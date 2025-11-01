@@ -9,7 +9,7 @@ Quantus is a Next.js 14 application engineered to publish thousands of SEO-focus
 - Access to install dependencies (`npm install`)
 - Optional: Playwright or Cypress for E2E (not bundled)
 
-## Quick start
+## Quick  ssrt
 
 ```bash
 npm install
