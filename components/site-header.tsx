@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getCategories } from "@/lib/content";
+import { SiteSearch } from "@/components/site-search";
 
 export function SiteHeader() {
   const categories = getCategories().slice(0, 5);
@@ -11,22 +12,25 @@ export function SiteHeader() {
         <Link href="/" className="flex items-center gap-2 font-serif text-xl font-semibold text-slate-900">
           Quantus
         </Link>
-        <nav className="flex flex-wrap items-center gap-4 text-sm font-medium text-slate-600">
-          <Link href="/category" className="hover:text-brand">
-            Categories
-          </Link>
-          {categories.map((category) => (
-            <Link
-              key={category.slug}
-              href={`/category/${category.slug}`}
-              className="hover:text-brand"
-            >
-              {category.label}
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-4">
+          <nav className="flex flex-wrap items-center gap-4 text-sm font-medium text-slate-600">
+            <Link href="/category" className="hover:text-brand">
+              Categories
             </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
-          <span>120K / day target</span>
+            {categories.map((category) => (
+              <Link
+                key={category.slug}
+                href={`/category/${category.slug}`}
+                className="hover:text-brand"
+              >
+                {category.label}
+              </Link>
+            ))}
+          </nav>
+          <SiteSearch />
+          <div className="hidden text-xs uppercase tracking-wide text-slate-400 md:flex md:items-center">
+            <span>120K / day target</span>
+          </div>
         </div>
       </div>
     </header>

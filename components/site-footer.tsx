@@ -14,6 +14,21 @@ export function SiteFooter() {
           <Link href="/category" className="hover:text-white">
             Category index
           </Link>
+          <Link href="/about" className="hover:text-white">
+            About
+          </Link>
+          <Link href="/author" className="hover:text-white">
+            Author
+          </Link>
+          <Link href="/privacy" className="hover:text-white">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-white">
+            Terms
+          </Link>
+          <Link href="/cookies" className="hover:text-white">
+            Cookies
+          </Link>
           <Link href="/sitemap.xml" className="hover:text-white">
             Sitemap
           </Link>

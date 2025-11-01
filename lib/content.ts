@@ -366,3 +366,19 @@ export function getUpcomingPublishSchedule(): PublishScheduleItem[] {
 
   return Array.from(upcomingByPath.values()).sort((a, b) => a.publishDate.localeCompare(b.publishDate));
 }
+
+export function searchCalculators(query: string): CalculatorRecord[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return [];
+  }
+
+  return getPublishedCalculators().filter((calculator) => {
+    return (
+      calculator.title.toLowerCase().includes(normalized) ||
+      calculator.fullPath.toLowerCase().includes(normalized) ||
+      calculator.category.toLowerCase().includes(normalized) ||
+      (calculator.subcategory?.toLowerCase().includes(normalized) ?? false)
+    );
+  });
+}

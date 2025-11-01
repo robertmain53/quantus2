@@ -23,6 +23,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   ] satisfies MetadataRoute.Sitemap;
 
+  const staticEntries = [
+    "/about",
+    "/author",
+    "/terms",
+    "/privacy",
+    "/cookies",
+    "/search"
+  ].map((path) => ({
+    url: getSiteUrl(path),
+    changeFrequency: "monthly",
+    priority: 0.6,
+    lastModified: fallbackDate
+  })) satisfies MetadataRoute.Sitemap;
+
   const categoryEntries = categories.map((category) => ({
     url: getSiteUrl(`/category/${category.slug}`),
     changeFrequency: "weekly",
@@ -37,5 +51,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: calculator.publishDate ?? fallbackDate
   })) satisfies MetadataRoute.Sitemap;
 
-  return [...baseEntries, ...categoryEntries, ...calculatorEntries];
+  return [...baseEntries, ...staticEntries, ...categoryEntries, ...calculatorEntries];
 }
