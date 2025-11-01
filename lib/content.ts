@@ -42,6 +42,7 @@ interface ContentCache {
   calculators: CalculatorRecord[];
   calculatorMap: Map<string, CalculatorRecord>;
   categories: Map<string, CategorySummary>;
+  publishSchedule: PublishScheduleItem[];
 }
 
 let cache: ContentCache | null = null;
@@ -61,47 +62,66 @@ function ensureCache(): ContentCache {
   const header = rows[0];
   const dataRows = rows.slice(1);
 
-  const calculators = dataRows
-    .map((columns, index) => {
-      const row = rowToRecord(header, columns);
+  const calculatorMap = new Map<string, CalculatorRecord>();
+  const schedule: PublishScheduleItem[] = [];
 
-      if (!row.slug) {
-        throw new Error(`Missing slug at row ${index + 2}`);
-      }
+  for (const [index, columns] of dataRows.entries()) {
+    const row = rowToRecord(header, columns);
 
-      const fullPath = normalizePath(row.slug);
-      const segments = fullPath
-        .split("/")
-        .filter(Boolean);
+    if (!row.slug) {
+      throw new Error(`Missing slug at row ${index + 2}`);
+    }
 
-      return {
-        category: row.category?.trim() || "uncategorized",
-        subcategory: row.subcategory?.trim() || null,
+    const fullPath = normalizePath(row.slug);
+    const segments = fullPath
+      .split("/")
+      .filter(Boolean);
+    const categoryLabel = row.category?.trim() || "uncategorized";
+    const subcategoryLabel = row.subcategory?.trim() || null;
+    const title = row.title.trim();
+    const trafficEstimate = Number.parseInt(row.traffic_estimate ?? "0", 10);
+    const publishDate = normalizeDate(row.New_Publish_Date);
+
+    if (publishDate) {
+      schedule.push({
+        path: fullPath,
+        title,
+        publishDate
+      });
+    }
+
+    if (!calculatorMap.has(fullPath)) {
+      calculatorMap.set(fullPath, {
+        category: categoryLabel,
+        subcategory: subcategoryLabel,
         slug: segments[segments.length - 1] ?? "",
         fullPath,
         segments,
-        title: row.title.trim(),
-        trafficEstimate: Number.parseInt(row.traffic_estimate ?? "0", 10),
-        publishDate: normalizeDate(row.New_Publish_Date)
-      } satisfies CalculatorRecord;
-    })
-    .sort((a, b) => {
-      if (a.category === b.category) {
-        return a.title.localeCompare(b.title);
-      }
-      return a.category.localeCompare(b.category);
-    });
+        title,
+        trafficEstimate,
+        publishDate
+      });
+      continue;
+    }
 
-  const calculatorMap = new Map<string, CalculatorRecord>();
+    const existing = calculatorMap.get(fullPath)!;
+    existing.trafficEstimate = Math.max(existing.trafficEstimate, trafficEstimate);
+
+    if (publishDate && (!existing.publishDate || publishDate < existing.publishDate)) {
+      existing.publishDate = publishDate;
+    }
+  }
+
+  const calculators = Array.from(calculatorMap.values()).sort((a, b) => {
+    if (a.category === b.category) {
+      return a.title.localeCompare(b.title);
+    }
+    return a.category.localeCompare(b.category);
+  });
+
   const categoryMap = new Map<string, CategorySummary>();
 
   for (const calculator of calculators) {
-    if (calculatorMap.has(calculator.fullPath)) {
-      throw new Error(`Duplicate calculator path detected: ${calculator.fullPath}`);
-    }
-
-    calculatorMap.set(calculator.fullPath, calculator);
-
     const categoryKey = calculator.category;
     const categorySlug = toSlug(categoryKey);
 
@@ -147,7 +167,8 @@ function ensureCache(): ContentCache {
   cache = {
     calculators,
     calculatorMap,
-    categories: categoryMap
+    categories: categoryMap,
+    publishSchedule: schedule
   };
 
   return cache;
@@ -169,7 +190,11 @@ function normalizePath(slug: string) {
   }
 
   const normalized = trimmed.replace(/\/+/g, "/");
-  return normalized.startsWith("/") ? normalized : `/${normalized}`;
+  const withLeading = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  if (withLeading.length > 1) {
+    return withLeading.replace(/\/+$/g, "");
+  }
+  return withLeading;
 }
 
 function normalizeDate(value: string | undefined): string | null {
@@ -311,14 +336,7 @@ export interface PublishScheduleItem {
 }
 
 export function getUpcomingPublishSchedule(): PublishScheduleItem[] {
-  return getAllCalculators()
-    .filter((calculator): calculator is CalculatorRecord & { publishDate: string } => {
-      return Boolean(calculator.publishDate);
-    })
-    .map((calculator) => ({
-      path: calculator.fullPath,
-      title: calculator.title,
-      publishDate: calculator.publishDate!
-    }))
+  return ensureCache()
+    .publishSchedule.slice()
     .sort((a, b) => a.publishDate.localeCompare(b.publishDate));
 }
