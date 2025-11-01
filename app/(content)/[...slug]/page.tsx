@@ -196,7 +196,9 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </div>
         </header>
 
-        {conversion && <ConversionCalculator context={conversion} />}
+        {conversion && (
+          <ConversionCalculator fromUnitId={conversion.from.id} toUnitId={conversion.to.id} />
+        )}
 
         <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">

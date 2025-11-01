@@ -3,18 +3,43 @@
 import { useMemo, useState } from "react";
 
 import {
-  ConversionContext,
+  type ConversionContext,
   buildConversionTable,
-  convertValue
+  convertValue,
+  getUnitById
 } from "@/lib/conversions";
 
 interface ConversionCalculatorProps {
-  context: ConversionContext;
+  fromUnitId: string;
+  toUnitId: string;
 }
 
-export function ConversionCalculator({ context }: ConversionCalculatorProps) {
+export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalculatorProps) {
   const [direction, setDirection] = useState<"forward" | "reverse">("forward");
   const [inputValue, setInputValue] = useState<string>("1");
+
+  const context = useMemo<ConversionContext | null>(() => {
+    const from = getUnitById(fromUnitId);
+    const to = getUnitById(toUnitId);
+
+    if (!from || !to || from.kind !== to.kind) {
+      return null;
+    }
+
+    return { from, to, kind: from.kind };
+  }, [fromUnitId, toUnitId]);
+
+  if (!context) {
+    return (
+      <section className="space-y-4 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+        <p>Interactive converter unavailable for this calculator.</p>
+        <p className="text-red-600">
+          We could not resolve compatible units for this experience. Please verify the slug
+          follows the pattern `from-to-to-unit-converter`.
+        </p>
+      </section>
+    );
+  }
 
   const parsedValue = Number.parseFloat(inputValue);
   const isValid = !Number.isNaN(parsedValue);

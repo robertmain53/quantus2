@@ -330,6 +330,10 @@ const aliasToUnitId: Record<string, string> = {
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
 
+export function getUnitById(id: string): UnitDefinition | undefined {
+  return units[id];
+}
+
 export function resolveUnit(token: string): UnitDefinition | undefined {
   const normalized = normalizeToken(token);
   const direct = aliasToUnitId[normalized];
