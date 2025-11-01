@@ -8,7 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const calculators = getAllCalculators();
   const fallbackDate = new Date().toISOString();
 
-  const baseEntries: MetadataRoute.Sitemap = [
+  const baseEntries = [
     {
       url: getSiteUrl("/"),
       changeFrequency: "daily",
@@ -21,21 +21,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
       lastModified: fallbackDate
     }
-  ];
+  ] satisfies MetadataRoute.Sitemap;
 
   const categoryEntries = categories.map((category) => ({
     url: getSiteUrl(`/category/${category.slug}`),
     changeFrequency: "weekly",
     priority: 0.8,
     lastModified: fallbackDate
-  }));
+  })) satisfies MetadataRoute.Sitemap;
 
   const calculatorEntries = calculators.map((calculator) => ({
     url: getSiteUrl(calculator.fullPath),
     changeFrequency: "weekly",
     priority: 0.7,
     lastModified: calculator.publishDate ?? fallbackDate
-  }));
+  })) satisfies MetadataRoute.Sitemap;
 
   return [...baseEntries, ...categoryEntries, ...calculatorEntries];
 }
