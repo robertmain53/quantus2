@@ -3,9 +3,6 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
-  experimental: {
-    typedRoutes: true
-  },
   eslint: {
     ignoreDuringBuilds: false
   },
