@@ -108,7 +108,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
       url: getSiteUrl(calculator.fullPath)
     }
   ];
-  const structuredData = [
+  const structuredData: Array<Record<string, unknown>> = [
     buildBreadcrumbSchema(breadcrumbs),
     buildWebPageSchema({
       name: calculator.title,
