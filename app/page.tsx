@@ -47,12 +47,7 @@ export default function HomePage() {
               <li key={entry.path} className="flex items-start gap-3">
                 <span className="mt-1 h-2.5 w-2.5 flex-none rounded-full bg-sky-500" aria-hidden />
                 <div className="space-y-1">
-                  <Link
-                    href={entry.path}
-                    className="font-medium text-slate-800 hover:text-brand"
-                  >
-                    {entry.title}
-                  </Link>
+                  <span className="font-medium text-slate-800">{entry.title}</span>
                   <p className="text-xs uppercase tracking-wide text-slate-400">
                     Publishing {formatPublishDate(entry.publishDate)}
                   </p>

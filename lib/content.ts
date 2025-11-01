@@ -21,6 +21,7 @@ export interface CalculatorRecord {
   title: string;
   trafficEstimate: number;
   publishDate: string | null;
+  isPublished: boolean;
 }
 
 export interface CategorySummary {
@@ -64,6 +65,7 @@ function ensureCache(): ContentCache {
 
   const calculatorMap = new Map<string, CalculatorRecord>();
   const schedule: PublishScheduleItem[] = [];
+  const todayIso = new Date().toISOString().split("T")[0];
 
   for (const [index, columns] of dataRows.entries()) {
     const row = rowToRecord(header, columns);
@@ -81,6 +83,7 @@ function ensureCache(): ContentCache {
     const title = row.title.trim();
     const trafficEstimate = Number.parseInt(row.traffic_estimate ?? "0", 10);
     const publishDate = normalizeDate(row.New_Publish_Date);
+    const isPublished = !publishDate || publishDate <= todayIso;
 
     if (publishDate) {
       schedule.push({
@@ -99,7 +102,8 @@ function ensureCache(): ContentCache {
         segments,
         title,
         trafficEstimate,
-        publishDate
+        publishDate,
+        isPublished
       });
       continue;
     }
@@ -110,6 +114,8 @@ function ensureCache(): ContentCache {
     if (publishDate && (!existing.publishDate || publishDate < existing.publishDate)) {
       existing.publishDate = publishDate;
     }
+
+    existing.isPublished = !existing.publishDate || existing.publishDate <= todayIso;
   }
 
   const calculators = Array.from(calculatorMap.values()).sort((a, b) => {
@@ -122,6 +128,10 @@ function ensureCache(): ContentCache {
   const categoryMap = new Map<string, CategorySummary>();
 
   for (const calculator of calculators) {
+    if (!calculator.isPublished) {
+      continue;
+    }
+
     const categoryKey = calculator.category;
     const categorySlug = toSlug(categoryKey);
 
@@ -276,13 +286,17 @@ export function getAllCalculators(): CalculatorRecord[] {
   return ensureCache().calculators;
 }
 
+export function getPublishedCalculators(): CalculatorRecord[] {
+  return getAllCalculators().filter((calculator) => calculator.isPublished);
+}
+
 export function getCalculatorByPath(pathname: string): CalculatorRecord | undefined {
   const normalized = normalizePath(pathname);
   return ensureCache().calculatorMap.get(normalized);
 }
 
 export function getCalculatorPaths(): string[] {
-  return getAllCalculators().map((calculator) => calculator.fullPath);
+  return getPublishedCalculators().map((calculator) => calculator.fullPath);
 }
 
 export function getCategories(): CategorySummary[] {
@@ -323,7 +337,7 @@ export function getSubcategoryBySlug(
 }
 
 export function getTopCalculators(limit = 12): CalculatorRecord[] {
-  return getAllCalculators()
+  return getPublishedCalculators()
     .slice()
     .sort((a, b) => b.trafficEstimate - a.trafficEstimate)
     .slice(0, limit);
@@ -336,7 +350,19 @@ export interface PublishScheduleItem {
 }
 
 export function getUpcomingPublishSchedule(): PublishScheduleItem[] {
-  return ensureCache()
-    .publishSchedule.slice()
-    .sort((a, b) => a.publishDate.localeCompare(b.publishDate));
+  const todayIso = new Date().toISOString().split("T")[0];
+  const upcomingByPath = new Map<string, PublishScheduleItem>();
+
+  for (const entry of ensureCache().publishSchedule) {
+    if (entry.publishDate < todayIso) {
+      continue;
+    }
+
+    const existing = upcomingByPath.get(entry.path);
+    if (!existing || entry.publishDate < existing.publishDate) {
+      upcomingByPath.set(entry.path, { ...entry });
+    }
+  }
+
+  return Array.from(upcomingByPath.values()).sort((a, b) => a.publishDate.localeCompare(b.publishDate));
 }

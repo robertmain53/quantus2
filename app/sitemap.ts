@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
-import { getAllCalculators, getCategories } from "@/lib/content";
+import { getCategories, getPublishedCalculators } from "@/lib/content";
 import { getSiteUrl } from "@/lib/seo";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const categories = getCategories();
-  const calculators = getAllCalculators();
+  const calculators = getPublishedCalculators();
   const fallbackDate = new Date().toISOString();
 
   const baseEntries = [

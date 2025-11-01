@@ -30,7 +30,7 @@ npm run dev
 
 - Source data lives in `data/calc.csv`. Each row defines a calculator/category path, predicted traffic, and publish date.
 - The data layer (`lib/content.ts`) is memoized and powers static params, sitemaps, navigation, and metadata.
-- Editing the CSV triggers new static routes automatically the next time `next build` runs—no code changes required for new entries.
+- Editing the CSV triggers new static routes automatically the next time `next build` runs—no code changes required for new entries. Entries with a `New_Publish_Date` in the future stay hidden from users, bots, and the sitemap until the date arrives.
 - Use the `traffic_estimate` column to prioritize categories surfaced on the homepage and navigation.
 
 ### Adding calculators

@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 
 import { ConversionCalculator } from "@/components/conversion-calculator";
 import {
-  getAllCalculators,
   getCalculatorByPath,
-  getCalculatorPaths
+  getCalculatorPaths,
+  getPublishedCalculators
 } from "@/lib/content";
 import {
   parseConversionFromSlug,
@@ -43,6 +43,15 @@ export async function generateMetadata(
     return {};
   }
 
+  if (!calculator.isPublished) {
+    return {
+      robots: {
+        index: false,
+        follow: false
+      }
+    };
+  }
+
   const conversion = parseConversionFromSlug(calculator.slug);
   const title = calculator.title;
   const description = conversion
@@ -70,6 +79,10 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const calculator = getCalculatorByPath(fullPath);
 
   if (!calculator) {
+    notFound();
+  }
+
+  if (!calculator.isPublished) {
     notFound();
   }
 
@@ -302,7 +315,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 }
 
 function getRelatedCalculators(currentPath: string, category: string) {
-  return getAllCalculators()
+  return getPublishedCalculators()
     .filter((item) => item.fullPath !== currentPath && item.category === category)
     .slice(0, 6);
 }

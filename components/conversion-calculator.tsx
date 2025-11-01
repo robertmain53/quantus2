@@ -54,7 +54,7 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
         <p>Interactive converter unavailable for this calculator.</p>
         <p className="text-red-600">
           We could not resolve compatible units for this experience. Please verify the slug
-          follows the pattern `from-to-to-unit-converter`.
+          follows the pattern `from-unit-to-unit-converter`.
         </p>
       </section>
     );
