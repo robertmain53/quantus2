@@ -226,7 +226,7 @@ function normalizeDate(value: string | undefined): string | null {
   return iso.split("T")[0] ?? null;
 }
 
-function toSlug(input: string) {
+export function toSlug(input: string) {
   return input
     .toLowerCase()
     .trim()

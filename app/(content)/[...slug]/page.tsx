@@ -6,7 +6,8 @@ import { ConversionCalculator } from "@/components/conversion-calculator";
 import {
   getCalculatorByPath,
   getCalculatorPaths,
-  getPublishedCalculators
+  getPublishedCalculators,
+  toSlug
 } from "@/lib/content";
 import {
   parseConversionFromSlug,
@@ -91,11 +92,8 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const pageDescription = conversion
     ? `Use this converter to move seamlessly between ${conversion.from.label.toLowerCase()} and ${conversion.to.label.toLowerCase()} with instant precision.`
     : `This guide delivers trusted answers, methodology, and expert tips for ${calculator.title.toLowerCase()}.`;
-  const categorySlug = calculator.segments[0] ?? "";
-  const subcategorySlug =
-    calculator.subcategory && calculator.segments.length > 2
-      ? calculator.segments[calculator.segments.length - 2]
-      : null;
+  const categorySlug = calculator.category ? toSlug(calculator.category) : null;
+  const subcategorySlug = calculator.subcategory ? toSlug(calculator.subcategory) : null;
   const faqEntries = buildFaq(calculator.title, conversion);
   const breadcrumbs = [
     { name: "Home", url: getSiteUrl("/") },
@@ -108,7 +106,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           }
         ]
       : []),
-    ...(calculator.subcategory && subcategorySlug
+    ...(calculator.subcategory && categorySlug && subcategorySlug
       ? [
           {
             name: calculator.subcategory,
@@ -177,7 +175,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                   </li>
                 </>
               )}
-              {calculator.subcategory && subcategorySlug && (
+              {calculator.subcategory && categorySlug && subcategorySlug && (
                 <>
                   <li aria-hidden>›</li>
                   <li>
