@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 
 import { getCategories } from "@/lib/content";
@@ -27,7 +28,9 @@ export function SiteHeader() {
               </Link>
             ))}
           </nav>
-          <SiteSearch />
+          <Suspense fallback={<span className="text-sm text-slate-400">Loading search…</span>}>
+            <SiteSearch />
+          </Suspense>
           <div className="hidden text-xs uppercase tracking-wide text-slate-400 md:flex md:items-center">
             <span>120K / day target</span>
           </div>
