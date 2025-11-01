@@ -29,6 +29,25 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
     return { from, to, kind: from.kind };
   }, [fromUnitId, toUnitId]);
 
+  const parsedValue = Number.parseFloat(inputValue);
+  const isValid = !Number.isNaN(parsedValue);
+
+  const targetValue = useMemo(() => {
+    if (!context || !isValid) {
+      return NaN;
+    }
+
+    return convertValue(parsedValue, direction, context);
+  }, [context, direction, parsedValue, isValid]);
+
+  const table = useMemo(() => {
+    if (!context) {
+      return [];
+    }
+    const tableSeeds = direction === "forward" ? [1, 5, 10, 25, 50, 100] : [1, 10, 50, 100, 500];
+    return buildConversionTable(tableSeeds, context, direction);
+  }, [context, direction]);
+
   if (!context) {
     return (
       <section className="space-y-4 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
@@ -40,20 +59,6 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
       </section>
     );
   }
-
-  const parsedValue = Number.parseFloat(inputValue);
-  const isValid = !Number.isNaN(parsedValue);
-
-  const targetValue = useMemo(() => {
-    if (!isValid) {
-      return NaN;
-    }
-
-    return convertValue(parsedValue, direction, context);
-  }, [context, direction, parsedValue, isValid]);
-
-  const tableSeeds = direction === "forward" ? [1, 5, 10, 25, 50, 100] : [1, 10, 50, 100, 500];
-  const table = buildConversionTable(tableSeeds, context, direction);
 
   const fromUnit = direction === "forward" ? context.from : context.to;
   const toUnit = direction === "forward" ? context.to : context.from;
