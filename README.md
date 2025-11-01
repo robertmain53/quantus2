@@ -2,7 +2,7 @@
 
 Quantus is a Next.js 14 application engineered to publish thousands of SEO-focused calculators and conversion tools from a single source-of-truth catalogue. The platform emphasizes static-first delivery, structured data, and an editorial workflow that can scale to 120K+ daily sessions.
 
-## Requirements
+## Requiremen s
 
 - Node.js 18.18+ (Next.js 14 baseline)
 - npm 9+ or pnpm/yarn equivalents
