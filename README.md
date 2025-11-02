@@ -44,7 +44,7 @@ npm run dev
 | `traffic_estimate` | Daily sessions forecast. Drives prioritisation and projected totals. |
 | `New_Publish_Date` | ISO-friendly date. Items with a future date stay hidden until the next rebuild after that date. |
 | `component_type` | Enum describing which generic engine should render the calculator. Supported values: `converter`, `simple_calc`, `advanced_calc`. |
-| `config_json` | JSON blob containing the full calculator contract: inputs, outputs, validation rules, content sections, schema hints, internal/external link plans, and presentation settings. |
+| `config_json` | JSON blob containing the full calculator contract: inputs, outputs, validation rules, structured page copy, schema hints, internal/external link plans, and presentation settings (no raw HTML). |
 
 > **Tip:** Keep JSON payloads in valid UTF-8 and escape double quotes if editing the CSV manually. For bulk edits, prefer tooling (Airtable export, Google Sheets + script) that can manage multi-line cells safely.
 
@@ -56,7 +56,7 @@ We ship a small stable of reusable React components. Each reads `component_type`
 - `GenericSimpleCalculator.tsx` – single-formula calculators (e.g. CAGR, markup) with lightweight validation.
 - `GenericAdvancedCalculator.tsx` – multi-step or multi-output flows (e.g. amortization) with repeatable groups, tables, and scenario analysis.
 
-Adding a new calculator never requires building another bespoke React component. Instead, evolve the engine APIs if a new pattern emerges, then reuse it everywhere via configuration.
+Adding a new calculator never requires building another bespoke React component. Instead, evolve the engine APIs if a new pattern emerges, then reuse it everywhere via configuration. Each engine owns the presentation layer—`page_content` strings are rendered with consistent typography, headings, and components, so the AI focuses purely on copy and logic.
 
 ### Adding calculators
 
@@ -80,7 +80,7 @@ This model removes bespoke React development from the daily cadence. Humans conc
 2. **Synthesis & generation (AI)**
    - Feed the corpus into your AI workspace with a prompt that requests:
      - Final `component_type` selection.
-     - A unified `config_json` matching the engine contract, including inputs, units, computed outputs, validation, display rules, content sections, link plans, and schema metadata. A representative structure might look like:
+     - A unified `config_json` matching the engine contract, including inputs, units, computed outputs, validation, display rules, structured page copy (plain text/Markdown snippets), link plans, and schema metadata. A representative structure might look like:
        ```json
        {
          "version": "1.0.0",
@@ -105,11 +105,16 @@ This model removes bespoke React development from the daily cadence. Humans conc
            "type": "amortization",
            "formula": "PMT"
          },
-         "content": {
-           "introduction": "<p>Use this calculator to understand the cost of any personal loan.</p>",
-           "methodology": "<p>We compute payments using the standard amortization formula...</p>",
+         "page_content": {
+           "introduction": [
+             "Use this calculator to understand the cost of any personal loan.",
+             "Adjust the sliders to see the impact of APR and term on cash flow."
+           ],
+           "methodology": [
+             "We compute payments using the standard amortization (PMT) formula that assumes fixed APR across the life of the loan."
+           ],
            "faqs": [
-             { "question": "How do I lower my monthly payment?", "answer": "<p>Lower APR or longer term reduces payments.</p>" }
+             { "question": "How do I lower my monthly payment?", "answer": "Lower the APR, extend the term, or reduce the principal. Each lever has trade-offs covered below." }
            ],
            "citations": [
              { "label": "Consumer Finance Protection Bureau", "url": "https://www.consumerfinance.gov" }
@@ -140,7 +145,7 @@ This model removes bespoke React development from the daily cadence. Humans conc
    - Trigger `npm run build` locally or rely on CI. Once the publish date arrives, the calculator goes live with no additional engineering effort.
    - Scheduled refreshes or corrections are handled by updating the CSV and re-running the pipeline.
 
-> **Quality gates:** Maintain automated validation inside `lib/content.ts` to reject malformed JSON, missing enum values, or unsanitised HTML before build time.
+> **Quality gates:** Maintain automated validation inside `lib/content.ts` to reject malformed JSON, missing enum values, or unsupported content patterns before build time.
 
 ## Implementation guidance & critique
 
@@ -152,7 +157,7 @@ This model removes bespoke React development from the daily cadence. Humans conc
 - **Risk areas to address**
   - `config_json` must be strictly versioned. Introduce a `config_version` field or embed schema IDs so older rows do not break when engines evolve.
   - Large JSON blobs in CSV cells are fragile. Consider mirroring the data in Airtable or a headless CMS with an automated export to guarantee quoting and encoding fidelity.
-  - AI-generated HTML embedded inside `config_json` requires sanitisation. Bake sanitising into the loader and limit the allowed tag list to prevent XSS.
+  - Even with structured text, enforce validation so the AI cannot inject unsupported Markdown or scripting fragments. Fail fast in the loader and surface actionable errors to editors.
   - Advanced calculators may need cross-field dependencies (e.g., amortisation tables). Document the engine contract thoroughly so AI prompts include required structures.
 
 - **Recommendations for future refinement**
