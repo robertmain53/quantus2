@@ -217,7 +217,7 @@ Output:
 
 ## Implementation guidance & critique
 
-- **Review tooling**
+- **Review tooling***
   - Use `/admin/playground` to validate and preview `config_json` before it reaches the CSV. The textarea+preview workflow lets reviewers catch schema violations immediately and see how each generic engine renders the experience.
 - **Strengths of the AI-first plan**
   - Eliminates bespoke React work; throughput is governed by research and validation capacity, not engineering.
