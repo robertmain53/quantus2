@@ -19,7 +19,7 @@ export default function CookiesPage() {
       </header>
 
       <section className="space-y-3 text-base text-slate-600">
-        <h2 className="font-serif text-2xl font-semibold text-slate-900">Essential cookies</h2>
+        <h2 className="font-serif text-2xl font-semibold text-slate-900">Essential Cookies</h2>
         <p>
           Required for authentication, security, and remembering your cookie preferences. These
           cookies cannot be disabled because the site will not function without them.
