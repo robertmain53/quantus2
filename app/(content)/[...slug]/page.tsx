@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ConversionCalculator } from "@/components/conversion-calculator";
+import { GenericConverter } from "@/components/generic-converter";
+import { GenericSimpleCalculator } from "@/components/generic-simple-calculator";
 import {
   getCalculatorByPath,
   getCalculatorPaths,
@@ -12,7 +14,8 @@ import {
 import {
   parseConversionFromSlug,
   ConversionContext,
-  convertValue
+  convertValue,
+  getUnitById
 } from "@/lib/conversions";
 import {
   buildBreadcrumbSchema,
@@ -87,14 +90,59 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
     notFound();
   }
 
-  const conversion = parseConversionFromSlug(calculator.slug);
+  const config = calculator.config;
+  const componentType = calculator.componentType;
+  const conversionFromConfig =
+    config && config.logic && config.logic.type === "conversion"
+      ? buildConversionContextFromLogic(config.logic.fromUnitId, config.logic.toUnitId)
+      : null;
+  const conversionFromSlug = parseConversionFromSlug(calculator.slug);
+  const conversion = conversionFromConfig ?? conversionFromSlug;
   const related = getRelatedCalculators(calculator.fullPath, calculator.category);
-  const pageDescription = conversion
-    ? `Use this converter to move seamlessly between ${conversion.from.label.toLowerCase()} and ${conversion.to.label.toLowerCase()} with instant precision.`
-    : `This guide delivers trusted answers, methodology, and expert tips for ${calculator.title.toLowerCase()}.`;
+  const pageContent = config?.pageContent ?? null;
+  const introductionParagraphs = pageContent?.introduction ?? [];
+  const methodologyParagraphs = pageContent?.methodology ?? [];
+  const examples = pageContent?.examples ?? [];
+  const summaryParagraphs = pageContent?.summary ?? [];
+  const citationEntries = pageContent?.citations ?? [];
+  const faqEntriesFromConfig = pageContent?.faqs ?? null;
+  const pageDescription =
+    config?.metadata?.description ??
+    introductionParagraphs[0] ??
+    (conversion
+      ? `Use this converter to move seamlessly between ${conversion.from.label.toLowerCase()} and ${conversion.to.label.toLowerCase()} with instant precision.`
+      : `This guide delivers trusted answers, methodology, and expert tips for ${calculator.title.toLowerCase()}.`);
   const categorySlug = calculator.category ? toSlug(calculator.category) : null;
   const subcategorySlug = calculator.subcategory ? toSlug(calculator.subcategory) : null;
-  const faqEntries = buildFaq(calculator.title, conversion);
+  const faqEntries =
+    faqEntriesFromConfig && faqEntriesFromConfig.length > 0
+      ? faqEntriesFromConfig
+      : buildFaq(calculator.title, conversion);
+  const converterNode =
+    componentType === "converter"
+      ? config && config.logic && config.logic.type === "conversion"
+        ? <GenericConverter config={config} />
+        : conversion
+          ? (
+              <ConversionCalculator
+                fromUnitId={conversion.from.id}
+                toUnitId={conversion.to.id}
+              />
+            )
+          : null
+      : !componentType && conversion
+        ? (
+            <ConversionCalculator
+              fromUnitId={conversion.from.id}
+              toUnitId={conversion.to.id}
+            />
+          )
+        : null;
+  const simpleCalculatorNode =
+    ((componentType === "simple_calc" || (!componentType && config?.logic?.type === "formula")) &&
+      config) ? (
+      <GenericSimpleCalculator config={config} />
+    ) : null;
   const breadcrumbs = [
     { name: "Home", url: getSiteUrl("/") },
     { name: "Categories", url: getSiteUrl("/category") },
@@ -127,9 +175,21 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
       url: getSiteUrl(calculator.fullPath),
       category: calculator.category,
       dateModified: calculator.publishDate
-    }),
-    buildFaqSchema(faqEntries)
+    })
   ];
+
+  if (faqEntries.length > 0) {
+    structuredData.push(buildFaqSchema(faqEntries));
+  }
+
+  if (config?.schema?.additionalTypes) {
+    for (const type of config.schema.additionalTypes) {
+      structuredData.push({
+        "@context": "https://schema.org",
+        "@type": type
+      });
+    }
+  }
 
   if (conversion) {
     structuredData.push({
@@ -197,7 +257,15 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             <h1 className="font-serif text-4xl font-semibold text-slate-900 sm:text-5xl">
               {calculator.title}
             </h1>
-            <p className="text-lg text-slate-600">{pageDescription}</p>
+            {introductionParagraphs.length > 0 ? (
+              <div className="space-y-3 text-lg text-slate-600">
+                {introductionParagraphs.map((paragraph, index) => (
+                  <p key={`intro-${index}`}>{paragraph}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-lg text-slate-600">{pageDescription}</p>
+            )}
             <div className="flex flex-wrap gap-3 text-xs uppercase tracking-wide text-slate-400">
               {calculator.publishDate && (
                 <span>Updated {humanizeDate(calculator.publishDate)}</span>
@@ -207,38 +275,70 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </div>
         </header>
 
-        {conversion && (
-          <ConversionCalculator fromUnitId={conversion.from.id} toUnitId={conversion.to.id} />
+        {converterNode}
+        {simpleCalculatorNode}
+
+        {methodologyParagraphs.length > 0 ? (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">Methodology</h2>
+            <div className="space-y-3 text-base text-slate-600">
+              {methodologyParagraphs.map((paragraph, index) => (
+                <p key={`method-${index}`}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">
+              How to use this {conversion ? conversion.from.label : "calculator"}
+              {conversion ? " converter" : ""}
+            </h2>
+            <ol className="space-y-3 text-base text-slate-600">
+              <li>
+                1. Enter the value you want to convert in the first input field. You
+                can type decimals or whole numbers.
+              </li>
+              <li>
+                2. The result updates instantly with our high-precision formulas,
+                rounding to sensible decimal places for practical use.
+              </li>
+              {conversion ? (
+                <li>
+                  3. Use the swap button to reverse the calculation and move from{" "}
+                  {conversion.to.label.toLowerCase()} back to{" "}
+                  {conversion.from.label.toLowerCase()}.
+                </li>
+              ) : (
+                <li>
+                  3. Review the methodology and worked examples below to understand
+                  how this calculator operates and when to rely on it.
+                </li>
+              )}
+            </ol>
+          </section>
         )}
 
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-          <h2 className="font-serif text-2xl font-semibold text-slate-900">
-            How to use this {conversion ? conversion.from.label : "calculator"}
-            {conversion ? " converter" : ""}
-          </h2>
-          <ol className="space-y-3 text-base text-slate-600">
-            <li>
-              1. Enter the value you want to convert in the first input field. You
-              can type decimals or whole numbers.
-            </li>
-            <li>
-              2. The result updates instantly with our high-precision formulas,
-              rounding to sensible decimal places for practical use.
-            </li>
-            {conversion ? (
-              <li>
-                3. Use the swap button to reverse the calculation and move from{" "}
-                {conversion.to.label.toLowerCase()} back to{" "}
-                {conversion.from.label.toLowerCase()}.
-              </li>
-            ) : (
-              <li>
-                3. Review the methodology and worked examples below to understand
-                how this calculator operates and when to rely on it.
-              </li>
-            )}
-          </ol>
-        </section>
+        {examples.length > 0 && (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">Worked examples</h2>
+            <div className="space-y-3 text-base text-slate-600">
+              {examples.map((paragraph, index) => (
+                <p key={`example-${index}`}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {summaryParagraphs.length > 0 && (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">Key takeaways</h2>
+            <div className="space-y-3 text-base text-slate-600">
+              {summaryParagraphs.map((paragraph, index) => (
+                <p key={`summary-${index}`}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+        )}
 
         {conversion && (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
@@ -274,6 +374,40 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             ))}
           </div>
         </section>
+
+        {citationEntries.length > 0 && (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">
+              Sources & citations
+            </h2>
+            <ul className="space-y-3 text-sm text-slate-600">
+              {citationEntries.map((citation, index) => (
+                <li key={citation.url ?? index}>
+                  <span className="font-medium text-slate-800">
+                    {citation.label ?? citation.text ?? citation.url}
+                  </span>
+                  {citation.url && (
+                    <>
+                      {" "}
+                      —{" "}
+                      <a
+                        href={citation.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-brand"
+                      >
+                        {citation.url}
+                      </a>
+                    </>
+                  )}
+                  {citation.text && (
+                    <p className="text-xs text-slate-500">{citation.text}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </article>
 
       <aside className="space-y-8">
@@ -331,6 +465,28 @@ function humanizeDate(value: string) {
     day: "numeric",
     year: "numeric"
   });
+}
+
+function buildConversionContextFromLogic(
+  fromUnitId: string,
+  toUnitId: string
+): ConversionContext | null {
+  const fromUnit = getUnitById(fromUnitId);
+  const toUnit = getUnitById(toUnitId);
+
+  if (!fromUnit || !toUnit) {
+    return null;
+  }
+
+  if (fromUnit.kind !== toUnit.kind) {
+    return null;
+  }
+
+  return {
+    from: fromUnit,
+    to: toUnit,
+    kind: fromUnit.kind
+  };
 }
 
 function buildFaq(

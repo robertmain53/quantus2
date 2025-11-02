@@ -149,6 +149,8 @@ This model removes bespoke React development from the daily cadence. Humans conc
 
 ## Implementation guidance & critique
 
+- **Review tooling**
+  - Use `/admin/playground` to validate and preview `config_json` before it reaches the CSV. The textarea+preview workflow lets reviewers catch schema violations immediately and see how each generic engine renders the experience.
 - **Strengths of the AI-first plan**
   - Eliminates bespoke React work; throughput is governed by research and validation capacity, not engineering.
   - Centralises all business logic in `config_json`, enabling reproducible builds and lightweight rollbacks (revert CSV rows).

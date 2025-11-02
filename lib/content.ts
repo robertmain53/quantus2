@@ -1,11 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  type CalculatorComponentType,
+  type CalculatorConfig,
+  parseCalculatorConfig
+} from "./calculator-config";
+
 const DATA_FILE = path.join(process.cwd(), "data", "calc.csv");
 
 export interface CalculatorRecord {
   category: string;
   subcategory: string | null;
+  componentType: CalculatorComponentType | null;
+  config: CalculatorConfig | null;
   /**
    * Slug of the calculator (last segment).
    */
@@ -84,6 +92,16 @@ function ensureCache(): ContentCache {
     const trafficEstimate = Number.parseInt(row.traffic_estimate ?? "0", 10);
     const publishDate = normalizeDate(row.New_Publish_Date);
     const isPublished = !publishDate || publishDate <= todayIso;
+    const componentTypeRaw = Object.prototype.hasOwnProperty.call(row, "component_type")
+      ? row.component_type
+      : undefined;
+    const configRaw = Object.prototype.hasOwnProperty.call(row, "config_json")
+      ? row.config_json
+      : undefined;
+    const componentType = normalizeComponentType(componentTypeRaw);
+    const config = parseRowConfig(configRaw, fullPath);
+    const resolvedComponentType =
+      componentType ?? inferComponentTypeFromConfig(config) ?? null;
 
     if (publishDate) {
       schedule.push({
@@ -101,6 +119,8 @@ function ensureCache(): ContentCache {
         fullPath,
         segments,
         title,
+        componentType: resolvedComponentType,
+        config,
         trafficEstimate,
         publishDate,
         isPublished
@@ -116,6 +136,14 @@ function ensureCache(): ContentCache {
     }
 
     existing.isPublished = !existing.publishDate || existing.publishDate <= todayIso;
+
+    if (!existing.componentType && resolvedComponentType) {
+      existing.componentType = resolvedComponentType;
+    }
+
+    if (!existing.config && config) {
+      existing.config = config;
+    }
   }
 
   const calculators = Array.from(calculatorMap.values()).sort((a, b) => {
@@ -224,6 +252,66 @@ function normalizeDate(value: string | undefined): string | null {
 
   const iso = new Date(Date.UTC(year, month - 1, day)).toISOString();
   return iso.split("T")[0] ?? null;
+}
+
+function normalizeComponentType(input: string | undefined): CalculatorComponentType | null {
+  if (!input) {
+    return null;
+  }
+
+  const normalized = input.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized === "converter" || normalized === "conversion") {
+    return "converter";
+  }
+
+  if (normalized === "simple_calc" || normalized === "simple") {
+    return "simple_calc";
+  }
+
+  if (normalized === "advanced_calc" || normalized === "advanced") {
+    return "advanced_calc";
+  }
+
+  throw new Error(`Unsupported component_type value "${input}"`);
+}
+
+function parseRowConfig(raw: string | undefined, context: string): CalculatorConfig | null {
+  if (!raw) {
+    return null;
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return parseCalculatorConfig(trimmed, `config_json for ${context}`);
+  } catch (error) {
+    throw new Error(`Invalid config_json for ${context}: ${(error as Error).message}`);
+  }
+}
+
+function inferComponentTypeFromConfig(
+  config: CalculatorConfig | null
+): CalculatorComponentType | null {
+  if (!config || !config.logic) {
+    return null;
+  }
+
+  if (config.logic.type === "conversion") {
+    return "converter";
+  }
+
+  if (config.logic.type === "formula") {
+    return "simple_calc";
+  }
+
+  return null;
 }
 
 export function toSlug(input: string) {
