@@ -149,7 +149,16 @@ This model removes bespoke React development from the daily cadence. Humans conc
 
 ### AI prompt template
 
-Use this prompt (in any chat interface or VS Code AI integration) once competitor research assets are assembled. Replace the bracketed notes before running it.
+**How to use**
+- Gather your research corpus (competitor pages, regulations, spreadsheets, notes) in a single folder. Compress it into a `.zip` when sending to a chat model, or keep it beside the repo when using a VS Code AI assistant that can read local files.
+- Prepare a short "context packet" to paste alongside the prompt:
+  - Target calculator slug and objective (e.g., `/finance/loans/personal-loan-payment-calculator`).
+  - List of existing Quantus internal links relevant to the topic (category hubs, related calculators).
+  - Any guardrails (tone, compliance notes, traffic goal, localisation).
+- When using ChatGPT/Gemini/Claude: upload the zip first, then paste the prompt+context.
+- When using VS Code AI: ensure the assistant has access to the research folder (or paste representative excerpts) before running the prompt.
+
+Replace the bracketed placeholders in the template below before sending it to the model.
 
 ```text
 You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Quantus config schema.
@@ -177,7 +186,8 @@ Requirements for the JSON you return:
     * `examples`: optional worked scenarios with numbers derived from the logic.
     * `faqs`: 3–5 Q&As covering expert intent, edge cases, and trust-building topics.
     * `citations`: authoritative sources (label + URL + optional summary).
-    * `glossary` or `summary` if helpful.
+    * `summary`: short bullet sentences capturing key insights from the attached assets (reference filenames when helpful).
+    * `glossary` if helpful.
   - `links`: internal slugs (existing Quantus paths) reinforcing topical clusters + authoritative external references (`rel` should include `noopener`/`noreferrer` when outbound).
   - `schema.additionalTypes`: include structured data hints (e.g., `"HowTo"`, `"Dataset"`) when justified by the copy.
 - Never emit HTML tags; formatting is handled by the React engine.
