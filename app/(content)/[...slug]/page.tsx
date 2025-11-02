@@ -93,9 +93,11 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 
   const config = calculator.config;
   const componentType = calculator.componentType;
+  const conversionLogic =
+    config?.logic && config.logic.type === "conversion" ? config.logic : null;
   const conversionFromConfig =
-    config && config.logic && config.logic.type === "conversion"
-      ? buildConversionContextFromLogic(config.logic.fromUnitId, config.logic.toUnitId)
+    conversionLogic !== null
+      ? buildConversionContextFromLogic(conversionLogic.fromUnitId, conversionLogic.toUnitId)
       : null;
   const conversionFromSlug = parseConversionFromSlug(calculator.slug);
   const conversion = conversionFromConfig ?? conversionFromSlug;

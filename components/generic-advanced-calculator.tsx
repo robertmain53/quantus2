@@ -70,8 +70,22 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
 
   const allFields = useMemo(() => Array.from(fieldMap.values()), [fieldMap]);
 
-  const methods = logic?.methods ?? [];
-  const defaultMethodId = logic?.defaultMethod ?? methods[0]?.id ?? "";
+  const methods = useMemo<AdvancedMethodConfig[]>(() => {
+    if (!logic) {
+      return [];
+    }
+    return [...logic.methods];
+  }, [logic]);
+
+  const defaultMethodId = useMemo(() => {
+    if (!logic || logic.methods.length === 0) {
+      return "";
+    }
+
+    const fallback = logic.methods[0]?.id ?? "";
+    const candidate = logic.defaultMethod ?? fallback;
+    return logic.methods.some((method) => method.id === candidate) ? candidate : fallback;
+  }, [logic]);
 
   const [activeMethodId, setActiveMethodId] = useState<string>(defaultMethodId);
 
