@@ -578,7 +578,10 @@ function resolveExternalLinks(entries: unknown): ExternalLink[] {
       "label" in entry && typeof entry.label === "string" ? entry.label.trim() : undefined;
     const rel =
       "rel" in entry && Array.isArray(entry.rel)
-        ? entry.rel.filter((token): token is string => typeof token === "string" && token.trim() !== "")
+        ? entry.rel.filter(
+            (token: unknown): token is string =>
+              typeof token === "string" && token.trim() !== ""
+          )
         : undefined;
 
     links.push({
