@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
   CalculatorConfig,
@@ -28,8 +28,8 @@ export function GenericSimpleCalculator({ config }: GenericSimpleCalculatorProps
         <h2 className="text-base font-semibold">Formula configuration required</h2>
         <p>
           Provide <code>form.fields</code>, <code>form.result.outputs</code>, and{" "}
-          <code>logic.type = "formula"</code> with output expressions in <code>config_json</code>{" "}
-          to enable the simple calculator experience.
+          <code>logic.type = &quot;formula&quot;</code> with output expressions in{" "}
+          <code>config_json</code> to enable the simple calculator experience.
         </p>
       </section>
     );
@@ -44,15 +44,25 @@ interface SimpleCalculatorFormProps {
 }
 
 function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
-  const fields = form.fields ?? [];
+  const fieldsSource = form.fields;
+  const fields = useMemo(
+    () => (fieldsSource ? [...fieldsSource] : []),
+    [fieldsSource]
+  );
   const fieldIds = useMemo(() => fields.map((field) => field.id), [fields]);
 
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    fields.reduce<Record<string, string>>((acc, field) => {
+  const initialValues = useMemo(() => {
+    return fields.reduce<Record<string, string>>((acc, field) => {
       acc[field.id] = field.defaultValue ?? "";
       return acc;
-    }, {})
-  );
+    }, {});
+  }, [fields]);
+
+  const [values, setValues] = useState<Record<string, string>>(initialValues);
+
+  useEffect(() => {
+    setValues(initialValues);
+  }, [initialValues]);
 
   const compiledOutputs = useMemo<CompiledOutput[]>(() => {
     return logic.outputs.map((output) => ({

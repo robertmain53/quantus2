@@ -16,7 +16,7 @@ export function GenericConverter({ config }: GenericConverterProps) {
       <section className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
         <h2 className="text-base font-semibold">Converter configuration required</h2>
         <p>
-          Provide <code>logic.type = "conversion"</code> with <code>fromUnitId</code> and{" "}
+          Provide <code>logic.type = &quot;conversion&quot;</code> with <code>fromUnitId</code> and{" "}
           <code>toUnitId</code> inside <code>config_json</code> to enable the interactive
           experience.
         </p>

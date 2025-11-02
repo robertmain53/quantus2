@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
   AdvancedLogicConfig,
@@ -36,25 +36,26 @@ const HELPER_FUNCTIONS: Record<string, (...args: number[]) => number> = {
 };
 
 export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorProps) {
-  const logic =
-    config?.logic && config.logic.type === "advanced" ? (config.logic as AdvancedLogicConfig) : null;
-  const form = config?.form;
+  const rawLogic = config?.logic ?? null;
+  const logic = useMemo<AdvancedLogicConfig | null>(() => {
+    if (!rawLogic || rawLogic.type !== "advanced") {
+      return null;
+    }
+    return rawLogic as AdvancedLogicConfig;
+  }, [rawLogic]);
 
-  if (!logic || !form) {
-    return (
-      <section className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
-        <h2 className="text-base font-semibold">Advanced calculator configuration required</h2>
-        <p>
-          Provide <code>component_type = "advanced_calc"</code>, <code>logic.type = "advanced"</code>
-          , and structured <code>form.fields</code>/<code>form.sections</code> inside{" "}
-          <code>config_json</code> to enable this experience.
-        </p>
-      </section>
-    );
-  }
+  const rawForm = config?.form ?? null;
+  const formFields = rawForm?.fields;
+  const formSections = rawForm?.sections;
 
-  const baseFields = form.fields ?? [];
-  const sections = form.sections ?? [];
+  const baseFields = useMemo<CalculatorFormField[]>(
+    () => (formFields ? [...formFields] : []),
+    [formFields]
+  );
+  const sections = useMemo<CalculatorFormSection[]>(
+    () => (formSections ? [...formSections] : []),
+    [formSections]
+  );
 
   const fieldMap = useMemo(() => {
     const map = new Map<string, CalculatorFormField>();
@@ -69,11 +70,15 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
 
   const allFields = useMemo(() => Array.from(fieldMap.values()), [fieldMap]);
 
-  const methods = logic.methods;
-  const defaultMethod =
-    methods.find((method) => method.id === logic.defaultMethod) ?? methods[0] ?? null;
+  const methods = logic?.methods ?? [];
+  const defaultMethodId = logic?.defaultMethod ?? methods[0]?.id ?? "";
 
-  const [activeMethodId, setActiveMethodId] = useState<string>(defaultMethod?.id ?? "");
+  const [activeMethodId, setActiveMethodId] = useState<string>(defaultMethodId);
+
+  useEffect(() => {
+    setActiveMethodId(defaultMethodId);
+  }, [defaultMethodId]);
+
   const activeMethod = useMemo<AdvancedMethodConfig | null>(() => {
     if (!methods.length) {
       return null;
@@ -81,13 +86,18 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
     return methods.find((method) => method.id === activeMethodId) ?? methods[0] ?? null;
   }, [methods, activeMethodId]);
 
-  const [values, setValues] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    allFields.forEach((field) => {
-      initial[field.id] = field.defaultValue ?? "";
-    });
-    return initial;
-  });
+  const initialValues = useMemo(() => {
+    return allFields.reduce<Record<string, string>>((acc, field) => {
+      acc[field.id] = field.defaultValue ?? "";
+      return acc;
+    }, {});
+  }, [allFields]);
+
+  const [values, setValues] = useState<Record<string, string>>(initialValues);
+
+  useEffect(() => {
+    setValues(initialValues);
+  }, [initialValues]);
 
   const numericValues = useMemo<Record<string, number>>(() => {
     return Object.entries(values).reduce<Record<string, number>>((acc, [id, raw]) => {
@@ -105,6 +115,27 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
     }
     return evaluateAdvancedMethod(activeMethod, numericValues);
   }, [activeMethod, numericValues]);
+
+  const evaluation = useMemo<EvaluatedOutputs>(() => {
+    if (!activeMethod) {
+      return { variables: {}, outputs: [] };
+    }
+    return evaluateAdvancedMethod(activeMethod, numericValues);
+  }, [activeMethod, numericValues]);
+
+  if (!logic || methods.length === 0) {
+    return (
+      <section className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+        <h2 className="text-base font-semibold">Advanced calculator configuration required</h2>
+        <p>
+          Provide <code>component_type = &quot;advanced_calc&quot;</code>,{" "}
+          <code>logic.type = &quot;advanced&quot;</code>, and structured{" "}
+          <code>form.fields</code>/<code>form.sections</code> inside <code>config_json</code> to
+          enable this experience.
+        </p>
+      </section>
+    );
+  }
 
   if (!activeMethod) {
     return (
@@ -152,7 +183,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
         </div>
       )}
 
-  {sections.length > 0 && (
+      {sections.length > 0 && (
         <div className="space-y-6">
           {sections.map((section) => {
             if (!shouldShowSection(section, values)) {
