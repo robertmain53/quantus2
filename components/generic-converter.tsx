@@ -33,8 +33,20 @@ export function GenericConverter({ config }: GenericConverterProps) {
 }
 
 function getConversionLogic(config: CalculatorConfig | null): ConversionLogicConfig | null {
-  if (!config || !config.logic) {
+  if (!config) {
     return null;
   }
-  return config.logic.type === "conversion" ? config.logic : null;
+  const logic = config.logic;
+  return isConversionLogic(logic) ? logic : null;
+}
+
+function isConversionLogic(
+  logic: CalculatorConfig["logic"] | null | undefined
+): logic is ConversionLogicConfig {
+  return Boolean(
+    logic &&
+    logic.type === "conversion" &&
+    "fromUnitId" in logic &&
+    "toUnitId" in logic
+  );
 }
