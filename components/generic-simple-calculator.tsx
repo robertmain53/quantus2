@@ -44,11 +44,12 @@ interface SimpleCalculatorFormProps {
 }
 
 function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
-  const fieldIds = useMemo(() => form.fields.map((field) => field.id), [form.fields]);
+  const fields = form.fields ?? [];
+  const fieldIds = useMemo(() => fields.map((field) => field.id), [fields]);
 
   const [values, setValues] = useState<Record<string, string>>(() =>
-    fieldIds.reduce<Record<string, string>>((acc, id) => {
-      acc[id] = "";
+    fields.reduce<Record<string, string>>((acc, field) => {
+      acc[field.id] = field.defaultValue ?? "";
       return acc;
     }, {})
   );
@@ -87,7 +88,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
   return (
     <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
       <div className="grid gap-4 md:grid-cols-2">
-        {form.fields.map((field) => (
+        {fields.map((field) => (
           <label key={field.id} className="space-y-2">
             <span className="text-sm font-medium text-slate-700">{field.label}</span>
             {renderInput(field, values[field.id] ?? "", (next) =>
@@ -98,7 +99,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
         ))}
       </div>
 
-      {form.result?.outputs && form.result.outputs.length > 0 && (
+      {outputs.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Results</h3>
           <div className="grid gap-3 md:grid-cols-2">
@@ -169,11 +170,11 @@ function renderInput(
 }
 
 function renderFieldMeta(field: CalculatorFormField) {
-  if (!field.placeholder && field.min === undefined && field.max === undefined) {
-    return null;
-  }
-
   const hints: string[] = [];
+
+  if (field.helpText) {
+    hints.push(field.helpText);
+  }
   if (field.placeholder) {
     hints.push(field.placeholder);
   }
@@ -193,16 +194,30 @@ function renderFieldMeta(field: CalculatorFormField) {
 
 function compileExpression(expression: string, fieldIds: string[]) {
   const uniqueFieldIds = Array.from(new Set(fieldIds));
+  const helperEntries: Array<[string, unknown]> = [
+    ["pow", Math.pow],
+    ["min", Math.min],
+    ["max", Math.max],
+    ["abs", Math.abs],
+    ["sqrt", Math.sqrt],
+    ["log", Math.log],
+    ["exp", Math.exp],
+    ["Math", Math]
+  ];
+  const helperKeys = helperEntries.map(([key]) => key);
 
   try {
     // eslint-disable-next-line no-new-func
     const evaluator = new Function(
       ...uniqueFieldIds,
+      ...helperKeys,
       `"use strict"; return (${expression});`
-    ) as (...args: number[]) => number;
+    ) as (...args: unknown[]) => number;
 
     return (variables: Record<string, number>) => {
-      const args = uniqueFieldIds.map((id) => variables[id] ?? NaN);
+      const args = uniqueFieldIds
+        .map((id) => variables[id] ?? NaN)
+        .concat(helperEntries.map(([, value]) => value));
       try {
         const result = evaluator(...args);
         return typeof result === "number" && Number.isFinite(result) ? result : NaN;

@@ -311,6 +311,10 @@ function inferComponentTypeFromConfig(
     return "simple_calc";
   }
 
+  if (config.logic.type === "advanced") {
+    return "advanced_calc";
+  }
+
   return null;
 }
 

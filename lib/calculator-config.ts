@@ -19,6 +19,7 @@ export interface MetadataConfig {
 
 export interface CalculatorFormConfig {
   fields: CalculatorFormField[];
+  sections: CalculatorFormSection[];
   result: CalculatorFormResultConfig | null;
 }
 
@@ -28,10 +29,26 @@ export interface CalculatorFormField {
   type: string;
   required: boolean;
   placeholder?: string;
+  helpText?: string;
+  defaultValue?: string;
   min?: number;
   max?: number;
   step?: number;
   options?: Array<{ label: string; value: string }>;
+}
+
+export interface CalculatorFormSection {
+  id: string;
+  label: string;
+  description?: string;
+  showWhen?: ShowWhenConfig | null;
+  fields: CalculatorFormField[];
+}
+
+export interface ShowWhenConfig {
+  field: string;
+  equals?: string;
+  in?: string[];
 }
 
 export interface CalculatorFormResultConfig {
@@ -48,6 +65,7 @@ export interface CalculatorFormOutput {
 export type CalculatorLogicConfig =
   | ConversionLogicConfig
   | FormulaLogicConfig
+  | AdvancedLogicConfig
   | GenericLogicConfig
   | null;
 
@@ -66,6 +84,38 @@ export interface FormulaLogicConfig {
     unit?: string;
     format?: string;
   }>;
+}
+
+export interface AdvancedLogicConfig {
+  type: "advanced";
+  defaultMethod: string;
+  methods: AdvancedMethodConfig[];
+}
+
+export interface AdvancedMethodConfig {
+  id: string;
+  label: string;
+  description?: string;
+  formula?: string;
+  variables: Record<string, AdvancedVariableConfig>;
+  outputs: AdvancedOutputConfig[];
+}
+
+export interface AdvancedVariableConfig {
+  expression: string;
+  dependencies?: string[];
+  label?: string;
+  unit?: string;
+  format?: string;
+  display?: boolean;
+}
+
+export interface AdvancedOutputConfig {
+  id: string;
+  label: string;
+  variable: string;
+  unit?: string;
+  format?: string;
 }
 
 export interface GenericLogicConfig {
@@ -267,6 +317,10 @@ function parseLogic(
     type = "conversion";
   }
 
+  if (type === "advanced_calc") {
+    type = "advanced";
+  }
+
   if (!type) {
     errors.push(`${context}: logic.type is required`);
     return null;
@@ -332,6 +386,200 @@ function parseLogic(
     return { type: "formula", outputs };
   }
 
+  if (type === "multi_method" || type === "advanced") {
+    const methodsCandidate = logicCandidate.methods;
+    if (!isPlainObject(methodsCandidate)) {
+      errors.push(`${context}: advanced logic requires a methods object`);
+      return null;
+    }
+
+    const methods: AdvancedMethodConfig[] = [];
+
+    for (const [methodId, methodCandidate] of Object.entries(methodsCandidate)) {
+      if (!isPlainObject(methodCandidate)) {
+        errors.push(`${context}: logic.methods["${methodId}"] must be an object`);
+        continue;
+      }
+
+      const label =
+        getOptionalString(methodCandidate, "label") ?? startCaseFromId(methodId);
+      const description = getOptionalString(methodCandidate, "description");
+      const formulaVar = getOptionalString(methodCandidate, "formula");
+
+      const variablesCandidate = methodCandidate.variables;
+      if (!isPlainObject(variablesCandidate) || Object.keys(variablesCandidate).length === 0) {
+        errors.push(`${context}: logic.methods["${methodId}"].variables must be an object`);
+        continue;
+      }
+
+      const variables: Record<string, AdvancedVariableConfig> = {};
+      for (const [variableId, variableCandidate] of Object.entries(variablesCandidate)) {
+        if (
+          !isPlainObject(variableCandidate) &&
+          typeof variableCandidate !== "string"
+        ) {
+          errors.push(
+            `${context}: logic.methods["${methodId}"].variables["${variableId}"] must be an object or expression string`
+          );
+          continue;
+        }
+
+        let expression: string | null = null;
+        if (typeof variableCandidate === "string") {
+          expression = variableCandidate;
+        } else if (typeof variableCandidate.expression === "string") {
+          expression = variableCandidate.expression;
+        }
+
+        if (!expression) {
+          errors.push(
+            `${context}: logic.methods["${methodId}"].variables["${variableId}"] requires an expression`
+          );
+          continue;
+        }
+
+        const dependencies: string[] | undefined = Array.isArray(
+          (variableCandidate as Record<string, unknown>).dependencies
+        )
+          ? ((variableCandidate as Record<string, unknown>).dependencies as unknown[]).flatMap((item, depIndex) => {
+              if (typeof item === "string" && item.trim() !== "") {
+                return item.trim();
+              }
+              errors.push(
+                `${context}: logic.methods["${methodId}"].variables["${variableId}"].dependencies[${depIndex}] must be a string`
+              );
+              return [];
+            })
+          : undefined;
+
+        const labelOverride = getOptionalString(
+          variableCandidate as Record<string, unknown>,
+          "label"
+        );
+        const unit = getOptionalString(variableCandidate as Record<string, unknown>, "unit");
+        const format = getOptionalString(
+          variableCandidate as Record<string, unknown>,
+          "format"
+        );
+        const display =
+          typeof (variableCandidate as Record<string, unknown>).display === "boolean"
+            ? Boolean((variableCandidate as Record<string, unknown>).display)
+            : false;
+
+        variables[variableId] = {
+          expression,
+          dependencies,
+          label: labelOverride ?? undefined,
+          unit: unit ?? undefined,
+          format: format ?? undefined,
+          display
+        };
+      }
+
+      if (Object.keys(variables).length === 0) {
+        errors.push(`${context}: logic.methods["${methodId}"] must define at least one variable`);
+        continue;
+      }
+
+      const outputs: AdvancedOutputConfig[] = [];
+      if (Array.isArray(methodCandidate.outputs)) {
+        methodCandidate.outputs.forEach((outputCandidate: unknown, outputIndex: number) => {
+          if (!isPlainObject(outputCandidate)) {
+            errors.push(
+              `${context}: logic.methods["${methodId}"].outputs[${outputIndex}] must be an object`
+            );
+            return;
+          }
+
+          const outputId = getStringProperty(outputCandidate, "id");
+          const outputLabel =
+            getStringProperty(outputCandidate, "label") ??
+            startCaseFromId(outputId ?? `output_${outputIndex}`);
+          const variableRef =
+            getStringProperty(outputCandidate, "variable") ??
+            getStringProperty(outputCandidate, "value");
+
+          if (!outputId || !variableRef) {
+            errors.push(
+              `${context}: logic.methods["${methodId}"].outputs[${outputIndex}] requires id and variable`
+            );
+            return;
+          }
+
+          outputs.push({
+            id: outputId,
+            label: outputLabel ?? startCaseFromId(outputId),
+            variable: variableRef,
+            unit: getOptionalString(outputCandidate, "unit"),
+            format: getOptionalString(outputCandidate, "format")
+          });
+        });
+      }
+
+      if (outputs.length === 0) {
+        if (formulaVar && variables[formulaVar]) {
+          outputs.push({
+            id: `${methodId}_${formulaVar}`,
+            label: startCaseFromId(formulaVar),
+            variable: formulaVar
+          });
+        }
+
+        for (const [variableId, variableConfig] of Object.entries(variables)) {
+          if (variableConfig.display || variableConfig.label) {
+            outputs.push({
+              id: `${methodId}_${variableId}`,
+              label: variableConfig.label ?? startCaseFromId(variableId),
+              variable: variableId,
+              unit: variableConfig.unit,
+              format: variableConfig.format
+            });
+          }
+        }
+      }
+
+      if (outputs.length === 0) {
+        errors.push(
+          `${context}: logic.methods["${methodId}"] must expose at least one output (via outputs array or formula/display flags)`
+        );
+        continue;
+      }
+
+      methods.push({
+        id: methodId,
+        label,
+        description,
+        formula: formulaVar ?? undefined,
+        variables,
+        outputs
+      });
+    }
+
+    if (methods.length === 0) {
+      errors.push(`${context}: advanced logic must define at least one valid method`);
+      return null;
+    }
+
+    const defaultMethod =
+      getOptionalString(logicCandidate, "defaultMethod") ??
+      getOptionalString(logicCandidate, "default_method") ??
+      methods[0]!.id;
+
+    if (!methods.some((method) => method.id === defaultMethod)) {
+      errors.push(
+        `${context}: advanced logic defaultMethod "${defaultMethod}" does not match any method id`
+      );
+    }
+
+    return {
+      type: "advanced",
+      defaultMethod: methods.some((method) => method.id === defaultMethod)
+        ? defaultMethod
+        : methods[0]!.id,
+      methods
+    };
+  }
+
   const data = { ...logicCandidate };
   return {
     type,
@@ -353,99 +601,41 @@ function parseForm(
     return null;
   }
 
-  const fieldsCandidate = formCandidate.fields;
-  if (!Array.isArray(fieldsCandidate) || fieldsCandidate.length === 0) {
-    errors.push(`${context}: form.fields must be a non-empty array`);
-    return null;
+  const fields: CalculatorFormField[] = [];
+  if (formCandidate.fields !== undefined) {
+    if (!Array.isArray(formCandidate.fields)) {
+      errors.push(`${context}: form.fields must be an array`);
+    } else {
+      formCandidate.fields.forEach((item: unknown, index: number) => {
+        const field = parseFormField(item, `${context}: form.fields[${index}]`, errors);
+        if (field) {
+          fields.push(field);
+        }
+      });
+    }
   }
 
-  const fields: CalculatorFormField[] = [];
-
-  fieldsCandidate.forEach((item, index) => {
-    if (!isPlainObject(item)) {
-      errors.push(`${context}: form.fields[${index}] must be an object`);
-      return;
+  const sections: CalculatorFormSection[] = [];
+  if (formCandidate.sections !== undefined) {
+    if (!Array.isArray(formCandidate.sections)) {
+      errors.push(`${context}: form.sections must be an array`);
+    } else {
+      formCandidate.sections.forEach((sectionCandidate: unknown, index: number) => {
+        const section = parseFormSection(
+          sectionCandidate,
+          `${context}: form.sections[${index}]`,
+          errors
+        );
+        if (section) {
+          sections.push(section);
+        }
+      });
     }
+  }
 
-    const id = getStringProperty(item, "id");
-    const label = getStringProperty(item, "label");
-    const type = getStringProperty(item, "type");
-
-    if (!id || !label || !type) {
-      errors.push(`${context}: form.fields[${index}] requires id, label, and type`);
-      return;
-    }
-
-    assertNoHtml(label, `${context}: form.fields[${index}].label`, errors);
-
-    const field: CalculatorFormField = {
-      id,
-      label,
-      type,
-      required: Boolean(item.required)
-    };
-
-    if (item.placeholder !== undefined) {
-      const placeholder = getOptionalString(item, "placeholder");
-      if (placeholder !== undefined) {
-        assertNoHtml(placeholder, `${context}: form.fields[${index}].placeholder`, errors);
-        field.placeholder = placeholder;
-      } else {
-        errors.push(`${context}: form.fields[${index}].placeholder must be a string`);
-      }
-    }
-
-    if (item.min !== undefined && typeof item.min === "number") {
-      field.min = item.min;
-    } else if (item.min !== undefined) {
-      errors.push(`${context}: form.fields[${index}].min must be a number`);
-    }
-
-    if (item.max !== undefined && typeof item.max === "number") {
-      field.max = item.max;
-    } else if (item.max !== undefined) {
-      errors.push(`${context}: form.fields[${index}].max must be a number`);
-    }
-
-    if (item.step !== undefined && typeof item.step === "number") {
-      field.step = item.step;
-    } else if (item.step !== undefined) {
-      errors.push(`${context}: form.fields[${index}].step must be a number`);
-    }
-
-    if (item.options !== undefined) {
-      const options = Array.isArray(item.options) ? item.options : null;
-      if (!options) {
-        errors.push(`${context}: form.fields[${index}].options must be an array`);
-      } else {
-        field.options = [];
-        options.forEach((option, optionIndex) => {
-          if (!isPlainObject(option)) {
-            errors.push(
-              `${context}: form.fields[${index}].options[${optionIndex}] must be an object`
-            );
-            return;
-          }
-          const optionLabel = getStringProperty(option, "label");
-          const optionValue = getStringProperty(option, "value");
-          if (!optionLabel || !optionValue) {
-            errors.push(
-              `${context}: form.fields[${index}].options[${optionIndex}] requires label and value`
-            );
-            return;
-          }
-          assertNoHtml(
-            optionLabel,
-            `${context}: form.fields[${index}].options[${optionIndex}].label`,
-            errors
-          );
-          field.options!.push({ label: optionLabel, value: optionValue });
-        });
-      }
-    }
-
-    fields.push(field);
-  });
+  if (fields.length === 0 && sections.length === 0) {
+    errors.push(`${context}: form must define at least one field or section`);
+  }
 
   let result: CalculatorFormResultConfig | null = null;
   if (formCandidate.result !== undefined && formCandidate.result !== null) {
@@ -482,8 +672,240 @@ function parseForm(
 
   return {
     fields,
+    sections,
     result
   };
+}
+
+function parseFormField(
+  candidate: unknown,
+  context: string,
+  errors: string[]
+): CalculatorFormField | null {
+  if (!isPlainObject(candidate)) {
+    errors.push(`${context} must be an object`);
+    return null;
+  }
+
+  const id = getStringProperty(candidate, "id");
+  const label = getStringProperty(candidate, "label");
+  const type = getStringProperty(candidate, "type");
+
+  if (!id || !label || !type) {
+    errors.push(`${context} requires id, label, and type`);
+    return null;
+  }
+
+  assertNoHtml(label, `${context}.label`, errors);
+
+  const field: CalculatorFormField = {
+    id,
+    label,
+    type,
+    required: candidate.required === undefined ? true : Boolean(candidate.required)
+  };
+
+  const placeholder = getOptionalString(candidate, "placeholder");
+  if (placeholder !== undefined) {
+    assertNoHtml(placeholder, `${context}.placeholder`, errors);
+    field.placeholder = placeholder;
+  }
+
+  const helpText =
+    getOptionalString(candidate, "helpText") ?? getOptionalString(candidate, "help_text");
+  if (helpText !== undefined) {
+    assertNoHtml(helpText, `${context}.help_text`, errors);
+    field.helpText = helpText;
+  }
+
+  if (candidate.default !== undefined) {
+    if (typeof candidate.default === "string" || typeof candidate.default === "number") {
+      field.defaultValue = String(candidate.default);
+    } else {
+      errors.push(`${context}.default must be a string or number`);
+    }
+  } else if (candidate.default_value !== undefined) {
+    if (
+      typeof candidate.default_value === "string" ||
+      typeof candidate.default_value === "number"
+    ) {
+      field.defaultValue = String(candidate.default_value);
+    } else {
+      errors.push(`${context}.default_value must be a string or number`);
+    }
+  }
+
+  if (candidate.min !== undefined) {
+    if (typeof candidate.min === "number") {
+      field.min = candidate.min;
+    } else {
+      errors.push(`${context}.min must be a number`);
+    }
+  }
+
+  if (candidate.max !== undefined) {
+    if (typeof candidate.max === "number") {
+      field.max = candidate.max;
+    } else {
+      errors.push(`${context}.max must be a number`);
+    }
+  }
+
+  if (candidate.step !== undefined) {
+    if (typeof candidate.step === "number") {
+      field.step = candidate.step;
+    } else {
+      errors.push(`${context}.step must be a number`);
+    }
+  }
+
+  if (candidate.options !== undefined) {
+    if (!Array.isArray(candidate.options)) {
+      errors.push(`${context}.options must be an array`);
+    } else {
+      field.options = [];
+      candidate.options.forEach((optionCandidate, optionIndex) => {
+        if (!isPlainObject(optionCandidate)) {
+          errors.push(`${context}.options[${optionIndex}] must be an object`);
+          return;
+        }
+
+        const optionLabel = getStringProperty(optionCandidate, "label");
+        const optionValue = getStringProperty(optionCandidate, "value");
+
+        if (!optionLabel || !optionValue) {
+          errors.push(`${context}.options[${optionIndex}] requires label and value`);
+          return;
+        }
+
+        assertNoHtml(optionLabel, `${context}.options[${optionIndex}].label`, errors);
+        field.options!.push({ label: optionLabel, value: optionValue });
+      });
+    }
+  }
+
+  return field;
+}
+
+function parseFormSection(
+  candidate: unknown,
+  context: string,
+  errors: string[]
+): CalculatorFormSection | null {
+  if (!isPlainObject(candidate)) {
+    errors.push(`${context} must be an object`);
+    return null;
+  }
+
+  const sectionId = getStringProperty(candidate, "id") ?? `section_${context}`;
+  const labelCandidate =
+    getOptionalString(candidate, "label") ?? startCaseFromId(sectionId);
+
+  if (!labelCandidate) {
+    errors.push(`${context} requires a label`);
+    return null;
+  }
+
+  assertNoHtml(labelCandidate, `${context}.label`, errors);
+
+  const description = getOptionalString(candidate, "description");
+  if (description !== undefined) {
+    assertNoHtml(description, `${context}.description`, errors);
+  }
+
+  const showWhenCandidate =
+    candidate.showWhen !== undefined ? candidate.showWhen : candidate.show_when;
+  const showWhen = parseShowWhen(showWhenCandidate, `${context}.showWhen`, errors);
+
+  const fields: CalculatorFormField[] = [];
+  if (!Array.isArray(candidate.fields) || candidate.fields.length === 0) {
+    errors.push(`${context}.fields must be a non-empty array`);
+  } else {
+    candidate.fields.forEach((fieldCandidate: unknown, fieldIndex: number) => {
+      const field = parseFormField(
+        fieldCandidate,
+        `${context}.fields[${fieldIndex}]`,
+        errors
+      );
+      if (field) {
+        fields.push(field);
+      }
+    });
+  }
+
+  return {
+    id: sectionId,
+    label: labelCandidate,
+    description: description ?? undefined,
+    showWhen,
+    fields
+  };
+}
+
+function parseShowWhen(
+  candidate: unknown,
+  context: string,
+  errors: string[]
+): ShowWhenConfig | null {
+  if (candidate === undefined || candidate === null) {
+    return null;
+  }
+
+  if (!isPlainObject(candidate)) {
+    errors.push(`${context} must be an object`);
+    return null;
+  }
+
+  const field = getStringProperty(candidate, "field");
+  if (!field) {
+    errors.push(`${context}.field is required`);
+    return null;
+  }
+
+  const equals = getOptionalString(candidate, "equals");
+  let inValues: string[] | undefined;
+
+  if (candidate.in !== undefined) {
+    if (!Array.isArray(candidate.in)) {
+      errors.push(`${context}.in must be an array of strings`);
+    } else {
+      inValues = [];
+      candidate.in.forEach((value, index) => {
+        if (typeof value === "string" && value.trim() !== "") {
+          inValues!.push(value.trim());
+        } else {
+          errors.push(`${context}.in[${index}] must be a string`);
+        }
+      });
+    }
+  }
+
+  return {
+    field,
+    equals: equals ?? undefined,
+    in: inValues
+  };
+}
+
+function startCaseFromId(input: string | null): string {
+  if (!input) {
+    return "";
+  }
+
+  const normalized = input
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function parsePageContent(
@@ -777,15 +1199,27 @@ function coerceStringArray(
   const result: string[] = [];
 
   values.forEach((value, index) => {
-    if (typeof value !== "string") {
-      errors.push(`${fieldPath}[${index}] must be a string`);
+    if (typeof value === "string") {
+      assertNoHtml(value, `${fieldPath}[${index}]`, errors);
+      const trimmed = value.trim();
+      if (trimmed) {
+        result.push(trimmed);
+      }
       return;
     }
-    assertNoHtml(value, `${fieldPath}[${index}]`, errors);
-    const trimmed = value.trim();
-    if (trimmed) {
-      result.push(trimmed);
+
+    if (isPlainObject(value)) {
+      const slug =
+        getStringProperty(value, "slug") ??
+        getStringProperty(value, "path") ??
+        getStringProperty(value, "href");
+      if (slug) {
+        result.push(slug);
+        return;
+      }
     }
+
+    errors.push(`${fieldPath}[${index}] must be a string or object with a slug`);
   });
 
   return result.length > 0 ? result : undefined;
@@ -807,6 +1241,9 @@ function getOptionalString(source: Record<string, unknown>, key: string): string
   if (typeof value === "string") {
     const trimmed = value.trim();
     return trimmed !== "" ? trimmed : undefined;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? String(value) : undefined;
   }
   return undefined;
 }

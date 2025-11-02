@@ -7,6 +7,7 @@ import {
   validateCalculatorConfig
 } from "@/lib/calculator-config";
 
+import { GenericAdvancedCalculator } from "@/components/generic-advanced-calculator";
 import { GenericConverter } from "@/components/generic-converter";
 import { GenericSimpleCalculator } from "@/components/generic-simple-calculator";
 
@@ -68,6 +69,9 @@ export function ConfigPlayground() {
     if (parsedConfig.logic.type === "formula") {
       return "simple_calc";
     }
+    if (parsedConfig.logic.type === "advanced") {
+      return "advanced_calc";
+    }
     return null;
   }, [parsedConfig]);
 
@@ -84,15 +88,7 @@ export function ConfigPlayground() {
       case "simple_calc":
         return <GenericSimpleCalculator config={parsedConfig} />;
       case "advanced_calc":
-        return (
-          <section className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
-            <h2 className="text-base font-semibold">Advanced calculator preview</h2>
-            <p>
-              Support for advanced calculators will be added once the engine contract is finalized.
-              Validation succeeds, but runtime rendering is not available yet.
-            </p>
-          </section>
-        );
+        return <GenericAdvancedCalculator config={parsedConfig} />;
       default:
         return null;
     }

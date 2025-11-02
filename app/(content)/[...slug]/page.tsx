@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ConversionCalculator } from "@/components/conversion-calculator";
+import { GenericAdvancedCalculator } from "@/components/generic-advanced-calculator";
 import { GenericConverter } from "@/components/generic-converter";
 import { GenericSimpleCalculator } from "@/components/generic-simple-calculator";
 import {
@@ -118,6 +119,10 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
     faqEntriesFromConfig && faqEntriesFromConfig.length > 0
       ? faqEntriesFromConfig
       : buildFaq(calculator.title, conversion);
+  const advancedCalculatorNode =
+    ((componentType === "advanced_calc" || config?.logic?.type === "advanced") && config) ? (
+      <GenericAdvancedCalculator config={config} />
+    ) : null;
   const converterNode =
     componentType === "converter"
       ? config && config.logic && config.logic.type === "conversion"
@@ -275,6 +280,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </div>
         </header>
 
+        {advancedCalculatorNode}
         {converterNode}
         {simpleCalculatorNode}
 
@@ -294,25 +300,37 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
               {conversion ? " converter" : ""}
             </h2>
             <ol className="space-y-3 text-base text-slate-600">
-              <li>
-                1. Enter the value you want to convert in the first input field. You
-                can type decimals or whole numbers.
-              </li>
-              <li>
-                2. The result updates instantly with our high-precision formulas,
-                rounding to sensible decimal places for practical use.
-              </li>
               {conversion ? (
-                <li>
-                  3. Use the swap button to reverse the calculation and move from{" "}
-                  {conversion.to.label.toLowerCase()} back to{" "}
-                  {conversion.from.label.toLowerCase()}.
-                </li>
+                <>
+                  <li>
+                    1. Enter the value you want to convert in the first input field. You can type
+                    decimals or whole numbers.
+                  </li>
+                  <li>
+                    2. The result updates instantly with our high-precision formulas, rounding to
+                    sensible decimal places for practical use.
+                  </li>
+                  <li>
+                    3. Use the swap button to reverse the calculation and move from{" "}
+                    {conversion.to.label.toLowerCase()} back to{" "}
+                    {conversion.from.label.toLowerCase()}.
+                  </li>
+                </>
               ) : (
-                <li>
-                  3. Review the methodology and worked examples below to understand
-                  how this calculator operates and when to rely on it.
-                </li>
+                <>
+                  <li>
+                    1. Enter your latest business assumptions in the inputs above. Every field is
+                    validated to keep projections realistic.
+                  </li>
+                  <li>
+                    2. Results refresh instantly so you can compare profitability, efficiency, and
+                    payback metrics across calculation methods.
+                  </li>
+                  <li>
+                    3. Review the methodology and worked examples below to confirm how each formula
+                    maps to your operating model.
+                  </li>
+                </>
               )}
             </ol>
           </section>

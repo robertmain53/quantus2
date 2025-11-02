@@ -171,15 +171,25 @@ Requirements for the JSON you return:
 - Top-level shape:
   ```json
   {
-    "component_type": "converter | simple_calc",
+    "component_type": "converter | simple_calc | advanced_calc",
     "config_json": { ... }
   }
   ```
 - Inside `config_json`:
   - `version`: semantic string, bump `major.minor` if you introduce new schema capabilities.
   - `metadata.title` and `metadata.description`: persuasive copy that differentiates us; no HTML.
-  - `logic`: set `type` to `"conversion"` (for unit converters) or `"formula"` (for calculators). Include everything needed for deterministic calculations (unit IDs, expressions, tolerances). Do not introduce custom logic types.
-  - `form`: supply a flat `fields` array (no nested sections or conditional `show_when`). Provide labels, types (`currency`, `percent`, `integer`, `select`, etc.), sensible defaults, min/max, step, and select options where relevant. If outputs are needed, use `form.result.outputs`.
+  - `logic`:
+    * For `component_type = "converter"` set `type` to `"conversion"` and provide `fromUnitId`/`toUnitId`.
+    * For `component_type = "simple_calc"` set `type` to `"formula"` with an `outputs` array (each item needs `id`, `label`, `expression`, optional `unit`/`format`).
+    * For `component_type = "advanced_calc"` set `type` to `"advanced"` and supply a `methods` object. Each method must define:
+      - `label` + optional `description`.
+      - `variables`: map of `{ "variable_name": { "expression": "...", "dependencies": [], "label": "...", "unit": "...", "format": "...", "display": true|false } }`. Expressions may reference form field IDs, other variables, or helper functions (`pow`, `min`, `max`, `abs`, `sqrt`, `log`, `exp`).
+      - `outputs`: array of `{ "id": "...", "label": "...", "variable": "variable_name", "unit": "...", "format": "currency|percent|decimal|integer" }`. At least one output must be present per method. Use `"display": true` and/or `label` on variables to surface additional metrics.
+      - `formula` (optional) to indicate the primary variable if you want a default highlight.
+    * Always populate `defaultMethod` with the method id that should load first.
+  - `form`:
+    * For converters/simple calculators, supply a flat `fields` array (labels, types, sensible defaults, min/max, step, options). Use `form.result.outputs` when you want companion result cards.
+    * For advanced calculators you may combine `fields` (global inputs) and `sections` (grouped inputs). Each section can include an optional `description` and `show_when` object (`field`, `equals`, `in`) to control conditional rendering. Every field may include `help_text`, `placeholder`, `default`, and validation limits.
   - `page_content`: use arrays of plain-text sentences; do not embed HTML. Provide:
     * `introduction`: 2–3 short paragraphs explaining intent and user value.
     * `methodology`: authoritative walkthrough referencing standards/regulations.
@@ -188,7 +198,7 @@ Requirements for the JSON you return:
     * `citations`: authoritative sources (label + URL + optional summary).
     * `summary`: short bullet sentences capturing key insights from the attached assets (reference filenames when helpful).
     * `glossary` if helpful.
-  - `links`: `internal` must be an array of existing Quantus slugs (e.g., `"/finance/loans/roi-calculator"`). `external` entries must be objects with `url` and optional `label`, `rel` (array of tokens such as `"noopener"` or `"noreferrer"`).
+  - `links`: `internal` should list existing Quantus slugs (e.g., `"/finance/loans/roi-calculator"`). `external` entries must be objects with `url` and optional `label`, `rel` (array of tokens such as `"noopener"` or `"noreferrer"`).
   - `schema.additionalTypes`: include structured data hints (e.g., `"HowTo"`, `"Dataset"`) when justified by the copy.
 - Never emit HTML tags; formatting is handled by the React engine.
 - Ensure math expressions use variables that match `form.fields[].id`.
@@ -199,6 +209,7 @@ Analytical expectations:
 - Address user mental models (e.g., disclaimers, validation states, error copy) inside the appropriate JSON fields.
 - Surface compliance or safety caveats when the topic demands it (loans, health, etc.).
 - Recommend internal links that strengthen our topical authority; avoid duplicates already in the citations list.
+- When you create multiple calculation methods (`advanced_calc`), ensure each method exposes distinct outputs and clearly communicates when it should be used.
 
 Output:
 - Return ONLY the final JSON object. It must parse without post-processing and conform to the schema above.
