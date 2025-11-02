@@ -147,6 +147,53 @@ This model removes bespoke React development from the daily cadence. Humans conc
 
 > **Quality gates:** Maintain automated validation inside `lib/content.ts` to reject malformed JSON, missing enum values, or unsupported content patterns before build time.
 
+### AI prompt template
+
+Use this prompt (in any chat interface or VS Code AI integration) once competitor research assets are assembled. Replace the bracketed notes before running it.
+
+```text
+You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Quantus config schema.
+
+Goals:
+1. Outperform every organic competitor on accuracy, UX, depth, and EEAT signals.
+2. Produce a single JSON object compatible with Quantus engines (`component_type` + `config_json`). No additional commentary.
+
+Requirements for the JSON you return:
+- Top-level shape:
+  ```json
+  {
+    "component_type": "converter | simple_calc | advanced_calc",
+    "config_json": { ... }
+  }
+  ```
+- Inside `config_json`:
+  - `version`: semantic string, bump `major.minor` if you introduce new schema capabilities.
+  - `metadata.title` and `metadata.description`: persuasive copy that differentiates us; no HTML.
+  - `logic`: choose `conversion`, `formula`, or a documented advanced type. Include everything needed for deterministic calculations (unit IDs, expressions, tables, tolerances).
+  - `form`: define every input field rendered in the UI. Provide labels, types (`currency`, `percent`, `integer`, `select`, etc.), sensible defaults, min/max, step, and select options where relevant.
+  - `page_content`: use arrays of plain-text sentences; do not embed HTML. Provide:
+    * `introduction`: 2–3 short paragraphs explaining intent and user value.
+    * `methodology`: authoritative walkthrough referencing standards/regulations.
+    * `examples`: optional worked scenarios with numbers derived from the logic.
+    * `faqs`: 3–5 Q&As covering expert intent, edge cases, and trust-building topics.
+    * `citations`: authoritative sources (label + URL + optional summary).
+    * `glossary` or `summary` if helpful.
+  - `links`: internal slugs (existing Quantus paths) reinforcing topical clusters + authoritative external references (`rel` should include `noopener`/`noreferrer` when outbound).
+  - `schema.additionalTypes`: include structured data hints (e.g., `"HowTo"`, `"Dataset"`) when justified by the copy.
+- Never emit HTML tags; formatting is handled by the React engine.
+- Ensure math expressions use variables that match `form.fields[].id`.
+- All numeric conversions must reference official standards (cite them).
+
+Analytical expectations:
+- Benchmark formulas, ranges, and UX patterns against every attached competitor. Flag weaknesses and improve them in our config.
+- Address user mental models (e.g., disclaimers, validation states, error copy) inside the appropriate JSON fields.
+- Surface compliance or safety caveats when the topic demands it (loans, health, etc.).
+- Recommend internal links that strengthen our topical authority; avoid duplicates already in the citations list.
+
+Output:
+- Return ONLY the final JSON object. It must parse without post-processing and conform to the schema above.
+```
+
 ## Implementation guidance & critique
 
 - **Review tooling**
