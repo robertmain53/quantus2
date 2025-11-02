@@ -6,6 +6,7 @@ import { ConversionCalculator } from "@/components/conversion-calculator";
 import { GenericAdvancedCalculator } from "@/components/generic-advanced-calculator";
 import { GenericConverter } from "@/components/generic-converter";
 import { GenericSimpleCalculator } from "@/components/generic-simple-calculator";
+import type { CalculatorRecord } from "@/lib/content";
 import {
   getCalculatorByPath,
   getCalculatorPaths,
@@ -102,6 +103,8 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const conversion = conversionFromConfig ?? conversionFromSlug;
   const related = getRelatedCalculators(calculator.fullPath, calculator.category);
   const pageContent = config?.pageContent ?? null;
+  const internalLinks = resolveInternalLinks(config?.links?.internal ?? []);
+  const externalLinks = resolveExternalLinks(config?.links?.external ?? []);
   const introductionParagraphs = pageContent?.introduction ?? [];
   const methodologyParagraphs = pageContent?.methodology ?? [];
   const examples = pageContent?.examples ?? [];
@@ -359,6 +362,53 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </section>
         )}
 
+        {(internalLinks.length > 0 || externalLinks.length > 0) && (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">Further resources</h2>
+            <div className="space-y-6 text-base text-slate-600">
+              {internalLinks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    Related calculators
+                  </h3>
+                  <ul className="mt-3 space-y-2">
+                    {internalLinks.map((item) => (
+                      <li key={item.fullPath}>
+                        <Link href={item.fullPath} className="hover:text-brand">
+                          {item.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {externalLinks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    External guidance
+                  </h3>
+                  <ul className="mt-3 space-y-2">
+                    {externalLinks.map((item) => (
+                      <li key={item.url}>
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel={[..."noopener noreferrer".split(" "), ...(item.rel ?? [])]
+                            .filter(Boolean)
+                            .join(" ")}
+                          className="hover:text-brand"
+                        >
+                          {item.label ?? item.url}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {conversion && (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
             <h2 className="font-serif text-2xl font-semibold text-slate-900">
@@ -469,6 +519,77 @@ function getRelatedCalculators(currentPath: string, category: string) {
   return getPublishedCalculators()
     .filter((item) => item.fullPath !== currentPath && item.category === category)
     .slice(0, 6);
+}
+
+function resolveInternalLinks(paths: string[]): CalculatorRecord[] {
+  const results: CalculatorRecord[] = [];
+  const seen = new Set<string>();
+
+  for (const rawPath of paths) {
+    if (typeof rawPath !== "string") {
+      continue;
+    }
+    const normalized = normalizeInternalPath(rawPath);
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+    const calculator = getCalculatorByPath(normalized);
+    if (calculator && calculator.isPublished) {
+      results.push(calculator);
+      seen.add(normalized);
+    }
+  }
+
+  return results;
+}
+
+function normalizeInternalPath(path: string) {
+  const trimmed = path.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const withLeading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeading.replace(/\/+/g, "/").replace(/\/+$/g, "") || null;
+}
+
+interface ExternalLink {
+  url: string;
+  label?: string;
+  rel?: string[];
+}
+
+function resolveExternalLinks(entries: unknown): ExternalLink[] {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const links: ExternalLink[] = [];
+
+  entries.forEach((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return;
+    }
+    const url = "url" in entry && typeof entry.url === "string" ? entry.url.trim() : "";
+    if (!url || seen.has(url)) {
+      return;
+    }
+    const label =
+      "label" in entry && typeof entry.label === "string" ? entry.label.trim() : undefined;
+    const rel =
+      "rel" in entry && Array.isArray(entry.rel)
+        ? entry.rel.filter((token): token is string => typeof token === "string" && token.trim() !== "")
+        : undefined;
+
+    links.push({
+      url,
+      label,
+      rel
+    });
+    seen.add(url);
+  });
+
+  return links;
 }
 
 function titleCase(value: string) {
