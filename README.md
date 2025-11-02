@@ -158,7 +158,7 @@ This model removes bespoke React development from the daily cadence. Humans conc
 - When using ChatGPT/Gemini/Claude: upload the zip first, then paste the prompt+context.
 - When using VS Code AI: ensure the assistant has access to the research folder (or paste representative excerpts) before running the prompt.
 
-Replace the bracketed placeholders in the template below before sending it to the model.
+Replace the bracketed placeholders in the template below before sending it to the model. When you paste the AI response into `/admin/playground`, you may either paste the entire wrapper (with `component_type` + `config_json`) or only the inner `config_json`.
 
 ```text
 You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Quantus config schema.
@@ -180,7 +180,7 @@ Requirements for the JSON you return:
   - `metadata.title` and `metadata.description`: persuasive copy that differentiates us; no HTML.
   - `logic`:
     * For `component_type = "converter"` set `type` to `"conversion"` and provide `fromUnitId`/`toUnitId`.
-    * For `component_type = "simple_calc"` set `type` to `"formula"` with an `outputs` array (each item needs `id`, `label`, `expression`, optional `unit`/`format`).
+    * For `component_type = "simple_calc"` set `type` to `"formula"` with an `outputs` array (each item needs `id`, `label`, `expression`, optional `unit`/`format`). Do **not** create extra properties such as `expressions`, `precision`, `isPrimary`, or `description`.
     * For `component_type = "advanced_calc"` set `type` to `"advanced"` and supply a `methods` object. Each method must define:
       - `label` + optional `description`.
       - `variables`: map of `{ "variable_name": { "expression": "...", "dependencies": [], "label": "...", "unit": "...", "format": "...", "display": true|false } }`. Expressions may reference form field IDs, other variables, or helper functions (`pow`, `min`, `max`, `abs`, `sqrt`, `log`, `exp`).
@@ -188,7 +188,7 @@ Requirements for the JSON you return:
       - `formula` (optional) to indicate the primary variable if you want a default highlight.
     * Always populate `defaultMethod` with the method id that should load first.
   - `form`:
-    * For converters/simple calculators, supply a flat `fields` array (labels, types, sensible defaults, min/max, step, options). Use `form.result.outputs` when you want companion result cards.
+    * For converters/simple calculators, supply a flat `fields` array (labels, types, sensible defaults, min/max, step, options). Use `form.result.outputs` when you want companion result cards—each entry should only include `id`, `label`, `format`, and optional `unit`.
     * For advanced calculators you may combine `fields` (global inputs) and `sections` (grouped inputs). Each section can include an optional `description` and `show_when` object (`field`, `equals`, `in`) to control conditional rendering. Every field may include `help_text`, `placeholder`, `default`, and validation limits.
   - `page_content`: use arrays of plain-text sentences; do not embed HTML. Provide:
     * `introduction`: 2–3 short paragraphs explaining intent and user value.
@@ -212,7 +212,7 @@ Analytical expectations:
 - When you create multiple calculation methods (`advanced_calc`), ensure each method exposes distinct outputs and clearly communicates when it should be used.
 
 Output:
-- Return ONLY the final JSON object. It must parse without post-processing and conform to the schema above.
+- Return ONLY the final JSON object (containing `component_type` and `config_json`). It must parse without post-processing and conform to the schema above.
 ```
 
 ## Implementation guidance & critique

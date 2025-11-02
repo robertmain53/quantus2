@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   type CalculatorComponentType,
@@ -12,42 +12,39 @@ import { GenericConverter } from "@/components/generic-converter";
 import { GenericSimpleCalculator } from "@/components/generic-simple-calculator";
 
 const SAMPLE_CONFIG = `{
-  "version": "1.0.0",
-  "metadata": {
-    "title": "Meters to Feet Converter",
-    "description": "Convert meters to feet with precision and see worked examples."
-  },
-  "logic": {
-    "type": "conversion",
-    "fromUnitId": "meter",
-    "toUnitId": "foot"
-  },
-  "page_content": {
-    "introduction": [
-      "Convert meters to feet instantly with engineering-grade precision.",
-      "Adjust any value to see the corresponding conversion."
-    ],
-    "methodology": [
-      "We anchor the conversion to SI base units and apply the official 3.28084 multiplier.",
-      "All results are rounded to four decimal places for readability."
-    ],
-    "faqs": [
-      {
-        "question": "How many feet are in a meter?",
-        "answer": "One meter equals approximately 3.28084 feet."
-      }
-    ],
-    "citations": [
-      {
-        "label": "NIST Guide to SI Units",
-        "url": "https://www.nist.gov/pml/owm/si-units"
-      }
-    ]
-  },
-  "links": {
-    "internal": [
-      "/conversions/length/meters-to-centimeters-converter"
-    ]
+  "component_type": "converter",
+  "config_json": {
+    "version": "1.0.0",
+    "metadata": {
+      "title": "Meters to Feet Converter",
+      "description": "Convert meters to feet with precision and see worked examples."
+    },
+    "logic": {
+      "type": "conversion",
+      "fromUnitId": "meter",
+      "toUnitId": "foot"
+    },
+    "form": {
+      "fields": [
+        {
+          "id": "value",
+          "label": "Meters",
+          "type": "number",
+          "default": 1,
+          "min": 0
+        }
+      ]
+    },
+    "page_content": {
+      "introduction": [
+        "Convert meters to feet instantly with engineering-grade precision."
+      ]
+    },
+    "links": {
+      "internal": [
+        "/conversions/length/meters-to-centimeters-converter"
+      ]
+    }
   }
 }`;
 
@@ -55,7 +52,34 @@ export function ConfigPlayground() {
   const [rawConfig, setRawConfig] = useState<string>(SAMPLE_CONFIG);
   const [componentType, setComponentType] = useState<CalculatorComponentType>("converter");
 
-  const validation = useMemo(() => validateCalculatorConfig(rawConfig, "playground"), [rawConfig]);
+  const parsedInput = useMemo(() => {
+    try {
+      const json = JSON.parse(rawConfig);
+      if (json && typeof json === "object" && "config_json" in json) {
+        const configJson = JSON.stringify(json.config_json, null, 2);
+        const detectedType =
+          typeof json.component_type === "string"
+            ? (json.component_type as CalculatorComponentType)
+            : null;
+        return { configText: configJson, detectedType };
+      }
+    } catch {
+      // fall through
+    }
+
+    return { configText: rawConfig, detectedType: null as CalculatorComponentType | null };
+  }, [rawConfig]);
+
+  useEffect(() => {
+    if (parsedInput.detectedType && parsedInput.detectedType !== componentType) {
+      setComponentType(parsedInput.detectedType);
+    }
+  }, [parsedInput.detectedType, componentType]);
+
+  const validation = useMemo(
+    () => validateCalculatorConfig(parsedInput.configText, "playground"),
+    [parsedInput.configText]
+  );
   const validationErrors = validation.errors;
   const parsedConfig = validation.config;
 
@@ -142,8 +166,9 @@ export function ConfigPlayground() {
       <div className="space-y-4">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
           <p>
-            Paste <code>config_json</code> on the left to preview how the generic engines will render
-            that configuration. Validation runs automatically as you type.
+            Paste either the entire JSON object (with <code>component_type</code> +
+            <code>config_json</code>) or the inner <code>config_json</code>. Validation runs
+            automatically as you type.
           </p>
         </div>
         <div className="space-y-4">

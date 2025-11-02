@@ -280,20 +280,40 @@ function normalizeComponentType(input: string | undefined): CalculatorComponentT
 }
 
 function parseRowConfig(raw: string | undefined, context: string): CalculatorConfig | null {
-  if (!raw) {
+  const trimmed = raw?.trim();
+
+  if (trimmed) {
+    try {
+      return parseCalculatorConfig(trimmed, `config_json for ${context}`);
+    } catch (error) {
+      throw new Error(`Invalid config_json for ${context}: ${(error as Error).message}`);
+    }
+  }
+
+  const relativePath = context.replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!relativePath) {
     return null;
   }
 
-  const trimmed = raw.trim();
-  if (!trimmed) {
+  const configRoot = path.join(process.cwd(), "data", "configs");
+  const nestedFile = path.join(configRoot, `${relativePath}.json`);
+  const leafFile = path.join(
+    configRoot,
+    `${relativePath.split("/").filter(Boolean).pop() ?? relativePath}.json`
+  );
+
+  const filePath = fs.existsSync(nestedFile)
+    ? nestedFile
+    : fs.existsSync(leafFile)
+      ? leafFile
+      : null;
+
+  if (!filePath) {
     return null;
   }
 
-  try {
-    return parseCalculatorConfig(trimmed, `config_json for ${context}`);
-  } catch (error) {
-    throw new Error(`Invalid config_json for ${context}: ${(error as Error).message}`);
-  }
+  const fileContent = fs.readFileSync(filePath, "utf-8");
+  return parseCalculatorConfig(fileContent, `config file ${relativePath}`);
 }
 
 function inferComponentTypeFromConfig(
