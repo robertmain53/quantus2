@@ -116,13 +116,6 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
     return evaluateAdvancedMethod(activeMethod, numericValues);
   }, [activeMethod, numericValues]);
 
-  const evaluation = useMemo<EvaluatedOutputs>(() => {
-    if (!activeMethod) {
-      return { variables: {}, outputs: [] };
-    }
-    return evaluateAdvancedMethod(activeMethod, numericValues);
-  }, [activeMethod, numericValues]);
-
   if (!logic || methods.length === 0) {
     return (
       <section className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
