@@ -16,31 +16,31 @@ export default function HomePage() {
       <section className="grid gap-12 lg:grid-cols-12 lg:items-center">
         <div className="space-y-6 lg:col-span-7">
           <span className="inline-flex items-center rounded-full bg-sky-100 px-4 py-1 text-sm font-medium text-sky-700">
-            Enterprise SEO Engineered
+            Built for Technical Teams
           </span>
           <h1 className="font-serif text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
-            Launch converters and calculators that outrank the incumbents.
+            Deliver calculators your experts can trust on deadline.
           </h1>
           <p className="text-lg text-slate-600">
-            Quantus orchestrates thousands of high-intent experiences with
-            precise metadata, structured data, and frictionless UX that scales
-            to 120K+ daily sessions.
+            Quantus keeps every converter auditable—aligning with published standards,
+            documenting methodology, and presenting results in a workflow your engineers,
+            analysts, and operators can rely on for real-world decisions.
           </p>
           <div className="flex flex-wrap gap-4 text-sm text-slate-500">
             <div className="rounded-lg bg-white px-4 py-2 shadow-sm shadow-slate-200">
-              Static-first architecture
+              Versioned methodologies &amp; units
             </div>
             <div className="rounded-lg bg-white px-4 py-2 shadow-sm shadow-slate-200">
-              Semantic linking across hubs
+              Standards-backed references
             </div>
             <div className="rounded-lg bg-white px-4 py-2 shadow-sm shadow-slate-200">
-              Programmatic publishing cadence
+              Governed release cadence
             </div>
           </div>
         </div>
         <aside className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200 lg:col-span-5">
           <h2 className="text-base font-semibold text-slate-800">
-            Content pipeline (next releases)
+            Upcoming releases (versioned roadmap)
           </h2>
           <ol className="space-y-4 text-sm text-slate-600">
             {publishSchedule.map((entry) => (
@@ -61,7 +61,7 @@ export default function HomePage() {
       <section className="space-y-8">
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">
-            High-value knowledge hubs
+            Disciplines we support
           </h2>
           <Link
             href="/category"
@@ -110,10 +110,10 @@ export default function HomePage() {
       <section className="space-y-8">
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">
-            Core converters ready for launch
+            Core converters teams depend on
           </h2>
           <p className="text-sm text-slate-500">
-            Ranked by forecasted daily sessions
+            Prioritized by active demand and critical workflows
           </p>
         </div>
         <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">

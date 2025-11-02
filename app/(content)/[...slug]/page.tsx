@@ -501,8 +501,8 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </p>
           <p className="mt-3 text-base">
             This experience belongs to the {calculator.category.toLowerCase()} cluster.
-            It is updated according to our SEO playbook and schema governance to keep
-            pace with algorithm changes.
+            It is maintained with versioned methodologies, standards references, and
+            scheduled technical reviews so your team can trust the output.
           </p>
         </div>
       </aside>

@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s | Quantus"
   },
   description:
-    "Quantus delivers authoritative calculators and unit converters engineered for enterprise-scale SEO performance.",
+    "Quantus delivers authoritative calculators and unit converters for engineers, analysts, and operations teams who need standards-aligned answers.",
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -34,14 +34,14 @@ export const metadata: Metadata = {
     siteName: "Quantus",
     title: "Quantus | Precision Converters & Calculators",
     description:
-      "Explore expertly crafted calculators and conversion tools optimized for accuracy, UX, and search impact."
+      "Explore expertly crafted calculators and conversion tools optimized for accuracy, auditability, and day-to-day professional workflows."
   },
   twitter: {
     card: "summary_large_image",
     creator: "@quantus",
     title: "Quantus | Precision Converters & Calculators",
     description:
-      "Enterprise-ready calculators and conversion tools designed for usability and SEO growth."
+      "Enterprise-ready calculators and conversion tools designed for dependable decision support."
   },
   robots: {
     index: true,

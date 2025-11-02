@@ -32,7 +32,7 @@ export function SiteHeader() {
             <SiteSearch />
           </Suspense>
           <div className="hidden text-xs uppercase tracking-wide text-slate-400 md:flex md:items-center">
-            <span>120K / day target</span>
+            <span>Standards aligned · audit ready</span>
           </div>
         </div>
       </div>

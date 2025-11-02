@@ -7,7 +7,7 @@ export function SiteFooter() {
         <div>
           <p className="text-lg font-semibold">Quantus</p>
           <p className="text-sm text-slate-400">
-            Programmatic content engine engineered for elite SEO performance.
+            Standards-driven calculators and converters for teams that depend on defensible answers.
           </p>
         </div>
         <nav className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
