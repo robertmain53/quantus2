@@ -28,75 +28,139 @@ npm run dev
 
 ## Content operations
 
-- Source data lives in `data/calc.csv`. Each row defines a calculator/category path, predicted traffic, and publish date.
-- The data layer (`lib/content.ts`) is memoized and powers static params, navigation, search, sitemaps, and metadata.
-- Editing the CSV triggers new static routes automatically the next time `next build` runs—no code changes required for new entries. Entries with a `New_Publish_Date` in the future stay hidden from users, bots, and the sitemap until the date arrives.
+- Source data lives in `data/calc.csv`. Each row is the single source of truth for taxonomy, publishing cadence, calculator configuration, and on-page copy.
+- The data layer (`lib/content.ts`) loads the CSV, memoizes it, and exposes helpers that drive static params, navigation, search, sitemaps, metadata, and calculator rendering.
+- Editing the CSV is all that’s required to launch, update, or unpublish a calculator. During `next build`, unpublished rows (publish date in the future) are skipped automatically.
 - Use the `traffic_estimate` column to prioritize categories surfaced on the homepage and navigation.
+
+### CSV schema (AI-first)
+
+| Column | Purpose |
+| --- | --- |
+| `category` | Human-readable cluster name (e.g. `Finance`). Used for taxonomy grouping and navigation copy. |
+| `subcategory` | Optional sub-cluster label (e.g. `Loans`). Empty cells keep calculators directly under the category. |
+| `slug` | Absolute path (e.g. `/finance/loans/personal-loan-payment-calculator`). Uniqueness is enforced in the loader. |
+| `title` | Page H1 and default metadata title. AI copy should be final-ready. |
+| `traffic_estimate` | Daily sessions forecast. Drives prioritisation and projected totals. |
+| `New_Publish_Date` | ISO-friendly date. Items with a future date stay hidden until the next rebuild after that date. |
+| `component_type` | Enum describing which generic engine should render the calculator. Supported values: `converter`, `simple_calc`, `advanced_calc`. |
+| `config_json` | JSON blob containing the full calculator contract: inputs, outputs, validation rules, content sections, schema hints, internal/external link plans, and presentation settings. |
+
+> **Tip:** Keep JSON payloads in valid UTF-8 and escape double quotes if editing the CSV manually. For bulk edits, prefer tooling (Airtable export, Google Sheets + script) that can manage multi-line cells safely.
+
+### Generic calculator engines
+
+We ship a small stable of reusable React components. Each reads `component_type` and `config_json` to decide how to render the interactive experience:
+
+- `GenericConverter.tsx` – unit-to-unit conversions with reversible inputs, precision rules, and optional derived outputs.
+- `GenericSimpleCalculator.tsx` – single-formula calculators (e.g. CAGR, markup) with lightweight validation.
+- `GenericAdvancedCalculator.tsx` – multi-step or multi-output flows (e.g. amortization) with repeatable groups, tables, and scenario analysis.
+
+Adding a new calculator never requires building another bespoke React component. Instead, evolve the engine APIs if a new pattern emerges, then reuse it everywhere via configuration.
 
 ### Adding calculators
 
-1. Add a row to `data/calc.csv` with category, optional subcategory, slug (absolute path), and title.
-2. Commit the change and run `npm run build`. Next.js will pre-render the new calculator and include it in search, navigation, and the sitemap once the publish date is in the past.
-3. If the slug follows the pattern `{unit}-to-{unit}-converter`, the page automatically enables the interactive conversion widget.
+1. Paste a new row in `data/calc.csv` (or the upstream datasource) with category, slug, publish date, and the AI-generated `component_type` plus unified `config_json`.
+2. Run `npm run build`. Next.js pre-renders the page, schema, and navigation updates using the generic component matched to `component_type` and hydrated by the config.
+3. Commit the CSV change. The deployment pipeline handles static regeneration once the publish date is met.
 
 ### Category taxonomy
 
 - Top categories are derived from the CSV. No manual configuration is required.
 - Category and subcategory pages are statically rendered from the data layer and include internal linking plus traffic forecasts.
 
-## Calculator production workflow (EEAT + AI assisted)
+## AI-first production workflow
 
-Every calculator ships as a best-in-class tool that surpasses competitors on UX, expertise, experience, authoritativeness, trust (EEAT), depth, and helpfulness. Follow this workflow for each slug listed in `data/calc.csv`.
+This model removes bespoke React development from the daily cadence. Humans concentrate on research, validation, and governance; AI generates production-ready configuration and content.
 
-1. **Create a research workspace**
-   - In the repository root, create a folder whose name matches the calculator slug (e.g. `auto-loan-amortization-calculator`).
-   - Collect 20–30 competitor calculators and related reference articles (HTML, PDFs, screenshots, spreadsheets). Save them in the folder for provenance.
+1. **Research (human)**
+   - Assemble a corpus of 20–30 competitor calculators plus primary sources.
+   - Store assets in a shared drive; provenance is mandatory for compliance and post-hoc audits.
 
-2. **Synthesize research insights**
-   - Catalogue formulas, variable definitions, edge cases, UX ideas, schema usage, and internal/external linking tactics present in the competitor set.
-   - Identify authoritative sources cited by competitors (standards organizations, regulations, journals) and capture canonical URLs.
+2. **Synthesis & generation (AI)**
+   - Feed the corpus into your AI workspace with a prompt that requests:
+     - Final `component_type` selection.
+     - A unified `config_json` matching the engine contract, including inputs, units, computed outputs, validation, display rules, content sections, link plans, and schema metadata. A representative structure might look like:
+       ```json
+       {
+         "version": "1.0.0",
+         "metadata": {
+           "title": "Personal Loan Payment Calculator",
+           "description": "Model monthly repayments, total interest, and payoff timelines."
+         },
+         "form": {
+           "fields": [
+             { "id": "principal", "label": "Loan amount", "type": "currency", "min": 1000, "max": 500000 },
+             { "id": "apr", "label": "APR", "type": "percent", "min": 0.1, "max": 60 },
+             { "id": "term_months", "label": "Term", "type": "integer", "min": 6, "max": 360 }
+           ],
+           "result": {
+             "outputs": [
+               { "id": "monthlyPayment", "label": "Monthly payment", "unit": "usd" },
+               { "id": "totalInterest", "label": "Total interest", "unit": "usd" }
+             ]
+           }
+         },
+         "logic": {
+           "type": "amortization",
+           "formula": "PMT"
+         },
+         "content": {
+           "introduction": "<p>Use this calculator to understand the cost of any personal loan.</p>",
+           "methodology": "<p>We compute payments using the standard amortization formula...</p>",
+           "faqs": [
+             { "question": "How do I lower my monthly payment?", "answer": "<p>Lower APR or longer term reduces payments.</p>" }
+           ],
+           "citations": [
+             { "label": "Consumer Finance Protection Bureau", "url": "https://www.consumerfinance.gov" }
+           ]
+         },
+         "schema": {
+           "additionalTypes": ["HowTo"]
+         },
+         "links": {
+           "internal": ["/finance/loans/auto-loan-payment-calculator"],
+           "external": [
+             { "url": "https://www.fdic.gov/resources/consumers/consumer-news/2023-12.pdf", "rel": ["noopener", "noreferrer"] }
+           ]
+         }
+       }
+       ```
+     - Any specialised JSON-LD requirements (e.g. `HowTo`, `Dataset`) should be embedded inside `config_json` so engines can emit schema automatically.
 
-3. **Draft an AI brief**
-   - Prepare a structured prompt that instructs the model to:
-     - Study every file in the slug folder.
-     - Summarize the strongest UX/UI patterns, data models, validation rules, and narrative structures.
-     - Produce a calculator specification (inputs, outputs, formulas, error handling, accessibility requirements, performance targets).
-     - Generate content sections (intro, methodology, FAQs, examples, citations) that exceed the depth of the aggregated competitors.
-     - Recommend schema (JSON-LD) enhancements, internal links, and high-authority external references.
+3. **Review (human)**
+   - Senior engineer validates the JSON: formulas, units, rounding, and accessibility properties.
+   - Editor reviews the generated copy for EEAT, tone, compliance, and citation accuracy.
+   - Both sign off by updating the row status in the source spreadsheet (optional but recommended).
 
-   Example prompt to adapt (feed alongside the collected files):
-   ```
-   You are an elite product strategist and senior engineer. Study every asset inside ./<slug>.
-   Goals:
-   1. Architect a calculator experience that outperforms all collected competitors in UX, clarity, speed, accessibility, and trust.
-   2. Provide complete formulas (including unit conversions, rounding, edge cases) and explain each variable.
-   3. Recommend UI flows, component states, microcopy, validation rules, and structured data.
-   4. Draft long-form content with deep domain expertise (EEAT): intro, methodology, worked examples, FAQs, glossary, citations.
-   5. Extract every authoritative source cited in the corpus. Return canonical URLs and context on why each matters.
-   6. Suggest internal links (existing Quantus pages) that reinforce topical authority.
-   Deliverables:
-   - Calculator spec (JSON or markdown table).
-   - Content outline and draft copy.
-   - Schema enhancements (JSON-LD).
-   - Link plan (internal + external with rationale).
-   - QA checklist covering accessibility, performance, accuracy, and legal/compliance.
-   ```
+4. **Data entry (human)**
+   - Paste the approved `config_json` into the CSV (or upstream database). Avoid manual tweaks elsewhere; the runtime should stay deterministic.
 
-4. **Human + AI collaboration**
-   - Humans review the AI output, validate formulas against primary sources, and adjust UX recommendations to align with design systems.
-   - Iterate with AI as needed to refine the calculator spec, content, and link plan.
-   - Document all authoritative references in the folder and cite them within the final content.
+5. **Publication**
+   - Trigger `npm run build` locally or rely on CI. Once the publish date arrives, the calculator goes live with no additional engineering effort.
+   - Scheduled refreshes or corrections are handled by updating the CSV and re-running the pipeline.
 
-5. **Build the product experience**
-   - Implement the calculator UI/logic in `app/(content)/...` aligned with the generated specification.
-   - Add supporting visualizations, tables, and interactive helpers identified during research.
-   - Ensure external links to authoritative sources open in new tabs with appropriate rel attributes.
-   - Update structured data (FAQ, HowTo, Dataset, etc.) based on AI recommendations and legal approvals.
+> **Quality gates:** Maintain automated validation inside `lib/content.ts` to reject malformed JSON, missing enum values, or unsanitised HTML before build time.
 
-6. **QA and publication**
-   - Run automated tests (`npm run test`, `npm run lint`) and manual QA against the checklist (accessibility, accuracy, cross-device).
-   - Set or update `New_Publish_Date` in the CSV to control release timing. Once the date is in the past, the calculator appears in search, navigation, and the sitemap automatically.
-   - Archive the final AI prompts and outputs in the slug folder for governance and future audits.
+## Implementation guidance & critique
+
+- **Strengths of the AI-first plan**
+  - Eliminates bespoke React work; throughput is governed by research and validation capacity, not engineering.
+  - Centralises all business logic in `config_json`, enabling reproducible builds and lightweight rollbacks (revert CSV rows).
+  - Encourages consistent UX patterns because engines evolve once and instantly benefit every calculator.
+
+- **Risk areas to address**
+  - `config_json` must be strictly versioned. Introduce a `config_version` field or embed schema IDs so older rows do not break when engines evolve.
+  - Large JSON blobs in CSV cells are fragile. Consider mirroring the data in Airtable or a headless CMS with an automated export to guarantee quoting and encoding fidelity.
+  - AI-generated HTML embedded inside `config_json` requires sanitisation. Bake sanitising into the loader and limit the allowed tag list to prevent XSS.
+  - Advanced calculators may need cross-field dependencies (e.g., amortisation tables). Document the engine contract thoroughly so AI prompts include required structures.
+
+- **Recommendations for future refinement**
+  1. Extend `npm run test` with JSON-schema validation against `config_json` and snapshot tests for representative calculators.
+  2. Add a playground admin tool that loads `config_json` and renders the generic component locally for reviewers (no code changes required).
+  3. Track review outcomes (approved / needs-fix) in metadata to build governance metrics and surface calculators stuck in QA.
+  4. Automate link checking and citation validation to catch stale sources before publication.
+  5. When new UX paradigms arise, enhance the generic engines behind feature flags, then upgrade existing rows by script—never by hand.
 
 ## SEO foundation
 
