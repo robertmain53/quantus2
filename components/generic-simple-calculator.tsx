@@ -7,6 +7,7 @@ import type {
   CalculatorFormConfig,
   CalculatorFormField,
   CalculatorFormOutput,
+  CalculatorLogicConfig,
   FormulaLogicConfig
 } from "@/lib/calculator-config";
 
@@ -20,7 +21,7 @@ interface CompiledOutput extends CalculatorFormOutput {
 
 export function GenericSimpleCalculator({ config }: GenericSimpleCalculatorProps) {
   const form = config?.form;
-  const logic = config?.logic && config.logic.type === "formula" ? config.logic : null;
+  const logic = isFormulaLogic(config?.logic) ? (config?.logic ?? null) : null;
 
   if (!form || !logic) {
     return (
@@ -272,4 +273,10 @@ function formatOutputValue(value: number, format?: string, unit?: string) {
       return unit ? `${formatted} ${unit}` : formatted;
     }
   }
+}
+
+function isFormulaLogic(
+  logic: CalculatorLogicConfig | null | undefined
+): logic is FormulaLogicConfig {
+  return Boolean(logic && logic.type === "formula" && Array.isArray(logic.outputs));
 }
