@@ -171,15 +171,15 @@ Requirements for the JSON you return:
 - Top-level shape:
   ```json
   {
-    "component_type": "converter | simple_calc | advanced_calc",
+    "component_type": "converter | simple_calc",
     "config_json": { ... }
   }
   ```
 - Inside `config_json`:
   - `version`: semantic string, bump `major.minor` if you introduce new schema capabilities.
   - `metadata.title` and `metadata.description`: persuasive copy that differentiates us; no HTML.
-  - `logic`: choose `conversion`, `formula`, or a documented advanced type. Include everything needed for deterministic calculations (unit IDs, expressions, tables, tolerances).
-  - `form`: define every input field rendered in the UI. Provide labels, types (`currency`, `percent`, `integer`, `select`, etc.), sensible defaults, min/max, step, and select options where relevant.
+  - `logic`: set `type` to `"conversion"` (for unit converters) or `"formula"` (for calculators). Include everything needed for deterministic calculations (unit IDs, expressions, tolerances). Do not introduce custom logic types.
+  - `form`: supply a flat `fields` array (no nested sections or conditional `show_when`). Provide labels, types (`currency`, `percent`, `integer`, `select`, etc.), sensible defaults, min/max, step, and select options where relevant. If outputs are needed, use `form.result.outputs`.
   - `page_content`: use arrays of plain-text sentences; do not embed HTML. Provide:
     * `introduction`: 2–3 short paragraphs explaining intent and user value.
     * `methodology`: authoritative walkthrough referencing standards/regulations.
@@ -188,7 +188,7 @@ Requirements for the JSON you return:
     * `citations`: authoritative sources (label + URL + optional summary).
     * `summary`: short bullet sentences capturing key insights from the attached assets (reference filenames when helpful).
     * `glossary` if helpful.
-  - `links`: internal slugs (existing Quantus paths) reinforcing topical clusters + authoritative external references (`rel` should include `noopener`/`noreferrer` when outbound).
+  - `links`: `internal` must be an array of existing Quantus slugs (e.g., `"/finance/loans/roi-calculator"`). `external` entries must be objects with `url` and optional `label`, `rel` (array of tokens such as `"noopener"` or `"noreferrer"`).
   - `schema.additionalTypes`: include structured data hints (e.g., `"HowTo"`, `"Dataset"`) when justified by the copy.
 - Never emit HTML tags; formatting is handled by the React engine.
 - Ensure math expressions use variables that match `form.fields[].id`.
