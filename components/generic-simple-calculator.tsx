@@ -226,9 +226,9 @@ function compileExpression(expression: string, fieldIds: string[]) {
     ) as (...args: unknown[]) => number;
 
     return (variables: Record<string, number>) => {
-      const args = uniqueFieldIds
-        .map((id) => variables[id] ?? NaN)
-        .concat(helperEntries.map(([, value]) => value));
+      const computedValues = uniqueFieldIds.map((id) => variables[id] ?? NaN);
+      const helperValues = helperEntries.map(([, value]) => value);
+      const args: unknown[] = [...computedValues, ...helperValues];
       try {
         const result = evaluator(...args);
         return typeof result === "number" && Number.isFinite(result) ? result : NaN;
