@@ -18,6 +18,7 @@ import {
   convertValue,
   getUnitById
 } from "@/lib/conversions";
+import type { ConversionLogicConfig, CalculatorLogicConfig } from "@/lib/calculator-config";
 import {
   buildBreadcrumbSchema,
   buildFaqSchema,
@@ -93,12 +94,10 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 
   const config = calculator.config;
   const componentType = calculator.componentType;
-  const conversionLogic =
-    config?.logic && config.logic.type === "conversion" ? config.logic : null;
-  const conversionFromConfig =
-    conversionLogic !== null
-      ? buildConversionContextFromLogic(conversionLogic.fromUnitId, conversionLogic.toUnitId)
-      : null;
+  const conversionLogic = config?.logic ?? null;
+  const conversionFromConfig = isConversionLogic(conversionLogic)
+    ? buildConversionContextFromLogic(conversionLogic.fromUnitId, conversionLogic.toUnitId)
+    : null;
   const conversionFromSlug = parseConversionFromSlug(calculator.slug);
   const conversion = conversionFromConfig ?? conversionFromSlug;
   const related = getRelatedCalculators(calculator.fullPath, calculator.category);
@@ -485,6 +484,12 @@ function humanizeDate(value: string) {
     day: "numeric",
     year: "numeric"
   });
+}
+
+function isConversionLogic(
+  logic: CalculatorLogicConfig | null | undefined
+): logic is ConversionLogicConfig {
+  return Boolean(logic && logic.type === "conversion" && "fromUnitId" in logic && "toUnitId" in logic);
 }
 
 function buildConversionContextFromLogic(
