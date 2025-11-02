@@ -278,5 +278,9 @@ function formatOutputValue(value: number, format?: string, unit?: string) {
 function isFormulaLogic(
   logic: CalculatorLogicConfig | null | undefined
 ): logic is FormulaLogicConfig {
-  return Boolean(logic && logic.type === "formula" && Array.isArray(logic.outputs));
+  if (!logic || logic.type !== "formula") {
+    return false;
+  }
+
+  return Object.prototype.hasOwnProperty.call(logic, "outputs") && Array.isArray((logic as FormulaLogicConfig).outputs);
 }
