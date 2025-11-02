@@ -179,7 +179,7 @@ Requirements for the JSON you return:
   - `version`: semantic string, bump `major.minor` if you introduce new schema capabilities.
   - `metadata.title` and `metadata.description`: persuasive copy that differentiates us; no HTML.
   - `logic`:
-    * For `component_type = "converter"` set `type` to `"conversion"` and provide `fromUnitId`/`toUnitId`.
+    * For `component_type = "converter"` set `type` to `"conversion"` and provide only `fromUnitId` and `toUnitId` that match entries in `lib/conversions.ts`. Do not emit custom unit arrays, conversion factors, precision settings, or formula strings.
     * For `component_type = "simple_calc"` set `type` to `"formula"` with an `outputs` array (each item needs `id`, `label`, `expression`, optional `unit`/`format`). Do **not** create extra properties such as `expressions`, `precision`, `isPrimary`, or `description`.
     * For `component_type = "advanced_calc"` set `type` to `"advanced"` and supply a `methods` object. Each method must define:
       - `label` + optional `description`.
@@ -188,12 +188,13 @@ Requirements for the JSON you return:
       - `formula` (optional) to indicate the primary variable if you want a default highlight.
     * Always populate `defaultMethod` with the method id that should load first.
   - `form`:
-    * For converters/simple calculators, supply a flat `fields` array (labels, types, sensible defaults, min/max, step, options). Use `form.result.outputs` when you want companion result cards—each entry should only include `id`, `label`, `format`, and optional `unit`.
+    * Converters render their own inputs; omit `form` or set it to `null` unless a companion UX pattern (e.g., presets) is explicitly required.
+    * For simple calculators, supply a flat `fields` array (labels, types, sensible defaults, min/max, step, options). Use `form.result.outputs` when you want companion result cards—each entry should only include `id`, `label`, `format`, and optional `unit`.
     * For advanced calculators you may combine `fields` (global inputs) and `sections` (grouped inputs). Each section can include an optional `description` and `show_when` object (`field`, `equals`, `in`) to control conditional rendering. Every field may include `help_text`, `placeholder`, `default`, and validation limits.
   - `page_content`: use arrays of plain-text sentences; do not embed HTML. Provide:
     * `introduction`: 2–3 short paragraphs explaining intent and user value.
     * `methodology`: authoritative walkthrough referencing standards/regulations.
-    * `examples`: optional worked scenarios with numbers derived from the logic.
+    * `examples`: optional worked scenarios expressed as plain-text sentences (no nested objects).
     * `faqs`: 3–5 Q&As covering expert intent, edge cases, and trust-building topics.
     * `citations`: authoritative sources (label + URL + optional summary).
     * `summary`: short bullet sentences capturing key insights from the attached assets (reference filenames when helpful).
