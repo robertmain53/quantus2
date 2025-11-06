@@ -500,9 +500,9 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             Authority signal
           </p>
           <p className="mt-3 text-base">
-            This experience belongs to the {calculator.category.toLowerCase()} cluster.
-            It is maintained with versioned methodologies, standards references, and
-            scheduled technical reviews so your team can trust the output.
+            Designed for {calculator.category.toLowerCase()} pros who need fast, trustworthy answers,
+            each release is benchmarked against current standards, peer-reviewed by our quant team, and
+            revalidated on a scheduled cadence so you can cite the results with confidence.
           </p>
         </div>
       </aside>
