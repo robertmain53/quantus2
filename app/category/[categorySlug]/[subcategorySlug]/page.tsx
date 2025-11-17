@@ -95,7 +95,7 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
             {subcategory.calculators.length} calculators
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1">
-            {subcategory.trafficTotal.toLocaleString()} projected visits
+      {/*      {subcategory.trafficTotal.toLocaleString()} projected visits */}
           </span>
         </div>
       </header>
