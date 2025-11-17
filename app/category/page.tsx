@@ -38,7 +38,7 @@ export default function CategoryIndexPage() {
                 {titleCase(category.label)}
               </Link>
               <p className="text-sm text-slate-500">
-                {category.trafficTotal.toLocaleString()} projected daily visits ·{" "}
+          {/*      {category.trafficTotal.toLocaleString()} projected daily visits ·{" "} */}
                 {category.calculators.length} calculators
               </p>
             </div>
