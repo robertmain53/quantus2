@@ -76,8 +76,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
           {titleCase(category.label)} Calculators & Intelligence
         </h1>
         <p className="max-w-3xl text-lg text-slate-600">
-          High-performing programmatic assets designed to capture transactional
-          intent across the {category.label.toLowerCase()} landscape.
+          High-performing tools designed to help professionals and not acrosss the {category.label.toLowerCase()} landscape.
         </p>
         <div className="flex flex-wrap gap-4 text-sm text-slate-500">
           <span className="rounded-full bg-slate-100 px-3 py-1">
@@ -112,7 +111,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
                   </Link>
                 </h3>
                 <p className="mt-2 text-sm text-slate-500">
-                  {subcategory.calculators.length} calculators ·{" "}
+                  {subcategory.calculators.length} calculators {/*  ·{" "} */}
     {/*              {subcategory.trafficTotal.toLocaleString()} projected visits */}
                 </p>
                 <ul className="mt-4 space-y-2 text-sm text-slate-600">
