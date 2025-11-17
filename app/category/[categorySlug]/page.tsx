@@ -87,7 +87,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
             {category.subcategories.length} subcategories
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1">
-            {category.trafficTotal.toLocaleString()} projected daily visits
+  {/*          {category.trafficTotal.toLocaleString()} projected daily visits */}
           </span>
         </div>
       </header>
@@ -113,7 +113,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
                 </h3>
                 <p className="mt-2 text-sm text-slate-500">
                   {subcategory.calculators.length} calculators ·{" "}
-                  {subcategory.trafficTotal.toLocaleString()} projected visits
+    {/*              {subcategory.trafficTotal.toLocaleString()} projected visits */}
                 </p>
                 <ul className="mt-4 space-y-2 text-sm text-slate-600">
                   {subcategory.calculators.slice(0, 3).map((calculator) => (
@@ -162,7 +162,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
                     </span>
                   )}
                 <span>
-                  {calculator.trafficEstimate.toLocaleString()} projected visits
+      {/*            {calculator.trafficEstimate.toLocaleString()} projected visits */}
                 </span>
               </div>
             </div>
