@@ -279,7 +279,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
               {calculator.publishDate && (
                 <span>Updated {humanizeDate(calculator.publishDate)}</span>
               )}
-              <span>{calculator.trafficEstimate.toLocaleString()} projected daily visits</span>
+        {/*      <span>{calculator.trafficEstimate.toLocaleString()} projected daily visits</span> */} 
             </div>
           </div>
         </header>
