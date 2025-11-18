@@ -170,6 +170,16 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 0.946352946,
     decimalPlaces: 4
   },
+  cup: {
+    id: "cup",
+    label: "US Cup",
+    symbol: "cup",
+    kind: "volume",
+    // 1 US liquid gallon is 16 cups. 1 gallon is 3.785411784 liters.
+    toBase: (value) => value * (3.785411784 / 16),
+    fromBase: (value) => value / (3.785411784 / 16),
+    decimalPlaces: 4
+  },
   celsius: {
     id: "celsius",
     label: "Celsius",
@@ -301,6 +311,8 @@ const aliasToUnitId: Record<string, string> = {
   quart: "quart",
   quarts: "quart",
   qt: "quart",
+  cup: "cup",
+  cups: "cup",
   celsius: "celsius",
   "degrees celsius": "celsius",
   celcius: "celsius",
