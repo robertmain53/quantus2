@@ -128,28 +128,14 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
       <GenericAdvancedCalculator config={config} />
     ) : null;
   const converterNode =
-    componentType === "converter"
-      ? config && config.logic && config.logic.type === "conversion"
-        ? <GenericConverter config={config} />
-        : conversion
-          ? (
-              <ConversionCalculator
-                fromUnitId={conversion.from.id}
-                toUnitId={conversion.to.id}
-              />
-            )
-          : null
-      : !componentType && conversion
-        ? (
-            <ConversionCalculator
-              fromUnitId={conversion.from.id}
-              toUnitId={conversion.to.id}
-            />
-          )
-        : null;
+    componentType === "converter" && config?.logic?.type === "conversion" ? (
+      <GenericConverter config={config} />
+    ) : !componentType && conversion ? (
+      // Fallback for legacy converters defined only by slug
+      <ConversionCalculator fromUnitId={conversion.from.id} toUnitId={conversion.to.id} />
+    ) : null;
   const simpleCalculatorNode =
-    ((componentType === "simple_calc" || (!componentType && config?.logic?.type === "formula")) &&
-      config) ? (
+    componentType === "simple_calc" && config?.logic?.type === "formula" ? (
       <GenericSimpleCalculator config={config} />
     ) : null;
   const breadcrumbs = [
