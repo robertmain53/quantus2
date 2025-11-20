@@ -164,8 +164,13 @@ Replace the bracketed placeholders in the template below before sending it to th
 You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Quantus config schema.
 
 Goals:
-1. Outperform every organic competitor on accuracy, UX, depth, and EEAT signals.
-2. Produce a single JSON object compatible with Quantus engines (`component_type` + `config_json`). No additional commentary.
+1. build a high-converting, SEO-first Milliliters-to-Cups converter for Quantus’ public catalog
+2. capture recipe & lab traffic with trust signals
+3. reference attached assets only for gaps in accuracy, authority, or UX and do not mention them in copy. 
+4 reference universities, and *.gov site for informations, formulas, insights and do mention them or even better link the in the copy
+5. strong EEAT copy (beyond methodology/faq)
+6. the output must be deployable JSON . I’ll review it directly via Quantus (so no placeholder commentary)
+7. Produce a single JSON object compatible with Quantus engines (`component_type` + `config_json`). No additional commentary.
 
 Requirements for the JSON you return:
 - Top-level shape:
