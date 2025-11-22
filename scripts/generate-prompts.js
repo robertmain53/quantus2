@@ -89,11 +89,29 @@ function buildTemplate() {
 function findMatchingZip(slug) {
   const slugFragment = slug.replace(/^\//, "").split("/").pop() || "";
   const base = slugFragment.replace("-converter", "").toLowerCase();
-  const files = fs.readdirSync(".");
-  const matches = files.filter(
-    (name) => name.endsWith(".zip") && name.toLowerCase().includes(base)
-  );
-  return matches;
+  const inputRoot = "input";
+  if (!fs.existsSync(inputRoot)) {
+    return [];
+  }
+
+  const zipFiles = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+      } else if (
+        entry.isFile() &&
+        entry.name.toLowerCase().includes(base) &&
+        entry.name.toLowerCase().endsWith(".zip")
+      ) {
+        zipFiles.push(path.relative(".", fullPath));
+      }
+    }
+  };
+
+  walk(inputRoot);
+  return zipFiles;
 }
 
 function formatSlugName(slug) {
@@ -133,7 +151,8 @@ function main() {
 
     const extraInstructions = [
       "Before you construct the config, scan the ./input folder and all subdirectories for competitor research assets (HTML snapshots, spreadsheets, or PDFs) and let the response draw from that corpus to raise information depth, EEAT, SEO, UX, and transparency.",
-      "Also mention which internal Quantus pages (e.g., category hubs or sibling calculators) provide related context, but avoid repeating any URLs already used in the citations that follow."
+      "Also mention which internal Quantus pages (e.g., category hubs or sibling calculators) provide related context, but avoid repeating any URLs already used in the citations that follow.",
+      "Schema guard: Return ONLY the Quantus schema JSON object with top-level keys component_type and config_json. Do not emit ui/hero/seo/content/calculator/layout fields. Follow README rules: metadata.title/description, logic (type=\"conversion\" with fromUnitId/toUnitId from lib/conversions.ts when available, otherwise type=\"formula\" with outputs), form (omit or null unless needed), page_content (introduction, methodology, examples, faqs, citations, summary, glossary), links (internal/external with rel), schema.additionalTypes. No HTML, no markdown, no extra keys."
     ].join(" ");
 
     const internalLinks = collectInternalLinks(rows, row);
