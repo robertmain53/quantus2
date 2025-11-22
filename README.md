@@ -164,13 +164,19 @@ Replace the bracketed placeholders in the template below before sending it to th
 You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Quantus config schema.
 
 Goals:
-1. build a high-converting, SEO-first Milliliters-to-Cups converter for Quantus’ public catalog
-2. capture recipe & lab traffic with trust signals
-3. reference attached assets only for gaps in accuracy, authority, or UX and do not mention them in copy. 
-4 reference universities, and *.gov site for informations, formulas, insights and do mention them or even better link the in the copy
-5. strong EEAT copy (beyond methodology/faq)
-6. the output must be deployable JSON . I’ll review it directly via Quantus (so no placeholder commentary)
-7. Produce a single JSON object compatible with Quantus engines (`component_type` + `config_json`). No additional commentary.
+
+1. Deliver a deployable JSON config that matches the Quantus schema, keeps the converter lean, and trades in user-facing value rather than internal talk.
+
+2. Keep metadata, page copy, and FAQs focused on address user's intent plus practical reassurance (calibration, instrument limits, regulatory cues).
+
+3. Use strong EEAT language (citations, references to NIST/OSHA/DOE/MIT/ISO, practical FAQs) without mentioning competitors, filenames, or the fact that this is a benchmark exercise.
+
+3. capture recipe & lab traffic with trust signals
+5. reference attached assets only for gaps in accuracy, authority, or UX and do not mention them in copy. 
+6 reference universities, and *.gov site for informations, formulas, insights and do mention them or even better link the in the copy
+7. strong EEAT copy (beyond methodology/faq)
+8. the output must be deployable JSON . I’ll review it directly via Quantus (so no placeholder commentary)
+9. Produce a single JSON object compatible with Quantus engines (`component_type` + `config_json`). No additional commentary.
 
 Requirements for the JSON you return:
 - Top-level shape:
