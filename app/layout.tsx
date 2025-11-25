@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Source_Serif_4 } from "next/font/google";
+import Script from "next/script";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -53,6 +54,9 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
       "max-snippet": -1
     }
+  },
+  verification: {
+    google: "L8cjnu8Ss2mqEu4EJMXWaWjnQeh8RNCwbQ891JT54LQ"
   }
 };
 
@@ -88,6 +92,23 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${sourceSerif.variable} scroll-smooth`}
     >
+      <head>
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9476637732224939"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-N3DCDYC7T1" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-N3DCDYC7T1');
+          `}
+        </Script>
+      </head>
       <body className="bg-slate-50 text-slate-900">
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
