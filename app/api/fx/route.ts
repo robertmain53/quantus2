@@ -6,7 +6,8 @@ interface EcbCache {
 }
 
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
-const ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml";
+const ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.xml";
+const SUPPORTED = new Set(["USD", "EUR", "GBP"]);
 
 let cache: EcbCache | null = null;
 
@@ -16,8 +17,8 @@ export async function GET(request: Request) {
   const quote = (searchParams.get("quote") ?? "EUR").toUpperCase();
   const dateParam = searchParams.get("date") ?? undefined;
 
-  if (!(base === "USD" && quote === "EUR")) {
-    return NextResponse.json({ error: "Only USD to EUR is supported" }, { status: 400 });
+  if (!SUPPORTED.has(base) || !SUPPORTED.has(quote)) {
+    return NextResponse.json({ error: "Only USD, EUR, and GBP are supported" }, { status: 400 });
   }
 
   const { rates } = await loadEcbRates();
@@ -31,18 +32,15 @@ export async function GET(request: Request) {
 
   const resolvedDate = targetDate ?? orderedDates[0];
   const dateRates = resolvedDate ? rates.get(resolvedDate) : undefined;
-  const usdRate = dateRates?.get("USD");
-
-  if (!usdRate) {
+  const rate = resolveRate(base, quote, dateRates);
+  if (!Number.isFinite(rate)) {
     return NextResponse.json({ error: "Rate unavailable" }, { status: 503 });
   }
-
-  const usdToEur = 1 / usdRate;
 
   return NextResponse.json({
     base,
     quote,
-    rate: Number(usdToEur.toFixed(6)),
+    rate: Number(rate.toFixed(6)),
     dateUsed: resolvedDate,
     source: "ECB reference rate",
     fetchedAt: new Date().toISOString()
@@ -93,4 +91,37 @@ function parseEcbXml(xml: string): Map<string, Map<string, number>> {
   }
 
   return rates;
+}
+
+function resolveRate(
+  base: string,
+  quote: string,
+  dateRates?: Map<string, number>
+): number {
+  if (!dateRates) return NaN;
+  if (base === quote) return 1;
+
+  // ECB gives rates as 1 EUR = X <currency>.
+  const toEur = (currency: string) => {
+    if (currency === "EUR") return 1;
+    const rate = dateRates.get(currency);
+    return rate ? 1 / rate : NaN;
+  };
+
+  const fromEur = (currency: string) => {
+    if (currency === "EUR") return 1;
+    return dateRates.get(currency) ?? NaN;
+  };
+
+  if (base === "EUR") {
+    return fromEur(quote);
+  }
+
+  if (quote === "EUR") {
+    return toEur(base);
+  }
+
+  const eurPerBase = toEur(base);
+  const quotePerEur = fromEur(quote);
+  return eurPerBase * quotePerEur;
 }
