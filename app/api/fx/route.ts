@@ -25,7 +25,8 @@ export async function GET(request: Request) {
   let targetDate: string | undefined = dateParam ?? orderedDates[0];
 
   if (targetDate && !rates.has(targetDate)) {
-    targetDate = orderedDates.find((d) => d <= targetDate);
+    const lookupDate = targetDate;
+    targetDate = orderedDates.find((d) => d <= lookupDate);
   }
 
   const resolvedDate = targetDate ?? orderedDates[0];
