@@ -25,10 +25,11 @@ export async function GET(request: Request) {
   let targetDate: string | undefined = dateParam ?? orderedDates[0];
 
   if (targetDate && !rates.has(targetDate)) {
-    targetDate = orderedDates.find((d) => d <= targetDate) ?? orderedDates[0];
+    targetDate = orderedDates.find((d) => d <= targetDate);
   }
 
-  const dateRates = targetDate ? rates.get(targetDate) : undefined;
+  const resolvedDate = targetDate ?? orderedDates[0];
+  const dateRates = resolvedDate ? rates.get(resolvedDate) : undefined;
   const usdRate = dateRates?.get("USD");
 
   if (!usdRate) {
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
     base,
     quote,
     rate: Number(usdToEur.toFixed(6)),
-    dateUsed: targetDate,
+    dateUsed: resolvedDate,
     source: "ECB reference rate",
     fetchedAt: new Date().toISOString()
   });
