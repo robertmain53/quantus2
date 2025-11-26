@@ -35,6 +35,8 @@ export interface CalculatorFormField {
   max?: number;
   step?: number;
   options?: Array<{ label: string; value: string }>;
+  fetchUrl?: string;
+  fetchDateField?: string;
 }
 
 export interface CalculatorFormSection {
@@ -716,6 +718,17 @@ function parseFormField(
   if (helpText !== undefined) {
     assertNoHtml(helpText, `${context}.help_text`, errors);
     field.helpText = helpText;
+  }
+
+  const fetchUrl = getOptionalString(candidate, "fetchUrl") ?? getOptionalString(candidate, "fetch_url");
+  if (fetchUrl !== undefined) {
+    field.fetchUrl = fetchUrl;
+  }
+
+  const fetchDateField = getOptionalString(candidate, "fetchDateField")
+    ?? getOptionalString(candidate, "fetch_date_field");
+  if (fetchDateField !== undefined) {
+    field.fetchDateField = fetchDateField;
   }
 
   if (candidate.default !== undefined) {

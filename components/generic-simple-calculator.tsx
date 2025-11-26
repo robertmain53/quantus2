@@ -60,10 +60,55 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
   }, [fields]);
 
   const [values, setValues] = useState<Record<string, string>>(initialValues);
+  const [fetchMeta, setFetchMeta] = useState<Record<string, string>>({});
+
+  const fetchableFields = useMemo(() => fields.filter((field) => field.fetchUrl), [fields]);
+  const fetchSignature = useMemo(() => {
+    return fetchableFields
+      .map((field) => {
+        const dateKey = field.fetchDateField ? values[field.fetchDateField] ?? "" : "";
+        return `${field.id}:${dateKey}`;
+      })
+      .join("|");
+  }, [fetchableFields, values]);
 
   useEffect(() => {
     setValues(initialValues);
   }, [initialValues]);
+
+  useEffect(() => {
+    if (fetchableFields.length === 0) {
+      return;
+    }
+
+    fetchableFields.forEach(async (field) => {
+      try {
+        const url = new URL(field.fetchUrl!, window.location.origin);
+        if (field.fetchDateField && values[field.fetchDateField]) {
+          url.searchParams.set("date", values[field.fetchDateField]);
+        }
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          return;
+        }
+        const data = (await response.json()) as {
+          rate?: number;
+          dateUsed?: string;
+          fetchedAt?: string;
+        };
+        if (typeof data.rate === "number") {
+          setValues((prev) => ({ ...prev, [field.id]: String(data.rate) }));
+          const metaParts: string[] = [];
+          if (data.dateUsed) metaParts.push(`Rate date ${data.dateUsed}`);
+          if (data.fetchedAt) metaParts.push(`Fetched ${data.fetchedAt}`);
+          setFetchMeta((prev) => ({ ...prev, [field.id]: metaParts.join(" · ") }));
+        }
+      } catch (error) {
+        console.error(`Failed to fetch ${field.id} from ${field.fetchUrl}`, error);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchSignature]);
 
   const compiledOutputs = useMemo<CompiledOutput[]>(() => {
     return logic.outputs.map((output) => ({
@@ -105,7 +150,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
             {renderInput(field, values[field.id] ?? "", (next) =>
               setValues((prev) => ({ ...prev, [field.id]: next }))
             )}
-            {renderFieldMeta(field)}
+            {renderFieldMeta(field, fetchMeta[field.id])}
           </label>
         ))}
       </div>
@@ -137,6 +182,17 @@ function renderInput(
   value: string,
   onChange: (value: string) => void
 ) {
+  if (field.type === "date") {
+    return (
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+      />
+    );
+  }
+
   if (field.type === "select" && field.options) {
     return (
       <select
@@ -180,7 +236,7 @@ function renderInput(
   );
 }
 
-function renderFieldMeta(field: CalculatorFormField) {
+function renderFieldMeta(field: CalculatorFormField, fetchedMeta?: string) {
   const hints: string[] = [];
 
   if (field.helpText) {
@@ -194,6 +250,9 @@ function renderFieldMeta(field: CalculatorFormField) {
   }
   if (typeof field.max === "number") {
     hints.push(`Max ${field.max}`);
+  }
+  if (fetchedMeta) {
+    hints.push(fetchedMeta);
   }
 
   if (hints.length === 0) {
