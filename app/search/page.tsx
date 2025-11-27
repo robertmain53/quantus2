@@ -66,9 +66,7 @@ export default async function SearchPage(props: SearchPageProps) {
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="font-medium text-slate-800">{calculator.title}</p>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                  {calculator.trafficEstimate.toLocaleString()} / day
-                </span>
+         
               </div>
               <p className="text-xs uppercase tracking-wide text-slate-400">
                 {calculator.category}
