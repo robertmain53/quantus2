@@ -59,7 +59,7 @@ export default function HomePage() {
       </section>
 
       <section className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">
             Disciplines we support
           </h2>
@@ -70,7 +70,7 @@ export default function HomePage() {
             View all categories
           </Link>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
             <article
               key={category.slug}
@@ -96,9 +96,7 @@ export default function HomePage() {
                     className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
                   >
                     <span className="truncate">{calculator.title}</span>
-                    <span className="ml-3 flex-none rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500 shadow-sm">
-                      {formatTraffic(calculator.trafficEstimate)}
-                    </span>
+                 
                   </Link>
                 ))}
               </div>
