@@ -16,9 +16,9 @@ export function SiteHeader() {
         </Link>
         <div className="flex flex-1 items-center justify-end gap-4">
           {/* Desktop Navigation */}
-          <nav className="hidden flex-wrap items-center gap-4 text-sm font-medium text-slate-600 md:flex">
+          <nav className="hidden flex-wrap items-center gap-4 text-sm font-medium text-slate-600 2xl:flex">
             <Link href="/category" className="hover:text-brand">
-              Categories
+              All Categories
             </Link>
             {categories.map((category) => (
               <Link
@@ -33,12 +33,14 @@ export function SiteHeader() {
           <Suspense fallback={<span className="text-sm text-slate-400">Loading search…</span>}>
             <SiteSearch />
           </Suspense>
-          <div className="hidden text-xs uppercase tracking-wide text-slate-400 md:flex md:items-center">
+          <div className="hidden text-xs uppercase tracking-wide text-slate-400 2xl:flex 2xl:items-center">
             <span>Standards aligned · audit ready</span>
           </div>
         </div>
         {/* Mobile Menu */}
-        <MobileMenu categories={categories} />
+        <div className="2xl:hidden">
+          <MobileMenu categories={categories} />
+        </div>
       </div>
     </header>
   );
