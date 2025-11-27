@@ -45,7 +45,7 @@ export function MobileMenu({ categories }: MobileMenuProps) {
             <div className="container flex flex-col gap-3">
               <Link
                 href="/category"
-                className="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand transition-colors"
+                className="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand transition-colors no-underline"
                 onClick={() => setIsOpen(false)}
               >
                 Categories
@@ -54,7 +54,7 @@ export function MobileMenu({ categories }: MobileMenuProps) {
                 <Link
                   key={category.slug}
                   href={`/category/${category.slug}`}
-                  className="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand transition-colors"
+                  className="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand transition-colors no-underline"
                   onClick={() => setIsOpen(false)}
                 >
                   {category.label}
