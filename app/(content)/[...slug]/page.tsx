@@ -485,9 +485,9 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </p>
           <p className="mt-3 text-base">
             Built for professionals who demand precision. We benchmark our
-            {calculator.category.toLowerCase()} against NIST and ISO 
-            standards and peer-review every update, so you can trust 
-            your data—whether you're in the lab or on the job site.
+            {calculator.category.toLowerCase()} against NIST and ISO
+            standards and peer-review every update, so you can trust
+            your data&mdash;whether you&apos;re in the lab or on the job site.
           </p>
         </div>
       </aside>
