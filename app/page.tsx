@@ -93,10 +93,12 @@ export default function HomePage() {
                   <Link
                     key={calculator.fullPath}
                     href={calculator.fullPath}
-                    className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+                    className="flex flex-col gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <span className="truncate">{calculator.title}</span>
-                 
+                    <span className="min-w-0 flex-1">{calculator.title}</span>
+                    <span className="flex-none rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500 shadow-sm">
+                      {formatTraffic(calculator.trafficEstimate)}
+                    </span>
                   </Link>
                 ))}
               </div>
