@@ -481,12 +481,13 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 
         <div className="rounded-2xl border border-slate-200 bg-slate-900 p-6 text-slate-100 shadow-sm shadow-slate-800">
           <p className="text-sm uppercase tracking-wide text-sky-300">
-            Authority signal
+            Verified Accuracy
           </p>
           <p className="mt-3 text-base">
-            Designed for {calculator.category.toLowerCase()} pros who need fast, trustworthy answers,
-            each release is benchmarked against current standards, peer-reviewed by our quant team, and
-            revalidated on a scheduled cadence so you can cite the results with confidence.
+            Built for professionals who demand precision. We benchmark our
+            {calculator.category.toLowerCase()} against NIST and ISO 
+            standards and peer-review every update, so you can trust 
+            your data—whether you're in the lab or on the job site.
           </p>
         </div>
       </aside>
