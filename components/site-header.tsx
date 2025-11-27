@@ -3,18 +3,20 @@ import Link from "next/link";
 
 import { getCategories } from "@/lib/content";
 import { SiteSearch } from "@/components/site-search";
+import { MobileMenu } from "@/components/mobile-menu";
 
 export function SiteHeader() {
   const categories = getCategories().slice(0, 5);
 
   return (
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-      <div className="container flex flex-wrap items-center justify-between gap-4 py-4">
+      <div className="container flex items-center justify-between gap-4 py-4">
         <Link href="/" className="flex items-center gap-2 font-serif text-xl font-semibold text-slate-900">
           Quantus
         </Link>
-        <div className="flex flex-1 flex-wrap items-center justify-end gap-4">
-          <nav className="flex flex-wrap items-center gap-4 text-sm font-medium text-slate-600">
+        <div className="flex flex-1 items-center justify-end gap-4">
+          {/* Desktop Navigation */}
+          <nav className="hidden flex-wrap items-center gap-4 text-sm font-medium text-slate-600 md:flex">
             <Link href="/category" className="hover:text-brand">
               Categories
             </Link>
@@ -35,6 +37,8 @@ export function SiteHeader() {
             <span>Standards aligned · audit ready</span>
           </div>
         </div>
+        {/* Mobile Menu */}
+        <MobileMenu categories={categories} />
       </div>
     </header>
   );

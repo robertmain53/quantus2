@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "https://www.quantus.example";
+const DEFAULT_SITE_URL = "https://quantus.tools";
 
 export function getSiteUrl(pathname = "/") {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_URL;

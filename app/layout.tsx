@@ -21,7 +21,7 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.quantus.example"),
+  metadataBase: new URL("https://quantus.tools"),
   title: {
     default: "Quantus | Precision Converters & Calculators",
     template: "%s | Quantus"
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://www.quantus.example",
+    url: "https://quantus.tools",
     siteName: "Quantus",
     title: "Quantus | Precision Converters & Calculators",
     description:
