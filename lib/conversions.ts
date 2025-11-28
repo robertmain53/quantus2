@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy";
 
 export interface UnitDefinition {
   id: string;
@@ -180,6 +180,16 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / (3.785411784 / 16),
     decimalPlaces: 4
   },
+  teaspoon: {
+    id: "teaspoon",
+    label: "Teaspoon",
+    symbol: "tsp",
+    kind: "volume",
+    // 1 teaspoon = 5 mL = 0.005 liters (FDA/NIST standard for kitchen measures)
+    toBase: (value) => value * 0.005,
+    fromBase: (value) => value / 0.005,
+    decimalPlaces: 4
+  },
   celsius: {
     id: "celsius",
     label: "Celsius",
@@ -278,6 +288,24 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 1.355818,
     fromBase: (value) => value / 1.355818,
     decimalPlaces: 4
+  },
+  kilocalorie: {
+    id: "kilocalorie",
+    label: "Kilocalorie",
+    symbol: "kcal",
+    kind: "energy",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
+  kilojoule: {
+    id: "kilojoule",
+    label: "Kilojoule",
+    symbol: "kJ",
+    kind: "energy",
+    toBase: (value) => value * 4.184,
+    fromBase: (value) => value / 4.184,
+    decimalPlaces: 2
   }
 };
 
@@ -349,6 +377,12 @@ const aliasToUnitId: Record<string, string> = {
   qt: "quart",
   cup: "cup",
   cups: "cup",
+  teaspoon: "teaspoon",
+  teaspoons: "teaspoon",
+  tsp: "teaspoon",
+  tsps: "teaspoon",
+  "tea spoon": "teaspoon",
+  "tea spoons": "teaspoon",
   celsius: "celsius",
   "degrees celsius": "celsius",
   celcius: "celsius",
@@ -392,7 +426,20 @@ const aliasToUnitId: Record<string, string> = {
   "ftlbf": "foot_pound",
   "ft-lbf": "foot_pound",
   "ft-lb": "foot_pound",
-  "lb-ft": "foot_pound"
+  "lb-ft": "foot_pound",
+  kilocalorie: "kilocalorie",
+  "kilocalories": "kilocalorie",
+  "kcal": "kilocalorie",
+  "kcals": "kilocalorie",
+  "Calorie": "kilocalorie",
+  "Calories": "kilocalorie",
+  "food calorie": "kilocalorie",
+  "food calories": "kilocalorie",
+  "large calorie": "kilocalorie",
+  kilojoule: "kilojoule",
+  "kilojoules": "kilojoule",
+  "kJ": "kilojoule",
+  "kjs": "kilojoule"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
