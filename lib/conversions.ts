@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure";
 
 export interface UnitDefinition {
   id: string;
@@ -351,6 +351,24 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 1.609344,
     fromBase: (value) => value / 1.609344,
     decimalPlaces: 2
+  },
+  bar: {
+    id: "bar",
+    label: "Bar",
+    symbol: "bar",
+    kind: "pressure",
+    toBase: (value) => value * 100000,
+    fromBase: (value) => value / 100000,
+    decimalPlaces: 4
+  },
+  psi: {
+    id: "psi",
+    label: "PSI (Pounds per Square Inch)",
+    symbol: "psi",
+    kind: "pressure",
+    toBase: (value) => value * 6894.757293,
+    fromBase: (value) => value / 6894.757293,
+    decimalPlaces: 2
   }
 };
 
@@ -508,7 +526,14 @@ const aliasToUnitId: Record<string, string> = {
   miles_per_hour: "miles_per_hour",
   "mph": "miles_per_hour",
   "mi/h": "miles_per_hour",
-  "miles per hour": "miles_per_hour"
+  "miles per hour": "miles_per_hour",
+  bar: "bar",
+  bars: "bar",
+  psi: "psi",
+  psig: "psi",
+  psia: "psi",
+  "pounds per square inch": "psi",
+  "pound per square inch": "psi"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
