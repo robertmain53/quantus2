@@ -89,6 +89,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 1609.344,
     decimalPlaces: 4
   },
+  nautical_mile: {
+    id: "nautical_mile",
+    label: "Nautical Mile",
+    symbol: "nmi",
+    kind: "length",
+    toBase: (value) => value * 1852,
+    fromBase: (value) => value / 1852,
+    decimalPlaces: 4
+  },
   gram: {
     id: "gram",
     label: "Gram",
@@ -342,6 +351,12 @@ const aliasToUnitId: Record<string, string> = {
   mile: "mile",
   miles: "mile",
   mi: "mile",
+  nautical_mile: "nautical_mile",
+  nautical_miles: "nautical_mile",
+  nmi: "nautical_mile",
+  "nautical mile": "nautical_mile",
+  "nautical miles": "nautical_mile",
+  nm: "nautical_mile",
   gram: "gram",
   grams: "gram",
   g: "gram",
