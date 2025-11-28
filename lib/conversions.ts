@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance";
 
 export interface UnitDefinition {
   id: string;
@@ -242,6 +242,24 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 10000,
     fromBase: (value) => value / 10000,
     decimalPlaces: 4
+  },
+  lumen: {
+    id: "lumen",
+    label: "Lumen",
+    symbol: "lm",
+    kind: "illuminance",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
+  lux: {
+    id: "lux",
+    label: "Lux",
+    symbol: "lx",
+    kind: "illuminance",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
   }
 };
 
@@ -337,7 +355,13 @@ const aliasToUnitId: Record<string, string> = {
   acres: "acre",
   hectare: "hectare",
   hectares: "hectare",
-  ha: "hectare"
+  ha: "hectare",
+  lumen: "lumen",
+  lumens: "lumen",
+  lm: "lumen",
+  lux: "lux",
+  luxes: "lux",
+  lx: "lux"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
