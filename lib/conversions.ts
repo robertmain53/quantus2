@@ -334,6 +334,24 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 4.184,
     decimalPlaces: 2
   },
+  joule: {
+    id: "joule",
+    label: "Joule",
+    symbol: "J",
+    kind: "energy",
+    toBase: (value) => value / 4.184,
+    fromBase: (value) => value * 4.184,
+    decimalPlaces: 2
+  },
+  calorie: {
+    id: "calorie",
+    label: "Calorie",
+    symbol: "cal",
+    kind: "energy",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
   kilometers_per_hour: {
     id: "kilometers_per_hour",
     label: "Kilometers per Hour",
@@ -581,6 +599,18 @@ const aliasToUnitId: Record<string, string> = {
   "kilojoules": "kilojoule",
   "kJ": "kilojoule",
   "kjs": "kilojoule",
+  joule: "joule",
+  "joules": "joule",
+  "J": "joule",
+  "js": "joule",
+  calorie: "calorie",
+  "calories": "calorie",
+  "cal": "calorie",
+  "cals": "calorie",
+  "gram calorie": "calorie",
+  "gram calories": "calorie",
+  "small calorie": "calorie",
+  "small calories": "calorie",
   kilometers_per_hour: "kilometers_per_hour",
   "km/h": "kilometers_per_hour",
   "kmh": "kilometers_per_hour",
