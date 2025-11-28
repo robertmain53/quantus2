@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate" | "time";
 
 export interface UnitDefinition {
   id: string;
@@ -352,6 +352,42 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value,
     decimalPlaces: 2
   },
+  second: {
+    id: "second",
+    label: "Second",
+    symbol: "s",
+    kind: "time",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
+  minute: {
+    id: "minute",
+    label: "Minute",
+    symbol: "min",
+    kind: "time",
+    toBase: (value) => value * 60,
+    fromBase: (value) => value / 60,
+    decimalPlaces: 2
+  },
+  hour: {
+    id: "hour",
+    label: "Hour",
+    symbol: "h",
+    kind: "time",
+    toBase: (value) => value * 3600,
+    fromBase: (value) => value / 3600,
+    decimalPlaces: 4
+  },
+  day: {
+    id: "day",
+    label: "Day",
+    symbol: "d",
+    kind: "time",
+    toBase: (value) => value * 86400,
+    fromBase: (value) => value / 86400,
+    decimalPlaces: 4
+  },
   kilometers_per_hour: {
     id: "kilometers_per_hour",
     label: "Kilometers per Hour",
@@ -611,6 +647,24 @@ const aliasToUnitId: Record<string, string> = {
   "gram calories": "calorie",
   "small calorie": "calorie",
   "small calories": "calorie",
+  second: "second",
+  "seconds": "second",
+  "s": "second",
+  "sec": "second",
+  "secs": "second",
+  minute: "minute",
+  "minutes": "minute",
+  "min": "minute",
+  "mins": "minute",
+  "m": "minute",
+  hour: "hour",
+  "hours": "hour",
+  "h": "hour",
+  "hr": "hour",
+  "hrs": "hour",
+  day: "day",
+  "days": "day",
+  "d": "day",
   kilometers_per_hour: "kilometers_per_hour",
   "km/h": "kilometers_per_hour",
   "kmh": "kilometers_per_hour",
