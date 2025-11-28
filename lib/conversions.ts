@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate";
 
 export interface UnitDefinition {
   id: string;
@@ -378,6 +378,60 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 1000,
     fromBase: (value) => value / 1000,
     decimalPlaces: 2
+  },
+  kilowatt: {
+    id: "kilowatt",
+    label: "Kilowatt",
+    symbol: "kW",
+    kind: "power",
+    toBase: (value) => value * 1000,
+    fromBase: (value) => value / 1000,
+    decimalPlaces: 3
+  },
+  horsepower: {
+    id: "horsepower",
+    label: "Horsepower",
+    symbol: "hp",
+    kind: "power",
+    toBase: (value) => value * 745.7,
+    fromBase: (value) => value / 745.7,
+    decimalPlaces: 3
+  },
+  megabyte: {
+    id: "megabyte",
+    label: "Megabyte",
+    symbol: "MB",
+    kind: "data_size",
+    toBase: (value) => value * 1000000,
+    fromBase: (value) => value / 1000000,
+    decimalPlaces: 2
+  },
+  gigabyte: {
+    id: "gigabyte",
+    label: "Gigabyte",
+    symbol: "GB",
+    kind: "data_size",
+    toBase: (value) => value * 1000000000,
+    fromBase: (value) => value / 1000000000,
+    decimalPlaces: 2
+  },
+  megabit_per_second: {
+    id: "megabit_per_second",
+    label: "Megabit per Second",
+    symbol: "Mbps",
+    kind: "data_rate",
+    toBase: (value) => value * 125000,
+    fromBase: (value) => value / 125000,
+    decimalPlaces: 2
+  },
+  megabyte_per_second: {
+    id: "megabyte_per_second",
+    label: "Megabyte per Second",
+    symbol: "MB/s",
+    kind: "data_rate",
+    toBase: (value) => value * 1000000,
+    fromBase: (value) => value / 1000000,
+    decimalPlaces: 2
   }
 };
 
@@ -548,7 +602,29 @@ const aliasToUnitId: Record<string, string> = {
   kpa: "kilopascal",
   "kPa": "kilopascal",
   kPas: "kilopascal",
-  "kilopascals": "kilopascal"
+  "kilopascals": "kilopascal",
+  kilowatt: "kilowatt",
+  kilowatts: "kilowatt",
+  kw: "kilowatt",
+  "kW": "kilowatt",
+  "kilowatts": "kilowatt",
+  horsepower: "horsepower",
+  hp: "horsepower",
+  "horse power": "horsepower",
+  megabyte: "megabyte",
+  megabytes: "megabyte",
+  mb: "megabyte",
+  "MB": "megabyte",
+  gigabyte: "gigabyte",
+  gigabytes: "gigabyte",
+  gb: "gigabyte",
+  "GB": "gigabyte",
+  "megabit per second": "megabit_per_second",
+  mbps: "megabit_per_second",
+  "Mbps": "megabit_per_second",
+  "MB/s": "megabyte_per_second",
+  "mb/s": "megabyte_per_second",
+  "megabyte per second": "megabyte_per_second"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
