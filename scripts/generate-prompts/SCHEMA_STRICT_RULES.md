@@ -2,6 +2,37 @@
 
 **You MUST follow these rules exactly. Do not deviate. Do not add extra fields.**
 
+---
+
+## CHOOSING THE RIGHT COMPONENT_TYPE
+
+Before you start, determine which calculator type is needed:
+
+### Use "converter" IF:
+- Converting between two units (kilocalories ↔ kilojoules, lumens ↔ lux, miles ↔ kilometers, fahrenheit ↔ celsius)
+- The conversion has a FIXED mathematical relationship
+- Users need to input ONE value and get ONE output
+- No variables or intermediate calculations needed
+- Example: "Convert Lumens to Lux" (fixed ratio, no extra inputs)
+
+### Use "simple_calc" IF:
+- Calculating a value using a FORMULA with multiple inputs
+- Users input several related values to compute a result
+- The formula has ONE primary output
+- Examples: BMI calculator (weight + height → BMI), mortgage payment (principal + rate + term → payment), tip calculator (bill + percentage → tip)
+- The "form" object is REQUIRED with "fields" array for user inputs
+
+### Use "advanced_calc" IF:
+- Multiple calculation methods or variable dependencies
+- Users need to switch between different formulas or scenarios
+- Complex workflows with conditional logic
+- Example: Retirement calculator (choose method: simple savings, compound interest, with conditions based on age)
+- The "logic.methods" object is REQUIRED
+
+**CRITICAL: DO NOT use simple_calc or advanced_calc for unit conversions. DO NOT add a form object to a converter.**
+
+---
+
 ## Top-Level Structure
 
 ```json
@@ -102,15 +133,94 @@
 ## Critical Rules (VIOLATIONS WILL CAUSE REJECTION)
 
 1. **NO HTML**: Never use `<div>`, `<p>`, `<br>`, markdown, or any markup. Use plain-text strings only.
-2. **NO custom fields**: Don't add `description`, `notes`, `help`, `ui`, `layout`, `styling`, etc.
-3. **NO nested `page_content` objects**: Don't use `{ "title": "...", "body": "..." }` format. Use flat arrays of strings.
-4. **Converters don't have `form`**: Omit the field entirely or set to `null`.
-5. **Expressions must be valid**: Math expressions in `logic.outputs[].expression` or `logic.methods[].variables[].expression` must reference field IDs or other variables that exist.
-6. **Unit IDs must exist**: `fromUnitId` and `toUnitId` must match actual entries in `lib/conversions.ts`.
-7. **`page_content.introduction` is array of strings**: Not a single string, not an object with "title" + "body".
-8. **`page_content.faqs` is array of objects**: Each object must have `question` and `answer` keys only.
-9. **`page_content.citations` is array of objects**: Each object must have `label` and `url` keys (no HTML in either).
-10. **No trailing commas, no undefined values, no comments in JSON**.
+
+2. **NO custom fields**: Don't add `description`, `notes`, `help`, `ui`, `layout`, `styling`, `canonical_url`, `robots`, `keywords`, `schema_org`, `open_graph`, `twitter_card`, or any field not listed above.
+
+3. **NO nested `page_content` objects**: Don't use `{ "title": "...", "body": "..." }` format. Use flat arrays of strings instead.
+
+4. **Converters don't have `form`**: Omit the field entirely or set to `null`. Only simple_calc and advanced_calc have form objects.
+
+5. **component_type must match content**:
+   - "converter" = unit conversion (NO form, logic.type = "conversion")
+   - "simple_calc" = formula calculation (form REQUIRED, logic.type = "formula")
+   - "advanced_calc" = multiple methods (form optional, logic.type = "advanced")
+
+6. **Expressions must be valid**: Math expressions in `logic.outputs[].expression` or `logic.methods[].variables[].expression` must reference field IDs or other variables that exist.
+
+7. **Unit IDs must exist**: `fromUnitId` and `toUnitId` must match actual entries in `lib/conversions.ts`.
+
+8. **`page_content.introduction` is array of strings**: Not a single string, not an object with "title" + "body". Example: `["String 1", "String 2", "String 3"]`
+
+9. **`page_content.faqs` is array of objects**: Each object must have `question` and `answer` keys only. Example: `[{ "question": "Q?", "answer": "A." }]`
+
+10. **`page_content.citations` is array of objects**: Each object must have `label` and `url` keys (no HTML in either). **URLs MUST be plain strings like `"https://example.com"` – NEVER use Markdown syntax `[url](url)` or HTML `<a>` tags.**
+
+11. **No trailing commas, no undefined values, no comments in JSON**.
+
+## Common Mistakes (DON'T DO THIS)
+
+### ❌ WRONG: Converter with form and expression engine
+```json
+{
+  "component_type": "converter",
+  "config_json": {
+    "logic": {
+      "type": "expression",
+      "engine": "math-expression",
+      "expressions": [...]
+    },
+    "form": { ... }
+  }
+}
+```
+**Problem**: Converters use "conversion" type, not "expression". No form needed.
+
+### ❌ WRONG: Markdown URLs in citations
+```json
+"citations": [
+  {
+    "label": "NIST Standards",
+    "url": "[https://nist.gov/...](https://nist.gov/...)"
+  }
+]
+```
+**Problem**: URLs have [brackets]. Should be plain: `"url": "https://nist.gov/..."`
+
+### ❌ WRONG: Nested page_content structure
+```json
+"page_content": {
+  "formula": {
+    "heading": "How to Convert",
+    "body": "Step by step..."
+  },
+  "faq": {
+    "items": [...]
+  }
+}
+```
+**Problem**: Should use flat arrays. Correct format:
+```json
+"page_content": {
+  "introduction": ["String 1", "String 2"],
+  "faqs": [{ "question": "Q?", "answer": "A." }]
+}
+```
+
+### ❌ WRONG: Extra metadata fields
+```json
+"metadata": {
+  "title": "...",
+  "description": "...",
+  "canonical_url": "...",
+  "robots": "...",
+  "keywords": [...],
+  "schema_org": {...},
+  "open_graph": {...}
+}
+```
+**Problem**: Only `title` and `description` allowed. SEO fields belong in Next.js config, not here.
+
+---
 
 ## Example: Minimal Converter (COPY THIS STRUCTURE)
 
@@ -162,9 +272,33 @@
 
 ---
 
-**BEFORE YOU RESPOND WITH JSON:**
-1. Check that your JSON is valid (paste into jsonlint.com if unsure).
-2. Verify every field name matches this schema exactly.
-3. Confirm no HTML or extra fields are present.
-4. Ensure `introduction`, `methodology`, `faqs`, `citations` are arrays, not objects.
-5. Return ONLY the JSON object. No commentary, no markdown code blocks, no explanations.
+## VALIDATION CHECKLIST (Before you respond with JSON)
+
+**Read this checklist and verify every item:**
+
+- [ ] My JSON is valid (no syntax errors, balanced quotes/braces)
+- [ ] `component_type` is EXACTLY one of: "converter", "simple_calc", "advanced_calc"
+- [ ] `logic.type` matches the component_type:
+  - converter → "conversion"
+  - simple_calc → "formula"
+  - advanced_calc → "advanced"
+- [ ] `fromUnitId` and `toUnitId` are real units in lib/conversions.ts (e.g., "lumen", "lux", "meter", "foot")
+- [ ] `metadata` has ONLY: `title` (string, no HTML) and `description` (string, no HTML)
+- [ ] `page_content` has ONLY these fields (as arrays of strings): `introduction`, `methodology`, and optional `examples`, `summary`, `glossary`
+- [ ] `page_content.faqs` is an array of objects: `[{ "question": "...", "answer": "..." }]` – NO "items" nested object
+- [ ] `page_content.citations` is an array of objects: `[{ "label": "...", "url": "..." }]` – URLs are PLAIN STRINGS, not Markdown
+- [ ] All URLs are bare HTTPS strings like `"https://example.com"` – NOT `"[https://example.com](https://example.com)"` or `"<a href='...'>"`
+- [ ] No HTML tags (`<div>`, `<p>`, `<br>`, etc.) in any text field
+- [ ] No forbidden fields like `form` (for converters), `description`, `canonical_url`, `robots`, `keywords`, etc.
+- [ ] Arrays like `introduction`, `methodology`, `faqs`, `citations` are NOT nested in objects like `{ "title": "...", "body": [...] }`
+
+**If any checkbox fails, fix it before responding.**
+
+**When done, return ONLY the JSON object. No commentary, no markdown code blocks, no explanations. Example:**
+
+```
+{
+  "component_type": "converter",
+  "config_json": { ... }
+}
+```
