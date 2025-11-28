@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque";
 
 export interface UnitDefinition {
   id: string;
@@ -260,6 +260,24 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value,
     fromBase: (value) => value,
     decimalPlaces: 2
+  },
+  newton_meter: {
+    id: "newton_meter",
+    label: "Newton-meter",
+    symbol: "N·m",
+    kind: "torque",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 4
+  },
+  foot_pound: {
+    id: "foot_pound",
+    label: "Foot-pound",
+    symbol: "ft·lbf",
+    kind: "torque",
+    toBase: (value) => value * 1.355818,
+    fromBase: (value) => value / 1.355818,
+    decimalPlaces: 4
   }
 };
 
@@ -361,7 +379,20 @@ const aliasToUnitId: Record<string, string> = {
   lm: "lumen",
   lux: "lux",
   luxes: "lux",
-  lx: "lux"
+  lx: "lux",
+  newton_meter: "newton_meter",
+  "newton-meter": "newton_meter",
+  "newton meter": "newton_meter",
+  "n·m": "newton_meter",
+  "nm": "newton_meter",
+  foot_pound: "foot_pound",
+  "foot-pound": "foot_pound",
+  "foot pound": "foot_pound",
+  "ft·lbf": "foot_pound",
+  "ftlbf": "foot_pound",
+  "ft-lbf": "foot_pound",
+  "ft-lb": "foot_pound",
+  "lb-ft": "foot_pound"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];

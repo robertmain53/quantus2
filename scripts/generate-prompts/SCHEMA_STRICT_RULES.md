@@ -294,6 +294,25 @@ Before you start, determine which calculator type is needed:
 
 **If any checkbox fails, fix it before responding.**
 
+---
+
+## CRITICAL: Before You Generate JSON, Answer These Questions
+
+**Do NOT produce JSON until you have explicitly confirmed these points to the user:**
+
+1. "This is a **[converter | simple_calc | advanced_calc]** because [explain the reason]."
+2. "I will use `component_type: '[type]'` with `logic.type: '[matching_type]'`."
+3. "I will structure `page_content` as **flat arrays only**: introduction[], methodology[], faqs[], citations[]."
+4. "All URLs in citations will be **plain HTTPS strings**, no Markdown like `[url](url)`, no HTML."
+5. "I will NOT add any forbidden fields (no slug, name, category, meta, schema_org, calculator, form for converters, etc.)."
+6. "I understand this is the final JSON and I cannot add commentary or explanations afterward."
+
+Then ask the user: **"Ready for me to produce the JSON?"**
+
+This ensures you have understood the schema before committing to output.
+
+---
+
 **When done, return ONLY the JSON object. No commentary, no markdown code blocks, no explanations. Example:**
 
 ```
@@ -302,3 +321,14 @@ Before you start, determine which calculator type is needed:
   "config_json": { ... }
 }
 ```
+
+---
+
+## Reference Documentation
+
+For any ambiguity not covered here, see:
+- **QUANTUS_SCHEMA_DEFINITIVE.md** – Complete specification with no exceptions
+- **SCHEMA_ENFORCEMENT_GUIDE.md** – User guide for following this schema
+- **lib/conversions.ts** – Current list of supported unit IDs
+
+If something is not in QUANTUS_SCHEMA_DEFINITIVE.md, it is NOT allowed.
