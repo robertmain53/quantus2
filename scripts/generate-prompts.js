@@ -3,6 +3,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
+// Resolve paths relative to project root, not script location
+const PROJECT_ROOT = path.resolve(__dirname, "..");
+
 function parseDate(value) {
   if (!value) {
     return null;
@@ -27,7 +30,7 @@ function parseDate(value) {
 }
 
 function readCalcRows() {
-  const csvPath = path.join("data", "calc.csv");
+  const csvPath = path.join(PROJECT_ROOT, "data", "calc.csv");
   const raw = fs.readFileSync(csvPath, "utf8");
   const lines = raw.trim().split(/\r?\n/);
   const header = lines[0].split(",");
@@ -64,7 +67,7 @@ function selectPublishedRows(rows) {
 }
 
 function buildTemplate() {
-  const readme = fs.readFileSync("README.md", "utf8");
+  const readme = fs.readFileSync(path.join(PROJECT_ROOT, "README.md"), "utf8");
   const anchor = "Replace the bracketed placeholders in the template below";
   const start = readme.indexOf(anchor);
   if (start === -1) {
@@ -89,7 +92,7 @@ function buildTemplate() {
 function findMatchingZip(slug) {
   const slugFragment = slug.replace(/^\//, "").split("/").pop() || "";
   const base = slugFragment.replace("-converter", "").toLowerCase();
-  const inputRoot = "input";
+  const inputRoot = path.join(PROJECT_ROOT, "input");
   if (!fs.existsSync(inputRoot)) {
     return [];
   }
@@ -140,7 +143,7 @@ function main() {
   const rows = readCalcRows();
   const published = selectPublishedRows(rows);
   const template = buildTemplate();
-  ensureDir(path.join("generated", "prompts"));
+  ensureDir(path.join(PROJECT_ROOT, "generated", "prompts"));
 
   published.forEach((row) => {
     const sanitizedTitle = row.title || "the calculator";
@@ -149,10 +152,13 @@ function main() {
       sanitizedTitle
     );
 
+    const schemaRules = fs.readFileSync(path.join(PROJECT_ROOT, "scripts", "generate-prompts", "SCHEMA_STRICT_RULES.md"), "utf8");
+
     const extraInstructions = [
-      "Before you construct the config, scan the ./input folder and all subdirectories for competitor research assets (HTML snapshots, spreadsheets, or PDFs) and let the response draw from that corpus to raise information depth, EEAT, SEO, UX, and transparency.",
+      "STRICT SCHEMA ENFORCEMENT:",
+      schemaRules,
+      "\nBefore you construct the config, scan the ./input folder and all subdirectories for competitor research assets (HTML snapshots, spreadsheets, or PDFs) and let the response draw from that corpus to raise information depth, EEAT, SEO, UX, and transparency.",
       "Also mention which internal Quantus pages (e.g., category hubs or sibling calculators) provide related context, but avoid repeating any URLs already used in the citations that follow.",
-      "Schema guard: Return ONLY the Quantus schema JSON object with top-level keys component_type and config_json. Do not emit ui/hero/seo/content/calculator/layout fields. Follow README rules: metadata.title/description, logic (type=\"conversion\" with fromUnitId/toUnitId from lib/conversions.ts when available, otherwise type=\"formula\" with outputs), form (omit or null unless needed), page_content (introduction, methodology, examples, faqs, citations, summary, glossary), links (internal/external with rel), schema.additionalTypes. No HTML, no markdown, no extra keys.",
       "Persistence note: if you include the wrapper, the repo saves only the inner config_json file under data/configs/...; do not introduce wrapper-specific keys into config_json."
     ].join(" ");
 
@@ -173,6 +179,7 @@ function main() {
     };
 
     const outputPath = path.join(
+      PROJECT_ROOT,
       "generated",
       "prompts",
       `${formatSlugName(row.slug)}.json`
