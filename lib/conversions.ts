@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed";
 
 export interface UnitDefinition {
   id: string;
@@ -235,6 +235,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value,
     decimalPlaces: 2
   },
+  rankine: {
+    id: "rankine",
+    label: "Rankine",
+    symbol: "°R",
+    kind: "temperature",
+    toBase: (value) => value / 1.8,
+    fromBase: (value) => value * 1.8,
+    decimalPlaces: 2
+  },
   square_meter: {
     id: "square_meter",
     label: "Square Meter",
@@ -323,6 +332,24 @@ const units: Record<string, UnitDefinition> = {
     kind: "energy",
     toBase: (value) => value * 4.184,
     fromBase: (value) => value / 4.184,
+    decimalPlaces: 2
+  },
+  kilometers_per_hour: {
+    id: "kilometers_per_hour",
+    label: "Kilometers per Hour",
+    symbol: "km/h",
+    kind: "speed",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
+  miles_per_hour: {
+    id: "miles_per_hour",
+    label: "Miles per Hour",
+    symbol: "mph",
+    kind: "speed",
+    toBase: (value) => value * 1.609344,
+    fromBase: (value) => value / 1.609344,
     decimalPlaces: 2
   }
 };
@@ -421,6 +448,9 @@ const aliasToUnitId: Record<string, string> = {
   "degrees fahrenheit": "fahrenheit",
   kelvin: "kelvin",
   kelvins: "kelvin",
+  rankine: "rankine",
+  rankines: "rankine",
+  "degrees rankine": "rankine",
   squaremeter: "square_meter",
   squaremeters: "square_meter",
   sqm: "square_meter",
@@ -469,7 +499,16 @@ const aliasToUnitId: Record<string, string> = {
   kilojoule: "kilojoule",
   "kilojoules": "kilojoule",
   "kJ": "kilojoule",
-  "kjs": "kilojoule"
+  "kjs": "kilojoule",
+  kilometers_per_hour: "kilometers_per_hour",
+  "km/h": "kilometers_per_hour",
+  "kmh": "kilometers_per_hour",
+  "km per hour": "kilometers_per_hour",
+  "kilometers per hour": "kilometers_per_hour",
+  miles_per_hour: "miles_per_hour",
+  "mph": "miles_per_hour",
+  "mi/h": "miles_per_hour",
+  "miles per hour": "miles_per_hour"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
