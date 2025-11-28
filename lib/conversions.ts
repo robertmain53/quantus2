@@ -170,6 +170,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 3.785411784,
     decimalPlaces: 4
   },
+  gallon_uk: {
+    id: "gallon_uk",
+    label: "UK Gallon (Imperial)",
+    symbol: "gal_uk",
+    kind: "volume",
+    toBase: (value) => value * 4.54609,
+    fromBase: (value) => value / 4.54609,
+    decimalPlaces: 4
+  },
   quart: {
     id: "quart",
     label: "US Quart",
@@ -387,6 +396,12 @@ const aliasToUnitId: Record<string, string> = {
   gallon: "gallon",
   gallons: "gallon",
   gal: "gallon",
+  gallon_uk: "gallon_uk",
+  gallon_imp: "gallon_uk",
+  imperial_gallon: "gallon_uk",
+  "imperial gallon": "gallon_uk",
+  "uk gallon": "gallon_uk",
+  "UK gallon": "gallon_uk",
   quart: "quart",
   quarts: "quart",
   qt: "quart",
