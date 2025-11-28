@@ -369,6 +369,15 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 6894.757293,
     fromBase: (value) => value / 6894.757293,
     decimalPlaces: 2
+  },
+  kilopascal: {
+    id: "kilopascal",
+    label: "Kilopascal",
+    symbol: "kPa",
+    kind: "pressure",
+    toBase: (value) => value * 1000,
+    fromBase: (value) => value / 1000,
+    decimalPlaces: 2
   }
 };
 
@@ -533,7 +542,13 @@ const aliasToUnitId: Record<string, string> = {
   psig: "psi",
   psia: "psi",
   "pounds per square inch": "psi",
-  "pound per square inch": "psi"
+  "pound per square inch": "psi",
+  kilopascal: "kilopascal",
+  kilopascals: "kilopascal",
+  kpa: "kilopascal",
+  "kPa": "kilopascal",
+  kPas: "kilopascal",
+  "kilopascals": "kilopascal"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
