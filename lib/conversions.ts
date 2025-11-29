@@ -640,6 +640,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 1.609344,
     decimalPlaces: 2
   },
+  pascal: {
+    id: "pascal",
+    label: "Pascal",
+    symbol: "Pa",
+    kind: "pressure",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
   bar: {
     id: "bar",
     label: "Bar",
@@ -1042,6 +1051,14 @@ const aliasToUnitId: Record<string, string> = {
   "mph": "miles_per_hour",
   "mi/h": "miles_per_hour",
   "miles per hour": "miles_per_hour",
+  pascal: "pascal",
+  pascals: "pascal",
+  pa: "pascal",
+  "Pa": "pascal",
+  "pascal": "pascal",
+  "pascals": "pascal",
+  "pascal (pa)": "pascal",
+  "pascals (pa)": "pascal",
   bar: "bar",
   bars: "bar",
   psi: "psi",
