@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate" | "time";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate" | "time" | "currency";
 
 export interface UnitDefinition {
   id: string;
@@ -388,6 +388,33 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 86400,
     decimalPlaces: 4
   },
+  usd: {
+    id: "usd",
+    label: "US Dollar",
+    symbol: "$",
+    kind: "currency",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
+  eur: {
+    id: "eur",
+    label: "Euro",
+    symbol: "€",
+    kind: "currency",
+    toBase: (value) => value * 1.10,
+    fromBase: (value) => value / 1.10,
+    decimalPlaces: 2
+  },
+  gbp: {
+    id: "gbp",
+    label: "British Pound",
+    symbol: "£",
+    kind: "currency",
+    toBase: (value) => value * 1.27,
+    fromBase: (value) => value / 1.27,
+    decimalPlaces: 2
+  },
   kilometers_per_hour: {
     id: "kilometers_per_hour",
     label: "Kilometers per Hour",
@@ -665,6 +692,26 @@ const aliasToUnitId: Record<string, string> = {
   day: "day",
   "days": "day",
   "d": "day",
+  usd: "usd",
+  "US Dollar": "usd",
+  "USD": "usd",
+  "us dollar": "usd",
+  "$": "usd",
+  "dollar": "usd",
+  "dollars": "usd",
+  eur: "eur",
+  "Euro": "eur",
+  "EUR": "eur",
+  "euro": "eur",
+  "euros": "eur",
+  "€": "eur",
+  gbp: "gbp",
+  "British Pound": "gbp",
+  "GBP": "gbp",
+  "british pound": "gbp",
+  "pound": "gbp",
+  "pounds": "gbp",
+  "£": "gbp",
   kilometers_per_hour: "kilometers_per_hour",
   "km/h": "kilometers_per_hour",
   "kmh": "kilometers_per_hour",
