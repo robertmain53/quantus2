@@ -730,6 +730,24 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 745.7,
     decimalPlaces: 3
   },
+  bit: {
+    id: "bit",
+    label: "Bit",
+    symbol: "b",
+    kind: "data_size",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 0
+  },
+  byte: {
+    id: "byte",
+    label: "Byte",
+    symbol: "B",
+    kind: "data_size",
+    toBase: (value) => value * 8,
+    fromBase: (value) => value / 8,
+    decimalPlaces: 2
+  },
   megabyte: {
     id: "megabyte",
     label: "Megabyte",
@@ -1141,6 +1159,14 @@ const aliasToUnitId: Record<string, string> = {
   horsepower: "horsepower",
   hp: "horsepower",
   "horse power": "horsepower",
+  bit: "bit",
+  bits: "bit",
+  b: "bit",
+  "b": "bit",
+  byte: "byte",
+  bytes: "byte",
+  "B": "byte",
+  "bytes": "byte",
   megabyte: "megabyte",
   megabytes: "megabyte",
   mb: "megabyte",
