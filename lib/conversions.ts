@@ -1008,6 +1008,60 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 0.012,
     fromBase: (value) => value / 0.012,
     decimalPlaces: 2
+  },
+  arcsecond: {
+    id: "arcsecond",
+    label: "Arcsecond",
+    symbol: "arcsec",
+    kind: "angle",
+    toBase: (value) => value * Math.PI / 648000,
+    fromBase: (value) => value * 648000 / Math.PI,
+    decimalPlaces: 6
+  },
+  megawatt_hour: {
+    id: "megawatt_hour",
+    label: "Megawatt Hour",
+    symbol: "MWh",
+    kind: "energy",
+    toBase: (value) => value * 3600000000,
+    fromBase: (value) => value / 3600000000,
+    decimalPlaces: 2
+  },
+  petabyte: {
+    id: "petabyte",
+    label: "Petabyte",
+    symbol: "PB",
+    kind: "data_size",
+    toBase: (value) => value * 8000000000000000,
+    fromBase: (value) => value / 8000000000000000,
+    decimalPlaces: 2
+  },
+  terahertz: {
+    id: "terahertz",
+    label: "Terahertz",
+    symbol: "THz",
+    kind: "frequency",
+    toBase: (value) => value * 1000000000000,
+    fromBase: (value) => value / 1000000000000,
+    decimalPlaces: 2
+  },
+  long_ton: {
+    id: "long_ton",
+    label: "Long Ton",
+    symbol: "ton (long)",
+    kind: "weight",
+    toBase: (value) => value * 1016.04691,
+    fromBase: (value) => value / 1016.04691,
+    decimalPlaces: 4
+  },
+  microgram: {
+    id: "microgram",
+    label: "Microgram",
+    symbol: "mcg",
+    kind: "weight",
+    toBase: (value) => value / 1000000000,
+    fromBase: (value) => value * 1000000000,
+    decimalPlaces: 6
   }
 };
 
@@ -1507,7 +1561,33 @@ const aliasToUnitId: Record<string, string> = {
   "Indian Rupee": "inr",
   "INR": "inr",
   "indian rupee": "inr",
-  "₹": "inr"
+  "₹": "inr",
+  arcsecond: "arcsecond",
+  arcseconds: "arcsecond",
+  "arc second": "arcsecond",
+  arcsec: "arcsecond",
+  "arcsec": "arcsecond",
+  megawatt_hour: "megawatt_hour",
+  "megawatt hour": "megawatt_hour",
+  "MWh": "megawatt_hour",
+  mwh: "megawatt_hour",
+  petabyte: "petabyte",
+  petabytes: "petabyte",
+  "pb": "petabyte",
+  "PB": "petabyte",
+  terahertz: "terahertz",
+  terahertzs: "terahertz",
+  "thz": "terahertz",
+  "THz": "terahertz",
+  long_ton: "long_ton",
+  "long ton": "long_ton",
+  "long_ton": "long_ton",
+  "imperial ton": "long_ton",
+  microgram: "microgram",
+  micrograms: "microgram",
+  "mcg": "microgram",
+  "µg": "microgram",
+  "ug": "microgram"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
