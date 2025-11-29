@@ -244,6 +244,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value * 1.8,
     decimalPlaces: 2
   },
+  reaumur: {
+    id: "reaumur",
+    label: "Reaumur",
+    symbol: "°Ré",
+    kind: "temperature",
+    toBase: (value) => value * 1.25 + 273.15,
+    fromBase: (value) => (value - 273.15) / 1.25,
+    decimalPlaces: 2
+  },
   square_meter: {
     id: "square_meter",
     label: "Square Meter",
@@ -397,6 +406,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 86400,
     decimalPlaces: 4
   },
+  week: {
+    id: "week",
+    label: "Week",
+    symbol: "wk",
+    kind: "time",
+    toBase: (value) => value * 604800,
+    fromBase: (value) => value / 604800,
+    decimalPlaces: 4
+  },
   usd: {
     id: "usd",
     label: "US Dollar",
@@ -450,6 +468,15 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 0.0067,
     fromBase: (value) => value / 0.0067,
     decimalPlaces: 2
+  },
+  btc: {
+    id: "btc",
+    label: "Bitcoin",
+    symbol: "BTC",
+    kind: "currency",
+    toBase: (value) => value * 42500,
+    fromBase: (value) => value / 42500,
+    decimalPlaces: 8
   },
   hertz: {
     id: "hertz",
@@ -973,6 +1000,10 @@ const aliasToUnitId: Record<string, string> = {
   rankine: "rankine",
   rankines: "rankine",
   "degrees rankine": "rankine",
+  reaumur: "reaumur",
+  reaumurs: "reaumur",
+  "degrees reaumur": "reaumur",
+  "°Ré": "reaumur",
   squaremeter: "square_meter",
   squaremeters: "square_meter",
   sqm: "square_meter",
@@ -1060,6 +1091,10 @@ const aliasToUnitId: Record<string, string> = {
   day: "day",
   "days": "day",
   "d": "day",
+  week: "week",
+  "weeks": "week",
+  "wk": "week",
+  "wks": "week",
   usd: "usd",
   "US Dollar": "usd",
   "USD": "usd",
@@ -1093,6 +1128,10 @@ const aliasToUnitId: Record<string, string> = {
   "JPY": "jpy",
   "japanese yen": "jpy",
   "¥": "jpy",
+  btc: "btc",
+  "Bitcoin": "btc",
+  "BTC": "btc",
+  "bitcoin": "btc",
   hertz: "hertz",
   "Hertz": "hertz",
   "Hz": "hertz",
