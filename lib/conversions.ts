@@ -775,13 +775,22 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 8,
     decimalPlaces: 2
   },
+  kilobyte: {
+    id: "kilobyte",
+    label: "Kilobyte",
+    symbol: "KB",
+    kind: "data_size",
+    toBase: (value) => value * 8000,
+    fromBase: (value) => value / 8000,
+    decimalPlaces: 2
+  },
   megabyte: {
     id: "megabyte",
     label: "Megabyte",
     symbol: "MB",
     kind: "data_size",
-    toBase: (value) => value * 1000000,
-    fromBase: (value) => value / 1000000,
+    toBase: (value) => value * 8000000,
+    fromBase: (value) => value / 8000000,
     decimalPlaces: 2
   },
   gigabyte: {
@@ -1225,6 +1234,10 @@ const aliasToUnitId: Record<string, string> = {
   bytes: "byte",
   "B": "byte",
   "bytes": "byte",
+  kilobyte: "kilobyte",
+  kilobytes: "kilobyte",
+  kb: "kilobyte",
+  "KB": "kilobyte",
   megabyte: "megabyte",
   megabytes: "megabyte",
   mb: "megabyte",
