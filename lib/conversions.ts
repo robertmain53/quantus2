@@ -424,6 +424,33 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 1.27,
     decimalPlaces: 2
   },
+  aud: {
+    id: "aud",
+    label: "Australian Dollar",
+    symbol: "A$",
+    kind: "currency",
+    toBase: (value) => value * 0.65,
+    fromBase: (value) => value / 0.65,
+    decimalPlaces: 2
+  },
+  cad: {
+    id: "cad",
+    label: "Canadian Dollar",
+    symbol: "C$",
+    kind: "currency",
+    toBase: (value) => value * 0.74,
+    fromBase: (value) => value / 0.74,
+    decimalPlaces: 2
+  },
+  jpy: {
+    id: "jpy",
+    label: "Japanese Yen",
+    symbol: "¥",
+    kind: "currency",
+    toBase: (value) => value * 0.0067,
+    fromBase: (value) => value / 0.0067,
+    decimalPlaces: 2
+  },
   hertz: {
     id: "hertz",
     label: "Hertz",
@@ -1008,6 +1035,19 @@ const aliasToUnitId: Record<string, string> = {
   "pound": "gbp",
   "pounds": "gbp",
   "£": "gbp",
+  aud: "aud",
+  "Australian Dollar": "aud",
+  "AUD": "aud",
+  "australian dollar": "aud",
+  cad: "cad",
+  "Canadian Dollar": "cad",
+  "CAD": "cad",
+  "canadian dollar": "cad",
+  jpy: "jpy",
+  "Japanese Yen": "jpy",
+  "JPY": "jpy",
+  "japanese yen": "jpy",
+  "¥": "jpy",
   hertz: "hertz",
   "Hertz": "hertz",
   "Hz": "hertz",
