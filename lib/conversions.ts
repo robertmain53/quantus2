@@ -352,6 +352,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value,
     decimalPlaces: 2
   },
+  btu: {
+    id: "btu",
+    label: "BTU",
+    symbol: "BTU",
+    kind: "energy",
+    toBase: (value) => value / 0.252,
+    fromBase: (value) => value * 0.252,
+    decimalPlaces: 2
+  },
   second: {
     id: "second",
     label: "Second",
@@ -888,6 +897,14 @@ const aliasToUnitId: Record<string, string> = {
   "cals": "calorie",
   "gram calorie": "calorie",
   "gram calories": "calorie",
+  btu: "btu",
+  "btus": "btu",
+  "BTU": "btu",
+  "BTUs": "btu",
+  "british thermal unit": "btu",
+  "british thermal units": "btu",
+  "btu/h": "btu",
+  "btuh": "btu",
   "small calorie": "calorie",
   "small calories": "calorie",
   second: "second",
