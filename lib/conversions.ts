@@ -685,6 +685,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 1000,
     decimalPlaces: 2
   },
+  watt: {
+    id: "watt",
+    label: "Watt",
+    symbol: "W",
+    kind: "power",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
   kilowatt: {
     id: "kilowatt",
     label: "Kilowatt",
@@ -692,6 +701,15 @@ const units: Record<string, UnitDefinition> = {
     kind: "power",
     toBase: (value) => value * 1000,
     fromBase: (value) => value / 1000,
+    decimalPlaces: 3
+  },
+  megawatt: {
+    id: "megawatt",
+    label: "Megawatt",
+    symbol: "MW",
+    kind: "power",
+    toBase: (value) => value * 1000000,
+    fromBase: (value) => value / 1000000,
     decimalPlaces: 3
   },
   horsepower: {
@@ -1089,11 +1107,21 @@ const aliasToUnitId: Record<string, string> = {
   "kPa": "kilopascal",
   kPas: "kilopascal",
   "kilopascals": "kilopascal",
+  watt: "watt",
+  watts: "watt",
+  w: "watt",
+  "W": "watt",
+  "watts": "watt",
   kilowatt: "kilowatt",
   kilowatts: "kilowatt",
   kw: "kilowatt",
   "kW": "kilowatt",
   "kilowatts": "kilowatt",
+  megawatt: "megawatt",
+  megawatts: "megawatt",
+  mw: "megawatt",
+  "MW": "megawatt",
+  "megawatts": "megawatt",
   horsepower: "horsepower",
   hp: "horsepower",
   "horse power": "horsepower",
