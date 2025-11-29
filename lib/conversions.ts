@@ -1296,6 +1296,96 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value,
     fromBase: (value) => value,
     decimalPlaces: 2
+  },
+  torr: {
+    id: "torr",
+    label: "Torr",
+    symbol: "Torr",
+    kind: "pressure",
+    toBase: (value) => value * 133.322,
+    fromBase: (value) => value / 133.322,
+    decimalPlaces: 4
+  },
+  decade: {
+    id: "decade",
+    label: "Decade",
+    symbol: "decade",
+    kind: "time",
+    toBase: (value) => value * 315360000,
+    fromBase: (value) => value / 315360000,
+    decimalPlaces: 6
+  },
+  month: {
+    id: "month",
+    label: "Month",
+    symbol: "month",
+    kind: "time",
+    toBase: (value) => value * 2592000,
+    fromBase: (value) => value / 2592000,
+    decimalPlaces: 4
+  },
+  year: {
+    id: "year",
+    label: "Year",
+    symbol: "yr",
+    kind: "time",
+    toBase: (value) => value * 31536000,
+    fromBase: (value) => value / 31536000,
+    decimalPlaces: 6
+  },
+  square_centimeter: {
+    id: "square_centimeter",
+    label: "Square Centimeter",
+    symbol: "cm²",
+    kind: "area",
+    toBase: (value) => value / 10000,
+    fromBase: (value) => value * 10000,
+    decimalPlaces: 6
+  },
+  square_inch: {
+    id: "square_inch",
+    label: "Square Inch",
+    symbol: "in²",
+    kind: "area",
+    toBase: (value) => value * 0.00064516,
+    fromBase: (value) => value / 0.00064516,
+    decimalPlaces: 6
+  },
+  square_kilometer: {
+    id: "square_kilometer",
+    label: "Square Kilometer",
+    symbol: "km²",
+    kind: "area",
+    toBase: (value) => value * 1000000,
+    fromBase: (value) => value / 1000000,
+    decimalPlaces: 4
+  },
+  square_mile: {
+    id: "square_mile",
+    label: "Square Mile",
+    symbol: "mi²",
+    kind: "area",
+    toBase: (value) => value * 2589988,
+    fromBase: (value) => value / 2589988,
+    decimalPlaces: 4
+  },
+  square_yard: {
+    id: "square_yard",
+    label: "Square Yard",
+    symbol: "yd²",
+    kind: "area",
+    toBase: (value) => value * 0.83612736,
+    fromBase: (value) => value / 0.83612736,
+    decimalPlaces: 4
+  },
+  tablespoon: {
+    id: "tablespoon",
+    label: "Tablespoon",
+    symbol: "tbsp",
+    kind: "volume",
+    toBase: (value) => value * 14.787,
+    fromBase: (value) => value / 14.787,
+    decimalPlaces: 4
   }
 };
 
@@ -1928,7 +2018,39 @@ const aliasToUnitId: Record<string, string> = {
   "newton per square meter": "newton_per_square_meter",
   "N/m²": "newton_per_square_meter",
   "N/m2": "newton_per_square_meter",
-  "n/m²": "newton_per_square_meter"
+  "n/m²": "newton_per_square_meter",
+  torr: "torr",
+  decade: "decade",
+  decades: "decade",
+  month: "month",
+  months: "month",
+  year: "year",
+  years: "year",
+  "yr": "year",
+  square_centimeter: "square_centimeter",
+  "square centimeter": "square_centimeter",
+  "cm²": "square_centimeter",
+  "cm2": "square_centimeter",
+  square_inch: "square_inch",
+  "square inch": "square_inch",
+  "in²": "square_inch",
+  "in2": "square_inch",
+  square_kilometer: "square_kilometer",
+  "square kilometer": "square_kilometer",
+  "km²": "square_kilometer",
+  "km2": "square_kilometer",
+  square_mile: "square_mile",
+  "square mile": "square_mile",
+  "mi²": "square_mile",
+  "mi2": "square_mile",
+  square_yard: "square_yard",
+  "square yard": "square_yard",
+  "yd²": "square_yard",
+  "yd2": "square_yard",
+  tablespoon: "tablespoon",
+  tablespoons: "tablespoon",
+  "tbsp": "tablespoon",
+  "table spoon": "tablespoon"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
