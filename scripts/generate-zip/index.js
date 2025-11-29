@@ -19,7 +19,7 @@ if (!SERPER_API_KEY) {
 const RESULTS_PER_KEYWORD = 20;
 const OUTPUT_DIR = path.join(process.cwd(), "../../input");
 const KEYWORDS_FILE = path.join(process.cwd(), "keywords.txt");
-const FETCH_DELAY_MS = 24000;
+const FETCH_DELAY_MS = 14000;
 const PAGE_TIMEOUT_MS = 40000;
 // -------------------------------
 
@@ -110,11 +110,19 @@ async function zipFolder(folderPath, zipPath) {
 
 async function processKeyword(keyword, page, engine, customFilename = null) {
   const slug = slugify(keyword, { lower: true, strict: true, trim: true });
+
+  const zipFilename = customFilename || `${slug}.zip`;
+  const zipPath = path.join(OUTPUT_DIR, zipFilename);
+
+  if (fs.existsSync(zipPath)) {
+    console.log(`\n⏭️ Skipping keyword "${keyword}": ZIP file already exists at ${zipPath}`);
+    return;
+  }
+
   const keywordDir = path.join(OUTPUT_DIR, slug);
   await fsp.mkdir(keywordDir, { recursive: true });
 
   console.log(`\n🔎 Keyword: "${keyword}" (engine: ${engine})`);
-
   let results;
   try {
     results = await getSerpResults(keyword, engine);
@@ -165,8 +173,6 @@ async function processKeyword(keyword, page, engine, customFilename = null) {
   const manifestPath = path.join(keywordDir, "manifest.json");
   await fsp.writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
 
-  const zipFilename = customFilename || `${slug}.zip`;
-  const zipPath = path.join(OUTPUT_DIR, zipFilename);
   await zipFolder(keywordDir, zipPath);
 
   console.log(`  ✅ Done: ${zipPath}`);
