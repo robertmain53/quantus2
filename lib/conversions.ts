@@ -2027,6 +2027,7 @@ meter: "meter",
   "PS": "metric_horsepower",
   "CV": "metric_horsepower",
   "ch": "metric_horsepower"
+};
 
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
