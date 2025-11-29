@@ -649,6 +649,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 1.609344,
     decimalPlaces: 2
   },
+  atmosphere: {
+    id: "atmosphere",
+    label: "Atmosphere",
+    symbol: "atm",
+    kind: "pressure",
+    toBase: (value) => value * 101325,
+    fromBase: (value) => value / 101325,
+    decimalPlaces: 4
+  },
   pascal: {
     id: "pascal",
     label: "Pascal",
@@ -1086,6 +1095,13 @@ const aliasToUnitId: Record<string, string> = {
   "mph": "miles_per_hour",
   "mi/h": "miles_per_hour",
   "miles per hour": "miles_per_hour",
+  atmosphere: "atmosphere",
+  atmospheres: "atmosphere",
+  atm: "atmosphere",
+  "atm": "atmosphere",
+  "atmosphere": "atmosphere",
+  "atmospheres": "atmosphere",
+  "standard atmosphere": "atmosphere",
   pascal: "pascal",
   pascals: "pascal",
   pa: "pascal",
