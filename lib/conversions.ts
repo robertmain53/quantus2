@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate" | "time" | "currency" | "frequency" | "density" | "force" | "voltage" | "resistance" | "angle" | "luminous_intensity";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate" | "time" | "currency" | "frequency" | "density" | "force" | "voltage" | "resistance" | "angle" | "luminous_intensity" | "fuel_economy";
 
 export interface UnitDefinition {
   id: string;
@@ -1215,6 +1215,87 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value / 1000000,
     fromBase: (value) => value * 1000000,
     decimalPlaces: 6
+  },
+  gallon_per_100_miles: {
+    id: "gallon_per_100_miles",
+    label: "Gallon per 100 Miles",
+    symbol: "gal/100mi",
+    kind: "fuel_economy",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 4
+  },
+  liter_per_100_kilometers: {
+    id: "liter_per_100_kilometers",
+    label: "Liter per 100 Kilometers",
+    symbol: "L/100km",
+    kind: "fuel_economy",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
+  liter_per_mile: {
+    id: "liter_per_mile",
+    label: "Liter per Mile",
+    symbol: "L/mi",
+    kind: "fuel_economy",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 4
+  },
+  mile_per_gallon_uk: {
+    id: "mile_per_gallon_uk",
+    label: "Mile per UK Gallon",
+    symbol: "mpg (UK)",
+    kind: "fuel_economy",
+    toBase: (value) => value * 0.425144,
+    fromBase: (value) => value / 0.425144,
+    decimalPlaces: 2
+  },
+  millisecond: {
+    id: "millisecond",
+    label: "Millisecond",
+    symbol: "ms",
+    kind: "time",
+    toBase: (value) => value / 1000,
+    fromBase: (value) => value * 1000,
+    decimalPlaces: 6
+  },
+  inch_of_mercury: {
+    id: "inch_of_mercury",
+    label: "Inch of Mercury",
+    symbol: "inHg",
+    kind: "pressure",
+    toBase: (value) => value * 3386.39,
+    fromBase: (value) => value / 3386.39,
+    decimalPlaces: 4
+  },
+  megapascal: {
+    id: "megapascal",
+    label: "Megapascal",
+    symbol: "MPa",
+    kind: "pressure",
+    toBase: (value) => value * 1000000,
+    fromBase: (value) => value / 1000000,
+    decimalPlaces: 2
+  },
+  millibar: {
+    id: "millibar",
+    label: "Millibar",
+    symbol: "mbar",
+    kind: "pressure",
+    toBase: (value) => value * 100,
+    fromBase: (value) => value / 100,
+    decimalPlaces: 2
+  },
+  newton_per_square_meter: {
+    id: "newton_per_square_meter",
+    label: "Newton per Square Meter",
+    symbol: "N/m²",
+    kind: "pressure",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
   }
 };
 
@@ -1817,7 +1898,37 @@ const aliasToUnitId: Record<string, string> = {
   micrometers: "micrometer",
   "µm": "micrometer",
   "um": "micrometer",
-  "micron": "micrometer"
+  "micron": "micrometer",
+  gallon_per_100_miles: "gallon_per_100_miles",
+  "gallon per 100 miles": "gallon_per_100_miles",
+  "gal/100mi": "gallon_per_100_miles",
+  liter_per_100_kilometers: "liter_per_100_kilometers",
+  "liter per 100 kilometers": "liter_per_100_kilometers",
+  "L/100km": "liter_per_100_kilometers",
+  liter_per_mile: "liter_per_mile",
+  "liter per mile": "liter_per_mile",
+  "L/mi": "liter_per_mile",
+  mile_per_gallon_uk: "mile_per_gallon_uk",
+  "mile per uk gallon": "mile_per_gallon_uk",
+  "mpg uk": "mile_per_gallon_uk",
+  millisecond: "millisecond",
+  milliseconds: "millisecond",
+  "ms": "millisecond",
+  "millis": "millisecond",
+  inch_of_mercury: "inch_of_mercury",
+  "inches of mercury": "inch_of_mercury",
+  "inHg": "inch_of_mercury",
+  megapascal: "megapascal",
+  megapascals: "megapascal",
+  "MPa": "megapascal",
+  millibar: "millibar",
+  millibars: "millibar",
+  "mbar": "millibar",
+  newton_per_square_meter: "newton_per_square_meter",
+  "newton per square meter": "newton_per_square_meter",
+  "N/m²": "newton_per_square_meter",
+  "N/m2": "newton_per_square_meter",
+  "n/m²": "newton_per_square_meter"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
