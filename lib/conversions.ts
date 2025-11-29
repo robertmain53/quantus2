@@ -1062,6 +1062,96 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value / 1000000000,
     fromBase: (value) => value * 1000000000,
     decimalPlaces: 6
+  },
+  gigabyte_per_second: {
+    id: "gigabyte_per_second",
+    label: "Gigabyte per Second",
+    symbol: "GB/s",
+    kind: "data_rate",
+    toBase: (value) => value * 8000000000,
+    fromBase: (value) => value / 8000000000,
+    decimalPlaces: 2
+  },
+  kibibyte: {
+    id: "kibibyte",
+    label: "Kibibyte",
+    symbol: "KiB",
+    kind: "data_size",
+    toBase: (value) => value * 8192,
+    fromBase: (value) => value / 8192,
+    decimalPlaces: 2
+  },
+  mebibyte: {
+    id: "mebibyte",
+    label: "Mebibyte",
+    symbol: "MiB",
+    kind: "data_size",
+    toBase: (value) => value * 8388608,
+    fromBase: (value) => value / 8388608,
+    decimalPlaces: 2
+  },
+  radian_per_second: {
+    id: "radian_per_second",
+    label: "Radian per Second",
+    symbol: "rad/s",
+    kind: "frequency",
+    toBase: (value) => value * 1000000000,
+    fromBase: (value) => value / 1000000000,
+    decimalPlaces: 4
+  },
+  short_ton: {
+    id: "short_ton",
+    label: "Short Ton",
+    symbol: "ton (short)",
+    kind: "weight",
+    toBase: (value) => value * 907.18474,
+    fromBase: (value) => value / 907.18474,
+    decimalPlaces: 4
+  },
+  tonne: {
+    id: "tonne",
+    label: "Tonne",
+    symbol: "t",
+    kind: "weight",
+    toBase: (value) => value * 1000,
+    fromBase: (value) => value / 1000,
+    decimalPlaces: 4
+  },
+  horsepower: {
+    id: "horsepower",
+    label: "Horsepower",
+    symbol: "hp",
+    kind: "power",
+    toBase: (value) => value * 745.7,
+    fromBase: (value) => value / 745.7,
+    decimalPlaces: 2
+  },
+  kpa: {
+    id: "kpa",
+    label: "Kilopascal",
+    symbol: "kPa",
+    kind: "pressure",
+    toBase: (value) => value * 1000,
+    fromBase: (value) => value / 1000,
+    decimalPlaces: 2
+  },
+  cubic_foot: {
+    id: "cubic_foot",
+    label: "Cubic Foot",
+    symbol: "ft³",
+    kind: "volume",
+    toBase: (value) => value * 28.3168,
+    fromBase: (value) => value / 28.3168,
+    decimalPlaces: 4
+  },
+  cubic_inch: {
+    id: "cubic_inch",
+    label: "Cubic Inch",
+    symbol: "in³",
+    kind: "volume",
+    toBase: (value) => value * 0.0163871,
+    fromBase: (value) => value / 0.0163871,
+    decimalPlaces: 6
   }
 };
 
@@ -1587,7 +1677,54 @@ const aliasToUnitId: Record<string, string> = {
   micrograms: "microgram",
   "mcg": "microgram",
   "µg": "microgram",
-  "ug": "microgram"
+  "ug": "microgram",
+  gigabyte_per_second: "gigabyte_per_second",
+  "gigabyte per second": "gigabyte_per_second",
+  "GB/s": "gigabyte_per_second",
+  "GBps": "gigabyte_per_second",
+  kibibyte: "kibibyte",
+  kibibytes: "kibibyte",
+  "KiB": "kibibyte",
+  "kib": "kibibyte",
+  mebibyte: "mebibyte",
+  mebibytes: "mebibyte",
+  "MiB": "mebibyte",
+  "mib": "mebibyte",
+  radian_per_second: "radian_per_second",
+  "radian per second": "radian_per_second",
+  "rad/s": "radian_per_second",
+  "radians per second": "radian_per_second",
+  short_ton: "short_ton",
+  "short ton": "short_ton",
+  "short_ton": "short_ton",
+  "us ton": "short_ton",
+  tonne: "tonne",
+  "metric ton": "tonne",
+  "metric_ton": "tonne",
+  "tonnes": "tonne",
+  "t": "tonne",
+  horsepower: "horsepower",
+  "horse power": "horsepower",
+  "hp": "horsepower",
+  "HP": "horsepower",
+  "mechanical horsepower": "horsepower",
+  kpa: "kpa",
+  kilopascal: "kpa",
+  "kilopascals": "kpa",
+  "kPa": "kpa",
+  "KPa": "kpa",
+  cubic_foot: "cubic_foot",
+  "cubic foot": "cubic_foot",
+  "cubic feet": "cubic_foot",
+  "cu ft": "cubic_foot",
+  "ft³": "cubic_foot",
+  "ft^3": "cubic_foot",
+  cubic_inch: "cubic_inch",
+  "cubic inch": "cubic_inch",
+  "cubic inches": "cubic_inch",
+  "cu in": "cubic_inch",
+  "in³": "cubic_inch",
+  "in^3": "cubic_inch"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
