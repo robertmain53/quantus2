@@ -900,6 +900,69 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 4.54609,
     fromBase: (value) => value / 4.54609,
     decimalPlaces: 4
+  },
+  attobyte: {
+    id: "attobyte",
+    label: "Attobyte",
+    symbol: "aB",
+    kind: "data_size",
+    toBase: (value) => value / 1000000000000000000,
+    fromBase: (value) => value * 1000000000000000000,
+    decimalPlaces: 0
+  },
+  btu_per_hour: {
+    id: "btu_per_hour",
+    label: "BTU per Hour",
+    symbol: "BTU/h",
+    kind: "power",
+    toBase: (value) => value * 0.293071,
+    fromBase: (value) => value / 0.293071,
+    decimalPlaces: 2
+  },
+  chf: {
+    id: "chf",
+    label: "Swiss Franc",
+    symbol: "CHF",
+    kind: "currency",
+    toBase: (value) => value * 1.12,
+    fromBase: (value) => value / 1.12,
+    decimalPlaces: 2
+  },
+  eth: {
+    id: "eth",
+    label: "Ethereum",
+    symbol: "ETH",
+    kind: "currency",
+    toBase: (value) => value * 2300,
+    fromBase: (value) => value / 2300,
+    decimalPlaces: 8
+  },
+  gradian: {
+    id: "gradian",
+    label: "Gradian",
+    symbol: "grad",
+    kind: "angle",
+    toBase: (value) => value * Math.PI / 200,
+    fromBase: (value) => value * 200 / Math.PI,
+    decimalPlaces: 4
+  },
+  mil: {
+    id: "mil",
+    label: "Mil",
+    symbol: "mil",
+    kind: "angle",
+    toBase: (value) => value * Math.PI / 3200,
+    fromBase: (value) => value * 3200 / Math.PI,
+    decimalPlaces: 4
+  },
+  turn: {
+    id: "turn",
+    label: "Turn",
+    symbol: "turn",
+    kind: "angle",
+    toBase: (value) => value * 2 * Math.PI,
+    fromBase: (value) => value / (2 * Math.PI),
+    decimalPlaces: 4
   }
 };
 
@@ -1352,7 +1415,33 @@ const aliasToUnitId: Record<string, string> = {
   "UK gallon": "uk_gallon",
   "uk gallons": "uk_gallon",
   "gallon (uk)": "uk_gallon",
-  "imperial gallon": "uk_gallon"
+  "imperial gallon": "uk_gallon",
+  attobyte: "attobyte",
+  attobytes: "attobyte",
+  "aB": "attobyte",
+  btu_per_hour: "btu_per_hour",
+  "btu per hour": "btu_per_hour",
+  "BTU/h": "btu_per_hour",
+  "BTU/hr": "btu_per_hour",
+  chf: "chf",
+  "Swiss Franc": "chf",
+  "CHF": "chf",
+  "swiss franc": "chf",
+  eth: "eth",
+  "Ethereum": "eth",
+  "ETH": "eth",
+  "ethereum": "eth",
+  gradian: "gradian",
+  gradians: "gradian",
+  "grad": "gradian",
+  "gon": "gradian",
+  mil: "mil",
+  mils: "mil",
+  "angular mil": "mil",
+  turn: "turn",
+  turns: "turn",
+  "full turn": "turn",
+  "revolution": "turn"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
