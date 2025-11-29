@@ -45,8 +45,9 @@ npm run dev
 | `New_Publish_Date` | ISO-friendly date. Items with a future date stay hidden until the next rebuild after that date. |
 | `component_type` | Enum describing which generic engine should render the calculator. Supported values: `converter`, `simple_calc`, `advanced_calc`. |
 | `config_json` | JSON blob containing the full calculator contract: inputs, outputs, validation rules, structured page copy, schema hints, internal/external link plans, and presentation settings (no raw HTML). |
-| `production_date` | ISO date when the initial calculator was first committed to git and deployed to production. Set during Phase 1 Step 2. |
-| `revision1_date` | ISO date when the first revision (Phase 2) was completed and deployed. Set during Phase 2 Step 9. Optional until revision is complete. |
+| `creation_date` | ISO date when the initial calculator JSON was first committed to git and deployed to production. Set during Phase 1 Step 2. |
+| `revision1_date` | ISO date when the first revision cycle (Phase 2) was completed and deployed. Set during Phase 2 Step 9. Optional until revision is complete. |
+| `revision2_date` | ISO date when the second revision cycle (Phase 3) was completed and deployed. Optional for subsequent revisions. |
 
 > **Tip:** Keep JSON payloads in valid UTF-8 and escape double quotes if editing the CSV manually. For bulk edits, prefer tooling (Airtable export, Google Sheets + script) that can manage multi-line cells safely.
 
@@ -249,7 +250,7 @@ The component_type field routes to the right engine; config_json contains the fu
 
 ### Overview
 
-The new workflow introduces a **two-phase review cycle** with deep auditing and iterative improvement. Each calculator undergoes initial production deployment, then structured review, refinement, and revision.
+The new workflow introduces a **multi-phase review cycle** with deep auditing and iterative improvement. Each calculator undergoes initial production deployment, then structured review, refinement, and revision cycles. Subsequent revisions follow the same Phase 2 pattern.
 
 ```
 Phase 1: Initial Production
@@ -259,9 +260,9 @@ Step 2: Claude Code Commit   [Human, 2 min] → Commit JSON to git and push to m
        ↓
 Step 3: Vercel Deploy        [Automated]    → Deploy to staging/production
        ↓
-Step 4: CSV Entry            [Human, 1 min] → Add row to calc.csv with production_date
+Step 4: CSV Entry            [Human, 1 min] → Add row to calc.csv with creation_date
        ↓
-Phase 2: Review & Revision
+Phase 2: First Revision
 Step 5: Gemini Deep Audit    [AI, 10 min]   → Download MHTML files, perform deep research + criticism
        ↓
 Step 6: ChatGPT Improvement  [AI, 10 min]   → Process Gemini report, enhance JSON with revisions
@@ -271,6 +272,11 @@ Step 7: Claude Code Update   [Human, 2 min] → Update original calculator JSON 
 Step 8: Vercel Re-Deploy     [Automated]    → Deploy updated calculator
        ↓
 Step 9: CSV Revision Date    [Human, 1 min] → Update calc.csv revision1_date column
+       ↓
+Phase 3: Subsequent Revisions (repeat Phase 2 pattern as needed)
+Step 10: Audit & Improve     [AI, ~20 min]  → Additional review cycles
+       ↓
+Step 11: CSV Update          [Human, 1 min] → Update calc.csv revision2_date (or later columns)
 ```
 
 ---
@@ -328,8 +334,9 @@ node scripts/add-calculator.js \
 ```
 
 **Ensure the CSV row includes:**
-- `production_date`: Set to the date you committed the JSON (e.g., `11/29/2025`)
+- `creation_date`: Set to the date you committed the JSON (e.g., `11/29/2025`)
 - `revision1_date`: Leave empty for now (will be updated in Phase 2)
+- `revision2_date`: Leave empty for now (will be updated in Phase 3 if applicable)
 
 **Output:** Calculator is now indexed in the system and searchable.
 
@@ -378,6 +385,15 @@ After the calculator has been deployed for at least 24 hours:
    ```
 
 **Output:** Revised calculator is deploying to production.
+
+#### Phase 3+ Subsequent Revisions
+
+If additional improvements are needed after Phase 2:
+
+1. Repeat Steps 5–9 using the same pattern
+2. Update the commit message to reference the revision number (e.g., `Revision 2`)
+3. Update the appropriate revision column in calc.csv (`revision2_date`, `revision3_date`, etc.)
+4. The same validation and deployment process applies
 
 ---
 
@@ -534,11 +550,18 @@ node scripts/add-calculator.js \
   --date "11/29/2025" \
   --config data/configs/pascals-to-atmospheres-converter.json
 git add data/calc.csv
-git commit -m "Add pascals-to-atmospheres-converter to CSV with production_date"
+git commit -m "Add pascals-to-atmospheres-converter to CSV with creation_date"
 git push origin main
 ```
 
-#### Phase 2: Review & Revision (~25 min total, spread over days)
+**CSV Row Structure (Phase 1):**
+- `creation_date`: 11/29/2025 (set to commit date)
+- `revision1_date`: (empty, set in Phase 2)
+- `revision2_date`: (empty, set in Phase 3 if needed)
+
+---
+
+#### Phase 2: First Revision (~25 min total, spread over 1–2 days)
 
 ```bash
 # PHASE 2, STEP 5: GEMINI DEEP AUDIT (Manual, ~10 min)
@@ -569,9 +592,34 @@ git commit -m "Update calc.csv: Add revision1_date for Pascals to Atmospheres"
 git push origin main
 ```
 
+**CSV Row Structure (Phase 2):**
+- `creation_date`: 11/29/2025 (unchanged from Phase 1)
+- `revision1_date`: 11/30/2025 (set to revision completion date)
+- `revision2_date`: (empty, set in Phase 3 if needed)
+
+---
+
+#### Phase 3+: Subsequent Revisions (Repeat Phase 2 pattern)
+
+```bash
+# PHASE 3, STEP 5–9: (Same pattern as Phase 2)
+# Perform audit, improvement, update, and deploy
+# Update revision2_date (or later revision columns as needed)
+
+git commit -m "Update calc.csv: Add revision2_date for [Calculator Name]"
+```
+
+**CSV Row Structure (Phase 3+):**
+- `creation_date`: 11/29/2025 (unchanged)
+- `revision1_date`: 11/30/2025 (unchanged)
+- `revision2_date`: 12/1/2025 (set to next revision completion date)
+
+---
+
 **Total Phase 1: ~10 minutes**
 **Total Phase 2: ~25 minutes (spread over 1–2 days)**
-**Advantage: Deep review + iterative improvement ensures production-quality calculators**
+**Total Phase 3+: ~25 minutes per revision (as needed)**
+**Advantage: Deep review + iterative improvement ensures production-quality calculators with full revision history tracking**
 
 ---
 
