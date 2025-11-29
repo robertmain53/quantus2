@@ -874,6 +874,15 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 1000000000,
     decimalPlaces: 2
   },
+  terabit_per_second: {
+    id: "terabit_per_second",
+    label: "Terabit per Second",
+    symbol: "Tbps",
+    kind: "data_rate",
+    toBase: (value) => value * 1000000000000,
+    fromBase: (value) => value / 1000000000000,
+    decimalPlaces: 2
+  },
   terabyte: {
     id: "terabyte",
     label: "Terabyte",
@@ -963,6 +972,42 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 2 * Math.PI,
     fromBase: (value) => value / (2 * Math.PI),
     decimalPlaces: 4
+  },
+  arcminute: {
+    id: "arcminute",
+    label: "Arcminute",
+    symbol: "arcmin",
+    kind: "angle",
+    toBase: (value) => value * Math.PI / 10800,
+    fromBase: (value) => value * 10800 / Math.PI,
+    decimalPlaces: 4
+  },
+  megajoule: {
+    id: "megajoule",
+    label: "Megajoule",
+    symbol: "MJ",
+    kind: "energy",
+    toBase: (value) => value * 1000000,
+    fromBase: (value) => value / 1000000,
+    decimalPlaces: 2
+  },
+  rpm: {
+    id: "rpm",
+    label: "Revolution per Minute",
+    symbol: "rpm",
+    kind: "frequency",
+    toBase: (value) => value / 60,
+    fromBase: (value) => value * 60,
+    decimalPlaces: 2
+  },
+  inr: {
+    id: "inr",
+    label: "Indian Rupee",
+    symbol: "₹",
+    kind: "currency",
+    toBase: (value) => value * 0.012,
+    fromBase: (value) => value / 0.012,
+    decimalPlaces: 2
   }
 };
 
@@ -1401,6 +1446,10 @@ const aliasToUnitId: Record<string, string> = {
   "gigabit per second": "gigabit_per_second",
   gbps: "gigabit_per_second",
   "Gbps": "gigabit_per_second",
+  terabit_per_second: "terabit_per_second",
+  "terabit per second": "terabit_per_second",
+  tbps: "terabit_per_second",
+  "Tbps": "terabit_per_second",
   terabyte: "terabyte",
   terabytes: "terabyte",
   tb: "terabyte",
@@ -1441,7 +1490,24 @@ const aliasToUnitId: Record<string, string> = {
   turn: "turn",
   turns: "turn",
   "full turn": "turn",
-  "revolution": "turn"
+  "revolution": "turn",
+  arcminute: "arcminute",
+  arcminutes: "arcminute",
+  "arc minute": "arcminute",
+  arcmin: "arcminute",
+  "arcmin": "arcminute",
+  megajoule: "megajoule",
+  megajoules: "megajoule",
+  "mj": "megajoule",
+  "MJ": "megajoule",
+  rpm: "rpm",
+  "revolutions per minute": "rpm",
+  "revolution per minute": "rpm",
+  inr: "inr",
+  "Indian Rupee": "inr",
+  "INR": "inr",
+  "indian rupee": "inr",
+  "₹": "inr"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
