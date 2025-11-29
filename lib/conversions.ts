@@ -1152,6 +1152,69 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 0.0163871,
     fromBase: (value) => value / 0.0163871,
     decimalPlaces: 6
+  },
+  cubic_meter: {
+    id: "cubic_meter",
+    label: "Cubic Meter",
+    symbol: "m³",
+    kind: "volume",
+    toBase: (value) => value * 1000,
+    fromBase: (value) => value / 1000,
+    decimalPlaces: 4
+  },
+  cubic_yard: {
+    id: "cubic_yard",
+    label: "Cubic Yard",
+    symbol: "yd³",
+    kind: "volume",
+    toBase: (value) => value * 764.555,
+    fromBase: (value) => value / 764.555,
+    decimalPlaces: 4
+  },
+  knot: {
+    id: "knot",
+    label: "Knot",
+    symbol: "kn",
+    kind: "speed",
+    toBase: (value) => value * 0.51444,
+    fromBase: (value) => value / 0.51444,
+    decimalPlaces: 4
+  },
+  mach: {
+    id: "mach",
+    label: "Mach",
+    symbol: "M",
+    kind: "speed",
+    toBase: (value) => value * 343,
+    fromBase: (value) => value / 343,
+    decimalPlaces: 4
+  },
+  mile_per_hour: {
+    id: "mile_per_hour",
+    label: "Mile per Hour",
+    symbol: "mph",
+    kind: "speed",
+    toBase: (value) => value * 0.44704,
+    fromBase: (value) => value / 0.44704,
+    decimalPlaces: 4
+  },
+  mile_per_second: {
+    id: "mile_per_second",
+    label: "Mile per Second",
+    symbol: "mi/s",
+    kind: "speed",
+    toBase: (value) => value * 1609.34,
+    fromBase: (value) => value / 1609.34,
+    decimalPlaces: 4
+  },
+  micrometer: {
+    id: "micrometer",
+    label: "Micrometer",
+    symbol: "µm",
+    kind: "length",
+    toBase: (value) => value / 1000000,
+    fromBase: (value) => value * 1000000,
+    decimalPlaces: 6
   }
 };
 
@@ -1724,7 +1787,37 @@ const aliasToUnitId: Record<string, string> = {
   "cubic inches": "cubic_inch",
   "cu in": "cubic_inch",
   "in³": "cubic_inch",
-  "in^3": "cubic_inch"
+  "in^3": "cubic_inch",
+  cubic_meter: "cubic_meter",
+  "cubic meter": "cubic_meter",
+  "cubic metres": "cubic_meter",
+  "m³": "cubic_meter",
+  "m^3": "cubic_meter",
+  cubic_yard: "cubic_yard",
+  "cubic yard": "cubic_yard",
+  "cubic yards": "cubic_yard",
+  "yd³": "cubic_yard",
+  "yd^3": "cubic_yard",
+  knot: "knot",
+  knots: "knot",
+  "kn": "knot",
+  "nautical mile per hour": "knot",
+  mach: "mach",
+  "m": "mach",
+  mile_per_hour: "mile_per_hour",
+  "mile per hour": "mile_per_hour",
+  "miles per hour": "mile_per_hour",
+  "mph": "mile_per_hour",
+  "MPH": "mile_per_hour",
+  mile_per_second: "mile_per_second",
+  "mile per second": "mile_per_second",
+  "miles per second": "mile_per_second",
+  "mi/s": "mile_per_second",
+  micrometer: "micrometer",
+  micrometers: "micrometer",
+  "µm": "micrometer",
+  "um": "micrometer",
+  "micron": "micrometer"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
