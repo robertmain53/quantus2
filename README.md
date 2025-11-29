@@ -45,6 +45,8 @@ npm run dev
 | `New_Publish_Date` | ISO-friendly date. Items with a future date stay hidden until the next rebuild after that date. |
 | `component_type` | Enum describing which generic engine should render the calculator. Supported values: `converter`, `simple_calc`, `advanced_calc`. |
 | `config_json` | JSON blob containing the full calculator contract: inputs, outputs, validation rules, structured page copy, schema hints, internal/external link plans, and presentation settings (no raw HTML). |
+| `production_date` | ISO date when the initial calculator was first committed to git and deployed to production. Set during Phase 1 Step 2. |
+| `revision1_date` | ISO date when the first revision (Phase 2) was completed and deployed. Set during Phase 2 Step 9. Optional until revision is complete. |
 
 > **Tip:** Keep JSON payloads in valid UTF-8 and escape double quotes if editing the CSV manually. For bulk edits, prefer tooling (Airtable export, Google Sheets + script) that can manage multi-line cells safely.
 
@@ -243,27 +245,165 @@ Single Source of Truth: data/calc.csv contains all metadata and configuration fo
 
 The component_type field routes to the right engine; config_json contains the full calculator blueprint (inputs, outputs, validation, copy, links, schema).
 
-## Operational Workflow (Steps 1–5)
+## Operational Workflow (New Process)
 
 ### Overview
 
-The workflow takes a calculator from research to publication in **~12 minutes** using ChatGPT and a single import script. No manual CSV escaping required.
+The new workflow introduces a **two-phase review cycle** with deep auditing and iterative improvement. Each calculator undergoes initial production deployment, then structured review, refinement, and revision.
 
 ```
-Step 1: Research     [Human, 5 min]  → Gather competitor assets
+Phase 1: Initial Production
+Step 1: ChatGPT Generation   [AI, 5 min]     → Use provided prompt + assets → Get JSON
        ↓
-Step 2: Generate     [AI, 5 min]     → Use provided prompt + assets → Get JSON
+Step 2: Claude Code Commit   [Human, 2 min] → Commit JSON to git and push to main
        ↓
-Step 3: Review       [Human, 1 min]  → Validate JSON against schema
+Step 3: Vercel Deploy        [Automated]    → Deploy to staging/production
        ↓
-Step 4: Import       [Script, 1 min]  → Run add-calculator.js → Auto-escapes & adds to CSV
+Step 4: CSV Entry            [Human, 1 min] → Add row to calc.csv with production_date
        ↓
-Step 5: Publish      [Automated]     → npm run build; Next.js renders using config_json
+Phase 2: Review & Revision
+Step 5: Gemini Deep Audit    [AI, 10 min]   → Download MHTML files, perform deep research + criticism
+       ↓
+Step 6: ChatGPT Improvement  [AI, 10 min]   → Process Gemini report, enhance JSON with revisions
+       ↓
+Step 7: Claude Code Update   [Human, 2 min] → Update original calculator JSON with revisions
+       ↓
+Step 8: Vercel Re-Deploy     [Automated]    → Deploy updated calculator
+       ↓
+Step 9: CSV Revision Date    [Human, 1 min] → Update calc.csv revision1_date column
 ```
 
 ---
 
-### Step 1: Research (Human, ~5 min)
+### Phase 1: Initial Production Workflow
+
+#### Step 1: ChatGPT Generation (AI, ~5 min)
+
+Using the prompt template from this README:
+
+1. Gather research assets (competitor pages, PDFs, spreadsheets)
+2. Copy the full **AI prompt template** from the "AI prompt template" section below
+3. Open ChatGPT/Claude/Gemini and attach your research assets
+4. Paste the prompt and run it
+5. ChatGPT returns production-ready JSON with `component_type` and `config_json`
+
+**Output:** A complete, deployable JSON object ready for commit.
+
+---
+
+#### Step 2: Claude Code Commit (Human, ~2 min)
+
+1. Copy the returned `config_json` object (not the wrapper) and save to `data/configs/[calculator-slug]-converter.json`
+2. Commit the file to git:
+   ```bash
+   git add data/configs/[calculator-slug]-converter.json
+   git commit -m "JSON #N: [Calculator Name] – Production Upload"
+   git push origin main
+   ```
+3. **production_date** is automatically recorded as today's date when this commit lands.
+
+**Output:** Calculator JSON is now in git and deploying to production.
+
+---
+
+#### Step 3: Vercel Deploy (Automated)
+
+Once pushed to main, Vercel automatically triggers a build and deployment. The calculator is now live.
+
+---
+
+#### Step 4: CSV Entry (Human, ~1 min)
+
+After the calculator deploys successfully, add a row to `data/calc.csv`:
+
+```bash
+node scripts/add-calculator.js \
+  --category "Conversions" \
+  --subcategory "Pressure" \
+  --slug "/conversions/pressure/pascals-to-atmospheres-converter" \
+  --title "Convert Pascals to Atmospheres – Pressure Converter" \
+  --traffic 5000 \
+  --date "11/29/2025" \
+  --config data/configs/pascals-to-atmospheres-converter.json
+```
+
+**Ensure the CSV row includes:**
+- `production_date`: Set to the date you committed the JSON (e.g., `11/29/2025`)
+- `revision1_date`: Leave empty for now (will be updated in Phase 2)
+
+**Output:** Calculator is now indexed in the system and searchable.
+
+---
+
+### Phase 2: Review & Revision Workflow
+
+#### Step 5: Gemini Deep Audit (AI, ~10 min)
+
+After the calculator has been deployed for at least 24 hours:
+
+1. Download all MHTML files from the deployed Vercel calculator
+2. Open Gemini AI and attach all MHTML files
+3. Request a **deep research audit** covering:
+   - Accuracy of conversion factors
+   - Completeness of FAQs and examples
+   - Authority of citations
+   - Gaps in methodology or edge cases
+   - Accessibility and UX clarity
+   - Cross-tool consistency
+4. Gemini provides a detailed criticism report with improvement suggestions
+
+**Output:** Structured audit report identifying weaknesses and improvement opportunities.
+
+---
+
+#### Step 6: ChatGPT Improvement (AI, ~10 min)
+
+1. Copy the Gemini audit report
+2. Open ChatGPT and paste the report along with the original JSON
+3. Request: "Using this audit, enhance and revise the calculator JSON to address all critiques"
+4. ChatGPT returns an improved `config_json` with enhancements
+
+**Output:** Refined JSON ready for deployment.
+
+---
+
+#### Step 7: Claude Code Update (Human, ~2 min)
+
+1. Replace the original JSON file with the revised version:
+   ```bash
+   # Update the JSON file with the new content
+   git add data/configs/[calculator-slug]-converter.json
+   git commit -m "JSON #N Revision 1: [Calculator Name] – Gemini Audit Review & Improvements"
+   git push origin main
+   ```
+
+**Output:** Revised calculator is deploying to production.
+
+---
+
+#### Step 8: Vercel Re-Deploy (Automated)
+
+Vercel automatically deploys the updated calculator.
+
+---
+
+#### Step 9: CSV Revision Date (Human, ~1 min)
+
+Update the CSV row to record the revision completion:
+
+```bash
+# Edit data/calc.csv and set revision1_date for this calculator
+# Example: revision1_date = "11/30/2025"
+git add data/calc.csv
+git commit -m "Update calc.csv: Add revision1_date for [Calculator Name]"
+git push origin main
+```
+
+**Output:** Revision is now tracked in the system metadata.
+
+---
+
+### Step 1 (Legacy): Research (Human, ~5 min)
 
 Assemble competitor data and primary sources:
 
@@ -364,35 +504,74 @@ No additional engineering required—the calculator is live.
 
 ---
 
-### Complete Workflow Example
+### Complete Workflow Example (New Process)
+
+#### Phase 1: Initial Production (~10 min total)
 
 ```bash
-# 1. RESEARCH (Manual)
-SERPER_API_KEY=sk_... node scripts/generate-zip/index.js
+# PHASE 1, STEP 1: CHATGPT GENERATION (Manual, ~5 min)
+# 1. Gather research assets (competitor pages, PDFs, spreadsheets)
+# 2. Copy the AI prompt template from this README
+# 3. Open ChatGPT/Claude/Gemini, attach assets, paste prompt
+# 4. Get back: { "component_type": "converter", "config_json": { ... } }
 
-# 2. GENERATE PROMPT
-npm run prepare-prompts
+# PHASE 1, STEP 2: COMMIT TO GIT (Manual, ~2 min)
+cp /path/to/chatgpt-output.json data/configs/pascals-to-atmospheres-converter.json
+git add data/configs/pascals-to-atmospheres-converter.json
+git commit -m "JSON #26: Pascals to Atmospheres – Production Upload"
+git push origin main
 
-# 3. CHATGPT (Manual, ~5 min)
-# → Copy prompt from generated/prompts/...json
-# → Attach ZIP from input/
-# → ChatGPT returns config_json
+# PHASE 1, STEP 3: VERCEL DEPLOYS AUTOMATICALLY
+# (Wait for Vercel build to complete)
 
-# 4. IMPORT TO CSV (Automated, ~1 min)
+# PHASE 1, STEP 4: ADD TO CSV (Manual, ~1 min)
 node scripts/add-calculator.js \
   --category "Conversions" \
-  --subcategory "Illuminance" \
-  --slug "/conversions/illuminance/lumens-to-lux-converter" \
-  --title "Convert Lumens to Lux – Light Converter" \
-  --traffic 10000 \
-  --date "11/28/2025" \
-  --config data/configs/lumens-to-lux-converter.json
-
-# 5. PUBLISH (Automated)
-npm run build && npm start
+  --subcategory "Pressure" \
+  --slug "/conversions/pressure/pascals-to-atmospheres-converter" \
+  --title "Convert Pascals to Atmospheres – Pressure Converter" \
+  --traffic 5000 \
+  --date "11/29/2025" \
+  --config data/configs/pascals-to-atmospheres-converter.json
+git add data/calc.csv
+git commit -m "Add pascals-to-atmospheres-converter to CSV with production_date"
+git push origin main
 ```
 
-**Total: ~12 minutes per calculator** (40% faster than manual)
+#### Phase 2: Review & Revision (~25 min total, spread over days)
+
+```bash
+# PHASE 2, STEP 5: GEMINI DEEP AUDIT (Manual, ~10 min)
+# 1. Download MHTML files from deployed calculator
+# 2. Open Gemini AI, attach MHTML files
+# 3. Request: "Perform deep research audit and criticism of this calculator"
+# 4. Save the detailed audit report
+
+# PHASE 2, STEP 6: CHATGPT IMPROVEMENT (Manual, ~10 min)
+# 1. Copy Gemini audit report
+# 2. Open ChatGPT, provide original JSON + audit report
+# 3. Request: "Using this audit, enhance and revise the calculator"
+# 4. Get back improved: { "config_json": { ... } }
+
+# PHASE 2, STEP 7: UPDATE GIT WITH REVISIONS (Manual, ~2 min)
+cp /path/to/improved-output.json data/configs/pascals-to-atmospheres-converter.json
+git add data/configs/pascals-to-atmospheres-converter.json
+git commit -m "JSON #26 Revision 1: Pascals to Atmospheres – Gemini Audit Review & Improvements"
+git push origin main
+
+# PHASE 2, STEP 8: VERCEL RE-DEPLOYS AUTOMATICALLY
+# (Wait for Vercel build to complete)
+
+# PHASE 2, STEP 9: UPDATE CSV REVISION DATE (Manual, ~1 min)
+# Edit data/calc.csv, set revision1_date = "11/30/2025" for this calculator
+git add data/calc.csv
+git commit -m "Update calc.csv: Add revision1_date for Pascals to Atmospheres"
+git push origin main
+```
+
+**Total Phase 1: ~10 minutes**
+**Total Phase 2: ~25 minutes (spread over 1–2 days)**
+**Advantage: Deep review + iterative improvement ensures production-quality calculators**
 
 ---
 
