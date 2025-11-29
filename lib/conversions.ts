@@ -1386,6 +1386,33 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 14.787,
     fromBase: (value) => value / 14.787,
     decimalPlaces: 4
+  },
+  square_millimeter: {
+    id: "square_millimeter",
+    label: "Square Millimeter",
+    symbol: "mm²",
+    kind: "area",
+    toBase: (value) => value / 1000000,
+    fromBase: (value) => value * 1000000,
+    decimalPlaces: 8
+  },
+  gigawatt: {
+    id: "gigawatt",
+    label: "Gigawatt",
+    symbol: "GW",
+    kind: "power",
+    toBase: (value) => value * 1000000000,
+    fromBase: (value) => value / 1000000000,
+    decimalPlaces: 2
+  },
+  metric_horsepower: {
+    id: "metric_horsepower",
+    label: "Metric Horsepower",
+    symbol: "PS",
+    kind: "power",
+    toBase: (value) => value * 735.5,
+    fromBase: (value) => value / 735.5,
+    decimalPlaces: 2
   }
 };
 
@@ -2050,7 +2077,19 @@ const aliasToUnitId: Record<string, string> = {
   tablespoon: "tablespoon",
   tablespoons: "tablespoon",
   "tbsp": "tablespoon",
-  "table spoon": "tablespoon"
+  "table spoon": "tablespoon",
+  square_millimeter: "square_millimeter",
+  "square millimeter": "square_millimeter",
+  "mm²": "square_millimeter",
+  "mm2": "square_millimeter",
+  gigawatt: "gigawatt",
+  gigawatts: "gigawatt",
+  "GW": "gigawatt",
+  metric_horsepower: "metric_horsepower",
+  "metric horsepower": "metric_horsepower",
+  "PS": "metric_horsepower",
+  "CV": "metric_horsepower",
+  "ch": "metric_horsepower"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
