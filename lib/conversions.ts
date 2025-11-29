@@ -1,4 +1,4 @@
-export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate" | "time" | "currency";
+export type UnitKind = "length" | "weight" | "temperature" | "volume" | "area" | "illuminance" | "torque" | "energy" | "speed" | "pressure" | "power" | "data_size" | "data_rate" | "time" | "currency" | "frequency" | "density" | "force" | "voltage" | "resistance" | "angle" | "luminous_intensity";
 
 export interface UnitDefinition {
   id: string;
@@ -415,6 +415,42 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 1.27,
     decimalPlaces: 2
   },
+  hertz: {
+    id: "hertz",
+    label: "Hertz",
+    symbol: "Hz",
+    kind: "frequency",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 2
+  },
+  kilohertz: {
+    id: "kilohertz",
+    label: "Kilohertz",
+    symbol: "kHz",
+    kind: "frequency",
+    toBase: (value) => value * 1000,
+    fromBase: (value) => value / 1000,
+    decimalPlaces: 2
+  },
+  megahertz: {
+    id: "megahertz",
+    label: "Megahertz",
+    symbol: "MHz",
+    kind: "frequency",
+    toBase: (value) => value * 1000000,
+    fromBase: (value) => value / 1000000,
+    decimalPlaces: 2
+  },
+  gigahertz: {
+    id: "gigahertz",
+    label: "Gigahertz",
+    symbol: "GHz",
+    kind: "frequency",
+    toBase: (value) => value * 1000000000,
+    fromBase: (value) => value / 1000000000,
+    decimalPlaces: 2
+  },
   kilometers_per_hour: {
     id: "kilometers_per_hour",
     label: "Kilometers per Hour",
@@ -712,6 +748,26 @@ const aliasToUnitId: Record<string, string> = {
   "pound": "gbp",
   "pounds": "gbp",
   "£": "gbp",
+  hertz: "hertz",
+  "Hertz": "hertz",
+  "Hz": "hertz",
+  "hz": "hertz",
+  kilohertz: "kilohertz",
+  "Kilohertz": "kilohertz",
+  "kHz": "kilohertz",
+  "khz": "kilohertz",
+  "kilohertz": "kilohertz",
+  "kilo hertz": "kilohertz",
+  megahertz: "megahertz",
+  "Megahertz": "megahertz",
+  "MHz": "megahertz",
+  "mhz": "megahertz",
+  "mega hertz": "megahertz",
+  gigahertz: "gigahertz",
+  "Gigahertz": "gigahertz",
+  "GHz": "gigahertz",
+  "ghz": "gigahertz",
+  "giga hertz": "gigahertz",
   kilometers_per_hour: "kilometers_per_hour",
   "km/h": "kilometers_per_hour",
   "kmh": "kilometers_per_hour",
