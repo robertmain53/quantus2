@@ -766,13 +766,31 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / 1000000000,
     decimalPlaces: 2
   },
+  bit_per_second: {
+    id: "bit_per_second",
+    label: "Bit per Second",
+    symbol: "bps",
+    kind: "data_rate",
+    toBase: (value) => value,
+    fromBase: (value) => value,
+    decimalPlaces: 0
+  },
+  kilobit_per_second: {
+    id: "kilobit_per_second",
+    label: "Kilobit per Second",
+    symbol: "kbps",
+    kind: "data_rate",
+    toBase: (value) => value * 1000,
+    fromBase: (value) => value / 1000,
+    decimalPlaces: 2
+  },
   megabit_per_second: {
     id: "megabit_per_second",
     label: "Megabit per Second",
     symbol: "Mbps",
     kind: "data_rate",
-    toBase: (value) => value * 125000,
-    fromBase: (value) => value / 125000,
+    toBase: (value) => value * 1000000,
+    fromBase: (value) => value / 1000000,
     decimalPlaces: 2
   },
   megabyte_per_second: {
@@ -1175,6 +1193,13 @@ const aliasToUnitId: Record<string, string> = {
   gigabytes: "gigabyte",
   gb: "gigabyte",
   "GB": "gigabyte",
+  "bit per second": "bit_per_second",
+  bps: "bit_per_second",
+  "bps": "bit_per_second",
+  kilobit_per_second: "kilobit_per_second",
+  "kilobit per second": "kilobit_per_second",
+  kbps: "kilobit_per_second",
+  "kbps": "kilobit_per_second",
   "megabit per second": "megabit_per_second",
   mbps: "megabit_per_second",
   "Mbps": "megabit_per_second",
