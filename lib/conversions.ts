@@ -837,6 +837,42 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 1000000,
     fromBase: (value) => value / 1000000,
     decimalPlaces: 2
+  },
+  gigabit_per_second: {
+    id: "gigabit_per_second",
+    label: "Gigabit per Second",
+    symbol: "Gbps",
+    kind: "data_rate",
+    toBase: (value) => value * 1000000000,
+    fromBase: (value) => value / 1000000000,
+    decimalPlaces: 2
+  },
+  terabyte: {
+    id: "terabyte",
+    label: "Terabyte",
+    symbol: "TB",
+    kind: "data_size",
+    toBase: (value) => value * 8000000000,
+    fromBase: (value) => value / 8000000000,
+    decimalPlaces: 2
+  },
+  us_gallon: {
+    id: "us_gallon",
+    label: "US Gallon",
+    symbol: "gal",
+    kind: "volume",
+    toBase: (value) => value * 3.78541,
+    fromBase: (value) => value / 3.78541,
+    decimalPlaces: 4
+  },
+  uk_gallon: {
+    id: "uk_gallon",
+    label: "UK Gallon",
+    symbol: "UK gal",
+    kind: "volume",
+    toBase: (value) => value * 4.54609,
+    fromBase: (value) => value / 4.54609,
+    decimalPlaces: 4
   }
 };
 
@@ -1258,7 +1294,26 @@ const aliasToUnitId: Record<string, string> = {
   "Mbps": "megabit_per_second",
   "MB/s": "megabyte_per_second",
   "mb/s": "megabyte_per_second",
-  "megabyte per second": "megabyte_per_second"
+  "megabyte per second": "megabyte_per_second",
+  gigabit_per_second: "gigabit_per_second",
+  "gigabit per second": "gigabit_per_second",
+  gbps: "gigabit_per_second",
+  "Gbps": "gigabit_per_second",
+  terabyte: "terabyte",
+  terabytes: "terabyte",
+  tb: "terabyte",
+  "TB": "terabyte",
+  us_gallon: "us_gallon",
+  "us gallon": "us_gallon",
+  "US gallon": "us_gallon",
+  "us gallons": "us_gallon",
+  "gallon (us)": "us_gallon",
+  uk_gallon: "uk_gallon",
+  "uk gallon": "uk_gallon",
+  "UK gallon": "uk_gallon",
+  "uk gallons": "uk_gallon",
+  "gallon (uk)": "uk_gallon",
+  "imperial gallon": "uk_gallon"
 };
 
 const slugSuffixes = ["-converter", "-calculator", "-conversion"];
