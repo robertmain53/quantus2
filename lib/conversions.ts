@@ -640,15 +640,6 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value,
     decimalPlaces: 4
   },
-  liter: {
-    id: "liter",
-    label: "Liter",
-    symbol: "L",
-    kind: "volume",
-    toBase: (value) => value * 1000,
-    fromBase: (value) => value / 1000,
-    decimalPlaces: 4
-  },
   cubic_centimeter: {
     id: "cubic_centimeter",
     label: "Cubic Centimeter",
@@ -1116,15 +1107,6 @@ const units: Record<string, UnitDefinition> = {
     toBase: (value) => value * 1000,
     fromBase: (value) => value / 1000,
     decimalPlaces: 4
-  },
-  horsepower: {
-    id: "horsepower",
-    label: "Horsepower",
-    symbol: "hp",
-    kind: "power",
-    toBase: (value) => value * 745.7,
-    fromBase: (value) => value / 745.7,
-    decimalPlaces: 2
   },
   kpa: {
     id: "kpa",
