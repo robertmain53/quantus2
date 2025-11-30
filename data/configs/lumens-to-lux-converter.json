@@ -1,96 +1,86 @@
 {
-  "version": "2.0.0",
+  "version": "3.0.0",
   "metadata": {
     "title": "Convert Lumens to Lux – Photometric Geometry Converter",
     "description": "Convert luminous flux in lumens to illuminance in lux using real photometric geometry: distance, beam angle, illuminated area and inverse square law, with educational explanations and audit-ready methodology."
   },
   "logic": {
-    "type": "conversion",
-    "fromUnitId": "lumen",
-    "toUnitId": "lux",
-
-    "modelVersion": "photometry-v3.0",
-    "supportsGeometry": true,
-
-    "modes": [
+    "type": "formula",
+    "outputs": [
       {
-        "id": "directional",
-        "label": "Directional source (spotlight / LED)",
-        "description": "Uses solid angle Ω = 2π(1 − cos(θ/2)) and E = Φ / (Ω·d²). Recommended for LED spotlights and luminaires with a specified beam angle.",
-        "primary": true,
-        "inputIds": ["lumens", "distance", "beamAngle"],
-        "formula": "lumens / (2 * PI * (1 - cos(beamAngle * PI / 360))) / (distance * distance)",
-        "outputUnitId": "lux"
+        "id": "illuminance_directional",
+        "label": "Illuminance (Directional Beam)",
+        "expression": "lumens / (2 * 3.14159265359 * (1 - cos(beam_angle * 3.14159265359/360)) * distance * distance)",
+        "unit": "lux",
+        "format": "decimal",
+        "help": "Uses solid angle Ω = 2π(1 − cos(θ/2)) and E = Φ / (Ω·d²). Recommended for LED spotlights and luminaires with a specified beam angle."
       },
       {
-        "id": "isotropic",
-        "label": "Isotropic source (full sphere)",
-        "description": "Assumes a point source radiating uniformly in all directions. Uses E = Φ / (4π·d²).",
-        "inputIds": ["lumens", "distance"],
-        "formula": "lumens / (4 * PI * distance * distance)",
-        "outputUnitId": "lux"
+        "id": "illuminance_isotropic",
+        "label": "Illuminance (Isotropic Sphere)",
+        "expression": "lumens / (4 * 3.14159265359 * distance * distance)",
+        "unit": "lux",
+        "format": "decimal",
+        "help": "Assumes a point source radiating uniformly in all directions. Uses E = Φ / (4π·d²)."
       },
       {
-        "id": "fixedArea",
-        "label": "Known illuminated area",
-        "description": "For cases where the illuminated area A is known or controlled (e.g. light box, workplane). Uses E = Φ / A.",
-        "inputIds": ["lumens", "area"],
-        "formula": "lumens / area",
-        "outputUnitId": "lux"
+        "id": "illuminance_area",
+        "label": "Illuminance (Fixed Area)",
+        "expression": "lumens / area_m2",
+        "unit": "lux",
+        "format": "decimal",
+        "help": "For cases where the illuminated area A is known or controlled. Uses E = Φ / A."
       }
-    ],
-
-    "inputs": {
-      "lumens": {
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "lumens",
         "label": "Luminous flux Φ",
-        "unitId": "lumen",
         "type": "number",
-        "min": 0,
+        "unit": "lm",
         "default": 1000,
+        "min": 1,
+        "max": 1000000,
         "step": 50,
-        "help": "Total luminous flux emitted by the source, as specified by the lamp or luminaire datasheet."
+        "helper_text": "Total luminous flux emitted by the source, as specified by the lamp or luminaire datasheet."
       },
-      "distance": {
+      {
+        "id": "distance",
         "label": "Distance d",
-        "unitId": "meter",
         "type": "number",
-        "min": 0.1,
+        "unit": "m",
         "default": 1,
+        "min": 0.1,
+        "max": 100,
         "step": 0.1,
-        "help": "Distance from the source to the illuminated point or surface, measured along the beam axis."
+        "helper_text": "Distance from the source to the illuminated point or surface, measured along the beam axis."
       },
-      "beamAngle": {
+      {
+        "id": "beam_angle",
         "label": "Beam angle θ",
-        "unitId": "degree",
         "type": "number",
+        "unit": "degrees",
+        "default": 60,
         "min": 1,
         "max": 180,
-        "default": 60,
         "step": 1,
-        "help": "Full beam angle of the luminaire, usually given on the datasheet (e.g. 15°, 30°, 60°, 120°)."
+        "helper_text": "Full beam angle of the luminaire, usually given on the datasheet (e.g. 15°, 30°, 60°, 120°)."
       },
-      "area": {
+      {
+        "id": "area_m2",
         "label": "Illuminated area A",
-        "unitId": "square-meter",
         "type": "number",
-        "min": 0.01,
+        "unit": "m²",
         "default": 1,
+        "min": 0.01,
+        "max": 10000,
         "step": 0.1,
-        "help": "Effective area in square metres over which the luminous flux is distributed."
+        "helper_text": "Effective area in square metres over which the luminous flux is distributed."
       }
-    },
-
-    "defaults": {
-      "modeId": "directional"
-    },
-
-    "rounding": {
-      "strategy": "deterministic",
-      "standard": "IEEE-754",
-      "decimals": 2
-    }
+    ]
   },
-
   "page_content": {
     "introduction": [
       "This lumen to lux converter is built on real photometric geometry rather than a simple unit table. Lux cannot be derived from lumens alone: you must also specify distance and how the light is distributed in space.",
@@ -105,7 +95,7 @@
       "Rounding is handled deterministically under IEEE-754 floating-point rules. This is particularly important for audit-ready use, where reproducibility of results across platforms and sessions matters."
     ],
 
-    "educational": [
+    "educational_sections": [
       {
         "heading": "Why lumens and lux are not interchangeable",
         "body": "Lumens describe how much visible light a source emits in total. Lux describes how brightly a surface is illuminated once that light has spread over some area. The same 1000 lm can yield only about 80 lux in a very wide distribution, but more than 160,000 lux in a narrow 5° spot. The difference – a factor of more than 2000 – comes entirely from geometry, not from the lamp itself."
@@ -124,7 +114,8 @@
       "Directional mode, 1000 lm, 60° beam, 1 m distance → approximately 1,190 lux.",
       "Same lamp and beam at 2 m distance → approximately 298 lux (one quarter of the 1 m value).",
       "Same lamp at 1 m but with a 30° beam → approximately 4,700 lux, showing how narrowing the beam concentrates light.",
-      "Isotropic mode, 1000 lm at 1 m → approximately 79.6 lux, matching the 4π solid angle of a sphere."
+      "Isotropic mode, 1000 lm at 1 m → approximately 79.6 lux, matching the 4π solid angle of a sphere.",
+      "Fixed-area mode, 1000 lm over 2 m² → 500 lux."
     ],
 
     "tables": [
@@ -138,6 +129,18 @@
           ["Standard spot", "60°", "0.84", "1,190"],
           ["Narrow spot", "30°", "0.21", "4,700"],
           ["Pin spot / near-laser", "5°", "0.006", "166,000"]
+        ]
+      },
+      {
+        "heading": "Inverse-square law (1000 lm spotlight, 60° beam)",
+        "columns": ["Distance (m)", "Illuminance (lux)"],
+        "rows": [
+          ["0.5", "4,760"],
+          ["1.0", "1,190"],
+          ["2.0", "297.5"],
+          ["3.0", "132.2"],
+          ["5.0", "47.6"],
+          ["10.0", "11.9"]
         ]
       }
     ],
@@ -159,31 +162,119 @@
         "answer": "Use the directional mode and enter the beam angle from the datasheet (commonly 15°, 30°, 60° or 90°) together with the mounting height. This gives a realistic estimate of lux on the task plane."
       },
       {
+        "question": "Why does a small beam angle produce so many lux?",
+        "answer": "Because the same luminous flux is concentrated over a much smaller area. A 5° beam concentrates light over ~2000× more than a 120° floodlight, producing proportionally higher lux. Beam geometry dominates the result."
+      },
+      {
+        "question": "What does 'solid angle' mean?",
+        "answer": "Solid angle (Ω, measured in steradians [sr]) describes how 'wide' a cone of light is. A 60° cone has Ω ≈ 0.84 sr. A 180° hemisphere has Ω = 6.28 sr. A full sphere (all directions) has Ω = 4π ≈ 12.57 sr. The formula Ω = 2π(1 − cos(θ/2)) converts half-angle θ to solid angle."
+      },
+      {
+        "question": "Why does doubling the distance reduce lux to one quarter?",
+        "answer": "The inverse-square law: illuminance ∝ 1/d². When you double d, you get 1/(2d)² = 1/(4d²). Light spreads equally in all directions from a point source, so doubling distance spreads the same light over 4× the area, reducing illuminance to 1/4."
+      },
+      {
         "question": "Can I quote these lux values in a professional report?",
         "answer": "Yes, provided you document your assumptions (flux, distance, beam angle or area). This tool exposes the equations and uses deterministic rounding so that your numbers are reproducible. For legal or regulatory purposes you should also perform on-site measurements with a calibrated lux meter as required by standards."
       }
     ],
 
-    "summary": [
-      "This lumen-to-lux converter bridges the gap between educational tools and audit-ready engineering calculators. It uses solid-angle geometry, inverse-square behaviour and explicit formulas so that you can both understand and defend your illuminance calculations."
+    "citations": [
+      {
+        "label": "CIE S 025:2015 – Test method for LED light sources",
+        "url": "https://cie.co.at/"
+      },
+      {
+        "label": "ISO 8995-1:2014 – Lighting of work areas (Part 1: Indoor)",
+        "url": "https://www.iso.org/standard/57456.html"
+      },
+      {
+        "label": "NIST SP 330 – The International System of Units (SI)",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.330-2019.pdf"
+      },
+      {
+        "label": "NIST Guide to the SI – Appendix B: Conversion Factors",
+        "url": "https://www.nist.gov/pml/special-publication-811/"
+      },
+      {
+        "label": "OSHA 1926.56 – Lighting of work areas (Workplace safety standards)",
+        "url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.56"
+      },
+      {
+        "label": "IEEE 1802:2018 – Guide for characterizing photometric LED products",
+        "url": "https://standards.ieee.org/standard/1802-2018.html"
+      }
+    ],
+
+    "glossary": [
+      {
+        "term": "Luminous flux (Φ)",
+        "definition": "Total visible light emitted by a source, measured in lumens (lm). One lumen is defined as the light emitted into one steradian by a point source of one candela."
+      },
+      {
+        "term": "Illuminance (E)",
+        "definition": "Luminous flux per unit area, measured in lux (lx). By definition, 1 lux = 1 lumen per square metre (1 lx = 1 lm/m²). Illuminance describes the light arriving at a surface."
+      },
+      {
+        "term": "Lux (lx)",
+        "definition": "SI unit of illuminance. One lux equals one lumen per square metre. It measures the intensity of light falling on a surface. Typical office: 300–500 lux; outdoor sunlight: 10,000–120,000 lux."
+      },
+      {
+        "term": "Lumen (lm)",
+        "definition": "SI unit of luminous flux. One lumen is the light emitted into one steradian by a point source of one candela. It measures total light output, independent of direction or distance."
+      },
+      {
+        "term": "Solid angle (Ω)",
+        "definition": "Measured in steradians (sr), solid angle describes how wide a cone of light is. Full sphere = 4π sr ≈ 12.57 sr. A 60° cone ≈ 0.84 sr. Formula: Ω = 2π(1 − cos(θ/2)) for half-angle θ."
+      },
+      {
+        "term": "Beam angle (θ)",
+        "definition": "Full beam angle of a conical light beam, in degrees. A 60° beam angle means 30° from the central axis in all directions. Narrower beam → higher lux concentration."
+      },
+      {
+        "term": "Inverse-square law",
+        "definition": "Illuminance from a point source decreases with the square of distance: E ∝ 1/d². Doubling distance reduces illuminance to 1/4. This applies universally to all point and small sources."
+      },
+      {
+        "term": "Isotropic source",
+        "definition": "A light source that emits equally in all directions (omnidirectional). Solid angle = 4π steradians. Bare incandescent bulbs approximate isotropic sources; directional fixtures do not."
+      },
+      {
+        "term": "Candela (cd)",
+        "definition": "SI unit of luminous intensity. One candela is defined as the light intensity of a point source emitting one lumen into a solid angle of one steradian. Relates light output to direction."
+      }
     ]
   },
 
   "links": {
     "internal": [
       "/conversions/illuminance/lux-to-lumens-converter",
-      "/conversions/illuminance/lux-to-footcandles-converter",
-      "/conversions/length/meters-to-feet-converter"
+      "/conversions/length/meters-to-feet-converter",
+      "/conversions/length/feet-to-meters-converter"
     ],
     "external": [
-      "https://www.nist.gov/pml/sensor-science/optical-radiation/realization-lumen",
-      "https://www.open.edu/openlearn/nature-environment/energy-buildings/content-section-5.2.3"
+      {
+        "label": "NIST Realization of the Lumen",
+        "url": "https://www.nist.gov/pml/sensor-science/optical-radiation/realization-lumen",
+        "rel": ["external"]
+      },
+      {
+        "label": "CIE International Lighting Vocabulary",
+        "url": "https://cie.co.at/",
+        "rel": ["external"]
+      },
+      {
+        "label": "IES (Illuminating Engineering Society) – Lighting Design Resources",
+        "url": "https://www.ies.org/",
+        "rel": ["external"]
+      }
     ]
   },
 
   "schema": {
     "additionalTypes": [
       "HowTo",
+      "FAQPage",
       "TechArticle"
     ]
   }
