@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Understand how Quantus collects, uses, and protects personal data generated across our platform."
+    "Understand how Cernarus collects, uses, and protects personal data generated across our platform."
 };
 
 export default function PrivacyPage() {
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
       <section className="space-y-3 text-base text-slate-600">
         <h2 className="font-serif text-2xl font-semibold text-slate-900">Your choices</h2>
         <p>
-          You can request access, corrections, or deletion at any time by emailing privacy@quantus.
+          You can request access, corrections, or deletion at any time by emailing privacy@cernarus.com.
           We honor regional privacy regulations and provide opt-outs where required.
         </p>
       </section>

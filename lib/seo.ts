@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "https://quantus.tools";
+const DEFAULT_SITE_URL = "https://cernarus.com";
 
 export function getSiteUrl(pathname = "/") {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_URL;
@@ -59,7 +59,7 @@ export function buildWebPageSchema(options: {
     inLanguage: "en-US",
     isPartOf: {
       "@type": "WebSite",
-      name: "Quantus",
+      name: "Cernarus",
       url: getSiteUrl()
     },
     about: options.category,

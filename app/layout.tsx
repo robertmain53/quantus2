@@ -21,26 +21,26 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://quantus.tools"),
+  metadataBase: new URL("https://cernarus.com"),
   title: {
-    default: "Quantus | Precision Converters & Calculators",
-    template: "%s | Quantus"
+    default: "Cernarus | Precision Converters & Calculators",
+    template: "%s | Cernarus"
   },
   description:
-    "Quantus delivers authoritative calculators and unit converters for engineers, analysts, and operations teams who need standards-aligned answers.",
+    "Cernarus delivers authoritative calculators and unit converters for engineers, analysts, and operations teams who need standards-aligned answers.",
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://quantus.tools",
-    siteName: "Quantus",
-    title: "Quantus | Precision Converters & Calculators",
+    url: "https://cernarus.com",
+    siteName: "Cernarus",
+    title: "Cernarus | Precision Converters & Calculators",
     description:
       "Explore expertly crafted calculators and conversion tools optimized for accuracy, auditability, and day-to-day professional workflows."
   },
   twitter: {
     card: "summary_large_image",
-    creator: "@quantus",
-    title: "Quantus | Precision Converters & Calculators",
+    creator: "@cernarus",
+    title: "Cernarus | Precision Converters & Calculators",
     description:
       "Enterprise-ready calculators and conversion tools designed for dependable decision support."
   },
@@ -73,14 +73,14 @@ export default function RootLayout({
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      name: "Quantus",
+      name: "Cernarus",
       url: siteUrl,
       sameAs: []
     },
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      name: "Quantus",
+      name: "Cernarus",
       url: siteUrl,
       potentialAction: {
         "@type": "SearchAction",

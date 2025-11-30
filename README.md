@@ -1,6 +1,6 @@
-# Quantus Enterprise Content Platform
+# Cernarus Enterprise Content Platform
 
-Quantus is a Next.js 14 application engineered to publish thousands of SEO-focused calculators and conversion tools from a single source-of-truth catalogue. The platform emphasizes static-first delivery, structured data, and an editorial workflow that can scale to 120K daily sessions.
+Cernarus is a Next.js 14 application engineered to publish thousands of SEO-focused calculators and conversion tools from a single source-of-truth catalogue. The platform emphasizes static-first delivery, structured data, and an editorial workflow that can scale to 120K daily sessions.
 
 ## Requirements
 
@@ -734,7 +734,7 @@ Bottom line: generated/prompts/ is a convenience layer that pre-seeds AI request
 
 ## Environment variables
 
-- `NEXT_PUBLIC_SITE_URL`: Set to the production domain (e.g., `https://quantus.com`). Used for canonical URLs, sitemap, and structured data.
+- `NEXT_PUBLIC_SITE_URL`: Set to the production domain (e.g., `https://cernarus.com`). Used for canonical URLs, sitemap, and structured data.
 
 ## Roadmap ideas
 
