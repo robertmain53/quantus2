@@ -12,7 +12,7 @@ export function SiteHeader() {
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
       <div className="container flex items-center justify-between gap-4 py-4">
         <Link href="/" className="flex items-center gap-2 font-serif text-xl font-semibold text-slate-900 no-underline">
-          Quantus
+          Cernarus
         </Link>
         <div className="flex flex-1 items-center justify-end gap-4">
           {/* Desktop Navigation */}

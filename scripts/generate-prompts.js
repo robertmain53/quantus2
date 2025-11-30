@@ -158,7 +158,7 @@ function main() {
       "STRICT SCHEMA ENFORCEMENT:",
       schemaRules,
       "\nBefore you construct the config, scan the ./input folder and all subdirectories for competitor research assets (HTML snapshots, spreadsheets, or PDFs) and let the response draw from that corpus to raise information depth, EEAT, SEO, UX, and transparency.",
-      "Also mention which internal Quantus pages (e.g., category hubs or sibling calculators) provide related context, but avoid repeating any URLs already used in the citations that follow.",
+      "Also mention which internal Cernarus pages (e.g., category hubs or sibling calculators) provide related context, but avoid repeating any URLs already used in the citations that follow.",
       "Persistence note: if you include the wrapper, the repo saves only the inner config_json file under data/configs/...; do not introduce wrapper-specific keys into config_json."
     ].join(" ");
 

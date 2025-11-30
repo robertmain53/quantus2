@@ -5,7 +5,7 @@ import { getTopCalculators, searchCalculators } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Search",
-  description: "Search the Quantus library of calculators and conversion tools."
+  description: "Search the Cernarus library of calculators and conversion tools."
 };
 
 interface SearchPageProps {
@@ -23,7 +23,7 @@ export default async function SearchPage(props: SearchPageProps) {
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">Search</h1>
         <p className="max-w-3xl text-lg text-slate-600">
-          Discover calculators, conversions, and programmatic experiences across the Quantus
+          Discover calculators, conversions, and programmatic experiences across the Cernarus
           knowledge graph.
         </p>
         <form action="/search" method="get" className="flex max-w-xl items-center gap-3">

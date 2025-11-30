@@ -2,7 +2,7 @@
 
 **Version**: 1.0.0
 **Effective**: November 28, 2025
-**Owner**: Quantus Validation System
+**Owner**: Cernarus Validation System
 
 ---
 
@@ -11,7 +11,7 @@
 The **two-stage workflow** separates content generation from schema compliance, based on lessons from JSON #1–#4:
 
 - **Stage 1 (ChatGPT)**: Generate excellent content (FAQs, citations, methodology, examples)
-- **Stage 2 (Manual/Automation)**: Restructure to strict Quantus schema
+- **Stage 2 (Manual/Automation)**: Restructure to strict Cernarus schema
 
 This approach is **faster, more reliable, and reduces ChatGPT schema confusion**.
 
@@ -124,7 +124,7 @@ ChatGPT produces a JSON object with ONLY the content fields:
 
 ### Input: Content JSON from Stage 1
 
-Take the content JSON and restructure it into the full Quantus schema.
+Take the content JSON and restructure it into the full Cernarus schema.
 
 ### Process
 
@@ -135,7 +135,7 @@ Take the content JSON and restructure it into the full Quantus schema.
 
 2. **Map content to page_content**
    ```
-   ChatGPT output             →  Quantus page_content
+   ChatGPT output             →  Cernarus page_content
    faqs[]                     →  page_content.faqs[]
    citations[]                →  page_content.citations[]
    examples[]                 →  page_content.examples[]

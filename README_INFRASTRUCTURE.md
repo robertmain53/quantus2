@@ -1,4 +1,4 @@
-# Quantus Validation & Automation Infrastructure
+# Cernarus Validation & Automation Infrastructure
 
 ## Overview
 

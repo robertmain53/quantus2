@@ -5,7 +5,7 @@ export function SiteFooter() {
     <footer className="border-t border-slate-200 bg-slate-900 text-slate-200">
       <div className="container flex flex-col gap-6 py-10 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-lg font-semibold">Quantus</p>
+          <p className="text-lg font-semibold">Cernarus</p>
           <p className="text-sm text-slate-400">
             Standards-driven calculators and converters for teams that depend on defensible answers.
           </p>
@@ -37,7 +37,7 @@ export function SiteFooter() {
           </Link>
         </nav>
         <p className="text-xs text-slate-500">
-          © {new Date().getFullYear()} Quantus. All rights reserved.
+          © {new Date().getFullYear()} Cernarus. All rights reserved.
         </p>
       </div>
     </footer>

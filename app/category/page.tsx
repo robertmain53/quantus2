@@ -6,7 +6,7 @@ import { getCategories } from "@/lib/content";
 export const metadata: Metadata = {
   title: "Category Directory",
   description:
-    "Browse the Quantus knowledge architecture organized by high-value categories and conversion clusters."
+    "Browse the Cernarus knowledge architecture organized by high-value categories and conversion clusters."
 };
 
 export default function CategoryIndexPage() {

@@ -637,7 +637,7 @@ function buildFaq(
       {
         question: "How should I cite or reference the result?",
         answer:
-          "Quantus calculators follow industry-standard formulas and document the methodology so you can confidently cite results in reports and client deliverables."
+          "Cernarus calculators follow industry-standard formulas and document the methodology so you can confidently cite results in reports and client deliverables."
       },
       {
         question: "How often is this experience updated?",

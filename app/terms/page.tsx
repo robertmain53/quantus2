@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Read the Quantus Terms of Service that govern access to our calculators, data, and platform."
+    "Read the Cernarus Terms of Service that govern access to our calculators, data, and platform."
 };
 
 export default function TermsPage() {
@@ -12,7 +12,7 @@ export default function TermsPage() {
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">Terms of Service</h1>
         <p className="max-w-3xl text-lg text-slate-600">
-          These terms form a binding agreement between Quantus and anyone accessing our sites,
+          These terms form a binding agreement between Cernarus and anyone accessing our sites,
           calculators, APIs, or derivative content.
         </p>
         <p className="text-sm text-slate-500">Last updated: January 15, 2024</p>
@@ -21,7 +21,7 @@ export default function TermsPage() {
       <section className="space-y-3 text-base text-slate-600">
         <h2 className="font-serif text-2xl font-semibold text-slate-900">1. Use of service</h2>
         <p>
-          Quantus grants a non-exclusive, revocable license to access our calculators for
+          Cernarus grants a non-exclusive, revocable license to access our calculators for
           informational purposes. You agree not to resell, reverse engineer, or misrepresent the
           outputs provided.
         </p>
@@ -38,7 +38,7 @@ export default function TermsPage() {
       <section className="space-y-3 text-base text-slate-600">
         <h2 className="font-serif text-2xl font-semibold text-slate-900">3. Limitation of liability</h2>
         <p>
-          Quantus is not liable for direct, indirect, or consequential losses arising from your use
+          Cernarus is not liable for direct, indirect, or consequential losses arising from your use
           of the platform. Access is provided &ldquo;as is&rdquo; without warranties of accuracy or
           fitness for a particular purpose.
         </p>

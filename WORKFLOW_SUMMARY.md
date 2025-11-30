@@ -1,4 +1,4 @@
-# Quantus Calculator Workflow Summary
+# Cernarus Calculator Workflow Summary
 
 ## Current Status
 

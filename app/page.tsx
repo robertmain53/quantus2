@@ -22,7 +22,7 @@ export default function HomePage() {
             Deliver calculators your experts can trust on deadline.
           </h1>
           <p className="text-lg text-slate-600">
-            Quantus keeps every converter auditable—aligning with published standards,
+            Cernarus keeps every converter auditable—aligning with published standards,
             documenting methodology, and presenting results in a workflow your engineers,
             analysts, and operators can rely on for real-world decisions.
           </p>

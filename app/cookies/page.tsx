@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Cookie Policy",
   description:
-    "Details on how Quantus uses cookies and local storage to enhance performance and personalization."
+    "Details on how Cernarus uses cookies and local storage to enhance performance and personalization."
 };
 
 export default function CookiesPage() {

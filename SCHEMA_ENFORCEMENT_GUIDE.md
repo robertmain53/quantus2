@@ -2,7 +2,7 @@
 
 ## What Changed
 
-The `generate-prompts.js` script now **embeds strict schema rules directly into the generated prompts**. This significantly reduces the risk of ChatGPT generating invalid JSON that doesn't match the Quantus engine contract.
+The `generate-prompts.js` script now **embeds strict schema rules directly into the generated prompts**. This significantly reduces the risk of ChatGPT generating invalid JSON that doesn't match the Cernarus engine contract.
 
 ## How Schema Enforcement Works
 

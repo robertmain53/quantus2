@@ -1,4 +1,4 @@
-# Quantus Calculator Config Schema – Definitive Specification
+# Cernarus Calculator Config Schema – Definitive Specification
 
 **Version**: 1.0.0
 **Last Updated**: November 28, 2025
@@ -8,7 +8,7 @@
 
 ## CRITICAL PREAMBLE
 
-This document defines the **ONLY acceptable JSON structure** for Quantus calculators. There are NO exceptions, NO variations, NO ambiguities.
+This document defines the **ONLY acceptable JSON structure** for Cernarus calculators. There are NO exceptions, NO variations, NO ambiguities.
 
 If you encounter anything not in this document, **STOP and ask** instead of guessing.
 

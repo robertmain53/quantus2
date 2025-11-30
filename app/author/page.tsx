@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Author Guidelines",
   description:
-    "Publishing standards, voice, and workflow expectations for Quantus content authors."
+    "Publishing standards, voice, and workflow expectations for Cernarus content authors."
 };
 
 export default function AuthorPage() {

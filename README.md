@@ -158,7 +158,7 @@ This model removes bespoke React development from the daily cadence. Humans conc
 - Gather your research corpus (competitor pages, regulations, spreadsheets, notes) in a single folder. Compress it into a `.zip` when sending to a chat model, or keep it beside the repo when using a VS Code AI assistant that can read local files.
 - Prepare a short "context packet" to paste alongside the prompt:
   - Target calculator slug and objective (e.g., `/finance/loans/personal-loan-payment-calculator`).
-  - List of existing Quantus internal links relevant to the topic (category hubs, related calculators).
+  - List of existing Cernarus internal links relevant to the topic (category hubs, related calculators).
   - Any guardrails (tone, compliance notes, traffic goal, localisation).
 - When using ChatGPT/Gemini/Claude: upload the zip first, then paste the prompt+context.
 - When using VS Code AI: ensure the assistant has access to the research folder (or paste representative excerpts) before running the prompt.
@@ -166,11 +166,11 @@ This model removes bespoke React development from the daily cadence. Humans conc
 Replace the bracketed placeholders in the template below before sending it to the model. When you paste the AI response into `/admin/playground`, you may either paste the entire wrapper (with `component_type` + `config_json`) or only the inner `config_json`.
 
 ```text
-You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Quantus config schema.
+You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Cernarus config schema.
 
 Goals:
 
-1. Deliver a deployable JSON config that matches the Quantus schema, keeps the converter lean, and trades in user-facing value rather than internal talk.
+1. Deliver a deployable JSON config that matches the Cernarus schema, keeps the converter lean, and trades in user-facing value rather than internal talk.
 
 2. Keep metadata, page copy, and FAQs focused on address user's intent plus practical reassurance (calibration, instrument limits, regulatory cues).
 
@@ -180,8 +180,8 @@ Goals:
 5. reference attached assets only for gaps in accuracy, authority, or UX and do not mention them in copy. 
 6 reference universities, and *.gov site for informations, formulas, insights and do mention them or even better link the in the copy
 7. strong EEAT copy (beyond methodology/faq)
-8. the output must be deployable JSON . I’ll review it directly via Quantus (so no placeholder commentary)
-9. Produce a single JSON object compatible with Quantus engines (`component_type` + `config_json`). No additional commentary.
+8. the output must be deployable JSON . I’ll review it directly via Cernarus (so no placeholder commentary)
+9. Produce a single JSON object compatible with Cernarus engines (`component_type` + `config_json`). No additional commentary.
 
 Requirements for the JSON you return:
 - Top-level shape:
@@ -215,7 +215,7 @@ Requirements for the JSON you return:
     * `citations`: authoritative sources (label + URL + optional summary).
     * `summary`: short bullet sentences capturing key insights from the attached assets (reference filenames when helpful).
     * `glossary` if helpful.
-  - `links`: `internal` should list existing Quantus slugs (e.g., `"/finance/loans/roi-calculator"`). `external` entries must be objects with `url` and optional `label`, `rel` (array of tokens such as `"noopener"` or `"noreferrer"`).
+  - `links`: `internal` should list existing Cernarus slugs (e.g., `"/finance/loans/roi-calculator"`). `external` entries must be objects with `url` and optional `label`, `rel` (array of tokens such as `"noopener"` or `"noreferrer"`).
   - `schema.additionalTypes`: include structured data hints (e.g., `"HowTo"`, `"Dataset"`) when justified by the copy.
 - Never emit HTML tags; formatting is handled by the React engine.
 - Ensure math expressions use variables that match `form.fields[].id`.

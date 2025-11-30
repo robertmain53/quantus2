@@ -1,4 +1,4 @@
-# Quantus Config Schema – STRICT ENFORCEMENT RULES
+# Cernarus Config Schema – STRICT ENFORCEMENT RULES
 
 **You MUST follow these rules exactly. Do not deviate. Do not add extra fields.**
 

@@ -277,7 +277,7 @@ JSON #6 demonstrates that **pure converters with clear specifications = 100% com
 - 📋 Clear methodology grounded in federal standards and research
 - ⚡ Practical examples for cooking, diet, medication understanding
 
-The only fix needed was cosmetic (URL formatting), which demonstrates that ChatGPT understands the Quantus schema deeply now.
+The only fix needed was cosmetic (URL formatting), which demonstrates that ChatGPT understands the Cernarus schema deeply now.
 
 ---
 

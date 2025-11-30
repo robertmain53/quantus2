@@ -1,4 +1,4 @@
-# Quantus System Foundation Index
+# Cernarus System Foundation Index
 
 **Version**: 1.0.0
 **Date**: November 28, 2025
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The Quantus calculator platform has completed its **foundational architecture phase** with four critical documents and a proven two-stage workflow. This index provides a comprehensive reference to all core systems, their purposes, and how they work together.
+The Cernarus calculator platform has completed its **foundational architecture phase** with four critical documents and a proven two-stage workflow. This index provides a comprehensive reference to all core systems, their purposes, and how they work together.
 
 **Key Achievement**: Four production calculators validated and deployed with increasing compliance:
 - JSON #1: 2/10 (revealed schema ambiguity)
@@ -54,7 +54,7 @@ The Quantus calculator platform has completed its **foundational architecture ph
   - Output: faqs[], citations[], methodology[], examples[], introduction[]
   - NO schema constraints—ChatGPT focuses on content quality
 
-- **Stage 2 (Human/Automation)**: Restructure into Quantus schema
+- **Stage 2 (Human/Automation)**: Restructure into Cernarus schema
   - Takes Stage 1 content JSON and maps to QUANTUS_SCHEMA_DEFINITIVE.md
   - Adds structure: version, metadata, logic, page_content, links, schema
   - Validates against definitive schema (deterministic, repeatable)
@@ -332,7 +332,7 @@ All 4 calculators have excellent content:
 | SCHEMA_STRICT_RULES.md | Before ChatGPT | "What constraints should ChatGPT follow?" | Process Engineer |
 | VALIDATION_FRAMEWORK.md | After receiving JSON | "Does this JSON comply?" | Tool Maker |
 | VALIDATION_REPORT_*.md | Post-submission | "What went wrong and how do we fix it?" | Tool Maker |
-| README.md | Project overview | "How does Quantus work end-to-end?" | Both |
+| README.md | Project overview | "How does Cernarus work end-to-end?" | Both |
 | QUICK_START.md | Need a 3-minute guide | "What are the minimal steps?" | Tool Maker |
 | WORKFLOW_SUMMARY.md | Want detailed flow | "Who does what and when?" | Process Engineer |
 
