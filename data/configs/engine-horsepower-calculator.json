@@ -1,34 +1,108 @@
 {
     "version": "1.0.0",
     "metadata": {
-        "title": "Engine Horsepower Calculator – Torque, Trap Speed, and ET Methods",
-        "description": "Estimate engine horsepower using torque and RPM, quarter-mile trap speed, or elapsed time and vehicle weight, with methods grounded in NIST- and SAE-referenced formulas."
+        "title": "Ultimate Engine Horsepower Estimator & Dyno Simulator",
+        "description": "Estimate engine horsepower from torque, VE and boost, or fuel and airflow data, with crank and wheel outputs plus SAE-style environmental corrections."
     },
     "logic": {
         "type": "advanced",
-        "defaultMethod": "torque_rpm",
+        "defaultMethod": "dyno_direct",
         "methods": {
-            "torque_rpm": {
-                "label": "Torque and RPM method",
-                "description": "Estimate engine horsepower from measured torque and engine speed.",
+            "dyno_direct": {
+                "label": "Dyno Mode – Torque and RPM",
+                "description": "Compute crank and wheel horsepower from measured torque, engine speed, drivetrain loss, and ambient conditions.",
                 "variables": {
-                    "hp_torque_rpm": {
+                    "drivetrain_loss_fraction": {
+                        "expression": "drivetrain_loss_percent / 100",
+                        "dependencies": [
+                            "drivetrain_loss_percent"
+                        ],
+                        "label": "Drivetrain loss fraction",
+                        "unit": "",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "hp_crank_raw": {
                         "expression": "torque_ftlb * rpm / 5252",
                         "dependencies": [
                             "torque_ftlb",
                             "rpm"
                         ],
-                        "label": "Estimated horsepower",
+                        "label": "Crank horsepower at current conditions",
                         "unit": "hp",
                         "format": "decimal",
                         "display": true
                     },
-                    "kw_torque_rpm": {
-                        "expression": "hp_torque_rpm * 0.7457",
+                    "hp_wheel_raw": {
+                        "expression": "hp_crank_raw * (1 - drivetrain_loss_fraction)",
                         "dependencies": [
-                            "hp_torque_rpm"
+                            "hp_crank_raw",
+                            "drivetrain_loss_fraction"
                         ],
-                        "label": "Estimated power",
+                        "label": "Wheel horsepower at current conditions",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "temp_k": {
+                        "expression": "ambient_temp_c + 273.15",
+                        "dependencies": [
+                            "ambient_temp_c"
+                        ],
+                        "label": "Ambient temperature in kelvin",
+                        "unit": "K",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "density_ratio": {
+                        "expression": "(ambient_pressure_kpa / 101.325) / (temp_k / 293.15)",
+                        "dependencies": [
+                            "ambient_pressure_kpa",
+                            "temp_k"
+                        ],
+                        "label": "Air density ratio vs standard day",
+                        "unit": "",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "hp_crank_corrected": {
+                        "expression": "hp_crank_raw / density_ratio",
+                        "dependencies": [
+                            "hp_crank_raw",
+                            "density_ratio"
+                        ],
+                        "label": "Crank horsepower corrected to standard conditions",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "hp_wheel_corrected": {
+                        "expression": "hp_wheel_raw / density_ratio",
+                        "dependencies": [
+                            "hp_wheel_raw",
+                            "density_ratio"
+                        ],
+                        "label": "Wheel horsepower corrected to standard conditions",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "kw_crank_corrected": {
+                        "expression": "hp_crank_corrected * 0.7457",
+                        "dependencies": [
+                            "hp_crank_corrected"
+                        ],
+                        "label": "Crank power corrected to standard conditions",
+                        "unit": "kW",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "kw_wheel_corrected": {
+                        "expression": "hp_wheel_corrected * 0.7457",
+                        "dependencies": [
+                            "hp_wheel_corrected"
+                        ],
+                        "label": "Wheel power corrected to standard conditions",
                         "unit": "kW",
                         "format": "decimal",
                         "display": true
@@ -36,42 +110,187 @@
                 },
                 "outputs": [
                     {
-                        "id": "hp_torque_rpm",
-                        "label": "Engine power from torque and RPM",
-                        "variable": "hp_torque_rpm",
+                        "id": "hp_crank_today",
+                        "label": "Crank horsepower (today)",
+                        "variable": "hp_crank_raw",
                         "unit": "hp",
                         "format": "decimal"
                     },
                     {
-                        "id": "kw_torque_rpm",
-                        "label": "Engine power from torque and RPM",
-                        "variable": "kw_torque_rpm",
+                        "id": "hp_wheel_today",
+                        "label": "Wheel horsepower (today)",
+                        "variable": "hp_wheel_raw",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "hp_crank_corrected",
+                        "label": "Crank horsepower (corrected)",
+                        "variable": "hp_crank_corrected",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "hp_wheel_corrected",
+                        "label": "Wheel horsepower (corrected)",
+                        "variable": "hp_wheel_corrected",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "kw_crank_corrected",
+                        "label": "Crank power (corrected)",
+                        "variable": "kw_crank_corrected",
+                        "unit": "kW",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "kw_wheel_corrected",
+                        "label": "Wheel power (corrected)",
+                        "variable": "kw_wheel_corrected",
                         "unit": "kW",
                         "format": "decimal"
                     }
                 ]
             },
-            "trap_speed": {
-                "label": "Quarter-mile trap speed method",
-                "description": "Estimate horsepower from vehicle weight and quarter-mile trap speed.",
+            "ve_boost": {
+                "label": "VE and Boost Model",
+                "description": "Estimate theoretical crank and wheel horsepower from displacement, volumetric efficiency, boost, and peak power RPM with environmental corrections.",
                 "variables": {
-                    "hp_trap_speed": {
-                        "expression": "weight_lb * (trap_speed_mph / 234) * (trap_speed_mph / 234) * (trap_speed_mph / 234)",
+                    "cid": {
+                        "expression": "displacement_l * 61.0237",
                         "dependencies": [
-                            "weight_lb",
-                            "trap_speed_mph"
+                            "displacement_l"
                         ],
-                        "label": "Estimated horsepower from trap speed",
+                        "label": "Engine displacement",
+                        "unit": "cid",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "ve_adjust_factor": {
+                        "expression": "ve_adjust_percent / 100",
+                        "dependencies": [
+                            "ve_adjust_percent"
+                        ],
+                        "label": "Volumetric efficiency adjustment factor",
+                        "unit": "",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "ve_effective": {
+                        "expression": "ve_base * (1 + ve_adjust_factor)",
+                        "dependencies": [
+                            "ve_base",
+                            "ve_adjust_factor"
+                        ],
+                        "label": "Effective volumetric efficiency",
+                        "unit": "",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "map_psi": {
+                        "expression": "14.7 + boost_psi",
+                        "dependencies": [
+                            "boost_psi"
+                        ],
+                        "label": "Manifold absolute pressure",
+                        "unit": "psi",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "hp_crank_corrected": {
+                        "expression": "cid * rpm_peak * ve_effective * (map_psi / 14.7) / 3456",
+                        "dependencies": [
+                            "cid",
+                            "rpm_peak",
+                            "ve_effective",
+                            "map_psi"
+                        ],
+                        "label": "Theoretical crank horsepower at standard conditions",
                         "unit": "hp",
                         "format": "decimal",
                         "display": true
                     },
-                    "kw_trap_speed": {
-                        "expression": "hp_trap_speed * 0.7457",
+                    "temp_k": {
+                        "expression": "ambient_temp_c + 273.15",
                         "dependencies": [
-                            "hp_trap_speed"
+                            "ambient_temp_c"
                         ],
-                        "label": "Estimated power from trap speed",
+                        "label": "Ambient temperature in kelvin",
+                        "unit": "K",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "density_ratio": {
+                        "expression": "(ambient_pressure_kpa / 101.325) / (temp_k / 293.15)",
+                        "dependencies": [
+                            "ambient_pressure_kpa",
+                            "temp_k"
+                        ],
+                        "label": "Air density ratio vs standard day",
+                        "unit": "",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "hp_crank_today": {
+                        "expression": "hp_crank_corrected * density_ratio",
+                        "dependencies": [
+                            "hp_crank_corrected",
+                            "density_ratio"
+                        ],
+                        "label": "Theoretical crank horsepower at current conditions",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "drivetrain_loss_fraction": {
+                        "expression": "drivetrain_loss_percent / 100",
+                        "dependencies": [
+                            "drivetrain_loss_percent"
+                        ],
+                        "label": "Drivetrain loss fraction",
+                        "unit": "",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "hp_wheel_corrected": {
+                        "expression": "hp_crank_corrected * (1 - drivetrain_loss_fraction)",
+                        "dependencies": [
+                            "hp_crank_corrected",
+                            "drivetrain_loss_fraction"
+                        ],
+                        "label": "Theoretical wheel horsepower at standard conditions",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "hp_wheel_today": {
+                        "expression": "hp_crank_today * (1 - drivetrain_loss_fraction)",
+                        "dependencies": [
+                            "hp_crank_today",
+                            "drivetrain_loss_fraction"
+                        ],
+                        "label": "Theoretical wheel horsepower at current conditions",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "kw_crank_corrected": {
+                        "expression": "hp_crank_corrected * 0.7457",
+                        "dependencies": [
+                            "hp_crank_corrected"
+                        ],
+                        "label": "Theoretical crank power at standard conditions",
+                        "unit": "kW",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "kw_wheel_corrected": {
+                        "expression": "hp_wheel_corrected * 0.7457",
+                        "dependencies": [
+                            "hp_wheel_corrected"
+                        ],
+                        "label": "Theoretical wheel power at standard conditions",
                         "unit": "kW",
                         "format": "decimal",
                         "display": true
@@ -79,42 +298,207 @@
                 },
                 "outputs": [
                     {
-                        "id": "hp_trap_speed",
-                        "label": "Horsepower from trap speed",
-                        "variable": "hp_trap_speed",
+                        "id": "hp_crank_corrected_ve",
+                        "label": "Crank horsepower (corrected, VE model)",
+                        "variable": "hp_crank_corrected",
                         "unit": "hp",
                         "format": "decimal"
                     },
                     {
-                        "id": "kw_trap_speed",
-                        "label": "Horsepower from trap speed",
-                        "variable": "kw_trap_speed",
+                        "id": "hp_crank_today_ve",
+                        "label": "Crank horsepower (today, VE model)",
+                        "variable": "hp_crank_today",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "hp_wheel_corrected_ve",
+                        "label": "Wheel horsepower (corrected, VE model)",
+                        "variable": "hp_wheel_corrected",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "hp_wheel_today_ve",
+                        "label": "Wheel horsepower (today, VE model)",
+                        "variable": "hp_wheel_today",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "kw_crank_corrected_ve",
+                        "label": "Crank power (corrected, VE model)",
+                        "variable": "kw_crank_corrected",
+                        "unit": "kW",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "kw_wheel_corrected_ve",
+                        "label": "Wheel power (corrected, VE model)",
+                        "variable": "kw_wheel_corrected",
                         "unit": "kW",
                         "format": "decimal"
                     }
                 ]
             },
-            "et_weight": {
-                "label": "Quarter-mile ET and weight method",
-                "description": "Estimate horsepower from vehicle weight and quarter-mile elapsed time.",
+            "tuner_maf_injector": {
+                "label": "Tuner Mode – MAF and Injectors",
+                "description": "Estimate supported horsepower from air mass flow and fuel system capacity using BSFC and AFR assumptions.",
                 "variables": {
-                    "hp_et": {
-                        "expression": "weight_lb / ((et_sec / 6.29) * (et_sec / 6.29) * (et_sec / 6.29))",
+                    "drivetrain_loss_fraction": {
+                        "expression": "drivetrain_loss_percent / 100",
                         "dependencies": [
-                            "weight_lb",
-                            "et_sec"
+                            "drivetrain_loss_percent"
                         ],
-                        "label": "Estimated horsepower from ET",
+                        "label": "Drivetrain loss fraction",
+                        "unit": "",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "air_lb_per_min": {
+                        "expression": "maf_lb_per_min",
+                        "dependencies": [
+                            "maf_lb_per_min"
+                        ],
+                        "label": "Air mass flow rate",
+                        "unit": "lb/min",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "fuel_lb_per_min_maf": {
+                        "expression": "air_lb_per_min / afr",
+                        "dependencies": [
+                            "air_lb_per_min",
+                            "afr"
+                        ],
+                        "label": "Fuel flow from MAF",
+                        "unit": "lb/min",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "fuel_lb_per_hr_maf": {
+                        "expression": "fuel_lb_per_min_maf * 60",
+                        "dependencies": [
+                            "fuel_lb_per_min_maf"
+                        ],
+                        "label": "Fuel flow from MAF",
+                        "unit": "lb/hr",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "hp_crank_maf": {
+                        "expression": "fuel_lb_per_hr_maf / bsfc_lb_hp_hr",
+                        "dependencies": [
+                            "fuel_lb_per_hr_maf",
+                            "bsfc_lb_hp_hr"
+                        ],
+                        "label": "Crank horsepower from MAF",
                         "unit": "hp",
                         "format": "decimal",
                         "display": true
                     },
-                    "kw_et": {
-                        "expression": "hp_et * 0.7457",
+                    "hp_wheel_maf": {
+                        "expression": "hp_crank_maf * (1 - drivetrain_loss_fraction)",
                         "dependencies": [
-                            "hp_et"
+                            "hp_crank_maf",
+                            "drivetrain_loss_fraction"
                         ],
-                        "label": "Estimated power from ET",
+                        "label": "Wheel horsepower from MAF",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "flow_l_min_per_injector": {
+                        "expression": "injector_flow_cc_min / 1000",
+                        "dependencies": [
+                            "injector_flow_cc_min"
+                        ],
+                        "label": "Injector flow per injector",
+                        "unit": "L/min",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "flow_kg_min_per_injector": {
+                        "expression": "flow_l_min_per_injector * fuel_density_kg_l",
+                        "dependencies": [
+                            "flow_l_min_per_injector",
+                            "fuel_density_kg_l"
+                        ],
+                        "label": "Fuel mass flow per injector",
+                        "unit": "kg/min",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "flow_lb_hr_per_injector": {
+                        "expression": "flow_kg_min_per_injector * 2.20462 * 60",
+                        "dependencies": [
+                            "flow_kg_min_per_injector"
+                        ],
+                        "label": "Fuel mass flow per injector",
+                        "unit": "lb/hr",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "duty_fraction": {
+                        "expression": "injector_duty_cycle_percent / 100",
+                        "dependencies": [
+                            "injector_duty_cycle_percent"
+                        ],
+                        "label": "Injector duty fraction",
+                        "unit": "",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "total_fuel_lb_hr_inj": {
+                        "expression": "flow_lb_hr_per_injector * injector_count * duty_fraction",
+                        "dependencies": [
+                            "flow_lb_hr_per_injector",
+                            "injector_count",
+                            "duty_fraction"
+                        ],
+                        "label": "Total fuel flow from injectors",
+                        "unit": "lb/hr",
+                        "format": "decimal",
+                        "display": false
+                    },
+                    "hp_crank_injectors": {
+                        "expression": "total_fuel_lb_hr_inj / bsfc_lb_hp_hr",
+                        "dependencies": [
+                            "total_fuel_lb_hr_inj",
+                            "bsfc_lb_hp_hr"
+                        ],
+                        "label": "Crank horsepower from injectors",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "hp_wheel_injectors": {
+                        "expression": "hp_crank_injectors * (1 - drivetrain_loss_fraction)",
+                        "dependencies": [
+                            "hp_crank_injectors",
+                            "drivetrain_loss_fraction"
+                        ],
+                        "label": "Wheel horsepower from injectors",
+                        "unit": "hp",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "kw_crank_maf": {
+                        "expression": "hp_crank_maf * 0.7457",
+                        "dependencies": [
+                            "hp_crank_maf"
+                        ],
+                        "label": "Crank power from MAF",
+                        "unit": "kW",
+                        "format": "decimal",
+                        "display": true
+                    },
+                    "kw_crank_injectors": {
+                        "expression": "hp_crank_injectors * 0.7457",
+                        "dependencies": [
+                            "hp_crank_injectors"
+                        ],
+                        "label": "Crank power from injectors",
                         "unit": "kW",
                         "format": "decimal",
                         "display": true
@@ -122,16 +506,44 @@
                 },
                 "outputs": [
                     {
-                        "id": "hp_et",
-                        "label": "Horsepower from elapsed time",
-                        "variable": "hp_et",
+                        "id": "hp_crank_maf",
+                        "label": "Crank horsepower from MAF",
+                        "variable": "hp_crank_maf",
                         "unit": "hp",
                         "format": "decimal"
                     },
                     {
-                        "id": "kw_et",
-                        "label": "Horsepower from elapsed time",
-                        "variable": "kw_et",
+                        "id": "hp_wheel_maf",
+                        "label": "Wheel horsepower from MAF",
+                        "variable": "hp_wheel_maf",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "hp_crank_injectors",
+                        "label": "Crank horsepower from injectors",
+                        "variable": "hp_crank_injectors",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "hp_wheel_injectors",
+                        "label": "Wheel horsepower from injectors",
+                        "variable": "hp_wheel_injectors",
+                        "unit": "hp",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "kw_crank_maf",
+                        "label": "Crank power from MAF",
+                        "variable": "kw_crank_maf",
+                        "unit": "kW",
+                        "format": "decimal"
+                    },
+                    {
+                        "id": "kw_crank_injectors",
+                        "label": "Crank power from injectors",
+                        "variable": "kw_crank_injectors",
                         "unit": "kW",
                         "format": "decimal"
                     }
@@ -162,75 +574,202 @@
                 "default": 6000
             },
             {
-                "id": "weight_lb",
-                "label": "Vehicle weight (with driver)",
+                "id": "drivetrain_loss_percent",
+                "label": "Drivetrain loss from crank to wheels",
                 "type": "number",
-                "unit": "lb",
-                "min": 500,
-                "max": 10000,
-                "step": 10,
-                "default": 3500
+                "unit": "%",
+                "min": 0,
+                "max": 40,
+                "step": 1,
+                "default": 15
             },
             {
-                "id": "trap_speed_mph",
-                "label": "Quarter-mile trap speed",
+                "id": "ambient_temp_c",
+                "label": "Ambient temperature",
                 "type": "number",
-                "unit": "mph",
-                "min": 10,
-                "max": 400,
-                "step": 0.1,
-                "default": 110
-            },
-            {
-                "id": "et_sec",
-                "label": "Quarter-mile elapsed time",
-                "type": "number",
-                "unit": "s",
-                "min": 1,
+                "unit": "°C",
+                "min": -30,
                 "max": 60,
+                "step": 1,
+                "default": 20
+            },
+            {
+                "id": "ambient_pressure_kpa",
+                "label": "Ambient pressure",
+                "type": "number",
+                "unit": "kPa",
+                "min": 80,
+                "max": 105,
+                "step": 0.1,
+                "default": 101.3
+            },
+            {
+                "id": "displacement_l",
+                "label": "Engine displacement",
+                "type": "number",
+                "unit": "L",
+                "min": 0.5,
+                "max": 10,
+                "step": 0.1,
+                "default": 2
+            },
+            {
+                "id": "rpm_peak",
+                "label": "Target or peak power RPM",
+                "type": "number",
+                "unit": "RPM",
+                "min": 1000,
+                "max": 12000,
+                "step": 100,
+                "default": 6500
+            },
+            {
+                "id": "ve_base",
+                "label": "Baseline volumetric efficiency",
+                "type": "number",
+                "unit": "",
+                "min": 0.6,
+                "max": 1.2,
                 "step": 0.01,
-                "default": 13
+                "default": 0.9
+            },
+            {
+                "id": "ve_adjust_percent",
+                "label": "VE fine-tune adjustment",
+                "type": "number",
+                "unit": "%",
+                "min": -20,
+                "max": 20,
+                "step": 1,
+                "default": 0
+            },
+            {
+                "id": "boost_psi",
+                "label": "Boost pressure (gauge)",
+                "type": "number",
+                "unit": "psi",
+                "min": 0,
+                "max": 40,
+                "step": 0.1,
+                "default": 0
+            },
+            {
+                "id": "maf_lb_per_min",
+                "label": "MAF air flow",
+                "type": "number",
+                "unit": "lb/min",
+                "min": 0,
+                "max": 200,
+                "step": 0.1,
+                "default": 30
+            },
+            {
+                "id": "afr",
+                "label": "Air–fuel ratio (mass)",
+                "type": "number",
+                "unit": "",
+                "min": 8,
+                "max": 18,
+                "step": 0.1,
+                "default": 12
+            },
+            {
+                "id": "bsfc_lb_hp_hr",
+                "label": "Brake-specific fuel consumption",
+                "type": "number",
+                "unit": "lb/(hp·h)",
+                "min": 0.3,
+                "max": 0.8,
+                "step": 0.01,
+                "default": 0.55
+            },
+            {
+                "id": "injector_flow_cc_min",
+                "label": "Injector flow per injector",
+                "type": "number",
+                "unit": "cc/min",
+                "min": 100,
+                "max": 3000,
+                "step": 10,
+                "default": 550
+            },
+            {
+                "id": "injector_count",
+                "label": "Number of injectors",
+                "type": "number",
+                "unit": "",
+                "min": 1,
+                "max": 16,
+                "step": 1,
+                "default": 4
+            },
+            {
+                "id": "injector_duty_cycle_percent",
+                "label": "Maximum injector duty cycle",
+                "type": "number",
+                "unit": "%",
+                "min": 10,
+                "max": 100,
+                "step": 1,
+                "default": 85
+            },
+            {
+                "id": "fuel_density_kg_l",
+                "label": "Fuel density",
+                "type": "number",
+                "unit": "kg/L",
+                "min": 0.6,
+                "max": 0.85,
+                "step": 0.01,
+                "default": 0.74
             }
         ]
     },
     "page_content": {
         "introduction": [
-            "Use this engine horsepower calculator to estimate power using three complementary methods: torque and RPM, quarter-mile trap speed, and quarter-mile elapsed time with vehicle weight.",
-            "The tool is intended for tuners, engineers, and technically minded drivers who want to cross-check dynamometer results, back-calculate power from drag-strip data, or sanity-check manufacturer power claims.",
-            "All estimates assume that measurements are taken carefully, vehicles are in sound mechanical condition, and any track testing is performed safely and legally on a closed course or certified facility."
+            "Use this ultimate engine horsepower estimator and dyno simulator to cross-check power using three complementary methods: direct torque and RPM, a volumetric efficiency and boost model, and tuner-style airflow and fuel system calculations.",
+            "The tool is designed for engine builders, tuners, and technically curious drivers who want to reconcile chassis-dyno pulls with theoretical engine models and with what the fuel and air systems can realistically support.",
+            "All estimates are engineering approximations, not certified ratings. For regulatory, warranty, or advertising claims, always refer to power figures measured under accredited test procedures and standards."
         ],
         "methodology": [
-            "The torque and RPM method implements the classical relationship HP = torque(ft·lb) × RPM / 5252, which follows from the definition of one mechanical horsepower as 33,000 ft·lb per minute and the conversion between angular speed in revolutions per minute and radians per second described in standard mechanics texts and engine test documentation.",
-            "In practice, torque is usually measured using an engine or chassis dynamometer. The dyno measures torque at the crankshaft or at the driven wheels, then horsepower is computed from torque and RPM using the same equation used in this calculator. Because the formula is dimensionally constrained, it is critical that torque be in ft·lb and engine speed in RPM when you use this method.",
-            "For drag racing situations where you have quarter-mile trap speed and total vehicle weight with driver, the calculator applies an empirical relationship commonly used in motorsport engineering: HP ≈ Weight × (TrapSpeed / 234)^3. This formula is derived by fitting power-to-weight data to measured trap speeds for a wide range of vehicles running over 402.3 m (a quarter mile) and is documented in several engineering references and professional calculators.",
-            "The elapsed-time method similarly back-calculates horsepower from weight and quarter-mile ET using an empirically calibrated equation of the form ET ≈ 6.29 × (Weight / HP)^(1/3). Rearranging this yields HP ≈ Weight / (ET / 6.29)^3, which is the expression implemented here. Because it depends strongly on launch, traction, gearing, shift strategy, and driver consistency, this method should be treated as a bracketing estimate rather than an exact measurement.",
-            "Both drag-strip methods assume that the vehicle is running at or near peak power at the end of the quarter mile, that aerodynamic drag and rolling resistance fall within typical ranges for production and lightly modified cars, and that elevation and weather conditions are not extreme. Serious development work should still rely on laboratory or certified track testing under controlled conditions.",
-            "Across all methods, users should treat the results as engineering estimates. For safety-critical or regulatory contexts, such as emissions and compliance testing, follow the procedures and corrections laid out in standards like SAE J1349 for net engine power and consult manufacturer data that is traceable to accredited test facilities."
+            "The Dyno Mode method applies the classical relationship between torque, engine speed, and horsepower, HP = torque(ft·lb) × RPM / 5252, which follows from the definition of mechanical horsepower as 33,000 ft·lb per minute combined with the conversion between revolutions per minute and radians per second in basic rotational mechanics.",
+            "In Dyno Mode, the calculator takes measured torque and engine speed, computes crankshaft horsepower, and then applies a user-specified drivetrain loss percentage to estimate wheel horsepower. Because drivetrain losses vary with layout, tire choice, and transmission type, the loss percentage is intentionally configurable rather than hard-coded.",
+            "To capture environmental effects, Dyno Mode uses a simple air-density ratio based on ambient pressure and temperature, following the proportionality of density to p/T from the ideal gas law. Power values are corrected from current conditions back to a standard reference day by dividing by this density ratio, in line with the conceptual approach used in SAE J1349 style corrections even though this calculator is not a full implementation of that standard.",
+            "The VE and Boost Model method estimates theoretical crank horsepower from engine displacement in liters, peak power RPM, volumetric efficiency, and manifold absolute pressure. Displacement is converted to cubic inches, and the widely used empirical formula HP ≈ CID × RPM × VE × (MAP / 14.7) / 3456 is applied, where CID is cubic inches of displacement, VE is volumetric efficiency, MAP is manifold absolute pressure in psi, and 3456 is a composite conversion constant.",
+            "Volumetric efficiency is represented as a baseline value that reflects the engine architecture and state of tune, with an adjustable percentage to fine-tune for better flowing cylinder heads, variable valve timing, race camshafts, or restrictive exhausts. Boost pressure raises manifold absolute pressure relative to naturally aspirated conditions, and the model scales power approximately in proportion to the ratio of MAP to atmospheric pressure.",
+            "The VE and Boost Model also uses the same density-ratio concept to distinguish theoretical power at standard conditions from estimated power on a particular day at a given elevation and temperature, helping users understand why a forced-induction engine may feel stronger on a cool night than on a hot day.",
+            "The Tuner Mode method estimates the horsepower that can be supported by the air and fuel systems. When you provide air mass flow in pounds per minute and an air–fuel ratio, the calculator converts that airflow to fuel mass flow and then divides by brake-specific fuel consumption (BSFC) in lb/(hp·h) to estimate crank horsepower. This is the same logic used by many professional tuners when sizing fuel pumps, in-tank regulators, and injectors.",
+            "The injector-based portion of Tuner Mode starts from injector flow in cubic centimeters per minute, converts it to fuel mass per unit time using an assumed fuel density, multiplies by the number of injectors and the maximum duty cycle, and then applies the same BSFC-based formula. Comparing the injector-limited horsepower with the MAF-based horsepower highlights whether the fuel system is the bottleneck or whether there is still injector headroom.",
+            "Across all three methods, crank horsepower is distinguished from wheel horsepower using a configurable drivetrain loss fraction, while kilowatt outputs are provided for users working primarily in SI units. The simplified models used here are intended to be transparent and traceable to well-known formulas documented in standards and engineering literature."
         ],
         "faqs": [
             {
-                "question": "When should I use the torque and RPM method instead of the drag-strip methods?",
-                "answer": "Use the torque and RPM method when you have access to reliable torque data from an engine or chassis dynamometer, or when a test stand provides torque at a known engine speed. It directly reflects the physics definition of horsepower and is the most transparent method when torque is well measured. The drag-strip methods are best when you only have quarter-mile timeslips plus a trustworthy vehicle weight."
+                "question": "How should I choose a sensible drivetrain loss percentage for wheel horsepower estimates?",
+                "answer": "Many practitioners assume drivetrain losses around 10 to 15 percent for lightweight front- or rear-wheel drive manual transmissions and closer to 20 percent or more for heavy-duty automatic transmissions or all-wheel drive systems. Because actual losses depend on gear ratios, lubricant temperature, tire type, and even wheel alignment, this calculator leaves the percentage adjustable so that you can align it to your own dyno experience or manufacturer data."
             },
             {
-                "question": "Are the horsepower estimates wheel horsepower or crank (engine) horsepower?",
-                "answer": "The torque and RPM method will match whatever you feed into it. If your torque comes from an engine dyno at the crankshaft, the result is crank horsepower. If it comes from a chassis dyno measuring at the driven wheels, the result is wheel horsepower. The drag-strip formulas are usually closer to wheel horsepower because they back out the power actually moving the car, but differences in drivetrain loss and converter slip mean the result is still an approximation."
+                "question": "What is the difference between crank horsepower and wheel horsepower in this calculator?",
+                "answer": "Crank horsepower represents power at the engine output shaft, which is how most manufacturers publish ratings derived from engine dynamometers. Wheel horsepower represents the power actually reaching the driven wheels after losses in the clutch or torque converter, gearbox, differential, and tires. The calculator computes crank horsepower from torque or from theoretical models and then applies a user-defined drivetrain loss fraction to estimate wheel horsepower."
             },
             {
-                "question": "How accurate are the trap speed and elapsed-time horsepower formulas?",
-                "answer": "Both quarter-mile formulas are empirical fits to real vehicles and work surprisingly well for typical performance cars in good mechanical condition, often within roughly plus or minus 5 to 10 percent when compared to dyno figures. Accuracy degrades for cars with very poor traction, unusual aerodynamics, power adders used only part of the run, very tall or short gearing, or for runs at high altitude or extreme temperatures where air density differs from the conditions assumed in the original curve fits."
+                "question": "How accurate is the volumetric efficiency and boost model compared with a real engine dyno?",
+                "answer": "The VE and boost method is a structured estimate rather than a substitute for a controlled engine dyno test. For well-characterized engines with realistic volumetric efficiency values, it can often land within roughly plus or minus 10 to 15 percent of measured results. However, complex intake and exhaust tuning effects, charge-air temperature control, ignition timing, knock limits, and fuel quality can all move the real engine away from the simple proportional relationship between manifold pressure and power used in this model."
             },
             {
-                "question": "What units should I use for torque, speed, and weight in this calculator?",
-                "answer": "The torque and RPM method requires torque in pound-feet and engine speed in revolutions per minute to preserve the constant 5252 in the formula. The drag-strip methods assume vehicle weight in pounds and trap speed in miles per hour, with quarter-mile elapsed time in seconds. If you work in SI units, convert torque from newton-metres to pound-feet and mass from kilograms to pounds before entering values, or convert the resulting horsepower to kilowatts using the provided kW outputs."
+                "question": "How do air–fuel ratio and BSFC influence the tuner-style horsepower estimates?",
+                "answer": "For a given airflow, a richer air–fuel ratio increases fuel mass flow and can support more power until combustion efficiency or knock limits are reached. Brake-specific fuel consumption encapsulates how efficiently the engine converts fuel energy into shaft power; lower BSFC values indicate higher efficiency. In the tuner calculations, more fuel flow or lower BSFC both raise the estimated horsepower, while leaner mixtures or higher BSFC values reduce it. Choosing realistic BSFC and AFR values based on similar engines is essential for credible results."
             },
             {
-                "question": "Can I use this calculator instead of a certified SAE J1349 engine test?",
-                "answer": "No. This calculator is designed for quick engineering estimates, tuning comparisons, and educational use. Certified engine power ratings for regulatory or advertising purposes must follow formal test codes such as SAE J1349 or equivalent standards in ISO-accredited facilities, with tightly controlled temperature, pressure, fuel, and accessory loads. Use the results here to sanity-check data, not to replace official certification."
+                "question": "Can I use this calculator to produce official power ratings for compliance or advertising?",
+                "answer": "No. Official engine power ratings for regulatory compliance, labeling, or marketing must be obtained using formal procedures such as those defined in SAE J1349 or equivalent standards, in accredited facilities with controlled environmental conditions, reference fuels, and strict instrumentation requirements. This calculator is intended for engineering analysis, tuning guidance, and educational purposes, not for certification work."
             },
             {
-                "question": "Is it safe to collect trap speed and elapsed-time data on public roads?",
-                "answer": "No. Measuring quarter-mile performance requires high speeds and long stopping distances. It must be done on a dedicated drag strip or closed-course test facility with proper safety equipment, trained staff, and compliance with local regulations. Never attempt to time quarter-mile runs on public roads, and always follow track rules and vehicle inspection requirements."
+                "question": "How do ambient temperature and pressure affect the horsepower estimates?",
+                "answer": "Because air density decreases as temperature rises or pressure falls, an engine taking in a fixed volume of air per cycle ingests less mass at high temperatures or elevations, which reduces the amount of fuel that can be burned and therefore reduces power. The calculator uses a simple density ratio derived from the ideal gas law to scale power between your current ambient conditions and a nominal standard day, providing both corrected and current-condition estimates so you can see how much performance is being gained or lost."
+            },
+            {
+                "question": "Is it safe to collect full-load data for these calculations on public roads?",
+                "answer": "High-power measurements typically require full-throttle operation at elevated engine speeds, which can be unsafe and illegal on public roads. Whenever you need the torque, speed, or airflow data required by this calculator, use an appropriate dynamometer or a closed-course test facility with proper safety equipment and trained staff, and follow all local laws and track regulations."
             }
         ],
         "citations": [
@@ -239,37 +778,34 @@
                 "url": "[https://www.nist.gov/pml/special-publication-811/nist-guide-si-appendix-b-conversion-factors](https://www.nist.gov/pml/special-publication-811/nist-guide-si-appendix-b-conversion-factors)"
             },
             {
-                "label": "NIST SI Units overview and guidance on using watts and kilowatts as power units",
+                "label": "NIST SI Units overview describing watts and kilowatts as standard power units",
                 "url": "[https://www.nist.gov/pml/owm/metric-si/si-units](https://www.nist.gov/pml/owm/metric-si/si-units)"
             },
             {
-                "label": "SAE J1349 Engine Power Test Code overview for net engine horsepower",
-                "url": "[https://www.sae.org/standards/j1349_201109-engine-power-test-code-spark-ignition-compression-ignition-installed-net-power-rating](https://www.sae.org/standards/j1349_201109-engine-power-test-code-spark-ignition-compression-ignition-installed-net-power-rating)"
+                "label": "SAE International information on J1349 engine power test code and net horsepower rating",
+                "url": "[https://www.sae.org/standards/content/j1349_201109/](https://www.sae.org/standards/content/j1349_201109/)"
             },
             {
-                "label": "CRX Engines summary of the SAE J1349 power standard for certified engine ratings",
-                "url": "[https://www.crxengines.com/sae-j1349-power-standard](https://www.crxengines.com/sae-j1349-power-standard)"
+                "label": "U.S. Department of Energy Fuel Economy and Environment information for gasoline properties and energy content",
+                "url": "[https://www.fueleconomy.gov](https://www.fueleconomy.gov)"
             },
             {
-                "label": "Speedway Motors drag racing calculator documenting HP = Weight × (MPH/234)^3 for quarter-mile trap speed",
-                "url": "[https://www.speedwaymotors.com/the-toolbox/drag-racing-calculator-1-4-mile-and-1-8-mile-et-mph-and-horsepower/145871](https://www.speedwaymotors.com/the-toolbox/drag-racing-calculator-1-4-mile-and-1-8-mile-et-mph-and-horsepower/145871)"
+                "label": "Massachusetts Institute of Technology OpenCourseWare notes on internal combustion engine performance and volumetric efficiency",
+                "url": "[https://ocw.mit.edu/courses/2-61-internal-combustion-engines-sma-5223-fall-2008/pages/lecture-notes/](https://ocw.mit.edu/courses/2-61-internal-combustion-engines-sma-5223-fall-2008/pages/lecture-notes/)"
             },
             {
-                "label": "Stealth 316 calculators describing ET and MPH based horsepower and weight relationships for a quarter-mile",
-                "url": "[https://www.stealth316.com/2-calc-hp-et-mph.htm](https://www.stealth316.com/2-calc-hp-et-mph.htm)"
+                "label": "University of Illinois automotive engineering resources on dynamometer testing and power measurement",
+                "url": "[https://aae.illinois.edu/research/automotive-and-powertrain/](https://aae.illinois.edu/research/automotive-and-powertrain/)"
             },
             {
-                "label": "Calculator.net engine horsepower calculator showing trap speed and elapsed-time estimation formulas",
-                "url": "[https://www.calculator.net/engine-horsepower-calculator.html](https://www.calculator.net/engine-horsepower-calculator.html)"
-            },
-            {
-                "label": "University of Arizona housing article on electric car horsepower including HP = torque × RPM / 5252 relationship",
-                "url": "[https://dev.housing.arizona.edu/electric-car-horsepower](https://dev.housing.arizona.edu/electric-car-horsepower)"
+                "label": "U.S. Environmental Protection Agency overview of dynamometer testing for emissions and engine mapping",
+                "url": "[https://www.epa.gov/vehicle-and-fuel-emissions-testing/dynamometer-drive-schedules](https://www.epa.gov/vehicle-and-fuel-emissions-testing/dynamometer-drive-schedules)"
             }
         ]
     },
     "links": {
         "internal": [
+            "/automotive/performance/engine-horsepower-calculator",
             "/automotive/performance/0-60-mph-estimator"
         ],
         "external": []
