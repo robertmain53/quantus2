@@ -32,6 +32,13 @@ const ENGINE_MAP = {
   "google.de": { gl: "de", hl: "de" }
 };
 
+const toSlug = (value) =>
+  slugify(value, {
+    lower: true,
+    strict: true,
+    trim: true
+  });
+
 // small CLI parser
 function parseCli() {
   const args = process.argv.slice(2);
@@ -108,10 +115,30 @@ async function zipFolder(folderPath, zipPath) {
   });
 }
 
-async function processKeyword(keyword, page, engine, customFilename = null) {
-  const slug = slugify(keyword, { lower: true, strict: true, trim: true });
+function normalizeFilename(rawFilename) {
+  if (!rawFilename) return null;
 
-  const zipFilename = customFilename || `${slug}.zip`;
+  const tokens = rawFilename
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const zipToken = tokens.find((token) => token.toLowerCase().endsWith(".zip"));
+  return zipToken || tokens.join(" ") || null;
+}
+
+function getZipFilename(keyword, customFilename) {
+  const normalized = normalizeFilename(customFilename);
+  if (normalized) return normalized;
+
+  const slug = toSlug(keyword);
+  return `${slug}.zip`;
+}
+
+async function processKeyword(keyword, page, engine, customFilename = null) {
+  const slug = toSlug(keyword);
+
+  const zipFilename = getZipFilename(keyword, customFilename);
   const zipPath = path.join(OUTPUT_DIR, zipFilename);
 
   if (fs.existsSync(zipPath)) {
@@ -178,6 +205,41 @@ async function processKeyword(keyword, page, engine, customFilename = null) {
   console.log(`  ✅ Done: ${zipPath}`);
 }
 
+function parseKeywordLine(line, defaultEngine) {
+  const parts = line
+    .split("|")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (!parts.length) return null;
+
+  if (parts.length === 1) {
+    return {
+      engine: defaultEngine,
+      keyword: parts[0],
+      filename: null
+    };
+  }
+
+  if (parts.length === 2) {
+    return {
+      engine: parts[0] || defaultEngine,
+      keyword: parts[1],
+      filename: null
+    };
+  }
+
+  const engine = parts[0] || defaultEngine;
+  const keyword = parts[1];
+  const filename = parts.slice(2).join(" ");
+
+  return {
+    engine,
+    keyword,
+    filename
+  };
+}
+
 async function readKeywordsFromFile(defaultEngine) {
   try {
     const raw = await fsp.readFile(KEYWORDS_FILE, "utf8");
@@ -186,40 +248,32 @@ async function readKeywordsFromFile(defaultEngine) {
       .map((l) => l.trim())
       .filter(Boolean);
 
-    // each line can be:
-    // google.it|calcolatore cilindro
-    // google.it|calcolatore cilindro|custom-filename.zip
-    // or just: calcolatore cilindro
-    return lines.map((line) => {
-      const hasPipe = line.includes("|");
-      if (hasPipe) {
-        const parts = line.split("|").map(p => p.trim());
-        const engine = parts[0];
-        let keyword = "";
-        let filename = null;
+    const parsed = lines
+      .map((line) => parseKeywordLine(line, defaultEngine))
+      .filter(Boolean);
 
-        if (parts.length === 2) {
-          // engine|keyword
-          keyword = parts[1];
-        } else if (parts.length >= 3) {
-          // engine|keyword|filename (last part is filename)
-          filename = parts[parts.length - 1];
-          keyword = parts.slice(1, -1).join("|"); // everything in between
-        }
+    const filtered = [];
 
-        return {
-          engine: engine || defaultEngine,
-          keyword,
-          filename
-        };
-      } else {
-        return {
-          engine: defaultEngine,
-          keyword: line,
-          filename: null
-        };
+    for (const entry of parsed) {
+      const filename = normalizeFilename(entry.filename);
+      const zipFilename = getZipFilename(entry.keyword, filename);
+      const zipPath = path.join(OUTPUT_DIR, zipFilename);
+
+      if (fs.existsSync(zipPath)) {
+        console.log(
+          `⏭️ Skipping keyword "${entry.keyword}" because "${zipFilename}" already exists in input.`
+        );
+        continue;
       }
-    });
+
+      filtered.push({
+        engine: entry.engine,
+        keyword: entry.keyword,
+        filename
+      });
+    }
+
+    return filtered;
   } catch (err) {
     return [];
   }
