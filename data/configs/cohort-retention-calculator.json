@@ -1,0 +1,278 @@
+{
+    "version": "1.0.0",
+    "metadata": {
+        "title": "Cohort Retention Calculator",
+        "description": "Calculate cohort-based retention and churn rates using period, rolling, and survival-style views to support product analytics, subscription metrics, and small-business decision making."
+    },
+    "logic": {
+        "type": "advanced",
+        "defaultMethod": "classic_retention",
+        "methods": {
+            "classic_retention": {
+                "label": "Period cohort retention",
+                "description": "Retention in a specific period for a given signup cohort.",
+                "variables": {
+                    "period_retention_rate": {
+                        "expression": "active_at_period_n / cohort_size",
+                        "dependencies": [
+                            "active_at_period_n",
+                            "cohort_size"
+                        ],
+                        "label": "Retention rate in this period",
+                        "unit": "%",
+                        "format": "percent",
+                        "display": true
+                    },
+                    "period_churn_rate": {
+                        "expression": "1 - period_retention_rate",
+                        "dependencies": [
+                            "period_retention_rate"
+                        ],
+                        "label": "Churn rate in this period",
+                        "unit": "%",
+                        "format": "percent",
+                        "display": true
+                    }
+                },
+                "outputs": [
+                    {
+                        "id": "period_retention_rate",
+                        "label": "Retention rate in this cohort-period",
+                        "variable": "period_retention_rate",
+                        "unit": "%",
+                        "format": "percent"
+                    },
+                    {
+                        "id": "period_churn_rate",
+                        "label": "Churn rate in this cohort-period",
+                        "variable": "period_churn_rate",
+                        "unit": "%",
+                        "format": "percent"
+                    }
+                ]
+            },
+            "rolling_retention": {
+                "label": "Rolling retention",
+                "description": "Retention measured as users active at or after period N divided by starting cohort size.",
+                "variables": {
+                    "rolling_retention_rate": {
+                        "expression": "active_at_or_after_n / cohort_size",
+                        "dependencies": [
+                            "active_at_or_after_n",
+                            "cohort_size"
+                        ],
+                        "label": "Rolling retention rate",
+                        "unit": "%",
+                        "format": "percent",
+                        "display": true
+                    }
+                },
+                "outputs": [
+                    {
+                        "id": "rolling_retention_rate",
+                        "label": "Rolling retention rate for this cohort",
+                        "variable": "rolling_retention_rate",
+                        "unit": "%",
+                        "format": "percent"
+                    }
+                ]
+            },
+            "cohort_survival": {
+                "label": "Cohort survival vs churn",
+                "description": "Simple cohort survival vs churn split for a given period.",
+                "variables": {
+                    "cohort_churn_rate": {
+                        "expression": "churned_by_period_n / cohort_size",
+                        "dependencies": [
+                            "churned_by_period_n",
+                            "cohort_size"
+                        ],
+                        "label": "Cohort churn rate",
+                        "unit": "%",
+                        "format": "percent",
+                        "display": true
+                    },
+                    "cohort_survival_rate": {
+                        "expression": "1 - cohort_churn_rate",
+                        "dependencies": [
+                            "cohort_churn_rate"
+                        ],
+                        "label": "Cohort survival (retention) rate",
+                        "unit": "%",
+                        "format": "percent",
+                        "display": true
+                    }
+                },
+                "outputs": [
+                    {
+                        "id": "cohort_survival_rate",
+                        "label": "Cohort survival (retention) rate",
+                        "variable": "cohort_survival_rate",
+                        "unit": "%",
+                        "format": "percent"
+                    },
+                    {
+                        "id": "cohort_churn_rate",
+                        "label": "Cohort churn rate",
+                        "variable": "cohort_churn_rate",
+                        "unit": "%",
+                        "format": "percent"
+                    }
+                ]
+            }
+        }
+    },
+    "form": {
+        "fields": [
+            {
+                "id": "cohort_size",
+                "label": "Cohort size at start of period",
+                "type": "number",
+                "default": 100,
+                "min": 1,
+                "step": 1
+            },
+            {
+                "id": "active_at_period_n",
+                "label": "Active users/customers in period N",
+                "type": "number",
+                "default": 80,
+                "min": 0,
+                "step": 1
+            },
+            {
+                "id": "active_at_or_after_n",
+                "label": "Active users/customers at or after period N",
+                "type": "number",
+                "default": 85,
+                "min": 0,
+                "step": 1
+            },
+            {
+                "id": "churned_by_period_n",
+                "label": "Users/customers lost by end of period N",
+                "type": "number",
+                "default": 20,
+                "min": 0,
+                "step": 1
+            },
+            {
+                "id": "period_n",
+                "label": "Period number for this row (for your own labeling, not used directly in formulas)",
+                "type": "number",
+                "default": 1,
+                "min": 1,
+                "step": 1
+            }
+        ]
+    },
+    "page_content": {
+        "introduction": [
+            "This cohort retention calculator helps you quantify how many customers or users from a given signup cohort are still active after each period, and how quickly that cohort is churning over time.",
+            "It is designed for product managers, growth teams, data analysts, and founders who need a clear, auditable definition of cohort retention that aligns with common practice in analytics, epidemiology, and social-science cohort analysis.",
+            "You can use it as a lightweight front end to more detailed spreadsheet or BI work, or as a teaching aid when explaining retention and churn concepts to colleagues, students, or stakeholders."
+        ],
+        "methodology": [
+            "A cohort is a group of customers or users who share a common starting event, such as the month they first purchased, the week they activated their account, or the date they entered a program. Cohort-based retention tracks what fraction of that original group remains active as time passes, instead of averaging behavior across all customers.",
+            "In the period cohort retention method, the calculator divides the number of active customers in period N by the original cohort size. If you started with 1,000 customers in the January cohort and 420 are still active in month 6, then month-6 retention for that cohort is 420 ÷ 1,000 = 0.42, or 42 percent, and the implied churn for that period is 1 minus 0.42, or 58 percent.",
+            "In the rolling retention method, you count customers who are active at or after a given period N, then divide by the starting cohort size. This view is often used in product analytics because it treats any customer who comes back at or beyond the target period as retained, even if they skipped an intermediate period.",
+            "The cohort survival view in this tool starts from an estimate of the number of customers who have churned by the end of period N and backs out the survival rate as one minus churn. This is useful when your source data directly tracks losses or cancellations rather than active users, such as in credit-risk, medical follow-up, or subscription cancellation datasets.",
+            "All three methods are mathematically consistent with standard treatments of cohort retention in analytics and social-science research: they express retention as the number of individuals remaining at a given follow-up time divided by the number at risk at the start, and express churn as the complement of retention.",
+            "To use the calculator responsibly, define cohorts on a consistent basis, use the same time bucket across cohorts, and avoid over-interpreting very small cohorts, where a change of a few users can produce large swings in the retention percentage. For operational use, pair this calculator with a retention table in your warehouse or BI tool so you can validate numbers against the underlying data."
+        ],
+        "faqs": [
+            {
+                "question": "What is the difference between cohort retention and overall customer retention?",
+                "answer": "Overall retention looks at your entire active customer base over a period, while cohort retention isolates one cohort at a time, such as customers who signed up in a specific month. Cohort analysis helps you see how retention is changing for newer cohorts versus older ones, and separates acquisition effects from engagement and product quality effects."
+            },
+            {
+                "question": "When should I use period retention versus rolling retention?",
+                "answer": "Use period retention when you care about activity within a specific time bucket, such as the fraction of a cohort that is active exactly in month 3. Use rolling retention when you want to know whether customers are still active at or after a reference period, which is common in mobile app and subscription analytics. Both views are valuable as long as you define and use them consistently."
+            },
+            {
+                "question": "How should I define a cohort for this calculator?",
+                "answer": "The most common approach is to group customers by acquisition date, such as all customers who first purchased in the same calendar month. In some settings you may want to group by activation date, first successful usage, or plan type. The key is to choose a definition that matches the business question you are answering and apply it consistently when counting cohort size and active customers."
+            },
+            {
+                "question": "Can I include reactivated customers in the retention counts?",
+                "answer": "Yes, many teams treat reactivated customers as retained in a rolling retention framework, because the focus is on whether the customer has returned by or after a given period. If you need a stricter definition that treats reactivations separately, you can track them as a separate metric and count only continuously active customers as retained in the period view."
+            },
+            {
+                "question": "How many customers do I need in a cohort for the retention rate to be reliable?",
+                "answer": "There is no single threshold, but very small cohorts can produce unstable percentages because a change of a few users has a big impact on the rate. As a practical rule of thumb, aim for at least a few dozen customers per cohort-period when making business decisions, and treat results from very small cohorts as directional rather than definitive."
+            },
+            {
+                "question": "Can I use this calculator for non-commercial cohorts, such as patients or students?",
+                "answer": "Yes. The same cohort retention logic is used in epidemiology, education, workforce and program evaluation. As long as you can clearly define the starting cohort and track who is still present at each follow-up period, you can use the calculator to compute survival and attrition rates for those groups."
+            },
+            {
+                "question": "How does cohort retention relate to churn analysis and lifetime value models?",
+                "answer": "Cohort retention curves are the foundation for many churn and lifetime value models. By observing how quickly different cohorts decay over time, you can estimate expected customer lifetimes, forecast future active users and revenue, and quantify the impact of product or service changes on long-term value."
+            },
+            {
+                "question": "Why do different tools sometimes report slightly different retention numbers?",
+                "answer": "Differences usually come from definitions and filters rather than from math errors. Tools may define activity differently, use calendar periods versus fixed day offsets, include or exclude reactivations, or filter by country or device. When comparing retention numbers, always check the cohort definition, time bucket, and activity criteria used by each source."
+            }
+        ],
+        "citations": [
+            {
+                "label": "Columbia University Mailman School of Public Health – Age-Period-Cohort Analysis overview",
+                "url": "https://www.publichealth.columbia.edu/research/population-health-methods/age-period-cohort-analysis\n"
+            },
+            {
+                "label": "California Center for Population Research – Cohort Analysis working paper",
+                "url": "https://ccpr.ucla.edu/wp-content/uploads/2024/04/Cohort-Analysis.pdf\n"
+            },
+            {
+                "label": "U.S. Small Business Administration Office of Advocacy – Small Business Facts",
+                "url": "https://advocacy.sba.gov/category/research/research-publications/facts-about-small-businesses/\n"
+            },
+            {
+                "label": "U.S. Department of Energy – Customer Acceptance, Retention, and Response to Time-Based Rates report",
+                "url": "https://www.energy.gov/sites/prod/files/2016/12/f34/CBS_Final_Program_Impact_Report_Draft_20161101_0.pdf\n"
+            },
+            {
+                "label": "KNIME – Cohort Analysis tutorial for customer retention",
+                "url": "https://www.knime.com/blog/cohort-analysis-tutorial\n"
+            },
+            {
+                "label": "Amplitude – Cohort retention analysis to reduce churn",
+                "url": "https://amplitude.com/blog/cohorts-to-improve-your-retention\n"
+            },
+            {
+                "label": "NetSuite – Customer retention definition and metrics overview",
+                "url": "https://www.netsuite.com/portal/resource/articles/crm/customer-retention.shtml\n"
+            }
+        ]
+    },
+    "links": {
+        "internal": [
+            "/business/accounting/churn-rate-calculator",
+            "/business/accounting/break-even-point-calculator"
+        ],
+        "external": [
+            {
+                "url": "https://www.sba.gov\n",
+                "label": "U.S. Small Business Administration",
+                "rel": [
+                    "noopener",
+                    "noreferrer"
+                ]
+            },
+            {
+                "url": "https://www.publichealth.columbia.edu\n",
+                "label": "Columbia University Mailman School of Public Health",
+                "rel": [
+                    "noopener",
+                    "noreferrer"
+                ]
+            }
+        ]
+    },
+    "schema": {
+        "additionalTypes": [
+            "HowTo",
+            "TechArticle"
+        ]
+    }
+}
