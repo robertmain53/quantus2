@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 import { getCategories } from "@/lib/content";
 import { SiteSearch } from "@/components/site-search";
@@ -11,8 +12,16 @@ export function SiteHeader() {
   return (
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
       <div className="container flex items-center justify-between gap-4 py-4">
-        <Link href="/" className="flex items-center gap-2 font-serif text-xl font-semibold text-slate-900 no-underline">
-          Cernarus
+        <Link href="/" className="flex items-center gap-2 no-underline">
+          <Image
+            src="/cernarus-logo.png"
+            alt="Cernarus"
+            width={160}
+            height={100}
+            priority
+            className="h-9 w-auto"
+          />
+          <span className="sr-only">Cernarus</span>
         </Link>
         <div className="flex flex-1 items-center justify-end gap-4">
           {/* Desktop Navigation */}
