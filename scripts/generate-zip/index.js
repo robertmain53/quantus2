@@ -142,8 +142,7 @@ async function processKeyword(keyword, page, engine, customFilename = null) {
   const zipPath = path.join(OUTPUT_DIR, zipFilename);
 
   if (fs.existsSync(zipPath)) {
-    console.log(`\n⏭️ Skipping keyword "${keyword}": ZIP file already exists at ${zipPath}`);
-    return;
+    console.log(`\n♻️ Overwriting existing ZIP for "${keyword}" at ${zipPath}`);
   }
 
   const keywordDir = path.join(OUTPUT_DIR, slug);
@@ -252,28 +251,11 @@ async function readKeywordsFromFile(defaultEngine) {
       .map((line) => parseKeywordLine(line, defaultEngine))
       .filter(Boolean);
 
-    const filtered = [];
-
-    for (const entry of parsed) {
-      const filename = normalizeFilename(entry.filename);
-      const zipFilename = getZipFilename(entry.keyword, filename);
-      const zipPath = path.join(OUTPUT_DIR, zipFilename);
-
-      if (fs.existsSync(zipPath)) {
-        console.log(
-          `⏭️ Skipping keyword "${entry.keyword}" because "${zipFilename}" already exists in input.`
-        );
-        continue;
-      }
-
-      filtered.push({
-        engine: entry.engine,
-        keyword: entry.keyword,
-        filename
-      });
-    }
-
-    return filtered;
+    return parsed.map((entry) => ({
+      engine: entry.engine,
+      keyword: entry.keyword,
+      filename: normalizeFilename(entry.filename)
+    }));
   } catch (err) {
     return [];
   }
