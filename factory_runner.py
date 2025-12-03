@@ -5,10 +5,12 @@ import os
 import sys
 import subprocess
 from pathlib import Path
-from difflib import get_close_matches
-from typing import Any, Dict, List, Optional
-from datetime import date, datetime   # <--- datetime added
-import shutil 
+from difflib import SequenceMatcher
+from typing import Any, Dict, List, Optional, Tuple
+from datetime import date, datetime
+import shutil
+import re
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -19,11 +21,11 @@ from openai import OpenAI
 CSV_PATH = Path("data/calc.csv")
 PROMPTS_DIR = Path("generated/prompts")
 OUTPUT_DIR = Path("data/configs")
-BUILD_LOG_PATH = Path("build.log")  # <-- change this if your build log has another name/path
+BUILD_LOG_PATH = Path("build.log")
 
-INPUT_DIR = Path("input")        # <--- NEW
+INPUT_DIR = Path("input")
 MODEL_NAME = "gpt-5-mini"
-ROWS_TO_PROCESS = 5  # starting row + 4 next rows (if available)
+DEFAULT_ROWS_TO_PROCESS = 5
 
 # column 9 (1-based) -> index 8 (0-based)
 DATE_COLUMN_INDEX = 8
@@ -35,6 +37,8 @@ SUPPORTED_CONTEXT_EXTENSIONS = {
     ".pdf",
 }
 
+
+# ------------ HELPER FUNCTIONS: CSV & BACKUP ------------
 
 def backup_csv(csv_path: Path) -> None:
     """
@@ -49,8 +53,6 @@ def backup_csv(csv_path: Path) -> None:
     shutil.copy2(csv_path, backup_path)
     print(f"Backup created: {backup_path}")
 
-
-# ------------ HELPER FUNCTIONS: CSV ------------
 
 def load_csv_rows(csv_path: Path) -> List[List[str]]:
     if not csv_path.exists():
@@ -73,13 +75,12 @@ def get_data_rows(rows: List[List[str]]) -> List[List[str]]:
 
 
 def write_csv_rows(rows: List[List[str]], csv_path: Path) -> None:
-    # NEW: safe backup before overwriting
+    # safe backup before overwriting
     backup_csv(csv_path)
 
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerows(rows)
-
 
 
 def extract_slug_from_row(row: List[str]) -> Optional[str]:
@@ -96,41 +97,130 @@ def extract_slug_from_row(row: List[str]) -> Optional[str]:
     return None
 
 
-# ------------ HELPER FUNCTIONS: PROMPT & ZIP ------------
+# ------------ HELPER FUNCTIONS: SLUG & MATCHING ------------
 
-def find_best_prompt_file(slug: str, prompts_dir: Path) -> Optional[Path]:
+def slug_core_from_slug(slug: str) -> str:
     """
-    Find the file in generated/prompts whose name best matches the slug.
-    Priority:
-      1. Filenames containing the slug.
-      2. Closest filename by difflib.get_close_matches.
+    Da 'price-elasticity-calculator' → 'price-elasticity'
+    Da 'ebitda-calculator' → 'ebitda'
+    Da 'calculate-price-elasticity' → 'price-elasticity'
     """
+    s = slug.lower()
+    # togli prefissi tipo 'calculate-'
+    s = re.sub(r"^(calculate|calc|calculator|convert|conversion)-", "", s)
+    # togli suffissi tipo '-calculator', '-calc', '-converter'
+    s = re.sub(r"-(calculator|calc|converter|conversion)$", "", s)
+    return s
+
+
+def slug_core_from_filename(path: Path) -> str:
+    """
+    Da 'business_accounting_price-elasticity-calculator.json'
+      → 'price-elasticity'
+    Da 'business_accounting_ebit-calculator.json'
+      → 'ebit'
+    """
+    stem = path.stem.lower()  # senza estensione
+    # prendi l’ultima parte dopo '_' (es. business_accounting_ebit-calculator → ebit-calculator)
+    last_segment = stem.split("_")[-1]
+    return slug_core_from_slug(last_segment)
+
+
+def string_similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def find_best_prompt_file_for_row(
+    slug: str,
+    row: List[str],
+    prompts_dir: Path,
+    input_root: Path,
+    similarity_threshold: float = 0.65,
+) -> Path:
+    """
+    Trova il file prompt 'giusto' per uno slug, usando:
+      - categoria e sottocategoria dal CSV
+      - combinazioni di parole nel nome file
+      - controllo che esista anche la cartella input corrispondente.
+
+    Se non trova un match sufficientemente buono → solleva RuntimeError.
+    """
+
     if not prompts_dir.exists():
         raise FileNotFoundError(f"Prompts directory not found: {prompts_dir}")
 
-    files = [p for p in prompts_dir.glob("**/*") if p.is_file()]
-    if not files:
-        return None
+    if len(row) < 2:
+        raise RuntimeError(f"Row too short to infer category/subcategory: {row}")
 
-    # Direct contains match
-    slug_lower = slug.lower()
-    contains_matches = [
-        f for f in files if slug_lower in f.name.lower()
+    category = row[0].strip().lower().replace(" ", "-")      # es. 'business'
+    subcategory = row[1].strip().lower().replace(" ", "-")   # es. 'accounting'
+
+    slug_core = slug_core_from_slug(slug)  # es. 'price-elasticity'
+
+    # 1) Tentativi “ovvi” di nome file
+    #   /business/accounting/price-elasticity-calculator
+    # → business_accounting_price-elasticity-calculator.json
+    candidates_exact = [
+        f"{category}_{subcategory}_{slug}.json",
+        f"{category}_{subcategory}_{slug_core}-calculator.json",
+        f"{category}_{subcategory}_{slug_core}.json",
     ]
-    if contains_matches:
-        # If multiple, pick shortest filename (usually more precise)
-        return sorted(contains_matches, key=lambda x: len(x.name))[0]
 
-    # Fuzzy match by name
-    names = [f.name for f in files]
-    close = get_close_matches(slug, names, n=1, cutoff=0.1)
-    if close:
-        best_name = close[0]
-        for f in files:
-            if f.name == best_name:
-                return f
-    return None
+    for name in candidates_exact:
+        p = prompts_dir / name
+        if p.exists():
+            # Verifica anche la cartella di input
+            input_folder = input_root / slug  # es. input/price-elasticity-calculator
+            if not input_folder.exists():
+                raise RuntimeError(
+                    f"Trovato prompt {p}, ma la cartella input {input_folder} non esiste. "
+                    "Controlla zip/unzip e naming prima di rilanciare."
+                )
+            return p
 
+    # 2) Fuzzy intelligente sul core del nome file
+    files = [p for p in prompts_dir.glob("**/*.json") if p.is_file()]
+    if not files:
+        raise RuntimeError(f"Nessun file .json trovato in {prompts_dir}")
+
+    scored: List[Tuple[float, Path]] = []
+
+    for f in files:
+        core = slug_core_from_filename(f)  # es. 'ebit', 'price-elasticity'
+        score = string_similarity(slug_core, core)
+
+        # boost se il core compare nel nome completo
+        stem = f.stem.lower()
+        if slug_core in stem:
+            score += 0.1
+
+        scored.append((score, f))
+
+    scored.sort(reverse=True, key=lambda x: x[0])
+    best_score, best_file = scored[0]
+
+    if best_score < similarity_threshold:
+        # Match troppo debole → meglio fermarsi e farti sistemare i file
+        raise RuntimeError(
+            f"Nessun prompt con similarità sufficiente per slug '{slug}' "
+            f"(miglior match: {best_file.name}, score={best_score:.2f}). "
+            "Crea un file prompt dedicato o rinomina quello esistente."
+        )
+
+    # Controllo cartella input coerente
+    input_folder = input_root / slug
+    if not input_folder.exists():
+        raise RuntimeError(
+            f"Prompt selezionato {best_file.name} per slug '{slug}', "
+            f"ma la cartella input {input_folder} non esiste. "
+            "Controlla che lo zip sia stato unzippato nella cartella corretta "
+            "(nome = slug) prima di rilanciare."
+        )
+
+    return best_file
+
+
+# ------------ HELPER FUNCTIONS: PROMPT JSON & ZIP FIELD ------------
 
 def load_json(path: Path) -> Dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
@@ -159,7 +249,6 @@ def find_zip_path_in_json(data: Any) -> Optional[str]:
 
 
 # ------------ HELPER FUNCTIONS: OPENAI ------------
-
 
 def call_openai_with_prompt_and_context_files(
     client: OpenAI, prompt_text: str, context_files: List[Path]
@@ -238,8 +327,6 @@ def call_openai_with_prompt_and_context_files(
     )
 
     return response.output_text
-
-
 
 
 def extract_json_block_with_version(text: str) -> str:
@@ -356,7 +443,7 @@ def run_git_commands(start_row_number: int) -> None:
 # ------------ MAIN LOGIC ------------
 
 def main() -> None:
-    # Determine starting row (1-based, data rows only)
+    # Determine starting row and optional number of rows
     if len(sys.argv) > 1:
         try:
             start_row_number = int(sys.argv[1])
@@ -364,12 +451,17 @@ def main() -> None:
             print("First argument must be an integer (starting row number).")
             sys.exit(1)
     else:
-        # Interactive fallback
+        start_row_number = int(input("Enter starting row number (1-based, data rows): ").strip())
+
+    # Optional second argument: number of rows to process
+    if len(sys.argv) > 2:
         try:
-            start_row_number = int(input("Enter starting row number (1-based, data rows): ").strip())
+            rows_to_process = int(sys.argv[2])
         except ValueError:
-            print("Invalid input, expected an integer.")
+            print("Second argument must be an integer (number of rows to process).")
             sys.exit(1)
+    else:
+        rows_to_process = DEFAULT_ROWS_TO_PROCESS
 
     if start_row_number < 1:
         print("Starting row must be >= 1.")
@@ -384,7 +476,7 @@ def main() -> None:
         sys.exit(1)
 
     start_index = start_row_number - 1  # convert to 0-based index for data_rows
-    end_index = min(start_index + ROWS_TO_PROCESS, len(data_rows))
+    end_index = min(start_index + rows_to_process, len(data_rows))
 
     if start_index >= len(data_rows):
         print(f"Starting row {start_row_number} is beyond available data rows ({len(data_rows)}).")
@@ -419,10 +511,12 @@ def main() -> None:
 
         print(f"  -> Slug detected: {slug}")
 
-        prompt_file = find_best_prompt_file(slug, PROMPTS_DIR)
-        if not prompt_file:
-            print(f"  -> No prompt file found for slug '{slug}'. Skipping.")
-            continue
+        try:
+            prompt_file = find_best_prompt_file_for_row(slug, row, PROMPTS_DIR, INPUT_DIR)
+        except RuntimeError as e:
+            print(f"  -> FATAL matching error for slug '{slug}': {e}")
+            print("     Interrompo lo script: sistema prompt/zip e rilancia.")
+            sys.exit(1)
 
         print(f"  -> Using prompt file: {prompt_file}")
 
@@ -450,7 +544,7 @@ def main() -> None:
                 base = Path(norm).name  # fallback: take only last part
 
             folder_name = base.replace(".zip", "")  # "xyz.zip" → "xyz"
-            folder_path = Path.cwd() / "input" / folder_name
+            folder_path = Path.cwd() / INPUT_DIR / folder_name
 
             if folder_path.exists() and folder_path.is_dir():
                 print(f"  -> Using folder for context: {folder_path}")
@@ -464,10 +558,8 @@ def main() -> None:
         else:
             print("  -> No zip reference found; using prompt only.")
 
-
-
         try:
-             raw_output = call_openai_with_prompt_and_context_files(client, prompt_text, context_files)
+            raw_output = call_openai_with_prompt_and_context_files(client, prompt_text, context_files)
         except Exception as e:
             print(f"  -> ERROR calling OpenAI for slug '{slug}': {e}")
             continue
