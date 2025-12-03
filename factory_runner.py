@@ -28,6 +28,13 @@ ROWS_TO_PROCESS = 5  # starting row + 4 next rows (if available)
 # column 9 (1-based) -> index 8 (0-based)
 DATE_COLUMN_INDEX = 8
 
+SUPPORTED_CONTEXT_EXTENSIONS = {
+    ".txt", ".text", ".md", ".markdown",
+    ".json", ".html", ".htm",
+    ".xml", ".yaml", ".yml",
+    ".pdf",
+}
+
 
 def backup_csv(csv_path: Path) -> None:
     """
@@ -153,48 +160,38 @@ def find_zip_path_in_json(data: Any) -> Optional[str]:
 
 # ------------ HELPER FUNCTIONS: OPENAI ------------
 
-def call_openai_with_prompt_and_zip(
-    client: OpenAI, prompt_text: str, zip_path: Optional[Path]
+def call_openai_with_prompt_and_context_files(
+    client: OpenAI, prompt_text: str, context_files: List[Path]
 ) -> str:
-    """
-    Call gpt-5.1-mini with the prompt, optionally attaching a zip file
-    via input_file.
-    Returns raw output_text from the model.
-    """
-    content: List[Dict[str, Any]] = []
 
-    # Attach zip file if available
-    if zip_path is not None and zip_path.exists():
-        file_obj = client.files.create(
-            file=zip_path.open("rb"),
-            purpose="user_data",
-        )
-        content.append(
-            {
+    content = []
+
+    # Attach each supported file
+    for p in context_files:
+        try:
+            f = client.files.create(
+                file=p.open("rb"),
+                purpose="user_data"
+            )
+            content.append({
                 "type": "input_file",
-                "file_id": file_obj.id,
-            }
-        )
-    else:
-        if zip_path is not None:
-            print(f"WARNING: zip file not found at {zip_path}, sending prompt without file.")
+                "file_id": f.id
+            })
+        except Exception as e:
+            print(f"WARNING: Could not attach file {p}: {e}")
 
-    # Add main prompt text
-    content.append(
-        {
-            "type": "input_text",
-            "text": prompt_text,
-        }
-    )
+    # Add the main prompt
+    content.append({
+        "type": "input_text",
+        "text": prompt_text
+    })
 
     response = client.responses.create(
         model=MODEL_NAME,
-        input=[
-            {
-                "role": "user",
-                "content": content,
-            }
-        ],
+        input=[{
+            "role": "user",
+            "content": content
+        }]
     )
 
     return response.output_text
@@ -396,25 +393,36 @@ def main() -> None:
             continue
 
         zip_str = find_zip_path_in_json(prompt_json)
-        zip_path: Optional[Path] = None
+        context_files: List[Path] = []
+
         if zip_str:
             norm = zip_str.strip()
 
-            # All your JSONs use "../input/xxx.zip" → map to "input/xxx.zip"
+            # ALWAYS convert "../input/xyz.zip" → "./input/xyz/"
             if norm.startswith("../input/"):
-                rel = "input/" + norm[len("../input/"):]   # drop "../" and prefix "input/"
+                base = norm[len("../input/"):]
             else:
-                # Fallback: strip leading "./" or "/" if format ever changes
-                rel = norm.lstrip("./")
+                base = Path(norm).name  # fallback: take only last part
 
-            zip_path = Path.cwd() / rel
-            print(f"  -> Zip file candidate: {zip_path}")
+            folder_name = base.replace(".zip", "")  # "xyz.zip" → "xyz"
+            folder_path = Path.cwd() / "input" / folder_name
+
+            if folder_path.exists() and folder_path.is_dir():
+                print(f"  -> Using folder for context: {folder_path}")
+                # Collect all supported files inside folder
+                for p in folder_path.rglob("*"):
+                    if p.is_file() and p.suffix.lower() in SUPPORTED_CONTEXT_EXTENSIONS:
+                        context_files.append(p)
+                        print(f"     + Adding context file: {p.name}")
+            else:
+                print(f"  -> Folder not found: {folder_path}. No context files added.")
         else:
-            print("  -> No .zip path found in JSON; sending prompt without file.")
+            print("  -> No zip reference found; using prompt only.")
+
 
 
         try:
-            raw_output = call_openai_with_prompt_and_zip(client, prompt_text, zip_path)
+             raw_output = call_openai_with_prompt_and_context_files(client, prompt_text, context_files)
         except Exception as e:
             print(f"  -> ERROR calling OpenAI for slug '{slug}': {e}")
             continue
