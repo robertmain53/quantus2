@@ -226,17 +226,17 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
                 key={`audit-${output.id}`}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-3"
               >
-                <p className="text-sm font-semibold text-slate-800">{output.label}</p>
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
-                  Expression
-                </p>
-                <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-                  {output.expression}
-                </code>
-                <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">
-                  Inputs used
-                </p>
-                <ul className="mt-2 space-y-1 text-xs text-slate-600">
+            <p className="text-sm font-semibold text-slate-800">{output.label}</p>
+            <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
+              Expression
+            </p>
+            <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+              {compiledOutputs.find((o) => o.id === output.id)?.expression ?? ""}
+            </code>
+            <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">
+              Inputs used
+            </p>
+            <ul className="mt-2 space-y-1 text-xs text-slate-600">
                   {fieldIds.map((id) => (
                     <li key={`input-${output.id}-${id}`} className="flex justify-between">
                       <span className="text-slate-500">{id}</span>
