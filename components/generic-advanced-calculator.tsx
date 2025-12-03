@@ -153,74 +153,91 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
     );
   }
 
+  const [showAudit, setShowAudit] = useState(false);
+
   return (
-    <section className="space-y-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-      {methods.length > 1 && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700" htmlFor="advanced-method-select">
-            Calculation method
-          </label>
-          <select
-            id="advanced-method-select"
-            value={activeMethod.id}
-            onChange={(event) => setActiveMethodId(event.target.value)}
-            className="w-full max-w-sm rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-          >
-            {methods.map((method) => (
-              <option key={method.id} value={method.id}>
-                {method.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+    <section className="bento-grid">
+      <div className="bento-tile p-6">
+        {methods.length > 1 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700" htmlFor="advanced-method-select">
+              Calculation method
+            </label>
+            <select
+              id="advanced-method-select"
+              value={activeMethod.id}
+              onChange={(event) => setActiveMethodId(event.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+            >
+              {methods.map((method) => (
+                <option key={method.id} value={method.id}>
+                  {method.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
-      {activeMethod.description && (
-        <p className="text-sm text-slate-600">{activeMethod.description}</p>
-      )}
+        {activeMethod.description && (
+          <p className="mt-3 text-sm text-slate-600">{activeMethod.description}</p>
+        )}
+      </div>
 
-      {baseFields.length > 0 && (
-        <div className="space-y-4">
+      <div className="bento-tile p-6">
+        <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Core inputs
+            Inputs
           </h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            {baseFields.map((field) => renderField(field, values, setValues))}
+          <button
+            type="button"
+            onClick={() => setValues(initialValues)}
+            className="text-xs font-semibold text-slate-500 underline underline-offset-4 hover:text-slate-700"
+          >
+            Reset
+          </button>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {baseFields.map((field) => renderField(field, values, setValues))}
+        </div>
+      </div>
+
+      {sections.length > 0 && (
+        <div className="bento-tile p-6">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Advanced inputs
+          </h3>
+          <div className="mt-3 space-y-6">
+            {sections.map((section) => {
+              if (!shouldShowSection(section, values)) {
+                return null;
+              }
+              return (
+                <div key={section.id} className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-700">{section.label}</h4>
+                    {section.description && (
+                      <p className="mt-1 text-sm text-slate-600">{section.description}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {section.fields.map((field) => renderField(field, values, setValues))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {sections.length > 0 && (
-        <div className="space-y-6">
-          {sections.map((section) => {
-            if (!shouldShowSection(section, values)) {
-              return null;
-            }
-            return (
-              <div key={section.id} className="space-y-3">
-                <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    {section.label}
-                  </h3>
-                  {section.description && (
-                    <p className="mt-1 text-sm text-slate-600">{section.description}</p>
-                  )}
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {section.fields.map((field) => renderField(field, values, setValues))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {evaluation.outputs.length > 0 && (
-        <div className="space-y-3">
+      <div className="bento-tile p-6">
+        <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Results
           </h3>
-          <div className="grid gap-3 md:grid-cols-2">
+          <span className="text-xs font-semibold text-emerald-600">Updates as you type</span>
+        </div>
+        {evaluation.outputs.length > 0 ? (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
             {evaluation.outputs.map((output) => (
               <div
                 key={`${activeMethod.id}_${output.id}`}
@@ -233,14 +250,54 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="mt-3 text-sm text-slate-500">Enter input values to see calculated results.</p>
+        )}
+      </div>
 
-      {evaluation.outputs.length === 0 && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-          Enter input values to see calculated results.
-        </div>
-      )}
+      <div className="bento-tile bento-span-2 p-6">
+        <button
+          type="button"
+          onClick={() => setShowAudit((prev) => !prev)}
+          className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:border-slate-300"
+        >
+          <span>How this is calculated</span>
+          <span aria-hidden className="text-slate-500">
+            {showAudit ? "▲" : "▼"}
+          </span>
+        </button>
+        {showAudit && (
+          <div className="mt-4 space-y-4 text-sm text-slate-700">
+            {evaluation.outputs.map((output) => (
+              <div
+                key={`audit-${activeMethod.id}-${output.id}`}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3"
+              >
+                <p className="text-sm font-semibold text-slate-800">{output.label}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Expression</p>
+                <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+                  {activeMethod.variables[output.variable]?.expression ?? ""}
+                </code>
+                <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Inputs used</p>
+                <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                  {Object.keys(activeMethod.variables).map((id) => (
+                    <li key={`input-${activeMethod.id}-${id}`} className="flex justify-between">
+                      <span className="text-slate-500">{id}</span>
+                      <span className="font-semibold text-slate-800">
+                        {Number.isFinite(evaluation.variables[id])
+                          ? evaluation.variables[id].toLocaleString("en-US", {
+                              maximumFractionDigits: 6
+                            })
+                          : "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

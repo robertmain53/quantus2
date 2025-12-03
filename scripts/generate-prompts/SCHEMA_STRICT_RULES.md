@@ -226,8 +226,6 @@ Before you start, determine which calculator type is needed:
 
 ```json
 {
-  "component_type": "converter",
-  "config_json": {
     "version": "1.0.0",
     "metadata": {
       "title": "Convert Kilocalories to Kilojoules",
@@ -266,7 +264,7 @@ Before you start, determine which calculator type is needed:
     "schema": {
       "additionalTypes": ["HowTo"]
     }
-  }
+  
 }
 ```
 
@@ -296,18 +294,38 @@ Before you start, determine which calculator type is needed:
 
 ---
 
-## CRITICAL: Before You Generate JSON, Answer These Questions
+## CRITICAL: Internal checklist before you generate JSON
 
-**Do NOT produce JSON until you have explicitly confirmed these points to the user:**
+Before you generate the JSON, you must internally verify ALL of the following.
+These checks are for your own reasoning only – do NOT print this checklist,
+do NOT explain it, do NOT ask any follow-up questions. You will only return
+the final JSON object.
 
-1. "This is a **[converter | simple_calc | advanced_calc]** because [explain the reason]."
-2. "I will use `component_type: '[type]'` with `logic.type: '[matching_type]'`."
-3. "I will structure `page_content` as **flat arrays only**: introduction[], methodology[], faqs[], citations[]."
-4. "All URLs in citations will be **plain HTTPS strings**, no Markdown like `[url](url)`, no HTML."
-5. "I will NOT add any forbidden fields (no slug, name, category, meta, schema_org, calculator, form for converters, etc.)."
-6. "I understand this is the final JSON and I cannot add commentary or explanations afterward."
+1. You have correctly chosen the calculator type:
+   `component_type` is exactly one of `"converter"`, `"simple_calc"`, or `"advanced_calc"`,
+   and `logic.type` matches (`"conversion"`, `"formula"`, or `"advanced"`).
 
-Then ask the user: **"Ready for me to produce the JSON?"**
+2. You will use `page_content` as **flat arrays only**:
+   `introduction[]`, `methodology[]`, `faqs[]`, `citations[]`
+   (plus any allowed optional arrays like `examples`, `summary`, `glossary`).
+
+3. All URLs in `page_content.citations[].url` are **plain HTTPS strings**,
+   with no Markdown like `[url](url)` and no HTML tags.
+
+4. You have NOT added any forbidden fields (no `slug`, `name`, `category`,
+   `meta`, `schema_org`, `canonical_url`, `robots`, `keywords`, or any other
+   field not explicitly listed in this schema).
+
+5. All math expressions reference existing field IDs or variables, and
+   `fromUnitId` / `toUnitId` (if used) are valid unit IDs.
+
+6. You understand that this is the final JSON and you cannot add commentary
+   or explanations afterward.
+
+Once all points above are satisfied IN YOUR INTERNAL REASONING,
+you directly output the final JSON object and nothing else.
+Do not print the checklist, do not ask “Ready for me to produce the JSON?”.
+
 
 This ensures you have understood the schema before committing to output.
 

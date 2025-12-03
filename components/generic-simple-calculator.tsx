@@ -141,24 +141,47 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
     });
   }, [compiledOutputs, numericValues]);
 
+  const [showDetails, setShowDetails] = useState(false);
+
   return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-      <div className="grid gap-4 md:grid-cols-2">
-        {fields.map((field) => (
-          <label key={field.id} className="space-y-2">
-            <span className="text-sm font-medium text-slate-700">{field.label}</span>
-            {renderInput(field, values[field.id] ?? "", (next) =>
-              setValues((prev) => ({ ...prev, [field.id]: next }))
-            )}
-            {renderFieldMeta(field, fetchMeta[field.id])}
-          </label>
-        ))}
+    <section className="bento-grid">
+      <div className="bento-tile p-6">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Inputs
+          </h3>
+          <button
+            type="button"
+            className="text-xs font-semibold text-slate-500 underline underline-offset-4 hover:text-slate-700"
+            onClick={() => setValues(initialValues)}
+          >
+            Reset
+          </button>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {fields.map((field) => (
+            <label key={field.id} className="space-y-2">
+              <span className="text-sm font-medium text-slate-700">{field.label}</span>
+              {renderInput(field, values[field.id] ?? "", (next) =>
+                setValues((prev) => ({ ...prev, [field.id]: next }))
+              )}
+              {renderFieldMeta(field, fetchMeta[field.id])}
+            </label>
+          ))}
+        </div>
       </div>
 
-      {outputs.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Results</h3>
-          <div className="grid gap-3 md:grid-cols-2">
+      <div className="bento-tile p-6">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Results
+          </h3>
+          <span className="text-xs font-semibold text-emerald-600">
+            Updates as you type
+          </span>
+        </div>
+        {outputs.length > 0 ? (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
             {outputs.map((output) => (
               <div
                 key={output.id}
@@ -171,8 +194,61 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="mt-3 text-sm text-slate-500">
+            Start entering values to see calculated results.
+          </p>
+        )}
+      </div>
+
+      <div className="bento-tile bento-span-2 p-6">
+        <button
+          type="button"
+          onClick={() => setShowDetails((prev) => !prev)}
+          className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:border-slate-300"
+        >
+          <span>How this is calculated</span>
+          <span aria-hidden className="text-slate-500">
+            {showDetails ? "▲" : "▼"}
+          </span>
+        </button>
+
+        {showDetails && (
+          <div className="mt-4 space-y-4 text-sm text-slate-700">
+            {compiledOutputs.map((output) => (
+              <div
+                key={`audit-${output.id}`}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3"
+              >
+                <p className="text-sm font-semibold text-slate-800">{output.label}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
+                  Expression
+                </p>
+                <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+                  {output.expression}
+                </code>
+                <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">
+                  Inputs used
+                </p>
+                <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                  {fieldIds.map((id) => (
+                    <li key={`input-${output.id}-${id}`} className="flex justify-between">
+                      <span className="text-slate-500">{id}</span>
+                      <span className="font-semibold text-slate-800">
+                        {Number.isFinite(numericValues[id])
+                          ? numericValues[id].toLocaleString("en-US", {
+                              maximumFractionDigits: 6
+                            })
+                          : "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

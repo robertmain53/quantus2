@@ -1,7 +1,6 @@
 'use client';
 
 import type { CalculatorConfig, ConversionLogicConfig } from "@/lib/calculator-config";
-
 import { ConversionCalculator } from "@/components/conversion-calculator";
 
 interface GenericConverterProps {
@@ -25,10 +24,23 @@ export function GenericConverter({ config }: GenericConverterProps) {
   }
 
   return (
-    <ConversionCalculator
-      fromUnitId={conversionLogic.fromUnitId}
-      toUnitId={conversionLogic.toUnitId}
-    />
+    <div className="bento-grid">
+      <div className="bento-tile p-6">
+        <ConversionCalculator
+          fromUnitId={conversionLogic.fromUnitId}
+          toUnitId={conversionLogic.toUnitId}
+        />
+      </div>
+      <div className="bento-tile bento-span-2 p-6">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          How this is calculated
+        </h3>
+        <p className="mt-2 text-sm text-slate-700">
+          Conversions use precise factors from our unit library. We normalize to SI base units,
+          then apply the forward and reverse factors so swapping directions keeps accuracy.
+        </p>
+      </div>
+    </div>
   );
 }
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getCategories } from "@/lib/content";
 import { SiteSearch } from "@/components/site-search";
 import { MobileMenu } from "@/components/mobile-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function SiteHeader() {
   const categories = getCategories().slice(0, 5);
@@ -36,8 +37,9 @@ export function SiteHeader() {
           <Suspense fallback={<span className="text-sm text-slate-400">Loading search…</span>}>
             <SiteSearch />
           </Suspense>
-          <div className="hidden text-xs uppercase tracking-wide text-slate-400 2xl:flex 2xl:items-center">
+          <div className="hidden items-center gap-3 text-xs uppercase tracking-wide text-slate-400 2xl:flex 2xl:items-center">
             <span>Standards aligned · audit ready</span>
+            <ThemeToggle />
           </div>
         </div>
         {/* Mobile Menu */}
