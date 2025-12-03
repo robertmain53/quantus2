@@ -560,7 +560,7 @@ def main() -> None:
             print(f"  -> ERROR calling OpenAI for slug '{slug}': {e}")
             continue
 
-      cleaned_json_str = extract_json_block_with_version(raw_output)
+        cleaned_json_str = extract_json_block_with_version(raw_output)
 
         if cleaned_json_str is None:
             debug_path = OUTPUT_DIR / f"{slug}_raw_output.txt"
@@ -570,7 +570,6 @@ def main() -> None:
             print(f"     Full model output saved to: {debug_path}")
             print("     Controlla cosa sta producendo il modello e sistema il prompt per forzare un JSON valido.")
             continue
-
 
         # Validate JSON structure
         try:
