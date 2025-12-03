@@ -21,7 +21,8 @@ PROMPTS_DIR = Path("generated/prompts")
 OUTPUT_DIR = Path("data/configs")
 BUILD_LOG_PATH = Path("build.log")  # <-- change this if your build log has another name/path
 
-MODEL_NAME = "gpt-5.1-mini"
+INPUT_DIR = Path("input")        # <--- NEW
+MODEL_NAME = "gpt-5-mini"
 ROWS_TO_PROCESS = 5  # starting row + 4 next rows (if available)
 
 # column 9 (1-based) -> index 8 (0-based)
@@ -397,13 +398,20 @@ def main() -> None:
         zip_str = find_zip_path_in_json(prompt_json)
         zip_path: Optional[Path] = None
         if zip_str:
-            zip_path = Path(zip_str)
-            if not zip_path.is_absolute():
-                # Interpret relative paths from repo root
-                zip_path = Path.cwd() / zip_path
+            norm = zip_str.strip()
+
+            # All your JSONs use "../input/xxx.zip" → map to "input/xxx.zip"
+            if norm.startswith("../input/"):
+                rel = "input/" + norm[len("../input/"):]   # drop "../" and prefix "input/"
+            else:
+                # Fallback: strip leading "./" or "/" if format ever changes
+                rel = norm.lstrip("./")
+
+            zip_path = Path.cwd() / rel
             print(f"  -> Zip file candidate: {zip_path}")
         else:
             print("  -> No .zip path found in JSON; sending prompt without file.")
+
 
         try:
             raw_output = call_openai_with_prompt_and_zip(client, prompt_text, zip_path)
