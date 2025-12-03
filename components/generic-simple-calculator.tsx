@@ -231,31 +231,31 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
               Expression
             </p>
             <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-              {compiledOutputs.find((o) => o.id === output.id)?.expression ?? ""}
+              {getOutputExpression(compiledOutputs, output.id)}
             </code>
             <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">
               Inputs used
             </p>
             <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                  {fieldIds.map((id) => (
-                    <li key={`input-${output.id}-${id}`} className="flex justify-between">
-                      <span className="text-slate-500">{id}</span>
-                      <span className="font-semibold text-slate-800">
-                        {Number.isFinite(numericValues[id])
-                          ? numericValues[id].toLocaleString("en-US", {
-                              maximumFractionDigits: 6
-                            })
-                          : "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              {fieldIds.map((id) => (
+                <li key={`input-${output.id}-${id}`} className="flex justify-between">
+                  <span className="text-slate-500">{id}</span>
+                  <span className="font-semibold text-slate-800">
+                    {Number.isFinite(numericValues[id])
+                      ? numericValues[id].toLocaleString("en-US", {
+                          maximumFractionDigits: 6
+                        })
+                      : "—"}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-        )}
+        ))}
       </div>
-    </section>
+    )}
+  </div>
+</section>
   );
 }
 
@@ -424,4 +424,9 @@ function isFormulaLogic(
   }
 
   return Object.prototype.hasOwnProperty.call(logic, "outputs") && Array.isArray((logic as FormulaLogicConfig).outputs);
+}
+
+function getOutputExpression(outputs: CompiledOutput[], outputId: string) {
+  const match = outputs.find((o) => o.id === outputId);
+  return match && "expression" in match ? (match as unknown as { expression?: string }).expression ?? "" : "";
 }
