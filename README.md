@@ -138,6 +138,9 @@ This model removes bespoke React development from the daily cadence. Humans conc
        ```
      - Any specialised JSON-LD requirements (e.g. `HowTo`, `Dataset`) should be embedded inside `config_json` so engines can emit schema automatically.
 
+     IMPORTANT: Never output raw '<' or '>' characters inside JSON values. Replace all '<' with '\u003C' and all '>' with '\u003E'. This prevents HTML interpretation, JSX parsing, and CSV corruption.
+
+
 3. **Review (human)**
    - Senior engineer validates the JSON: formulas, units, rounding, and accessibility properties.
    - Editor reviews the generated copy for EEAT, tone, compliance, and citation accuracy.
