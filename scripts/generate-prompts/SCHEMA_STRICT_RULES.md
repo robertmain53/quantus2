@@ -90,6 +90,74 @@ Before you start, determine which calculator type is needed:
   - `result`: optional object with `outputs` (simple card display)
 - `page_content`, `links`, `schema` (same as converter)
 
+### For `component_type: "simple_calc"`
+
+[...]
+
+- `form` (required): object with:
+  - `fields`: array of input objects (labels, types, defaults, min/max)
+  - `result`: optional object with:
+    - `outputs`: **array of objects**, NEVER strings.  
+      Each object MUST have at least:
+      - `id`: string – must match one of `logic.outputs[].id`
+      - `label`: string – user-facing label for that output card  
+      You MAY also include:
+      - `format`: `"currency" | "percent" | "decimal" | "integer"`
+      - `unit`: string (e.g., `"currency"`, `"percent"`, `"years"`)
+
+#### ❌ WRONG (will break the build)
+
+```json
+"result": {
+  "outputs": [
+    "ebit",
+    "ebit_reconciled",
+    "ebit_margin"
+  ]
+}
+
+✅ CORRECT
+"result": {
+  "outputs": [
+    { "id": "ebit", "label": "EBIT (Earnings Before Interest & Taxes)" },
+    { "id": "ebit_reconciled", "label": "EBIT (reconciled from Net Income)" },
+    { "id": "ebit_margin", "label": "EBIT Margin (%)" }
+  ]
+}
+
+
+This way, when `generate-prompts.js` injects `SCHEMA_STRICT_RULES.md` into every prompt, the model gets a **hard schema rule** for `form.result.outputs`.
+
+---
+
+### 4. What to tweak in the README prompt (optional but recommended)
+
+In `README.md`, inside the AI prompt template section where you describe `form`, update this bullet:
+
+Current-ish:
+
+> Use `form.result.outputs` when you want companion result cards—each entry should only include `id`, `label`, `format`, and optional `unit`.
+
+Make it more rigid and explicit:
+
+```text
+- For simple calculators, supply a flat `fields` array (labels, types, defaults, min/max, step, options).
+- If you want companion result cards, use `form.result.outputs`:
+
+  - `form.result.outputs` MUST be an array of OBJECTS, NOT strings.
+  - Each object MUST include `id` and `label`.
+  - You MAY also include `format` and `unit`.
+
+  Example (CORRECT):
+  "result": {
+    "outputs": [
+      { "id": "ebit", "label": "EBIT (Earnings Before Interest & Taxes)" },
+      { "id": "ebit_reconciled", "label": "EBIT (reconciled from Net Income)" },
+      { "id": "ebit_margin", "label": "EBIT Margin (%)" }
+    ]
+  }
+  
+
 ## For `component_type: "advanced_calc"`
 
 **Allowed fields in `config_json`:**
