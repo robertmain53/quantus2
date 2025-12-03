@@ -9,6 +9,7 @@ import type {
   CalculatorFormField,
   CalculatorFormSection
 } from "@/lib/calculator-config";
+import { SharedResultsTable } from "@/components/shared-results-table";
 
 interface GenericAdvancedCalculatorProps {
   config: CalculatorConfig | null;
@@ -252,6 +253,11 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
           </div>
         ) : (
           <p className="mt-3 text-sm text-slate-500">Enter input values to see calculated results.</p>
+        )}
+        {evaluation.outputs.length > 0 && (
+          <div className="mt-4">
+            <SharedResultsTable outputs={evaluation.outputs} />
+          </div>
         )}
       </div>
 

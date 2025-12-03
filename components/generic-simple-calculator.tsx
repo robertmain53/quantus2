@@ -10,6 +10,7 @@ import type {
   CalculatorLogicConfig,
   FormulaLogicConfig
 } from "@/lib/calculator-config";
+import { SharedResultsTable } from "@/components/shared-results-table";
 
 interface GenericSimpleCalculatorProps {
   config: CalculatorConfig | null;
@@ -198,6 +199,11 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
           <p className="mt-3 text-sm text-slate-500">
             Start entering values to see calculated results.
           </p>
+        )}
+        {outputs.length > 0 && (
+          <div className="mt-4">
+            <SharedResultsTable outputs={outputs} />
+          </div>
         )}
       </div>
 
