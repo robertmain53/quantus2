@@ -560,11 +560,17 @@ def main() -> None:
             print(f"  -> ERROR calling OpenAI for slug '{slug}': {e}")
             continue
 
-        cleaned_json_str = extract_json_block_with_version(raw_output)
+      cleaned_json_str = extract_json_block_with_version(raw_output)
 
         if cleaned_json_str is None:
-            print('  -> ERROR: No JSON block with "version" found in model output. Skipping save for this slug.')
+            debug_path = OUTPUT_DIR / f"{slug}_raw_output.txt"
+            with debug_path.open("w", encoding="utf-8") as f:
+                f.write(raw_output)
+            print('  -> ERROR: No JSON block with "version" found in model output.')
+            print(f"     Full model output saved to: {debug_path}")
+            print("     Controlla cosa sta producendo il modello e sistema il prompt per forzare un JSON valido.")
             continue
+
 
         # Validate JSON structure
         try:

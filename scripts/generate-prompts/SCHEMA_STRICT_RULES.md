@@ -331,16 +331,6 @@ This ensures you have understood the schema before committing to output.
 
 ---
 
-**When done, return ONLY the JSON object. No commentary, no markdown code blocks, no explanations. Example:**
-
-```
-{
-  "component_type": "converter",
-  "config_json": { ... }
-}
-```
-
----
 
 ## Reference Documentation
 
