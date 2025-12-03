@@ -101,6 +101,8 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
     return methods.find((method) => method.id === activeMethodId) ?? methods[0] ?? null;
   }, [methods, activeMethodId]);
 
+  const [showAudit, setShowAudit] = useState(false);
+
   const initialValues = useMemo(() => {
     return allFields.reduce<Record<string, string>>((acc, field) => {
       acc[field.id] = field.defaultValue ?? "";
@@ -153,8 +155,6 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
       </section>
     );
   }
-
-  const [showAudit, setShowAudit] = useState(false);
 
   return (
     <section className="bento-grid">

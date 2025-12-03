@@ -69,54 +69,56 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
   };
 
   return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="font-serif text-2xl font-semibold text-slate-900">
-            Interactive Converter
-          </h2>
-          <p className="text-sm text-slate-500">
-            Convert between {context.from.label.toLowerCase()} and{" "}
-            {context.to.label.toLowerCase()} with precision rounding.
-          </p>
+    <section className="bento-grid">
+      <div className="bento-tile p-6">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">
+              Interactive Converter
+            </h2>
+            <p className="text-sm text-slate-500">
+              Convert between {context.from.label.toLowerCase()} and{" "}
+              {context.to.label.toLowerCase()} with precision rounding.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSwap}
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-700"
+          >
+            Swap units
+          </button>
+        </header>
+
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">
+              {fromUnit.label} ({fromUnit.symbol})
+            </span>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={inputValue}
+              onChange={(event) => setInputValue(event.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-4 py-2 text-lg font-semibold text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">
+              {toUnit.label} ({toUnit.symbol})
+            </span>
+            <input
+              type="text"
+              readOnly
+              value={isValid ? formatNumber(targetValue, toUnit.decimalPlaces) : "—"}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-lg font-semibold text-slate-900 shadow-sm"
+            />
+          </label>
         </div>
-        <button
-          type="button"
-          onClick={handleSwap}
-          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-700"
-        >
-          Swap units
-        </button>
-      </header>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">
-            {fromUnit.label} ({fromUnit.symbol})
-          </span>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={inputValue}
-            onChange={(event) => setInputValue(event.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-4 py-2 text-lg font-semibold text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-          />
-        </label>
-
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-slate-700">
-            {toUnit.label} ({toUnit.symbol})
-          </span>
-          <input
-            type="text"
-            readOnly
-            value={isValid ? formatNumber(targetValue, toUnit.decimalPlaces) : "—"}
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-lg font-semibold text-slate-900 shadow-sm"
-          />
-        </label>
       </div>
 
-      <div>
+      <div className="bento-tile p-6">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Quick reference table
         </h3>
@@ -142,6 +144,17 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="bento-tile bento-span-2 p-6">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          How this is calculated
+        </h3>
+        <p className="mt-2 text-sm text-slate-700">
+          We normalize all conversions to SI base units, apply published factors, and mirror those
+          factors in reverse when you swap units. Reference values are precomputed for common
+          inputs to speed up exploration.
+        </p>
       </div>
     </section>
   );
