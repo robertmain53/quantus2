@@ -282,7 +282,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
                 <p className="text-sm font-semibold text-slate-800">{output.label}</p>
                 <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Expression</p>
                 <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-                  {activeMethod.variables[output.variable]?.expression ?? ""}
+                  {getOutputExpression(activeMethod, output.id)}
                 </code>
                 <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Inputs used</p>
                 <ul className="mt-2 space-y-1 text-xs text-slate-600">
@@ -539,4 +539,13 @@ function formatOutputValue(value: number, format?: string, unit?: string) {
       return unit ? `${formatted} ${unit}` : formatted;
     }
   }
+}
+
+function getOutputExpression(method: AdvancedMethodConfig, outputId: string): string {
+  const match = method.outputs.find((o) => o.id === outputId);
+  if (!match) return "";
+  const variable = match.variable;
+  if (!variable) return "";
+  const expr = method.variables[variable]?.expression;
+  return expr ?? "";
 }
