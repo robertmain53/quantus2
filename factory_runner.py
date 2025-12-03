@@ -329,35 +329,31 @@ def call_openai_with_prompt_and_context_files(
     return response.output_text
 
 
-def extract_json_block_with_version(text: str) -> str:
+def extract_json_block_with_version(text: str) -> Optional[str]:
     """
     From the model output, keep only the JSON object delimited by the
     outermost {} that contains `"version"` somewhere inside.
-    Strategy:
-      - Find the first '{' that appears before '"version"'
-      - From there, find the matching closing '}' by brace counting
-      - Return that substring
-    If anything fails, return original text as a fallback.
+
+    Returns:
+      - string with the JSON block, or
+      - None if no plausible JSON object is found.
     """
     version_index = text.find('"version"')
     if version_index == -1:
-        # No "version" found, best effort: try first { ... last }
-        first_brace = text.find("{")
-        last_brace = text.rfind("}")
-        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-            return text[first_brace:last_brace + 1]
-        return text
+        # No "version" found at all → niente JSON affidabile
+        return None
 
     # Find '{' before "version"
     first_brace = text.rfind("{", 0, version_index)
     if first_brace == -1:
         first_brace = text.find("{")
         if first_brace == -1:
-            return text
+            # Non esistono graffe → non c'è JSON
+            return None
 
     # Brace matching
     depth = 0
-    end_index = None
+    end_index: Optional[int] = None
     for i in range(first_brace, len(text)):
         ch = text[i]
         if ch == "{":
@@ -369,12 +365,12 @@ def extract_json_block_with_version(text: str) -> str:
                 break
 
     if end_index is None:
-        # Fallback to last '}'
+        # Fallback a ultima '}' dopo first_brace
         last_brace = text.rfind("}")
         if last_brace != -1 and last_brace > first_brace:
             end_index = last_brace
         else:
-            return text
+            return None
 
     return text[first_brace:end_index + 1]
 
@@ -566,15 +562,18 @@ def main() -> None:
 
         cleaned_json_str = extract_json_block_with_version(raw_output)
 
-        # Validate JSON structure (optional but useful)
+        if cleaned_json_str is None:
+            print('  -> ERROR: No JSON block with "version" found in model output. Skipping save for this slug.')
+            continue
+
+        # Validate JSON structure
         try:
             parsed = json.loads(cleaned_json_str)
         except Exception as e:
-            print(f"  -> WARNING: Extracted text is not valid JSON: {e}")
-            # Still save raw cleaned string for manual inspection
-            output_text_to_save = cleaned_json_str
+            print(f"  -> ERROR: Extracted text is not valid JSON: {e}")
+            print("     Skipping save for this slug – fix prompt or model output and retry.")
+            continue
         else:
-            # Re-dump with pretty formatting
             output_text_to_save = json.dumps(parsed, indent=2, ensure_ascii=False)
 
         output_path = OUTPUT_DIR / f"{slug}.json"
