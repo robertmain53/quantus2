@@ -1,13 +1,246 @@
-1. This is a simple_calc because break-even requires multiple related numeric inputs (fixed costs, price per unit, variable cost per unit, optional target profit or contribution margin), and the tool computes one or more formula outputs (breakeven units, breakeven revenue, contribution margin, optional margin of safety). It is not a unit conversion and does not need multiple alternative methods, so simple_calc is appropriate.
-
-2. I will use component_type: "simple_calc" with logic.type: "formula".
-
-3. I will structure page_content as flat arrays only: introduction[], methodology[], faqs[], citations[] (and may include examples[] and summary[] as plain arrays).
-
-4. All URLs in citations will be plain HTTPS strings, not Markdown or HTML.
-
-5. I will NOT add any forbidden fields (no canonical_url, robots, keywords, schema_org, open_graph, twitter_card, custom UI fields, or form for converters, etc.).
-
-6. I understand this is the final JSON and I cannot add commentary or explanations afterward.
-
-Ready for me to produce the JSON?
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Payback Period Calculator (Simple & Discounted)",
+    "description": "Calculate the payback period for an investment using either the simple equal-cash inflow method or the discounted (time-value-of-money) closed-form approach. Includes guidance on assumptions, limits, and calibration against standard references."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "simple",
+    "methods": {
+      "simple": {
+        "label": "Simple Payback (equal annual inflows)",
+        "description": "Assumes identical annual net cash inflows. Returns the number of years required for cumulative nominal inflows to equal the initial investment.",
+        "variables": {
+          "initial_investment": {
+            "expression": "initial_investment",
+            "dependencies": [],
+            "label": "Initial investment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "annual_cash_inflow": {
+            "expression": "annual_cash_inflow",
+            "dependencies": [],
+            "label": "Annual net cash inflow",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payback_years": {
+            "expression": "initial_investment / annual_cash_inflow",
+            "dependencies": [
+              "initial_investment",
+              "annual_cash_inflow"
+            ],
+            "label": "Payback period (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payback_years",
+            "label": "Payback Period (years)",
+            "variable": "payback_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "discounted": {
+        "label": "Discounted Payback (equal annual inflows)",
+        "description": "Uses time-value-of-money to compute the payback period when annual inflows are constant and cash flows are discounted at a specified rate. Closed-form solution for the number of years (may be fractional).",
+        "variables": {
+          "initial_investment": {
+            "expression": "initial_investment",
+            "dependencies": [],
+            "label": "Initial investment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "annual_cash_inflow": {
+            "expression": "annual_cash_inflow",
+            "dependencies": [],
+            "label": "Annual net cash inflow",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "discount_rate": {
+            "expression": "discount_rate",
+            "dependencies": [],
+            "label": "Discount rate (decimal)",
+            "unit": "percent",
+            "format": "decimal",
+            "display": false
+          },
+          "discounted_payback_years": {
+            "expression": "log(1 - discount_rate * initial_investment / annual_cash_inflow) / -log(1 + discount_rate)",
+            "dependencies": [
+              "initial_investment",
+              "annual_cash_inflow",
+              "discount_rate"
+            ],
+            "label": "Discounted payback (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "discounted_payback_years",
+            "label": "Discounted Payback Period (years)",
+            "variable": "discounted_payback_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "initial_investment",
+        "label": "Initial investment (currency)",
+        "type": "number",
+        "default": 10000,
+        "min": 0
+      },
+      {
+        "id": "annual_cash_inflow",
+        "label": "Annual net cash inflow (currency)",
+        "type": "number",
+        "default": 3000,
+        "min": 0
+      },
+      {
+        "id": "discount_rate",
+        "label": "Discount rate (as decimal, e.g. 0.08 = 8%)",
+        "type": "number",
+        "default": 0.08,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "method",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "simple",
+        "options": [
+          {
+            "label": "Simple payback (equal inflows)",
+            "value": "simple"
+          },
+          {
+            "label": "Discounted payback (time value of money)",
+            "value": "discounted"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "payback_years",
+          "label": "Payback Period (years)"
+        },
+        {
+          "id": "discounted_payback_years",
+          "label": "Discounted Payback Period (years)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes how long it takes for an investment to be recovered from net cash inflows. Use the simple method when inflows are approximately equal each period, or use the discounted method to account for the time value of money.",
+      "The discounted closed-form formula included here provides a fractional-year estimate for projects with uniform annual inflows. For uneven cash flows, use a period-by-period cumulative approach (spreadsheet recommended) or the project-level cash-flow tools linked in the citations."
+    ],
+    "methodology": [
+      "Simple payback is calculated as Initial Investment divided by Annual Net Cash Inflow. It measures nominal years to recover the investment but ignores timing within the year and the time value of money.",
+      "Discounted payback applies the present value of an annuity formula and solves for the number of years n that satisfies the inequality PV(annuity up to n) >= Initial Investment. For constant annual inflow C and discount rate r, the closed-form solution used here is n = -ln(1 - r * I / C) / ln(1 + r), where I is the initial investment. This requires r > 0 and r * I / C < 1; when those conditions fail, discounted payback is undefined or indicates the project will not recover value under the given assumptions.",
+      "This tool assumes: (1) 'annual net cash inflow' is the net cash benefit available to repay the initial investment (after operating costs and taxes as applicable), (2) inflows occur once per period (year), and (3) for the discounted method inflows are identical each year. For uneven cash flows, perform a cumulative discounted sum by year and interpolate the fractional year when cumulative PV crosses the initial investment."
+    ],
+    "faqs": [
+      {
+        "question": "What if annual cash inflow is zero or negative?",
+        "answer": "If annual net cash inflow is zero or negative, simple payback is undefined (division by zero or negative recovery). For such cases the project does not recover its investment under the assumed steady inflow. Consider scenario analysis, operational changes, or a cash-flow table to inspect year-by-year outcomes."
+      },
+      {
+        "question": "How should I interpret fractional years in the result?",
+        "answer": "Fractional results indicate partial years required to recover the investment under the model's assumptions. For simple payback, fractional years are a linear interpolation within the year. For discounted payback, the closed-form solution yields a fractional year consistent with the continuous logarithmic solution for annuity recovery."
+      },
+      {
+        "question": "Can I use this for uneven cash flows or one-off receipts?",
+        "answer": "This calculator's methods assume equal annual inflows. For uneven cash flows, build a year-by-year table (or use a spreadsheet) to compute cumulative (nominal or discounted) cash flows by period and find the period where cumulative inflows meet the initial investment, interpolating within the year if needed. The citations include references and project-finance guidance for period-by-period evaluation."
+      },
+      {
+        "question": "What are the limits and numerical caveats of the discounted formula?",
+        "answer": "The closed-form discounted solution requires that discount_rate > 0 and that discount_rate * initial_investment / annual_cash_inflow < 1. If discount_rate is zero, discounted payback reduces to simple payback. If the condition fails, the annuity at the given discount rate never reaches the investment amount (project does not pay back under those assumptions). Always verify inputs and run sensitivity checks for discount rate and inflow size."
+      },
+      {
+        "question": "How do I adapt this to SaaS CAC payback or contribution-margin payback?",
+        "answer": "Treat 'Initial investment' as customer acquisition cost (CAC) and 'Annual net cash inflow' as per-customer contribution margin (revenue minus variable costs) on the same time basis. Ensure both values are comparable (monthly vs annual) and convert units before calculation."
+      },
+      {
+        "question": "Where can I learn more about present value and annuity formulas?",
+        "answer": "Authoritative educational materials on time value of money and project evaluation are available from university open-course materials and government energy and finance guidance linked in the citations. These resources explain derivations, assumptions, and recommended practices for capital budgeting."
+      }
+    ],
+    "citations": [
+      {
+        "label": "MIT OpenCourseWare — Financial Management and Time Value of Money resources",
+        "url": "https://ocw.mit.edu"
+      },
+      {
+        "label": "U.S. Department of Energy — Project finance and economic analysis guidance",
+        "url": "https://www.energy.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission — Investor education on financial statements and project evaluation",
+        "url": "https://www.investor.gov"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/npv",
+      "/calculators/irr",
+      "/financial-ratios/payback-period-guides"
+    ],
+    "external": [
+      {
+        "url": "https://ocw.mit.edu",
+        "label": "MIT OpenCourseWare",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.energy.gov",
+        "label": "U.S. Department of Energy",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}
