@@ -160,41 +160,86 @@ def find_zip_path_in_json(data: Any) -> Optional[str]:
 
 # ------------ HELPER FUNCTIONS: OPENAI ------------
 
+
 def call_openai_with_prompt_and_context_files(
     client: OpenAI, prompt_text: str, context_files: List[Path]
 ) -> str:
+    """
+    Call gpt-5-mini with:
+      - the main prompt text
+      - the contents of any context files (e.g. manifest.json),
+        inlined as input_text blocks.
 
-    content = []
+    No file uploads: all context is sent as plain text.
+    """
+    content: List[Dict[str, Any]] = []
 
-    # Attach each supported file
     for p in context_files:
         try:
-            f = client.files.create(
-                file=p.open("rb"),
-                purpose="user_data"
-            )
-            content.append({
-                "type": "input_file",
-                "file_id": f.id
-            })
-        except Exception as e:
-            print(f"WARNING: Could not attach file {p}: {e}")
+            text = p.read_text(encoding="utf-8", errors="ignore")
 
-    # Add the main prompt
+            # Optional: truncate very large files
+            max_len = 20000
+            if len(text) > max_len:
+                text = text[-max_len:]
+
+            if p.name == "manifest.json":
+                # Special handling for SERP manifest
+                wrapped = (
+                    "You are given a JSON manifest describing search results "
+                    "from a search engine (SERP) for this calculator's keyword. "
+                    "Each result includes competitor pages.\n\n"
+                    "Use this manifest ONLY to:\n"
+                    "- infer the main and secondary search intent of the user;\n"
+                    "- understand what tools, UI patterns, and information competitors provide;\n"
+                    "- make your tool and its explanation more complete, clearer, and more useful than what they likely offer.\n\n"
+                    "IMPORTANT RESTRICTIONS:\n"
+                    "- Do NOT mention or reference any competitor by name, brand, or URL;\n"
+                    "- Do NOT copy text or structure verbatim;\n"
+                    "- Do NOT list or describe specific sites.\n\n"
+                    "Here is the SERP manifest JSON:\n"
+                    "----- BEGIN SERP_MANIFEST -----\n"
+                    f"{text}\n"
+                    "----- END SERP_MANIFEST -----\n"
+                )
+            else:
+                # Generic context file (if you add more later)
+                wrapped = (
+                    f"You are given a supplementary context file named {p.name}. "
+                    "Use it only to improve accuracy, completeness, and professional tone, "
+                    "without copying text verbatim or referring to any internal file names.\n\n"
+                    "----- BEGIN CONTEXT_FILE -----\n"
+                    f"{text}\n"
+                    "----- END CONTEXT_FILE -----\n"
+                )
+
+            content.append({
+                "type": "input_text",
+                "text": wrapped,
+            })
+
+        except Exception as e:
+            print(f"WARNING: Could not read file {p}: {e}")
+
+    # Add the main prompt last so it can refer back to context
     content.append({
         "type": "input_text",
-        "text": prompt_text
+        "text": prompt_text,
     })
 
     response = client.responses.create(
         model=MODEL_NAME,
-        input=[{
-            "role": "user",
-            "content": content
-        }]
+        input=[
+            {
+                "role": "user",
+                "content": content,
+            }
+        ],
     )
 
     return response.output_text
+
+
 
 
 def extract_json_block_with_version(text: str) -> str:
