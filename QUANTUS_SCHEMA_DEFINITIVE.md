@@ -1,41 +1,150 @@
-# Cernarus Calculator Config Schema – Definitive Specification
+# Cernarus Calculator Config Schema – Definitive Specification (Expanded Edition)
 
-**Version**: 1.0.0
-**Last Updated**: November 28, 2025
-**Status**: FROZEN (no guessing, no variations)
-
----
-
-## CRITICAL PREAMBLE
-
-This document defines the **ONLY acceptable JSON structure** for Cernarus calculators. There are NO exceptions, NO variations, NO ambiguities.
-
-If you encounter anything not in this document, **STOP and ask** instead of guessing.
+**Version**: 1.1.0  
+**Last Updated**: December 2025  
+**Status**: FROZEN — This is the complete, authoritative, and expanded schema definition.  
+No inference. No guessing. No deviations.
 
 ---
 
-## Top-Level Structure (EXACT)
+# 🔥 CRITICAL WARNING
+
+This schema defines **exactly** what every calculator JSON **must** look like for Cernarus/Quantus.
+
+If any field appears that is **not** listed here → ❌ **REJECTED**  
+If any required field is **missing** → ❌ **REJECTED**  
+If any structure differs → ❌ **REJECTED**  
+
+Validators, build scripts, and UI engines expect **perfect structural compliance**.
+
+---
+
+# 1. Top-Level Structure (MANDATORY)
+
+Every config file MUST look like:
 
 ```json
 {
   "component_type": "converter|simple_calc|advanced_calc",
   "config_json": {
-    /* everything else goes here */
+      /* calculator definition */
   }
 }
 ```
 
-**Rules:**
-- The wrapper ALWAYS has exactly these two keys
-- `component_type` must be a STRING, one of the three values above
-- `config_json` is an OBJECT containing the calculator configuration
-- NO other top-level keys are allowed (no "schema_org", no "meta", no "slug", no "category")
+Rules:
+
+- Only **two** top-level keys:  
+  - `component_type`  
+  - `config_json`
+- `component_type` MUST be one of:
+  - `"converter"`
+  - `"simple_calc"`
+  - `"advanced_calc"`
+- No HTML, no Markdown, no extra metadata, no arrays outside defined sections.
 
 ---
 
-## config_json Structure (BY COMPONENT_TYPE)
+# 2. component_type Decision Rules (EXPANDED)
 
-### For `component_type: "converter"`
+## 2.1 converter
+
+Choose `"converter"` ONLY IF:
+
+- It converts **one unit to another** with a *fixed* conversion relation.
+- Input is **1 value**, output is **1 converted value**.
+- No formulas, no scenarios, no conditional logic.
+- No multiple outputs.
+- No form object (form UI is auto-generated).
+
+Examples:
+
+- meters → feet  
+- psi → bar  
+- lumens → lux
+
+---
+
+## 2.2 simple_calc
+
+Choose `"simple_calc"` IF:
+
+- It computes **one or more numeric outputs** from **fixed formulas**.
+- User must manually input several values.
+- There is **one method**.
+- There is **no scenario switching**.
+- The output expressions must reference inputs from `form.fields[].id`.
+
+Examples:
+
+- mortgage payment  
+- EBITDA  
+- break-even point  
+- car payoff duration
+
+---
+
+## 2.3 advanced_calc
+
+Choose `"advanced_calc"` IF:
+
+- There are **multiple methods**, **scenarios**, or **calculation paths**.
+- Methods may have different formulas or different variable chains.
+- Users may select the scenario.
+- "Variables" represent internal computational dependencies.
+- A `defaultMethod` MUST be provided.
+
+Examples:
+
+- retirement planning (linear vs compound vs capped)  
+- loan amortization (equal payments vs interest-only)  
+- performance scoring with alternative weight systems
+
+---
+
+# 3. config_json Specification (ALL TYPES)
+
+`config_json` contains the actual calculator definition.
+
+Universal required keys:
+
+| Key | Required | Notes |
+|-----|----------|-------|
+| `version` | yes | MUST be `"1.0.0"` or `"X.Y.Z"` |
+| `metadata` | yes | Only `title` and `description` allowed |
+| `page_content` | yes | Strict flat arrays only |
+| `logic` | yes | Structure depends on component_type |
+| `links` | optional | internal/external |
+| `schema` | optional | additionalTypes only |
+
+Forbidden keys (GLOBAL):
+
+❌ `slug`  
+❌ `category`  
+❌ `name`  
+❌ `hero`  
+❌ `sections`  
+❌ `ui`  
+❌ `layout`  
+❌ `meta`  
+❌ `schema_org`  
+❌ `canonical_url`  
+❌ `robots`  
+❌ `keywords`  
+❌ `open_graph`  
+❌ `twitter_card`  
+❌ `js`  
+❌ `css`  
+❌ `style`  
+❌ ANYTHING NOT DEFINED HERE
+
+---
+
+# 4. Detailed Schema by component_type
+
+---
+
+# 4.1 CONVERTER
 
 ```json
 {
@@ -43,34 +152,27 @@ If you encounter anything not in this document, **STOP and ask** instead of gues
   "config_json": {
     "version": "1.0.0",
     "metadata": {
-      "title": "string (title only, no HTML)",
-      "description": "string (description only, no HTML)"
+      "title": "string",
+      "description": "string"
     },
     "logic": {
       "type": "conversion",
-      "fromUnitId": "string matching lib/conversions.ts",
-      "toUnitId": "string matching lib/conversions.ts"
+      "fromUnitId": "string",
+      "toUnitId": "string"
     },
     "page_content": {
-      "introduction": ["string", "string", "string"],
-      "methodology": ["string", "string", ...],
-      "faqs": [
-        { "question": "string", "answer": "string" },
-        { "question": "string", "answer": "string" }
-      ],
-      "citations": [
-        { "label": "string", "url": "https://..." },
-        { "label": "string", "url": "https://..." }
-      ],
-      "examples": ["string", "string", ...],
+      "introduction": ["string", ...],
+      "methodology": ["string", ...],
+      "faqs": [{ "question": "...", "answer": "..." }],
+      "citations": [{ "label": "...", "url": "https://..." }],
+      "examples": ["string", ...],
       "summary": ["string", ...],
       "glossary": ["string", ...]
     },
     "links": {
-      "internal": ["/conversions/category/slug", ...],
+      "internal": ["/path", ...],
       "external": [
-        { "label": "string", "url": "https://...", "rel": ["external"] },
-        ...
+        { "label": "...", "url": "https://...", "rel": ["external"] }
       ]
     },
     "schema": {
@@ -80,41 +182,17 @@ If you encounter anything not in this document, **STOP and ask** instead of gues
 }
 ```
 
-**MANDATORY fields:**
-- `version` (required, must be semantic string "X.Y.Z")
-- `metadata.title` (required, string, no HTML)
-- `metadata.description` (required, string, no HTML)
-- `logic.type` (required, must be exactly "conversion")
-- `logic.fromUnitId` (required, string)
-- `logic.toUnitId` (required, string)
-- `page_content` (required, object)
+### Converter Hard Rules
 
-**OPTIONAL fields in page_content:**
-- `introduction` (recommended, array of strings 2–5 items)
-- `methodology` (recommended, array of strings 3–7 items)
-- `faqs` (recommended, array of objects with question/answer only)
-- `citations` (recommended, array of objects with label/url only)
-- `examples` (optional, array of strings)
-- `summary` (optional, array of strings)
-- `glossary` (optional, array of strings)
-
-**OPTIONAL fields at root:**
-- `links` (optional, object with internal and external arrays)
-- `schema` (optional, object with additionalTypes array)
-
-**FORBIDDEN fields (DO NOT ADD):**
-- `slug`, `name`, `category`, `topic`, `meta`, `schema_org`
-- `calculator`, `content`, `form` (for converters)
-- `body`, `body_sections`, `sections`, `hero`
-- `tags`, `precision`, `controls`, `units`, `fields`
-- `formulas`, `js`, `expressions`, `engine`
-- `og_title`, `og_description`, `og_type`
-- `robots`, `canonical_url`, `keywords`
-- ANY other fields not explicitly listed above
+- No `form` object allowed.
+- No formulas allowed.
+- No variables.
+- No `precision` field.
+- Units must exist in `lib/conversions.ts`.
 
 ---
 
-### For `component_type: "simple_calc"`
+# 4.2 SIMPLE_CALC
 
 ```json
 {
@@ -131,8 +209,8 @@ If you encounter anything not in this document, **STOP and ask** instead of gues
         {
           "id": "string",
           "label": "string",
-          "expression": "math expression referencing form.fields[].id",
-          "unit": "optional string",
+          "expression": "math using form.fields[].id",
+          "unit": "optional",
           "format": "currency|percent|decimal|integer"
         }
       ]
@@ -143,46 +221,34 @@ If you encounter anything not in this document, **STOP and ask** instead of gues
           "id": "string",
           "label": "string",
           "type": "number|text|select",
-          "unit": "optional string",
-          "required": true,
-          "constraints": {
-            "min": 0,
-            "max": 1000
-          }
+          "default": 0,
+          "min": 0,
+          "max": 999999999
         }
-      ]
+      ],
+      "result": {
+        "outputs": [
+          { "id": "output_id", "label": "string" }
+        ]
+      }
     },
-    "page_content": {
-      "introduction": [...],
-      "methodology": [...],
-      "faqs": [...],
-      "citations": [...]
-    },
-    "links": {...},
-    "schema": {...}
+    "page_content": { ... },
+    "links": { ... },
+    "schema": { ... }
   }
 }
 ```
 
-**MANDATORY:**
-- `version`
-- `metadata.title`, `metadata.description`
-- `logic.type` (must be "formula")
-- `logic.outputs` (array of output objects)
-- `form.fields` (required for simple_calc, array of input fields)
-- `page_content`
+### Simple Calc Hard Rules
 
-**OPTIONAL:**
-- `links`, `schema`
-
-**FORBIDDEN:**
-- `fromUnitId`, `toUnitId` (these are for converters)
-- `form` field without `fields` array
-- Any field listed as forbidden for converters
+- `form.fields` is **mandatory**.
+- Output expressions MUST reference input field IDs.
+- `form.result.outputs[*].id` AND `.label` are **required**.
+- No nested structures beyond defined ones.
 
 ---
 
-### For `component_type: "advanced_calc"`
+# 4.3 ADVANCED_CALC (EXPANDED)
 
 ```json
 {
@@ -195,13 +261,13 @@ If you encounter anything not in this document, **STOP and ask** instead of gues
     },
     "logic": {
       "type": "advanced",
-      "defaultMethod": "string (method id)",
+      "defaultMethod": "method_id",
       "methods": {
         "method_id": {
           "label": "string",
-          "description": "optional string",
+          "description": "optional",
           "variables": {
-            "var_name": {
+            "varname": {
               "expression": "math expression",
               "dependencies": [],
               "label": "string",
@@ -214,7 +280,7 @@ If you encounter anything not in this document, **STOP and ask** instead of gues
             {
               "id": "string",
               "label": "string",
-              "variable": "var_name",
+              "variable": "varname",
               "unit": "optional",
               "format": "currency|percent|decimal|integer"
             }
@@ -224,279 +290,181 @@ If you encounter anything not in this document, **STOP and ask** instead of gues
     },
     "form": {
       "fields": [...],
-      "sections": [...]
+      "sections": [
+        {
+          "title": "string",
+          "fields": ["id1", "id2"],
+          "show_when": {
+            "field": "field_id",
+            "eq": "value"
+          }
+        }
+      ]
     },
-    "page_content": {...},
-    "links": {...},
-    "schema": {...}
+    "page_content": { ... },
+    "links": { ... },
+    "schema": { ... }
   }
 }
 ```
 
-**MANDATORY:**
-- `version`
-- `metadata.title`, `metadata.description`
-- `logic.type` (must be "advanced")
-- `logic.defaultMethod`
-- `logic.methods` (object with at least one method)
-- `page_content`
+### Advanced Calc Hard Rules
 
-**OPTIONAL:**
-- `form` (unlike simple_calc, form is optional for advanced_calc)
-- `links`, `schema`
+- At least **one method** required.
+- `defaultMethod` MUST refer to an existing method key.
+- Variables MUST NOT circularly reference.
 
 ---
 
-## page_content Field Rules (All Types)
+# 5. page_content Specification (FULL)
 
-### introduction
-- Type: `["string", "string", ...]`
-- Required: No (recommended for all types)
-- Use: 2–3 paragraph summary of what the calculator does
-- Format: Plain text strings only (no HTML, no Markdown)
-- Example:
-  ```json
-  "introduction": [
-    "This converter transforms lux to lumens...",
-    "Use it when you have illuminance measurements..."
-  ]
-  ```
+Allowed keys:
 
-### methodology
-- Type: `["string", "string", ...]`
-- Required: No (recommended for all types)
-- Use: 3–7 paragraphs explaining the mathematical basis, standards, or formula
-- Format: Plain text strings only
-- Example:
-  ```json
-  "methodology": [
-    "Lux is defined as one lumen per square metre...",
-    "The SI standard specifies..."
-  ]
-  ```
+- `introduction`: array of strings  
+- `methodology`: array of strings  
+- `faqs`: array of `{ question, answer }`  
+- `citations`: array of `{ label, url }`  
+- `examples`: array of strings  
+- `summary`: array of strings  
+- `glossary`: array of strings  
 
-### examples
-- Type: `["string", "string", ...]`
-- Required: No (optional)
-- Use: Worked examples, real-world scenarios
-- Format: Plain text strings only
-- Example:
-  ```json
-  "examples": [
-    "Example 1: A 10 m² room with 500 lux requires 5000 lumens...",
-    "Example 2: Lab equipment rated at 1000 lux..."
-  ]
-  ```
+Strict rules:
 
-### faqs
-- Type: `[{ "question": "string", "answer": "string" }, ...]`
-- Required: No (recommended for all types)
-- Use: Frequently asked questions with answers
-- Format: Objects with exactly two keys: `question` and `answer` (plain text only)
-- Rules:
-  - Each object MUST have exactly `question` and `answer` (no other keys)
-  - NO nested objects, NO markdown in answers
-  - NO `answer_markdown`, NO `items` nested array
-- Example:
-  ```json
-  "faqs": [
-    {
-      "question": "What is lux?",
-      "answer": "Lux is a unit of illuminance equal to one lumen per square metre."
-    }
-  ]
-  ```
+- No HTML  
+- No Markdown  
+- No inline bold/italics  
+- No links except plain HTTPS URLs inside `citations.url` or `links.external.url`
 
-### citations
-- Type: `[{ "label": "string", "url": "https://..." }, ...]`
-- Required: No (recommended for all types)
-- Use: Authoritative sources (NIST, universities, standards bodies)
-- Format: Objects with exactly two keys: `label` and `url` (plain strings only)
-- Rules:
-  - Each object MUST have exactly `label` and `url` (no other keys)
-  - URLs MUST be plain strings: `"https://example.com"`
-  - URLs MUST NOT be Markdown: `"[https://example.com](...)"`
-  - URLs MUST NOT be HTML: `"<a href='...'>"`
-  - All URLs MUST be HTTPS (not HTTP)
-- Example:
-  ```json
-  "citations": [
-    {
-      "label": "NIST SI Standards",
-      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.330-2019.pdf"
-    }
-  ]
-  ```
+FAQ rules:
 
-### summary
-- Type: `["string", "string", ...]`
-- Required: No (optional)
-- Use: Brief summary of key points
-- Format: Plain text strings only
+```json
+{ "question": "string", "answer": "string" }
+```
 
-### glossary
-- Type: `["string", "string", ...]`
-- Required: No (optional)
-- Use: Definitions of technical terms
-- Format: Plain text strings only
+NO other keys allowed.
+
+Citations rules:
+
+```json
+{ "label": "string", "url": "https://..." }
+```
+
+- Only HTTPS  
+- No tracking parameters unless essential  
+- No Markdown  
+- No `<a>` tags  
 
 ---
 
-## links Object (Optional)
+# 6. links Object (Expanded)
 
 ```json
 "links": {
-  "internal": [
-    "/conversions/length/meters-to-feet-converter",
-    "/conversions/length/feet-to-meters-converter"
-  ],
+  "internal": ["/path1", "/path2"],
   "external": [
     {
-      "label": "NIST Guide to SI",
-      "url": "https://www.nist.gov/pml/special-publication-811/...",
+      "label": "string",
+      "url": "https://...",
       "rel": ["external"]
     }
   ]
 }
 ```
 
-**Rules:**
-- `internal` is an array of slug strings (e.g., "/conversions/category/slug-name")
-- `external` is an array of objects with `label`, `url`, and `rel` keys
-- URLs in external array MUST be plain HTTPS strings
-- The `rel` field should contain `["external"]`
+Rules:
+
+- internal must be slugs, NOT full URLs
+- external must include `"rel": ["external"]`
 
 ---
 
-## schema Object (Optional)
+# 7. schema Object (Expanded)
 
 ```json
 "schema": {
-  "additionalTypes": ["HowTo"]
+  "additionalTypes": ["HowTo", "FAQPage", "FinancialProduct"]
 }
 ```
 
-**Rules:**
-- `additionalTypes` is an array of strings
-- Recommended value: `["HowTo"]` for educational converters
-- No other keys are allowed
+Allowed values:
+
+- HowTo  
+- FAQPage  
+- FinancialProduct  
+- EducationalOccupationalProgram  
+- WebApplication  
 
 ---
 
-## Text Field Rules (UNIVERSAL)
+# 8. Text Content Rules (GLOBAL)
 
-These rules apply to ALL text fields (metadata.title, metadata.description, introduction[], methodology[], examples[], faqs[].answer, etc.):
+These apply to:
+- introduction
+- methodology
+- FAQs
+- citations.label
+- metadata.title
+- metadata.description
 
-1. **NO HTML**: Do not use `<div>`, `<p>`, `<br>`, `<a>`, `<span>`, or any HTML tags
-2. **NO Markdown**: Do not use `**bold**`, `_italic_`, `[link](url)`, `# headers`, etc.
-3. **NO LaTeX**: Do not use `$$...$$` or `\(...\)` for math
-4. **Plain text only**: Use plain ASCII or Unicode text
-5. **Special characters OK**: You may use Unicode characters like `·`, `×`, `→`, `°`, etc.
-6. **Line breaks**: Use `\n` if multi-line text is needed within a string
-7. **Escape quotes**: If using double quotes inside a string, escape them as `\"`
-
-**Examples of CORRECT text:**
-```
-"Torque = Force × Distance"
-"SI definition: 1 lux = 1 lumen per m²"
-"The relationship is: E = F / A, where E is illuminance and A is area."
-"Convert between °C and °F using the formula: T(°F) = T(°C) × 9/5 + 32"
-```
-
-**Examples of WRONG text:**
-```
-"Torque = <strong>Force</strong> × Distance"  ❌ HTML
-"**Torque** = Force × Distance"  ❌ Markdown
-"Torque = $F \times d$"  ❌ LaTeX
-"Check [NIST guide](https://nist.gov)"  ❌ Markdown link
-```
+❌ HTML forbidden  
+❌ Markdown forbidden  
+❌ LaTeX forbidden  
+❌ No lists, no bullets within strings  
+✔ plain text only  
+✔ Unicode OK  
 
 ---
 
-## Unit ID Validation (for converters)
+# 9. Unit Validation (Converters Only)
 
-For `component_type: "converter"`, the `logic.fromUnitId` and `logic.toUnitId` MUST exist in `lib/conversions.ts`.
+Units must exist in `lib/conversions.ts`.
 
-**Currently supported units** (as of 2025-11-28):
-- **Length**: meter, kilometer, foot, inch, centimeter, millimeter, yard, mile
-- **Weight**: gram, kilogram, pound, ounce, ton
-- **Temperature**: celsius, fahrenheit, kelvin
-- **Volume**: liter, milliliter, gallon, cup, pint, fluid_ounce
-- **Area**: square_meter, square_foot, square_kilometer, hectare, acre
-- **Illuminance**: lumen, lux
-- **Torque**: newton_meter, foot_pound
+Supported categories:
 
-To add a new unit, modify `lib/conversions.ts` BEFORE creating a calculator that uses it.
+- length  
+- mass  
+- temperature  
+- torque  
+- illuminance  
+- energy  
+- data  
 
----
-
-## JSON Validation Rules
-
-1. **No trailing commas**: `["item1", "item2"]` not `["item1", "item2",]`
-2. **No comments**: JSON does not support comments
-3. **No undefined values**: All values must be strings, numbers, booleans, arrays, or objects
-4. **Balanced braces and quotes**: `{` pairs with `}`, `"` pairs with `"`
-5. **Valid JSON structure**: Use a JSON validator (jsonlint.com) before submission
+Missing units → ❌ REJECTED.
 
 ---
 
-## Checklist for Authors (ChatGPT or Human)
+# 10. JSON Structure Validation
 
-Before submitting a JSON:
+Your JSON must:
 
-- [ ] Is `component_type` one of: "converter", "simple_calc", "advanced_calc"?
-- [ ] Is `config_json` an object (not a string)?
-- [ ] Is `version` a semantic string like "1.0.0"?
-- [ ] Does `metadata` have ONLY `title` and `description`? (no other fields)
-- [ ] Does `logic.type` match the `component_type`?
-  - [ ] converter → "conversion"
-  - [ ] simple_calc → "formula"
-  - [ ] advanced_calc → "advanced"
-- [ ] For converters: Do `logic.fromUnitId` and `logic.toUnitId` exist in lib/conversions.ts?
-- [ ] For simple_calc: Does `form.fields` exist and have at least one field?
-- [ ] For advanced_calc: Does `logic.methods` have at least one method?
-- [ ] Are all `page_content` arrays (introduction[], methodology[], faqs[], citations[])?
-- [ ] Do FAQ objects have ONLY `question` and `answer`? (no other keys)
-- [ ] Do citation objects have ONLY `label` and `url`? (no other keys)
-- [ ] Are all URLs plain strings (no Markdown, no HTML)? All HTTPS?
-- [ ] Are there NO forbidden fields (slug, name, category, meta, schema_org, calculator, etc.)?
-- [ ] Is there NO HTML or Markdown in any text field?
-- [ ] Is the JSON valid? (no trailing commas, no undefined values, balanced braces)
-- [ ] Is the JSON parseable? (paste into jsonlint.com)
+✔ be valid JSON  
+✔ contain no trailing commas  
+✔ have matched quotes/braces  
+✔ avoid null unless explicitly allowed  
 
 ---
 
-## Summary: EXACT vs. FLEXIBLE
+# 11. Compliance Checklist (EXPANDED)
 
-| Aspect | Status | Examples |
-|--------|--------|----------|
-| Component types | EXACT | Only "converter", "simple_calc", "advanced_calc" |
-| Metadata fields | EXACT | Only "title" and "description" |
-| page_content structure | EXACT | Flat arrays only: introduction[], methodology[], faqs[], citations[] |
-| FAQ objects | EXACT | Only "question" and "answer" keys |
-| Citation objects | EXACT | Only "label" and "url" keys |
-| URL format | EXACT | Plain HTTPS strings only, no Markdown or HTML |
-| Text content | FLEXIBLE | Plain text, any language, Unicode OK |
-| Introduction/methodology length | FLEXIBLE | 2-7 paragraphs, author's choice |
-| FAQ count | FLEXIBLE | 3-10 FAQs, author's choice |
-| Citation count | FLEXIBLE | 3-8 citations, author's choice |
-| page_content optional fields | FLEXIBLE | Include examples, summary, glossary as needed |
+Before ANY JSON is submitted:
 
----
-
-## If You Have Doubts
-
-**DO NOT GUESS.** Instead:
-
-1. Check this document first (is your question answered here?)
-2. Look at a passing example (JSON #3: newton-meters-to-foot-pounds-converter)
-3. Ask explicitly before proceeding
-4. Never assume variations are allowed if not listed
-
-**This document is the source of truth. Past practice, assumptions, and inference are NOT valid.**
+- [ ] Top-level structure correct  
+- [ ] `component_type` valid  
+- [ ] `config_json.version` semantic  
+- [ ] Only allowed metadata fields  
+- [ ] Only allowed page_content fields  
+- [ ] All arrays contain plain strings  
+- [ ] FAQs contain only `question` + `answer`  
+- [ ] Citations contain only `label` + `url`  
+- [ ] All URLs HTTPS  
+- [ ] No HTML/Markdown anywhere  
+- [ ] No forbidden fields  
+- [ ] For converters: units valid  
+- [ ] For simple_calc: form.fields exists  
+- [ ] For advanced_calc: methods valid  
+- [ ] JSON parses with no errors  
 
 ---
 
-**Document Status**: FROZEN
-**Last Review**: November 28, 2025
-**Approved for**: ChatGPT, developers, validators
+# END OF DOCUMENT  
+**Status: FROZEN — DO NOT MODIFY WITHOUT VERSION BUMP**
