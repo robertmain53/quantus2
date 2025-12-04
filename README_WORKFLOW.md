@@ -14,7 +14,27 @@ uc@uc:~/Projects/quantus2$ source .venv/bin/activate
 
 questo push su vercel
 
-4. Aprire Vercel e guardare se ci sono errori di build. Risolverli. Ripushare manualmente con 
+4. Aprire Vercel e guardare se ci sono errori di build. Risolverli. 
+
+tipici errori: page_content.glossary[0] must be an object
+
+glossary deve essere così: 
+
+"glossary": [
+      {
+        "term": "Current assets",
+        "definition": "Assets expected to be converted into cash within one year."
+      },
+      {
+        "term": "Current liabilities",
+        "definition": "Obligations due within one year."
+      }
+    ]
+
+
+
+
+Ripushare manualmente con 
 
 git add .
 git commit -m "fix row x"
@@ -25,3 +45,4 @@ Lo script automaticamente aggiunge le date di creazione sul file calc.csv
 
 
 # Come gestire la revisione manuale
+
