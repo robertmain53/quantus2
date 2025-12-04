@@ -1,0 +1,243 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Drywall Sheets & Material Estimator",
+    "description": "Estimate the number of drywall sheets, material counts, and cost for walls based on total wall length, height, sheet size, openings, and waste allowance. Includes practical measurement guidance and safety references."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "total_wall_area_sqft",
+        "label": "Total wall area (sq ft)",
+        "expression": "max(total_wall_length_ft * wall_height_ft - openings_area_sqft, 0)",
+        "unit": "sq ft",
+        "format": "decimal"
+      },
+      {
+        "id": "sheet_area_sqft",
+        "label": "Single sheet area (sq ft)",
+        "expression": "sheet_width_ft * sheet_height_ft",
+        "unit": "sq ft",
+        "format": "decimal"
+      },
+      {
+        "id": "sheets_needed_raw",
+        "label": "Sheets required (raw, no waste)",
+        "expression": "(total_wall_length_ft * wall_height_ft - openings_area_sqft) / (sheet_width_ft * sheet_height_ft)",
+        "format": "decimal"
+      },
+      {
+        "id": "sheets_with_waste",
+        "label": "Sheets required (with waste)",
+        "expression": "((total_wall_length_ft * wall_height_ft - openings_area_sqft) / (sheet_width_ft * sheet_height_ft)) * (1 + waste_percent / 100)",
+        "format": "decimal"
+      },
+      {
+        "id": "sheets_to_buy",
+        "label": "Sheets to purchase (rounded up)",
+        "expression": "ceil(((total_wall_length_ft * wall_height_ft - openings_area_sqft) / (sheet_width_ft * sheet_height_ft)) * (1 + waste_percent / 100))",
+        "unit": "sheets",
+        "format": "integer"
+      },
+      {
+        "id": "estimated_total_cost",
+        "label": "Estimated total material cost",
+        "expression": "ceil(((total_wall_length_ft * wall_height_ft - openings_area_sqft) / (sheet_width_ft * sheet_height_ft)) * (1 + waste_percent / 100)) * cost_per_sheet",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "screws_needed",
+        "label": "Estimated screws/fasteners needed",
+        "expression": "ceil(((total_wall_length_ft * wall_height_ft - openings_area_sqft) / (sheet_width_ft * sheet_height_ft)) * (1 + waste_percent / 100)) * screws_per_sheet",
+        "format": "integer"
+      },
+      {
+        "id": "tape_length_ft",
+        "label": "Estimated tape length (ft)",
+        "expression": "total_wall_length_ft * ceil(wall_height_ft / sheet_height_ft) + total_wall_length_ft * (ceil(total_wall_length_ft / sheet_width_ft) - 1)",
+        "unit": "ft",
+        "format": "decimal"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "total_wall_length_ft",
+        "label": "Total wall length (ft) — all walls combined",
+        "type": "number",
+        "default": 40,
+        "min": 1,
+        "step": 0.1
+      },
+      {
+        "id": "wall_height_ft",
+        "label": "Wall height (ft)",
+        "type": "number",
+        "default": 8,
+        "min": 2,
+        "step": 0.1
+      },
+      {
+        "id": "sheet_width_ft",
+        "label": "Drywall sheet width (ft)",
+        "type": "number",
+        "default": 4,
+        "min": 1,
+        "step": 0.01
+      },
+      {
+        "id": "sheet_height_ft",
+        "label": "Drywall sheet height (ft)",
+        "type": "number",
+        "default": 8,
+        "min": 1,
+        "step": 0.01
+      },
+      {
+        "id": "openings_area_sqft",
+        "label": "Total area of openings (doors/windows) to subtract (sq ft)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "waste_percent",
+        "label": "Waste allowance (%) — cutting, mistakes, odd shapes",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "cost_per_sheet",
+        "label": "Cost per sheet (local currency)",
+        "type": "number",
+        "default": 12,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "screws_per_sheet",
+        "label": "Average screws/fasteners per sheet",
+        "type": "number",
+        "default": 32,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "total_wall_area_sqft",
+          "label": "Total wall area (sq ft)"
+        },
+        {
+          "id": "sheet_area_sqft",
+          "label": "Single sheet area (sq ft)"
+        },
+        {
+          "id": "sheets_needed_raw",
+          "label": "Sheets required (raw)"
+        },
+        {
+          "id": "sheets_with_waste",
+          "label": "Sheets required (with waste)"
+        },
+        {
+          "id": "sheets_to_buy",
+          "label": "Sheets to purchase"
+        },
+        {
+          "id": "estimated_total_cost",
+          "label": "Estimated total material cost"
+        },
+        {
+          "id": "screws_needed",
+          "label": "Estimated screws/fasteners needed"
+        },
+        {
+          "id": "tape_length_ft",
+          "label": "Estimated tape length (ft)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps contractors, remodelers, and DIYers calculate drywall sheet quantities, basic accessory counts, and an initial material cost estimate from a few simple measurements: combined wall length, wall height, sheet size, openings, and a chosen waste allowance.",
+      "Results are conservative, rounded to whole sheets for purchasing, and include a configurable waste percentage to account for cuts, mistakes, and non-rectangular walls. Use the total wall length field to handle multiple rooms or irregular layouts by entering the sum of all wall runs."
+    ],
+    "methodology": [
+      "Area-based approach: the tool computes wall surface area (linear wall length × height), subtracts openings (doors/windows), and divides by the selected sheet area. A waste allowance is applied and the final purchase quantity is rounded up to whole sheets.",
+      "Accessory estimates (screws, tape) are derived from typical coverage rates and sheet counts to provide quick procurement guidance. Cost is a simple multiplication of sheets-to-buy × cost-per-sheet and does not include delivery, fasteners, joint compound, or labor.",
+      "This estimator is intended for planning and purchasing. For final takeoffs on commercial jobs or code compliance, cross-check with project drawings and local building codes."
+    ],
+    "how_is_calculated": [
+      "Total wall area = total_wall_length_ft × wall_height_ft − openings_area_sqft",
+      "Single sheet area = sheet_width_ft × sheet_height_ft",
+      "Sheets (raw) = Total wall area ÷ Single sheet area",
+      "Sheets (with waste) = Sheets (raw) × (1 + waste_percent / 100)",
+      "Sheets to purchase = ceiling(Sheets (with waste))",
+      "Estimated cost = Sheets to purchase × cost_per_sheet",
+      "Screws estimate = Sheets to purchase × screws_per_sheet",
+      "Tape length estimate = total_wall_length_ft × rows_of_sheets_per_height + approximate vertical seam allowance (conservative estimate)"
+    ],
+    "faqs": [
+      {
+        "question": "How do I measure total wall length for multiple rooms?",
+        "answer": "Measure each wall run (inside face-to-face) and add them together. Include closets and partial walls that will be drywalled. Do not include openings you plan to leave exposed; instead, add their areas in the openings field to subtract them from the total area."
+      },
+      {
+        "question": "What waste percentage should I use?",
+        "answer": "Typical waste allowances are 5–10% for simple rectangular rooms and 10–15% for rooms with many corners, soffits, or awkward openings. For complex layouts or ceilings, consider 15–20%."
+      },
+      {
+        "question": "Can I use metric measurements?",
+        "answer": "This estimator uses feet and square feet. Convert metric measurements to feet before entering values. For professional workflows, use project takeoff tools that support metric units and detailed nesting of rooms."
+      },
+      {
+        "question": "How accurate is the tape and screws estimate?",
+        "answer": "Tape and fastener counts are conservative approximations based on sheet counts and common trade practices. Final quantities will vary with fastening patterns, stud spacing, and finishing level (tape only, skim coat, etc.)."
+      },
+      {
+        "question": "Does the cost include joint compound, corner bead, or labor?",
+        "answer": "No. The cost shown is only a basic multiplier of sheets-to-buy × cost-per-sheet. Add separate line items for joint compound, corner bead, screws, tools, waste disposal, and labor in your final budget."
+      },
+      {
+        "question": "Is this tool suitable for commercial code compliance?",
+        "answer": "Use this estimator for preliminary procurement planning. For code compliance, fire-rating, acoustics, or engineered assemblies, consult project specifications and local building officials; verify required board types and fastening schedules."
+      },
+      {
+        "question": "Why do results round up to whole sheets?",
+        "answer": "Sheets are sold in whole units. The calculator rounds up after applying waste allowance so purchasers order a sufficient number of full sheets to complete the job."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — Construction industry",
+        "url": "https://www.osha.gov/construction"
+      },
+      {
+        "label": "National Institute for Occupational Safety and Health (NIOSH) — Respirator and dust guidance",
+        "url": "https://www.cdc.gov/niosh"
+      },
+      {
+        "label": "U.S. Department of Energy — Building science and insulation guidance",
+        "url": "https://www.energy.gov"
+      },
+      {
+        "label": "U.S. Environmental Protection Agency (EPA) — Lead and renovation safety",
+        "url": "https://www.epa.gov/lead"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Measurement standards",
+        "url": "https://www.nist.gov"
+      }
+    ]
+  }
+}
