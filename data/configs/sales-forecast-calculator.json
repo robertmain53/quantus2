@@ -1,0 +1,416 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Sales Forecast Calculator",
+    "description": "Multi-method sales forecasting tool: choose between compound growth, linear trend, or moving average methods. Produces period and cumulative projections and a conservative buffer. Guidance references government and academic best practices for validation and accuracy measurement."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "compound_growth",
+    "methods": {
+      "compound_growth": {
+        "label": "Compound Growth (exponential)",
+        "description": "Projects future sales using a compound growth rate applied to the most recent period. Useful when growth compounds consistently across periods.",
+        "variables": {
+          "initial": {
+            "expression": "last_period_sales",
+            "dependencies": [],
+            "label": "Most recent period sales",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "g": {
+            "expression": "growth_rate_percent / 100",
+            "dependencies": [],
+            "label": "Growth rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "periods",
+            "dependencies": [],
+            "label": "Number of periods",
+            "format": "integer",
+            "display": false
+          },
+          "projected_final": {
+            "expression": "initial * (1 + g) ^ n",
+            "dependencies": [
+              "initial",
+              "g",
+              "n"
+            ],
+            "label": "Projected sales after periods",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "projected_total": {
+            "expression": "initial * (((1 + g) ^ n - 1) / g)",
+            "dependencies": [
+              "initial",
+              "g",
+              "n"
+            ],
+            "label": "Projected cumulative revenue over periods",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_final": {
+            "expression": "projected_final * (1 - margin_buffer_percent / 100)",
+            "dependencies": [
+              "projected_final",
+              "margin_buffer_percent"
+            ],
+            "label": "Conservative (buffered) projection",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_end_sales",
+            "label": "Projected sales after selected periods",
+            "variable": "projected_final",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "projected_total_revenue",
+            "label": "Projected cumulative revenue",
+            "variable": "projected_total",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "conservative_projection",
+            "label": "Conservative forecast (buffer applied)",
+            "variable": "adjusted_final",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "linear_trend": {
+        "label": "Linear Trend (arithmetic)",
+        "description": "Applies an average absolute change per period to the most recent period. Best when changes are additive and trend is linear.",
+        "variables": {
+          "initial": {
+            "expression": "last_period_sales",
+            "dependencies": [],
+            "label": "Most recent period sales",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "d": {
+            "expression": "average_period_change",
+            "dependencies": [],
+            "label": "Average change per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "n": {
+            "expression": "periods",
+            "dependencies": [],
+            "label": "Number of periods",
+            "format": "integer",
+            "display": false
+          },
+          "projected_final": {
+            "expression": "initial + d * n",
+            "dependencies": [
+              "initial",
+              "d",
+              "n"
+            ],
+            "label": "Projected sales after periods",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "projected_total": {
+            "expression": "n / 2 * (2 * initial + (n - 1) * d)",
+            "dependencies": [
+              "initial",
+              "d",
+              "n"
+            ],
+            "label": "Projected cumulative revenue",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_final": {
+            "expression": "projected_final * (1 - margin_buffer_percent / 100)",
+            "dependencies": [
+              "projected_final",
+              "margin_buffer_percent"
+            ],
+            "label": "Conservative (buffered) projection",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_end_sales_linear",
+            "label": "Projected sales after selected periods (linear)",
+            "variable": "projected_final",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "projected_total_revenue_linear",
+            "label": "Projected cumulative revenue (linear)",
+            "variable": "projected_total",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "conservative_projection_linear",
+            "label": "Conservative forecast (buffer applied, linear)",
+            "variable": "adjusted_final",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "moving_average": {
+        "label": "Moving Average",
+        "description": "Uses the average of historical periods as the forecast for each future period. Good for stationary series without trend.",
+        "variables": {
+          "avg": {
+            "expression": "avg_period_sales",
+            "dependencies": [],
+            "label": "Average historical period sales",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "n": {
+            "expression": "periods",
+            "dependencies": [],
+            "label": "Number of periods",
+            "format": "integer",
+            "display": false
+          },
+          "projected_final": {
+            "expression": "avg",
+            "dependencies": [
+              "avg"
+            ],
+            "label": "Projected sales after each period (moving average)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "projected_total": {
+            "expression": "avg * n",
+            "dependencies": [
+              "avg",
+              "n"
+            ],
+            "label": "Projected cumulative revenue",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_final": {
+            "expression": "avg * (1 - margin_buffer_percent / 100)",
+            "dependencies": [
+              "avg",
+              "margin_buffer_percent"
+            ],
+            "label": "Conservative (buffered) projection",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_end_sales_ma",
+            "label": "Projected sales per period (moving average)",
+            "variable": "projected_final",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "projected_total_revenue_ma",
+            "label": "Projected cumulative revenue (moving average)",
+            "variable": "projected_total",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "conservative_projection_ma",
+            "label": "Conservative forecast (buffer applied, moving average)",
+            "variable": "adjusted_final",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "last_period_sales",
+        "label": "Most recent period sales (currency)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "max": 1000000000
+      },
+      {
+        "id": "avg_period_sales",
+        "label": "Average of historical periods (currency)",
+        "type": "number",
+        "default": 9000,
+        "min": 0,
+        "max": 1000000000
+      },
+      {
+        "id": "average_period_change",
+        "label": "Average change per period (currency)",
+        "type": "number",
+        "default": 500,
+        "min": -100000000,
+        "max": 100000000
+      },
+      {
+        "id": "growth_rate_percent",
+        "label": "Growth rate (percent per period)",
+        "type": "number",
+        "default": 5,
+        "min": -100,
+        "max": 100
+      },
+      {
+        "id": "periods",
+        "label": "Periods to forecast (integer)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 60
+      },
+      {
+        "id": "seasonality_percent",
+        "label": "Seasonality amplitude (percent)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 200
+      },
+      {
+        "id": "margin_buffer_percent",
+        "label": "Conservative buffer (percent)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "max": 100
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Sales Forecast Calculator supports three established forecasting workflows—compound growth, linear trend, and moving average—so you can choose the approach that best matches your historical patterns and business model.",
+      "Use the compound method when growth compounds over time, the linear method when changes are approximately additive, and the moving average when data are stationary. Each method returns a period-end projection, a cumulative revenue projection across the forecast horizon, and a conservative buffered forecast.",
+      "The tool is intended for planning and scenario analysis. Validate projections against accounting records and regulatory reporting standards before use in statutory filings or investor reporting."
+    ],
+    "methodology": [
+      "Select a forecasting method that reflects the statistical properties of your historical series: trend, seasonality, and stationarity. If unsure, compute simple diagnostics (trend slope, variance) or consult time-series resources from academic sources such as MIT OpenCourseWare.",
+      "Compound growth: treats the most recent period as the base and applies a constant percentage growth per period. Cumulative revenue is calculated using the geometric series sum formula.",
+      "Linear trend: applies a constant absolute change per period (arithmetic progression). Cumulative revenue is the sum of the arithmetic series over the selected periods.",
+      "Moving average: uses the historical average as the best single-period estimate when the series shows no trend. Multiply by the number of periods for cumulative projection.",
+      "Calibration and accuracy: after producing a forecast, compare it to holdout actuals and compute accuracy metrics such as Mean Absolute Error (MAE) and Mean Absolute Percentage Error (MAPE). MAPE is commonly expressed as average(|actual - forecast| / actual) * 100. Track rolling accuracy and adjust method choice and parameters accordingly.",
+      "Conservative buffer: apply a user-controlled margin to produce a downside-aware forecast for budgeting and cash planning. This is a deterministic buffer and not a statistical confidence interval; for statistical intervals, use time-series models and residual analysis."
+    ],
+    "faqs": [
+      {
+        "question": "Which forecasting method should I pick?",
+        "answer": "Choose based on your data pattern: use compound growth for proportional increases, linear trend for steady absolute changes, and moving average for stationary data with no trend. When in doubt, test each method against a recent holdout period and compare accuracy metrics (MAE, MAPE)."
+      },
+      {
+        "question": "How do I measure forecast accuracy?",
+        "answer": "Common metrics: MAE (Mean Absolute Error), RMSE (Root Mean Square Error), and MAPE (Mean Absolute Percentage Error). Compute these on a holdout dataset or via cross-validation to assess expected out-of-sample performance."
+      },
+      {
+        "question": "Can I use this for regulatory or audited reporting?",
+        "answer": "This tool is for planning and scenario analysis. For audited financial statements or regulatory filings follow applicable accounting standards (for example, GAAP) and consult a qualified accountant. Validate forecasts against source accounting systems and disclosures."
+      },
+      {
+        "question": "How should I set the conservative buffer?",
+        "answer": "Set a buffer reflecting your risk tolerance, cash runway, and known upcoming events (promotions, product launches). Typical buffers range from 5–20% depending on volatility; use historical forecast error as a guide."
+      },
+      {
+        "question": "What about seasonality and promotions?",
+        "answer": "This calculator provides a simple seasonality amplitude input. For repeated seasonal patterns or promotional spikes, consider time-series models that explicitly model seasonality (for example, seasonal decomposition or exponential smoothing) and evaluate them against holdout periods."
+      },
+      {
+        "question": "What data quality and security practices should I follow?",
+        "answer": "Store historical sales and input data using access controls and encryption. Follow data integrity and security guidance from standards organizations such as NIST and ISO when handling production or personally identifiable data."
+      }
+    ],
+    "citations": [
+      {
+        "label": "MIT OpenCourseWare – Time Series and Forecasting materials",
+        "url": "https://ocw.mit.edu"
+      },
+      {
+        "label": "U.S. Bureau of Economic Analysis (BEA) – Economic data and methodology",
+        "url": "https://www.bea.gov"
+      },
+      {
+        "label": "U.S. Small Business Administration – Financial projections guidance",
+        "url": "https://www.sba.gov"
+      },
+      {
+        "label": "NIST – Frameworks and guidance on data integrity and security",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) – standards catalog",
+        "url": "https://www.iso.org"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/financial/discounted-cash-flow",
+      "/calculators/financial/margin-and-profit",
+      "/guides/forecasting/best-practices"
+    ],
+    "external": [
+      {
+        "url": "https://otexts.com/fpp3/",
+        "label": "Forecasting: Principles and Practice (practical time-series guide)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.census.gov/",
+        "label": "U.S. Census – Business and economic statistics",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}
