@@ -161,13 +161,14 @@ def find_best_prompt_file_for_row(
     # Prefer any prompt whose filename contains the exact slug (most direct match)
     direct_matches = [p for p in prompts_dir.glob("*.json") if slug_plain in p.stem.lower()]
     if direct_matches:
-        # Prefer exact suffix match, then shortest name
-        direct_matches.sort(
-            key=lambda p: (
-                0 if p.stem.lower().endswith(slug_plain) else 1,
-                len(p.stem)
-            )
-        )
+        # Prefer matching category/subcategory, then exact suffix, then shortest name
+        def direct_score(p: Path) -> tuple:
+            stem = p.stem.lower()
+            cat_hit = 0 if f"{category}_{subcategory}" in stem else 1
+            suffix_hit = 0 if stem.endswith(slug_plain) else 1
+            return (cat_hit, suffix_hit, len(stem))
+
+        direct_matches.sort(key=direct_score)
         best_direct = direct_matches[0]
         input_folder = input_root / slug
         if not input_folder.exists():
