@@ -144,8 +144,8 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
   }, [compiledOutputs, numericValues]);
 
   const [showDetails, setShowDetails] = useState(false);
-  const [showChart, setShowChart] = useState(false);
   const [proMode, setProMode] = useState(false);
+  const [showChart, setShowChart] = useState(false);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -162,7 +162,6 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [initialValues]);
-  const [showChart, setShowChart] = useState(false);
 
   return (
     <section className="bento-grid">

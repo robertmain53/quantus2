@@ -19,6 +19,21 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
   const [direction, setDirection] = useState<"forward" | "reverse">("forward");
   const [inputValue, setInputValue] = useState<string>("1");
   const [showChart, setShowChart] = useState(false);
+  const [proMode, setProMode] = useState(false);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === "p") {
+        setProMode((prev) => !prev);
+      }
+      if (event.key.toLowerCase() === "r") {
+        setInputValue("1");
+        setDirection("forward");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const context = useMemo<ConversionContext | null>(() => {
     const from = getUnitById(fromUnitId);
@@ -83,13 +98,22 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
               {context.to.label.toLowerCase()} with precision rounding.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleSwap}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-700"
-          >
-            Swap units
-          </button>
+          <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
+            <button
+              type="button"
+              onClick={handleSwap}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-700"
+            >
+              Swap units
+            </button>
+            <button
+              type="button"
+              onClick={() => setProMode((prev) => !prev)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700 shadow-sm hover:border-slate-300"
+            >
+              {proMode ? "Pro On (P)" : "Pro Off (P)"}
+            </button>
+          </div>
         </header>
 
         <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -159,7 +183,7 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
         </p>
       </div>
 
-      {table.length > 0 && (
+      {table.length > 0 && proMode && (
         <div className="bento-tile bento-span-2 p-6">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
