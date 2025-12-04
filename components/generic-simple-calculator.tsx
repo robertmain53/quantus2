@@ -144,6 +144,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
   }, [compiledOutputs, numericValues]);
 
   const [showDetails, setShowDetails] = useState(false);
+  const [showChart, setShowChart] = useState(false);
 
   return (
     <section className="bento-grid">
@@ -277,8 +278,6 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
         </div>
       )}
     </section>
-  );
-}
   );
 }
 

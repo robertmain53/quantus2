@@ -393,27 +393,6 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </section>
         )}
 
-        {conversion && (
-          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-            <h2 className="font-serif text-2xl font-semibold text-slate-900">
-              Conversion formula explained
-            </h2>
-            <p className="text-base text-slate-600">
-              To convert {conversion.from.label.toLowerCase()} to {conversion.to.label.toLowerCase()},
-              multiply the input value by the precise conversion factor derived from
-              international measurement standards. The formula looks like this:
-            </p>
-            <pre className="overflow-x-auto rounded-xl bg-slate-900 p-4 text-sm text-slate-200">
-{formatFormula(conversion)}
-            </pre>
-            <p className="text-base text-slate-600">
-              We compute the factor using the SI base unit as the truth source
-              to guarantee accuracy even across chained conversions (e.g., meters →
-              feet → inches).
-            </p>
-          </section>
-        )}
-
         <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">
             Expert Q&A
