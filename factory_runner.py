@@ -161,6 +161,13 @@ def find_best_prompt_file_for_row(
     # Prefer any prompt whose filename contains the exact slug (most direct match)
     direct_matches = [p for p in prompts_dir.glob("*.json") if slug_plain in p.stem.lower()]
     if direct_matches:
+        # Prefer exact suffix match, then shortest name
+        direct_matches.sort(
+            key=lambda p: (
+                0 if p.stem.lower().endswith(slug_plain) else 1,
+                len(p.stem)
+            )
+        )
         best_direct = direct_matches[0]
         input_folder = input_root / slug
         if not input_folder.exists():
