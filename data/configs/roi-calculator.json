@@ -1,170 +1,262 @@
 {
   "version": "1.0.0",
   "metadata": {
-    "title": "Return on Investment (ROI) Calculator",
-    "description": "Calculate simple and annualized ROI from an initial investment, final value, and additional costs. Includes clear definitions, worked outputs (net profit, total return, annualized return) and citations to government and university guidance for verification."
+    "title": "Return on Investment (ROI) — Multi‑Method Calculator",
+    "description": "Estimate investment returns using multiple industry methods (simple ROI, annualized/CAGR, NPV‑adjusted ROI, and payback period). Includes guidance for discounting, sensitivity checks, and conservative assumptions for planning and reporting."
   },
   "logic": {
-    "type": "formula",
-    "outputs": [
-      {
-        "id": "roi_percent",
-        "label": "ROI (Simple, %)",
-        "expression": "((final_value - initial_investment - total_costs) / initial_investment) * 100",
-        "format": "percent"
+    "type": "advanced",
+    "defaultMethod": "simple_roi",
+    "methods": {
+      "simple_roi": {
+        "label": "Simple ROI",
+        "description": "Basic percentage return: (Total Benefit − Total Cost) / Total Cost. Use for single‑period projects or high‑level estimates.",
+        "variables": {
+          "roi_var": {
+            "expression": "(total_benefit - total_cost) / total_cost",
+            "dependencies": [
+              "total_benefit",
+              "total_cost"
+            ],
+            "label": "Simple ROI",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "roi_pct",
+            "label": "Simple ROI (%)",
+            "variable": "roi_var",
+            "format": "percent"
+          }
+        ]
       },
-      {
-        "id": "net_profit",
-        "label": "Net Profit (currency)",
-        "expression": "final_value - initial_investment - total_costs",
-        "format": "currency"
+      "annualized_roi": {
+        "label": "Annualized ROI (CAGR)",
+        "description": "Compound annual growth rate between an initial investment and a final value across multiple years. Useful when comparing multi‑year projects or investments.",
+        "variables": {
+          "cagr_var": {
+            "expression": "pow(final_value / initial_investment, 1 / years) - 1",
+            "dependencies": [
+              "final_value",
+              "initial_investment",
+              "years"
+            ],
+            "label": "Annualized ROI (CAGR)",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annualized_roi_pct",
+            "label": "Annualized ROI (CAGR %)",
+            "variable": "cagr_var",
+            "format": "percent"
+          }
+        ]
       },
-      {
-        "id": "total_return",
-        "label": "Total Return (currency)",
-        "expression": "final_value - initial_investment",
-        "format": "currency"
+      "npv": {
+        "label": "NPV‑Adjusted ROI",
+        "description": "Discount future benefit to present value and compare to initial investment. Use a discount rate that reflects project risk and opportunity cost.",
+        "variables": {
+          "npv_var": {
+            "expression": "final_value / pow(1 + discount_rate, years) - initial_investment",
+            "dependencies": [
+              "final_value",
+              "discount_rate",
+              "years",
+              "initial_investment"
+            ],
+            "label": "Net Present Value (NPV)",
+            "format": "currency",
+            "display": true
+          },
+          "roi_npv_var": {
+            "expression": "npv_var / initial_investment",
+            "dependencies": [
+              "npv_var",
+              "initial_investment"
+            ],
+            "label": "NPV‑adjusted ROI",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "npv_value",
+            "label": "NPV (currency)",
+            "variable": "npv_var",
+            "format": "currency"
+          },
+          {
+            "id": "npv_roi_pct",
+            "label": "NPV‑adjusted ROI (%)",
+            "variable": "roi_npv_var",
+            "format": "percent"
+          }
+        ]
       },
-      {
-        "id": "annualized_return_percent",
-        "label": "Annualized Return (CAGR, %)",
-        "expression": "(pow(final_value / initial_investment, 1 / holding_period_years) - 1) * 100",
-        "format": "percent"
+      "payback": {
+        "label": "Payback Period",
+        "description": "Estimate how many years until cumulative inflows equal the initial investment. For uneven cash flows, use discounted payback or NPV method.",
+        "variables": {
+          "payback_var": {
+            "expression": "initial_investment / annual_cashflow",
+            "dependencies": [
+              "initial_investment",
+              "annual_cashflow"
+            ],
+            "label": "Payback Period (years)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payback_years",
+            "label": "Payback Period (years)",
+            "variable": "payback_var",
+            "format": "decimal"
+          }
+        ]
       }
-    ]
+    }
   },
   "form": {
     "fields": [
       {
         "id": "initial_investment",
-        "label": "Initial investment (amount invested)",
+        "label": "Initial investment / cost",
         "type": "number",
         "default": 10000,
-        "min": 0.01,
-        "max": 1000000000,
-        "step": 0.01
+        "min": 0,
+        "max": 10000000000
+      },
+      {
+        "id": "total_cost",
+        "label": "Total cost (use same basis as benefits)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "max": 10000000000
       },
       {
         "id": "final_value",
-        "label": "Final value or proceeds (sale + remaining value)",
+        "label": "Final value or total benefit at horizon",
         "type": "number",
-        "default": 12000,
+        "default": 15000,
         "min": 0,
-        "max": 1000000000,
-        "step": 0.01
+        "max": 10000000000
       },
       {
-        "id": "total_costs",
-        "label": "Additional costs (fees, upkeep, taxes) — enter 0 if none",
+        "id": "total_benefit",
+        "label": "Total benefit (single period or cumulative)",
         "type": "number",
-        "default": 0,
+        "default": 15000,
         "min": 0,
-        "max": 1000000000,
-        "step": 0.01
+        "max": 10000000000
       },
       {
-        "id": "holding_period_years",
-        "label": "Holding period (years) — used to annualize return",
+        "id": "years",
+        "label": "Duration (years)",
         "type": "number",
-        "default": 1,
-        "min": 0.01,
-        "max": 100,
-        "step": 0.01
+        "default": 3,
+        "min": 0,
+        "max": 100
+      },
+      {
+        "id": "discount_rate",
+        "label": "Discount rate (decimal, e.g. 0.10 = 10%)",
+        "type": "number",
+        "default": 0.1,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "id": "annual_cashflow",
+        "label": "Average annual cash flow (for payback)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "max": 10000000000
       }
-    ],
-    "result": {
-      "outputs": [
-        {
-          "id": "roi_percent",
-          "label": "ROI (Simple %)",
-          "format": "percent"
-        },
-        {
-          "id": "annualized_return_percent",
-          "label": "Annualized Return (CAGR %)",
-          "format": "percent"
-        },
-        {
-          "id": "net_profit",
-          "label": "Net Profit",
-          "format": "currency"
-        },
-        {
-          "id": "total_return",
-          "label": "Total Return",
-          "format": "currency"
-        }
-      ]
-    }
+    ]
   },
   "page_content": {
     "introduction": [
-      "This ROI calculator computes simple return on investment (ROI), net profit, total return, and an annualized (CAGR) return based on the initial amount invested, the final proceeds or value, and any additional costs such as fees or taxes.",
-      "Use the simple ROI for a quick profitability check: ROI = (Net Profit / Initial Investment) × 100. Use the annualized return to compare investments with different holding periods by converting total growth into a compound annual rate."
+      "This ROI calculator supports multiple standard approaches so you can match the method to your use case: quick percentage estimates, annualized returns for multi‑year projects, discounting for time value of money, and payback analysis.",
+      "Use the Simple ROI for single‑period or high‑level comparisons. Use Annualized ROI (CAGR) to compare investments over different horizons. Use NPV‑adjusted ROI and Payback to account for timing, discount rates, and cash flow profiles."
     ],
     "methodology": [
-      "Simple ROI is computed as: ((final_value - initial_investment - total_costs) / initial_investment) × 100. Net profit equals final_value minus initial_investment and additional costs.",
-      "Annualized return uses the compound annual growth rate (CAGR) formula: (final_value / initial_investment)^(1 / years) − 1, expressed as a percentage. This expresses total growth as an equivalent constant yearly growth rate.",
-      "All fields are numeric. Enter additional costs to reflect fees, transaction costs, maintenance, or taxes to get a realistic ROI. For multi-year, uneven cash flows, use an IRR or discounted cash flow tool; this calculator provides a standardized summary metric for comparability."
+      "Simple ROI = (Total Benefit − Total Cost) / Total Cost. This is a high‑level metric and does not account for timing or risk.",
+      "Annualized ROI (CAGR) converts a multi‑year growth into an annual rate: (Final / Initial)^(1 / Years) − 1. This allows apples‑to‑apples comparisons across different time horizons.",
+      "NPV‑Adjusted ROI discounts future benefits to present value using a discount rate that reflects the opportunity cost or project risk; NPV = Present Value of Benefits − Initial Investment, and NPV‑adjusted ROI = NPV / Initial Investment.",
+      "Payback Period = Initial Investment / Annual Cash Flow. For uneven cash flows, prefer a discounted payback or full NPV analysis."
+    ],
+    "how_is_calculated": [
+      "Simple ROI formula: (Total Benefit − Total Cost) / Total Cost",
+      "Annualized ROI (CAGR): pow(FinalValue / InitialInvestment, 1 / Years) − 1",
+      "NPV (single future value approximation): FinalValue / (1 + DiscountRate)^Years − InitialInvestment",
+      "Payback Period: InitialInvestment / AnnualCashflow"
     ],
     "faqs": [
       {
-        "question": "What is the difference between simple ROI and annualized return?",
-        "answer": "Simple ROI measures total return over the entire holding period without adjusting for time. Annualized return (CAGR) converts total return into an equivalent per-year compound growth rate, allowing direct comparison between investments of different durations."
+        "question": "Which method should I use?",
+        "answer": "Choose Simple ROI for quick comparisons, Annualized ROI when comparing investments with different durations, NPV‑adjusted ROI when timing and discounting matter, and Payback when liquidity and recovery time are primary concerns."
       },
       {
-        "question": "How should I include fees, taxes, and other costs?",
-        "answer": "Include all non-investment cash outflows that reduce proceeds in the 'Additional costs' field (commissions, taxes on sale, maintenance). These are subtracted from final value before computing net profit and ROI."
+        "question": "How do I pick a discount rate?",
+        "answer": "Select a discount rate that reflects the opportunity cost of capital and project risk. Public agencies often reference government guidance; private firms use weighted average cost of capital (WACC) or required rates set by finance teams. Run sensitivity checks across a range (e.g., 5%–15%)."
       },
       {
-        "question": "What if my holding period is less than one year or zero?",
-        "answer": "For annualized calculations, this tool requires a positive holding period (minimum 0.01 years). For very short periods, annualized figures can appear large — interpret them as an extrapolated rate, not a guaranteed annual return."
+        "question": "Can I include taxes, depreciation, and inflation?",
+        "answer": "Yes. For greater accuracy, convert all cash flows to either nominal or real terms consistently, net of taxes and depreciation where appropriate. If you include inflation in revenue projections, use a real discount rate or remove inflation from both discounting and cash flows to avoid double counting."
       },
       {
-        "question": "Can I use this for projects with multiple uneven cash flows?",
-        "answer": "This calculator assumes a single initial outflow and a single final inflow. For multiple or irregular cash flows, IRR or discounted cash flow (DCF) analysis is more accurate; consider an IRR/NPV tool for multi-period cash flows."
+        "question": "How accurate is the calculator?",
+        "answer": "This tool provides estimates based on user inputs and the selected method. Accuracy depends on input quality and assumptions. Use conservative inputs, document assumptions, and supplement calculations with project‑level financial models for material decisions."
       },
       {
-        "question": "How accurate are the results and should I rely on them for financial decisions?",
-        "answer": "Results are mathematically correct for the inputs provided, but inputs must reflect reality (all costs, correct closing value). This tool does not account for taxes, inflation, risk, or opportunity cost; consult a financial professional for decisions with significant financial consequences."
+        "question": "Can I use this for public sector projects or grant applications?",
+        "answer": "Yes, but follow applicable public guidance for discounting, cost‑benefit analysis, and reporting. For federal projects, consult official guidance on discount rates and benefit valuation and apply agency‑specific rules where required."
+      },
+      {
+        "question": "How should I present results to stakeholders?",
+        "answer": "Show multiple metrics (e.g., Simple ROI, Annualized ROI, NPV, Payback) with clear assumptions, ranges from sensitivity analysis, and key caveats (tax treatment, inflation, timing). This improves transparency and decision quality."
       }
     ],
     "citations": [
       {
-        "label": "MIT OpenCourseWare — Finance and Investment courses",
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "MIT OpenCourseWare (finance & valuation resources)",
         "url": "https://ocw.mit.edu"
       },
       {
-        "label": "U.S. Securities and Exchange Commission — Investor information",
-        "url": "https://www.sec.gov/investor"
+        "label": "U.S. Department of Energy — Analysis Tools & Data",
+        "url": "https://www.energy.gov/eere/analysis/analysis-tools-data"
       },
       {
-        "label": "National Institute of Standards and Technology (NIST)",
-        "url": "https://www.nist.gov"
+        "label": "U.S. Small Business Administration — Plan Your Business",
+        "url": "https://www.sba.gov/business-guide/plan-your-business/market-research-competitive-analysis"
+      },
+      {
+        "label": "ISO — Risk management (ISO 31000)",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
       }
     ]
   },
   "links": {
     "internal": [
-      "/calculators/financial/npv-irr",
-      "/guides/financial-metrics/roi-vs-irr"
+      "/calculators/finance/npv",
+      "/guides/financial-metrics"
     ],
-    "external": [
-      {
-        "url": "https://ocw.mit.edu",
-        "label": "MIT OpenCourseWare - Finance",
-        "rel": [
-          "nofollow"
-        ]
-      },
-      {
-        "url": "https://www.sec.gov/investor",
-        "label": "SEC Investor Guidance",
-        "rel": [
-          "nofollow"
-        ]
-      }
-    ]
+    "external": []
   },
   "schema": {
     "additionalTypes": [

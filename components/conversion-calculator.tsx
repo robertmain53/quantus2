@@ -97,6 +97,21 @@ export function ConversionCalculator({
     return buildConversionTable(tableSeeds, context, direction);
   }, [context, direction]);
 
+  const fallbackHowIsCalculated = useMemo(() => {
+    if (!context) return [];
+    const forwardFactor = convertValue(1, "forward", context);
+    const reverseFactor = convertValue(1, "reverse", context);
+    const fromSym = context.from.symbol || context.from.label || context.from.id;
+    const toSym = context.to.symbol || context.to.label || context.to.id;
+    const formatFactor = (v: number) =>
+      Number.isFinite(v) ? v.toLocaleString("en-US", { maximumFractionDigits: 10 }) : "?";
+    return [
+      `${toSym} = ${fromSym} × ${formatFactor(forwardFactor)}`,
+      `${fromSym} = ${toSym} × ${formatFactor(reverseFactor)}`,
+      `Factors derive from the exact unit definitions in our conversions library`
+    ];
+  }, [context]);
+
   if (!context) {
     return (
       <section className="space-y-4 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
@@ -231,17 +246,14 @@ export function ConversionCalculator({
             <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               How this is calculated
             </h4>
-            {howIsCalculated.length > 0 ? (
+            { (howIsCalculated.length > 0 ? howIsCalculated : (methodology.length > 0 ? methodology : fallbackHowIsCalculated)).length > 0 ? (
               <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                {howIsCalculated.map((item, idx) => (
-                  <li key={idx} className="list-disc pl-4">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            ) : methodology.length > 0 ? (
-              <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                {methodology.map((item, idx) => (
+                {(howIsCalculated.length > 0
+                  ? howIsCalculated
+                  : methodology.length > 0
+                    ? methodology
+                    : fallbackHowIsCalculated
+                ).map((item, idx) => (
                   <li key={idx} className="list-disc pl-4">
                     {item}
                   </li>
