@@ -108,6 +108,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
   }, [methods, activeMethodId]);
 
   const [showAudit, setShowAudit] = useState(false);
+  const [chartPointLimit, setChartPointLimit] = useState<string>("all");
 
   const initialValues = useMemo(() => {
     return allFields.reduce<Record<string, string>>((acc, field) => {
@@ -190,6 +191,32 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
       /* ignore */
     }
   }, [storageKey, values]);
+
+  const chartPoints = useMemo(() => {
+    const scenarioPoints =
+      savedScenarios.length > 0
+        ? savedScenarios.flatMap((scenario) =>
+            scenario.outputs.map((o) => ({
+              label: `${scenario.label} – ${o.label}`,
+              value: o.value
+            }))
+          )
+        : [];
+    const livePoints =
+      evaluation.outputs.length > 0
+        ? evaluation.outputs.map((o, idx) => ({
+            label: o.label ?? `Output ${idx + 1}`,
+            value: o.value
+          }))
+        : [];
+    const all = scenarioPoints.length > 0 ? scenarioPoints : livePoints;
+    if (chartPointLimit === "all") return all;
+    const limit = Number.parseInt(chartPointLimit, 10);
+    if (Number.isFinite(limit) && limit > 0) {
+      return all.slice(-limit);
+    }
+    return all;
+  }, [evaluation.outputs, savedScenarios, chartPointLimit]);
 
   if (!logic || methods.length === 0) {
     return (
@@ -379,22 +406,36 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Visualization
             </h3>
-            <button
-              type="button"
-              onClick={() => setShowChart((prev) => !prev)}
-              className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
-            >
-              {showChart ? "Hide chart (V)" : "Load chart (V)"}
-            </button>
+            <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
+              <label className="flex items-center gap-1">
+                <span>Points</span>
+                <select
+                  value={chartPointLimit}
+                  onChange={(e) => setChartPointLimit(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                >
+                  <option value="all">All</option>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowChart((prev) => !prev)}
+                className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+              >
+                {showChart ? "Hide chart (V)" : "Load chart (V)"}
+              </button>
+            </div>
           </div>
           {showChart ? (
             <div className="mt-3">
               <SharedChart
-                description="Trend across computed outputs"
-                points={evaluation.outputs.map((o, idx) => ({
-                  label: o.label ?? `Output ${idx + 1}`,
-                  value: o.value
-                }))}
+                description="Trend across computed outputs and saved scenarios"
+                xLabel="Scenario / Output"
+                yLabel="Value"
+                points={chartPoints}
               />
             </div>
           ) : (

@@ -139,13 +139,13 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchSignature]);
 
-const compiledOutputs = useMemo<CompiledOutput[]>(() => {
-  return logic.outputs.map((output) => ({
-    ...output,
-    evaluate: compileExpression(output.expression, fieldIds),
-    expression: output.expression
-  }));
-}, [logic.outputs, fieldIds]);
+  const compiledOutputs = useMemo<CompiledOutput[]>(() => {
+    return logic.outputs.map((output) => ({
+      ...output,
+      evaluate: compileExpression(output.expression, fieldIds),
+      expression: output.expression
+    }));
+  }, [logic.outputs, fieldIds]);
 
   const numericValues = useMemo<Record<string, number>>(() => {
     return fieldIds.reduce<Record<string, number>>((acc, id) => {
@@ -174,6 +174,7 @@ const compiledOutputs = useMemo<CompiledOutput[]>(() => {
   const [showDetails, setShowDetails] = useState(false);
   const [proMode, setProMode] = useState(false);
   const [showChart, setShowChart] = useState(false);
+  const [chartPointLimit, setChartPointLimit] = useState<string>("all");
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -190,6 +191,32 @@ const compiledOutputs = useMemo<CompiledOutput[]>(() => {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [initialValues]);
+
+  const chartPoints = useMemo(() => {
+    const scenarioPoints =
+      savedScenarios.length > 0
+        ? savedScenarios.flatMap((scenario) =>
+            scenario.outputs.map((o) => ({
+              label: `${scenario.label} – ${o.label}`,
+              value: o.value
+            }))
+          )
+        : [];
+    const livePoints =
+      outputs.length > 0
+        ? outputs.map((o, idx) => ({
+            label: o.label ?? `Output ${idx + 1}`,
+            value: o.value
+          }))
+        : [];
+    const all = scenarioPoints.length > 0 ? scenarioPoints : livePoints;
+    if (chartPointLimit === "all") return all;
+    const limit = Number.parseInt(chartPointLimit, 10);
+    if (Number.isFinite(limit) && limit > 0) {
+      return all.slice(-limit);
+    }
+    return all;
+  }, [outputs, savedScenarios, chartPointLimit]);
 
   return (
     <section className="bento-grid">
@@ -336,28 +363,42 @@ const compiledOutputs = useMemo<CompiledOutput[]>(() => {
         </div>
       )}
 
-      {outputs.length > 1 && (
+      {chartPoints.length > 0 && (
         <div className="bento-tile bento-span-2 p-6">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Visualization
             </h3>
-            <button
-              type="button"
-              onClick={() => setShowChart((prev) => !prev)}
-              className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
-            >
-              {showChart ? "Hide chart" : "Load chart"}
-            </button>
+            <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
+              <label className="flex items-center gap-1">
+                <span>Points</span>
+                <select
+                  value={chartPointLimit}
+                  onChange={(e) => setChartPointLimit(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                >
+                  <option value="all">All</option>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowChart((prev) => !prev)}
+                className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+              >
+                {showChart ? "Hide chart" : "Load chart"}
+              </button>
+            </div>
           </div>
           {showChart ? (
             <div className="mt-3">
               <SharedChart
-                description="Trend across computed outputs"
-                points={outputs.map((o, idx) => ({
-                  label: o.label ?? `Output ${idx + 1}`,
-                  value: o.value
-                }))}
+                description="Trend across computed outputs and saved scenarios"
+                xLabel="Scenario / Output"
+                yLabel="Value"
+                points={chartPoints}
               />
             </div>
           ) : (

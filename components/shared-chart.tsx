@@ -11,9 +11,11 @@ interface SharedChartProps {
   title?: string;
   description?: string;
   points: Point[];
+  xLabel?: string;
+  yLabel?: string;
 }
 
-export function SharedChart({ title, description, points }: SharedChartProps) {
+export function SharedChart({ title, description, points, xLabel, yLabel }: SharedChartProps) {
   const validPoints = useMemo(() => points.filter((p) => Number.isFinite(p.value)), [points]);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -117,6 +119,29 @@ export function SharedChart({ title, description, points }: SharedChartProps) {
         >
           <rect width={width} height={height} fill="#f8fafc" />
           <path d={path} fill="none" stroke="#0ea5e9" strokeWidth={2} />
+          {xLabel && (
+            <text
+              x={width / 2}
+              y={height - 2}
+              textAnchor="middle"
+              fontSize="10"
+              fill="#475569"
+            >
+              {xLabel}
+            </text>
+          )}
+          {yLabel && (
+            <text
+              x={10}
+              y={height / 2}
+              textAnchor="middle"
+              fontSize="10"
+              fill="#475569"
+              transform={`rotate(-90 10 ${height / 2})`}
+            >
+              {yLabel}
+            </text>
+          )}
           {validPoints.map((p, idx) => {
             const x =
               validPoints.length === 1
