@@ -60,10 +60,8 @@ function readCalcRows() {
 }
 
 function selectPublishedRows(rows) {
-  const today = new Date();
-  return rows.filter(
-    (row) => row.publishDate === null || row.publishDate <= today
-  );
+  // Generate prompts for all rows, regardless of publish date
+  return rows;
 }
 
 function buildTemplate() {
