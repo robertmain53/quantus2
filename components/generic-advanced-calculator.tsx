@@ -210,7 +210,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
 
   return (
     <section className="bento-grid">
-      <div className="bento-tile p-6">
+      <div className="bento-tile bento-span-2 p-6">
         {methods.length > 1 && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700" htmlFor="advanced-method-select">
@@ -255,7 +255,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
       </div>
 
       {sections.length > 0 && (
-        <div className="bento-tile p-6">
+        <div className="bento-tile bento-span-2 p-6">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Advanced inputs
           </h3>
