@@ -72,6 +72,11 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
 
   const allFields = useMemo(() => Array.from(fieldMap.values()), [fieldMap]);
 
+  const storageKey = useMemo(
+    () => `advanced-calc-${config?.metadata?.title ?? "calculator"}`,
+    [config?.metadata?.title]
+  );
+
   const methods = useMemo<AdvancedMethodConfig[]>(() => {
     if (!logic) {
       return [];
@@ -106,7 +111,10 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
 
   const initialValues = useMemo(() => {
     return allFields.reduce<Record<string, string>>((acc, field) => {
-      acc[field.id] = field.defaultValue ?? "";
+      const sample =
+        field.defaultValue ??
+        (typeof field.min === "number" ? String(field.min) : field.placeholder ?? "1");
+      acc[field.id] = sample;
       return acc;
     }, {});
   }, [allFields]);
@@ -136,6 +144,9 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
 
   const [proMode, setProMode] = useState(false);
   const [showChart, setShowChart] = useState(false);
+  const [savedScenarios, setSavedScenarios] = useState<
+    Array<{ label: string; outputs: EvaluatedOutputs["outputs"] }>
+  >([]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -156,6 +167,26 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [initialValues]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, string>;
+        setValues((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(values));
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey, values]);
 
   if (!logic || methods.length === 0) {
     return (
@@ -299,6 +330,43 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
             <SharedResultsTable outputs={evaluation.outputs} />
           </div>
         )}
+        {evaluation.outputs.length > 0 && (
+          <div className="sticky bottom-4 mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm shadow-emerald-100 md:static md:bg-transparent md:border-0 md:shadow-none">
+            <div className="flex items-center justify-between text-sm font-semibold text-emerald-700">
+              <span>Primary result</span>
+              <span>
+                {formatOutputValue(
+                  evaluation.outputs[0].value,
+                  evaluation.outputs[0].format,
+                  evaluation.outputs[0].unit
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+        {evaluation.outputs.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-3 text-xs">
+            <button
+              type="button"
+              onClick={() =>
+                setSavedScenarios((prev) => [
+                  ...prev,
+                  { label: `Scenario ${prev.length + 1}`, outputs: evaluation.outputs }
+                ])
+              }
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+            >
+              Save scenario
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+            >
+              Export PDF
+            </button>
+          </div>
+        )}
       </div>
 
       {proMode && (
@@ -323,7 +391,10 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
                   <p className="text-sm font-semibold text-slate-800">{output.label}</p>
                   <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Expression</p>
                   <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-                    {getOutputExpression(activeMethod, output.id)}
+                    {formatExpressionWithValues(
+                      getOutputExpression(activeMethod, output.id),
+                      evaluation.variables
+                    )}
                   </code>
                   <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Inputs used</p>
                   <ul className="mt-2 space-y-1 text-xs text-slate-600">
@@ -374,6 +445,45 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
           ) : (
             <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100" />
           )}
+        </div>
+      )}
+
+      {savedScenarios.length > 0 && (
+        <div className="bento-tile bento-span-2 p-6">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Scenario comparison
+          </h3>
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Output</th>
+                  {savedScenarios.map((s) => (
+                    <th key={s.label} className="px-3 py-2 text-left font-semibold text-slate-700">
+                      {s.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {evaluation.outputs.map((output) => (
+                  <tr key={output.id}>
+                    <td className="px-3 py-2 text-slate-800">{output.label}</td>
+                    {savedScenarios.map((s, idx) => {
+                      const match = s.outputs.find((o) => o.id === output.id);
+                      return (
+                        <td key={`${output.id}-${idx}`} className="px-3 py-2 text-slate-700">
+                          {match
+                            ? formatOutputValue(match.value, match.format, match.unit)
+                            : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </section>

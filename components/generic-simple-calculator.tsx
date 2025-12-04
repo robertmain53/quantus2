@@ -56,13 +56,20 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
 
   const initialValues = useMemo(() => {
     return fields.reduce<Record<string, string>>((acc, field) => {
-      acc[field.id] = field.defaultValue ?? "";
+      const sample =
+        field.defaultValue ??
+        (typeof field.min === "number" ? String(field.min) : field.placeholder ?? "1");
+      acc[field.id] = sample;
       return acc;
     }, {});
   }, [fields]);
 
+  const storageKey = useMemo(() => `simple-calc`, []);
   const [values, setValues] = useState<Record<string, string>>(initialValues);
   const [fetchMeta, setFetchMeta] = useState<Record<string, string>>({});
+  const [savedScenarios, setSavedScenarios] = useState<
+    Array<{ label: string; outputs: typeof outputs }>
+  >([]);
 
   const fetchableFields = useMemo(() => fields.filter((field) => field.fetchUrl), [fields]);
   const fetchSignature = useMemo(() => {
@@ -77,6 +84,26 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
   useEffect(() => {
     setValues(initialValues);
   }, [initialValues]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, string>;
+        setValues((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(values));
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey, values]);
 
   useEffect(() => {
     if (fetchableFields.length === 0) {
@@ -186,7 +213,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
               {renderInput(field, values[field.id] ?? "", (next) =>
                 setValues((prev) => ({ ...prev, [field.id]: sanitizeInput(next) }))
               )}
-              {renderFieldMeta(field, fetchMeta[field.id])}
+              {renderFieldMeta(field, fetchMeta[field.id], values[field.id] ?? "")}
             </label>
           ))}
         </div>
@@ -228,6 +255,27 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
         {outputs.length > 0 && (
           <div className="mt-4">
             <SharedResultsTable outputs={outputs} />
+            <div className="mt-3 flex flex-wrap gap-3 text-xs">
+              <button
+                type="button"
+                onClick={() =>
+                  setSavedScenarios((prev) => [
+                    ...prev,
+                    { label: `Scenario ${prev.length + 1}`, outputs }
+                  ])
+                }
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+              >
+                Save scenario
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+              >
+                Export PDF
+              </button>
+            </div>
           </div>
         )}
         {outputs.length > 0 && (
@@ -317,6 +365,45 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
           )}
         </div>
       )}
+
+      {savedScenarios.length > 0 && (
+        <div className="bento-tile bento-span-2 p-6">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Scenario comparison
+          </h3>
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Output</th>
+                  {savedScenarios.map((s) => (
+                    <th key={s.label} className="px-3 py-2 text-left font-semibold text-slate-700">
+                      {s.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {outputs.map((output) => (
+                  <tr key={output.id}>
+                    <td className="px-3 py-2 text-slate-800">{output.label}</td>
+                    {savedScenarios.map((s, idx) => {
+                      const match = s.outputs.find((o) => o.id === output.id);
+                      return (
+                        <td key={`${output.id}-${idx}`} className="px-3 py-2 text-slate-700">
+                          {match
+                            ? formatOutputValue(match.value, match.format, match.unit)
+                            : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -380,8 +467,9 @@ function renderInput(
   );
 }
 
-function renderFieldMeta(field: CalculatorFormField, fetchedMeta?: string) {
+function renderFieldMeta(field: CalculatorFormField, fetchedMeta?: string, rawValue?: string) {
   const hints: string[] = [];
+  const num = rawValue ? Number.parseFloat(rawValue) : null;
 
   if (field.helpText) {
     hints.push(field.helpText);
@@ -397,6 +485,14 @@ function renderFieldMeta(field: CalculatorFormField, fetchedMeta?: string) {
   }
   if (fetchedMeta) {
     hints.push(fetchedMeta);
+  }
+  if (num !== null && Number.isFinite(num)) {
+    if (typeof field.min === "number" && num < field.min) {
+      hints.push("Value below typical range");
+    }
+    if (typeof field.max === "number" && num > field.max) {
+      hints.push("Value above typical range");
+    }
   }
 
   if (hints.length === 0) {
