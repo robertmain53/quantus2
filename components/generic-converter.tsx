@@ -24,8 +24,8 @@ export function GenericConverter({ config }: GenericConverterProps) {
   }
 
   return (
-    <div className="bento-grid  bento-span-2 "> 
-      <div className="bento-tile bento-span-1  p-3">
+    <div className="bento-grid "> 
+      <div className="bento-tile bento-span-2  p-3">
         <ConversionCalculator
           fromUnitId={conversionLogic.fromUnitId}
           toUnitId={conversionLogic.toUnitId}
