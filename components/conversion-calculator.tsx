@@ -21,6 +21,7 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
   const [inputValue, setInputValue] = useState<string>("1");
   const [showChart, setShowChart] = useState(false);
   const [proMode, setProMode] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -104,6 +105,13 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
   const fromUnit = direction === "forward" ? context.from : context.to;
   const toUnit = direction === "forward" ? context.to : context.from;
 
+  const caution =
+    Number.isFinite(parsedValue) && parsedValue < 0
+      ? "Questo valore negativo potrebbe non essere previsto per questa conversione."
+      : Number.isFinite(parsedValue) && parsedValue > 1e9
+        ? "Valore molto grande: verifica che l'unità sia corretta."
+        : null;
+
   const handleSwap = () => {
     setDirection((state) => (state === "forward" ? "reverse" : "forward"));
     setInputValue(Number.isFinite(parsedValue) ? parsedValue.toString() : "1");
@@ -152,6 +160,7 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
               onChange={(event) => setInputValue(sanitizeInput(event.target.value))}
               className="w-full rounded-lg border border-slate-200 px-4 py-2 text-lg font-semibold text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
+            {caution && <p className="text-xs text-amber-600">{caution}</p>}
           </label>
 
           <label className="space-y-2">
@@ -164,60 +173,24 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
               value={isValid ? formatNumber(targetValue, toUnit.decimalPlaces) : "—"}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-lg font-semibold text-slate-900 shadow-sm"
             />
+            {isValid && (
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(formatNumber(targetValue, toUnit.decimalPlaces));
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+                className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+              >
+                {copied ? "Copiato!" : "Copia risultato"}
+              </button>
+            )}
           </label>
         </div>
       </div>
 
-      <div className="bento-tile bento-span-2 p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Quick reference table
-        </h3>
-        <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left font-semibold text-slate-700">
-              <tr>
-                <th className="px-4 py-3">{fromUnit.label}</th>
-                <th className="px-4 py-3">{toUnit.label}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {table.map((row) => (
-                <tr key={`${direction}-${row.input}`}>
-                  <td className="px-4 py-3 font-medium text-slate-800">
-                    {formatNumber(row.input, fromUnit.decimalPlaces)} {fromUnit.symbol}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {formatNumber(row.output, toUnit.decimalPlaces)} {toUnit.symbol}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="bento-tile bento-span-2 p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          How this is calculated
-        </h3>
-        <p className="mt-2 text-sm text-slate-700">
-          We normalize all conversions to SI base units, apply published factors, and mirror those
-          factors in reverse when you swap units. Reference values are precomputed for common
-          inputs to speed up exploration.
-        </p>
-        {isValid && (
-          <div className="sticky bottom-4 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm shadow-emerald-100 md:static md:bg-transparent md:border-0 md:shadow-none">
-            <div className="flex items-center justify-between">
-              <span>Result</span>
-              <span>
-                {formatNumber(targetValue, toUnit.decimalPlaces)} {toUnit.symbol}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {table.length > 0 && proMode && (
+     {table.length > 0 && proMode && (
         <div className="bento-tile bento-span-2 p-6">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -246,6 +219,38 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
           )}
         </div>
       )}
+      
+      <div className="bento-tile bento-span-2 p-6">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Quick reference table
+        </h3>
+        <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50 text-left font-semibold text-slate-700">
+              <tr>
+                <th className="px-4 py-3">{fromUnit.label}</th>
+                <th className="px-4 py-3">{toUnit.label}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {table.map((row) => (
+                <tr key={`${direction}-${row.input}`}>
+                  <td className="px-4 py-3 font-medium text-slate-800">
+                    {formatNumber(row.input, fromUnit.decimalPlaces)} {fromUnit.symbol}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {formatNumber(row.output, toUnit.decimalPlaces)} {toUnit.symbol}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+  
+
+ 
     </section>
   );
 }
