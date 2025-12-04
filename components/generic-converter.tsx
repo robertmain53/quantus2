@@ -31,7 +31,7 @@ export function GenericConverter({ config }: GenericConverterProps) {
           toUnitId={conversionLogic.toUnitId}
         />
       </div>
-      <div className="bento-tile bento-span-1 p-3">
+      <div className="bento-tile bento-span-2 p-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
           How this is calculated
         </h3>
