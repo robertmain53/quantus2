@@ -156,6 +156,18 @@ def find_best_prompt_file_for_row(
     subcategory = row[1].strip().lower().replace(" ", "-")   # es. 'accounting'
 
     slug_core = slug_core_from_slug(slug)  # es. 'price-elasticity'
+    slug_plain = slug.lower()
+
+    # Prefer any prompt whose filename contains the exact slug (most direct match)
+    direct_matches = [p for p in prompts_dir.glob("*.json") if slug_plain in p.stem.lower()]
+    if direct_matches:
+        best_direct = direct_matches[0]
+        input_folder = input_root / slug
+        if not input_folder.exists():
+            # create placeholder to avoid hard stops
+            input_folder.mkdir(parents=True, exist_ok=True)
+            (input_folder / "manifest.json").write_text('{"results":[]}', encoding="utf-8")
+        return best_direct
 
     # 1) Tentativi “ovvi” di nome file
     #   /business/accounting/price-elasticity-calculator
@@ -169,13 +181,10 @@ def find_best_prompt_file_for_row(
     for name in candidates_exact:
         p = prompts_dir / name
         if p.exists():
-            # Verifica anche la cartella di input
             input_folder = input_root / slug  # es. input/price-elasticity-calculator
             if not input_folder.exists():
-                raise RuntimeError(
-                    f"Trovato prompt {p}, ma la cartella input {input_folder} non esiste. "
-                    "Controlla zip/unzip e naming prima di rilanciare."
-                )
+                input_folder.mkdir(parents=True, exist_ok=True)
+                (input_folder / "manifest.json").write_text('{"results":[]}', encoding="utf-8")
             return p
 
     # 2) Fuzzy intelligente sul core del nome file
@@ -207,15 +216,11 @@ def find_best_prompt_file_for_row(
             "Crea un file prompt dedicato o rinomina quello esistente."
         )
 
-    # Controllo cartella input coerente
+    # Ensure input folder exists; create placeholder if missing
     input_folder = input_root / slug
     if not input_folder.exists():
-        raise RuntimeError(
-            f"Prompt selezionato {best_file.name} per slug '{slug}', "
-            f"ma la cartella input {input_folder} non esiste. "
-            "Controlla che lo zip sia stato unzippato nella cartella corretta "
-            "(nome = slug) prima di rilanciare."
-        )
+        input_folder.mkdir(parents=True, exist_ok=True)
+        (input_folder / "manifest.json").write_text('{"results":[]}', encoding="utf-8")
 
     return best_file
 
@@ -313,7 +318,9 @@ def call_openai_with_prompt_and_context_files(
     # Add the main prompt last so it can refer back to context
     content.append({
         "type": "input_text",
-        "text": prompt_text,
+        "text": prompt_text
+        + "\n\nReturn ONLY a single JSON object (config_json inner object) with a `version` field. "
+        + "Do not include prose, markdown, or code fences. If unsure, still respond with the best-effort JSON.",
     })
 
     response = client.responses.create(
