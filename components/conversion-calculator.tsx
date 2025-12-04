@@ -69,7 +69,7 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
   };
 
   return (
-    <section className="bento-grid">
+    <section className="bento-grid converter-bento">
       <div className="bento-tile p-6">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
