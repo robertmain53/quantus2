@@ -47,6 +47,9 @@ export function SharedChart({ title, description, points, xLabel, yLabel }: Shar
   const height = 120;
   const width = 320;
   const margin = 8;
+  const firstLabel = validPoints[0]?.label ?? "";
+  const lastLabel = validPoints[validPoints.length - 1]?.label ?? "";
+  const formatLabel = (text: string) => (text.length > 14 ? `${text.slice(0, 12)}…` : text);
 
   const path = validPoints
     .map((p, idx) => {
@@ -118,6 +121,22 @@ export function SharedChart({ title, description, points, xLabel, yLabel }: Shar
           aria-label={title ?? "Chart"}
         >
           <rect width={width} height={height} fill="#f8fafc" />
+          <line
+            x1={margin}
+            y1={height - margin}
+            x2={width - margin}
+            y2={height - margin}
+            stroke="#cbd5e1"
+            strokeWidth={1}
+          />
+          <line
+            x1={margin}
+            y1={margin}
+            x2={margin}
+            y2={height - margin}
+            stroke="#cbd5e1"
+            strokeWidth={1}
+          />
           <path d={path} fill="none" stroke="#0ea5e9" strokeWidth={2} />
           {xLabel && (
             <text
@@ -142,6 +161,18 @@ export function SharedChart({ title, description, points, xLabel, yLabel }: Shar
               {yLabel}
             </text>
           )}
+          <text x={width - margin} y={height - 12} textAnchor="end" fontSize="10" fill="#94a3b8">
+            {formatLabel(lastLabel)}
+          </text>
+          <text x={margin} y={height - 12} textAnchor="start" fontSize="10" fill="#94a3b8">
+            {formatLabel(firstLabel)}
+          </text>
+          <text x={margin + 2} y={margin + 10} fontSize="10" fill="#94a3b8">
+            {max.toLocaleString("en-US", { maximumFractionDigits: 4 })}
+          </text>
+          <text x={margin + 2} y={height - margin - 4} fontSize="10" fill="#94a3b8">
+            {min.toLocaleString("en-US", { maximumFractionDigits: 4 })}
+          </text>
           {validPoints.map((p, idx) => {
             const x =
               validPoints.length === 1

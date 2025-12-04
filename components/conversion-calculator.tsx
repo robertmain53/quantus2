@@ -209,8 +209,8 @@ export function ConversionCalculator({ fromUnitId, toUnitId, methodology = [] }:
             <div className="mt-3">
               <SharedChart
                 description="Reference curve for common inputs"
-                xLabel={`${fromUnit.symbol} ↔ ${toUnit.symbol}`}
-                yLabel="Value"
+                xLabel={fromUnit.symbol}
+                yLabel={toUnit.symbol}
                 points={table.map((row) => ({
                   label: `${row.input} ${fromUnit.symbol}`,
                   value: row.output
