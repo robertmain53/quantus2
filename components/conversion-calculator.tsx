@@ -168,7 +168,7 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
         </div>
       </div>
 
-      <div className="bento-tile p-6">
+      <div className="bento-tile bento-span-2 p-6">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Quick reference table
         </h3>
