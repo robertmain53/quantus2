@@ -9,10 +9,7 @@ interface GenericConverterProps {
 
 export function GenericConverter({ config }: GenericConverterProps) {
   const conversionLogic = getConversionLogic(config);
-  const methodology =
-    (config?.page_content && "methodology" in config.page_content
-      ? (config.page_content as { methodology?: string[] }).methodology
-      : undefined) ?? [];
+  const methodology = config?.pageContent?.methodology ?? [];
 
   if (!conversionLogic) {
     return (
