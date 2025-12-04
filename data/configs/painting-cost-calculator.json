@@ -1,0 +1,538 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Painting Cost Calculator (Quick & Detailed Modes)",
+    "description": "Estimate paint, labor, and total project cost for interior and exterior painting. Two modes: quick per-sqft estimate and detailed room-by-room calculation. Includes waste, coats, primer, and optional trim/doors/windows adjustments."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "quick_estimate",
+    "methods": {
+      "quick_estimate": {
+        "label": "Quick per-square-foot estimate",
+        "description": "Fast estimate using total paintable area, coats, coverage, and per-unit costs. Good for rapid budgeting.",
+        "variables": {
+          "effective_area": {
+            "expression": "area_sqft * (1 + waste_percent)",
+            "dependencies": [
+              "area_sqft",
+              "waste_percent"
+            ],
+            "label": "Effective paintable area (including waste)",
+            "unit": "sqft",
+            "format": "decimal",
+            "display": true
+          },
+          "gallons_needed": {
+            "expression": "(effective_area * coats) / coverage_sqft_per_gallon",
+            "dependencies": [
+              "effective_area",
+              "coats",
+              "coverage_sqft_per_gallon"
+            ],
+            "label": "Estimated gallons of paint",
+            "unit": "gallons",
+            "format": "decimal",
+            "display": true
+          },
+          "paint_cost": {
+            "expression": "gallons_needed * paint_cost_per_gallon",
+            "dependencies": [
+              "gallons_needed",
+              "paint_cost_per_gallon"
+            ],
+            "label": "Paint material cost",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "labor_cost": {
+            "expression": "area_sqft * labor_cost_per_sqft",
+            "dependencies": [
+              "area_sqft",
+              "labor_cost_per_sqft"
+            ],
+            "label": "Estimated labor cost",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost": {
+            "expression": "paint_cost + labor_cost + prep_cost_flat + primer_cost",
+            "dependencies": [
+              "paint_cost",
+              "labor_cost",
+              "prep_cost_flat",
+              "primer_cost"
+            ],
+            "label": "Total project cost",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "cost_per_sqft": {
+            "expression": "total_cost / max(area_sqft,1)",
+            "dependencies": [
+              "total_cost",
+              "area_sqft"
+            ],
+            "label": "Total cost per sqft",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "gallons_needed",
+            "label": "Estimated gallons",
+            "variable": "gallons_needed",
+            "unit": "gallons",
+            "format": "decimal"
+          },
+          {
+            "id": "paint_cost",
+            "label": "Paint cost",
+            "variable": "paint_cost",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "labor_cost",
+            "label": "Labor cost",
+            "variable": "labor_cost",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost",
+            "label": "Total estimated project cost",
+            "variable": "total_cost",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "cost_per_sqft",
+            "label": "Cost per square foot",
+            "variable": "cost_per_sqft",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "detailed_estimate": {
+        "label": "Detailed room-by-room estimate",
+        "description": "Breaks project into rooms, deducts doors/windows, includes trim painting and separate primer/repair lines for higher accuracy.",
+        "variables": {
+          "area_from_rooms": {
+            "expression": "room_count * avg_room_wall_area + ceiling_area",
+            "dependencies": [
+              "room_count",
+              "avg_room_wall_area",
+              "ceiling_area"
+            ],
+            "label": "Aggregated wall area from rooms plus ceilings",
+            "unit": "sqft",
+            "format": "decimal",
+            "display": true
+          },
+          "opening_area": {
+            "expression": "door_count * door_area + window_count * window_area",
+            "dependencies": [
+              "door_count",
+              "door_area",
+              "window_count",
+              "window_area"
+            ],
+            "label": "Total area of doors and windows",
+            "unit": "sqft",
+            "format": "decimal",
+            "display": true
+          },
+          "net_paint_area": {
+            "expression": "area_from_rooms - opening_area",
+            "dependencies": [
+              "area_from_rooms",
+              "opening_area"
+            ],
+            "label": "Net paintable area after openings",
+            "unit": "sqft",
+            "format": "decimal",
+            "display": true
+          },
+          "gallons_needed_detailed": {
+            "expression": "(net_paint_area * coats * (1 + waste_percent)) / coverage_sqft_per_gallon",
+            "dependencies": [
+              "net_paint_area",
+              "coats",
+              "waste_percent",
+              "coverage_sqft_per_gallon"
+            ],
+            "label": "Estimated gallons (detailed)",
+            "unit": "gallons",
+            "format": "decimal",
+            "display": true
+          },
+          "trim_paint_gallons": {
+            "expression": "trim_linear_ft * trim_coverage_gallon_per_ft",
+            "dependencies": [
+              "trim_linear_ft",
+              "trim_coverage_gallon_per_ft"
+            ],
+            "label": "Paint gallons for trim",
+            "unit": "gallons",
+            "format": "decimal",
+            "display": true
+          },
+          "paint_cost_detailed": {
+            "expression": "gallons_needed_detailed * paint_cost_per_gallon + trim_paint_gallons * paint_cost_per_gallon",
+            "dependencies": [
+              "gallons_needed_detailed",
+              "trim_paint_gallons",
+              "paint_cost_per_gallon"
+            ],
+            "label": "Paint material cost (detailed)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "labor_cost_detailed": {
+            "expression": "net_paint_area * labor_cost_per_sqft + trim_linear_ft * labor_cost_per_trim_ft + repair_hours * labor_hourly_rate",
+            "dependencies": [
+              "net_paint_area",
+              "labor_cost_per_sqft",
+              "trim_linear_ft",
+              "labor_cost_per_trim_ft",
+              "repair_hours",
+              "labor_hourly_rate"
+            ],
+            "label": "Labor cost including trim and repair",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_detailed": {
+            "expression": "paint_cost_detailed + labor_cost_detailed + prep_cost_flat + primer_cost + specialty_surface_prep",
+            "dependencies": [
+              "paint_cost_detailed",
+              "labor_cost_detailed",
+              "prep_cost_flat",
+              "primer_cost",
+              "specialty_surface_prep"
+            ],
+            "label": "Total detailed project cost",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "detailed_cost_per_sqft": {
+            "expression": "total_cost_detailed / max(net_paint_area,1)",
+            "dependencies": [
+              "total_cost_detailed",
+              "net_paint_area"
+            ],
+            "label": "Detailed cost per sqft",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "gallons_needed_detailed",
+            "label": "Estimated gallons (detailed)",
+            "variable": "gallons_needed_detailed",
+            "unit": "gallons",
+            "format": "decimal"
+          },
+          {
+            "id": "paint_cost_detailed",
+            "label": "Paint cost (detailed)",
+            "variable": "paint_cost_detailed",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "labor_cost_detailed",
+            "label": "Labor cost (detailed)",
+            "variable": "labor_cost_detailed",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_detailed",
+            "label": "Total project cost (detailed)",
+            "variable": "total_cost_detailed",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "detailed_cost_per_sqft",
+            "label": "Cost per square foot (detailed)",
+            "variable": "detailed_cost_per_sqft",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "area_sqft",
+        "label": "Total paintable area (sqft)",
+        "type": "number",
+        "default": 1000,
+        "min": 1,
+        "max": 100000
+      },
+      {
+        "id": "coats",
+        "label": "Number of coats (including primer if separate)",
+        "type": "number",
+        "default": 2,
+        "min": 1,
+        "max": 10
+      },
+      {
+        "id": "coverage_sqft_per_gallon",
+        "label": "Paint coverage (sqft per gallon)",
+        "type": "number",
+        "default": 350,
+        "min": 50,
+        "max": 2000
+      },
+      {
+        "id": "paint_cost_per_gallon",
+        "label": "Paint cost per gallon (currency)",
+        "type": "number",
+        "default": 35,
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "id": "labor_cost_per_sqft",
+        "label": "Labor cost per sqft (currency)",
+        "type": "number",
+        "default": 1.5,
+        "min": 0,
+        "max": 100
+      },
+      {
+        "id": "prep_cost_flat",
+        "label": "Flat preparation & masking cost (currency)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "max": 100000
+      },
+      {
+        "id": "waste_percent",
+        "label": "Material waste allowance (decimal fraction)",
+        "type": "number",
+        "default": 0.1,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "id": "primer_cost",
+        "label": "Primer cost (currency, include if separate)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000
+      },
+      {
+        "id": "room_count",
+        "label": "Room count (for detailed mode)",
+        "type": "number",
+        "default": 1,
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "id": "avg_room_wall_area",
+        "label": "Average wall area per room (sqft)",
+        "type": "number",
+        "default": 200,
+        "min": 0,
+        "max": 10000
+      },
+      {
+        "id": "ceiling_area",
+        "label": "Total ceiling area (sqft, enter 0 if included in wall area)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000
+      },
+      {
+        "id": "door_count",
+        "label": "Number of doors",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "id": "door_area",
+        "label": "Average door area (sqft)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "id": "window_count",
+        "label": "Number of windows",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "id": "window_area",
+        "label": "Average window area (sqft)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "id": "trim_linear_ft",
+        "label": "Trim linear feet to paint",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000
+      },
+      {
+        "id": "trim_coverage_gallon_per_ft",
+        "label": "Gallons needed per linear foot of trim (gallons/ft)",
+        "type": "number",
+        "default": 0.001,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "id": "labor_cost_per_trim_ft",
+        "label": "Labor cost per linear foot of trim (currency)",
+        "type": "number",
+        "default": 0.5,
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "id": "repair_hours",
+        "label": "Extra repair hours (for surface prep)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 10000
+      },
+      {
+        "id": "labor_hourly_rate",
+        "label": "Labor hourly rate (currency)",
+        "type": "number",
+        "default": 40,
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "id": "specialty_surface_prep",
+        "label": "Specialty surface prep / hazardous-material handling (currency)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Painting Cost Calculator provides two estimate modes: a quick per-square-foot calculation for rapid budgeting and a detailed room-by-room mode for contractors and homeowners who want itemized accuracy.",
+      "Estimates include paint volume, material cost, labor, and common extras such as primer, trim painting, and surface preparation. Use conservative inputs for waste and include separate primer or specialty-surface line items when applicable."
+    ],
+    "methodology": [
+      "Quick mode multiplies the user-supplied paintable area by coats and a user-set waste allowance, then divides by paint coverage (sqft per gallon) to estimate gallons. Costs are calculated from gallons × paint unit price plus area × labor unit price and flat preparation costs.",
+      "Detailed mode aggregates per-room wall area, deducts door and window openings, adds ceilings where provided, and separates trim, repair, primer, and specialty handling. Labor lines include area-based painting, linear-feet trim work, and repair hours multiplied by an hourly rate.",
+      "This tool follows standard measurement practices and conservative assumptions commonly used in building trades estimating. For unit and safety guidance consult national standards and regulatory resources cited below."
+    ],
+    "how_is_calculated": [
+      "Effective area = area_sqft × (1 + waste_percent)",
+      "Gallons = (Effective area × coats) / coverage_sqft_per_gallon",
+      "Paint cost = Gallons × paint_cost_per_gallon",
+      "Labor cost (quick) = area_sqft × labor_cost_per_sqft",
+      "Detailed net area = (room_count × avg_room_wall_area + ceiling_area) − (door_count × door_area + window_count × window_area)",
+      "Total cost = paint cost + labor cost + prep cost + primer cost + specialty handling"
+    ],
+    "faqs": [
+      {
+        "question": "How do I include primer or multiple product types?",
+        "answer": "Enter primer cost as a separate line item if primer is purchased separately. For different product types (e.g., ceiling vs wall paint), run the detailed mode twice with different coverage and cost inputs and sum the totals."
+      },
+      {
+        "question": "How accurate are quick per-square-foot estimates?",
+        "answer": "Quick estimates are suitable for ballpark budgeting (±15–30%). Use detailed mode or a contractor quote for final budgeting, especially when repairs, multiple substrates, or hazardous materials are present."
+      },
+      {
+        "question": "Should I round gallons up?",
+        "answer": "Yes. Manufacturers sell whole gallons; round gallons_needed up to the next whole unit when purchasing. Also account for color changes or specialty finishes which may increase required material."
+      },
+      {
+        "question": "What about safety, VOCs, and lead?",
+        "answer": "Follow federal and local regulations for VOCs, lead-based paint, and worker safety. For lead hazards consult CDC guidance and use qualified abatement professionals where required. Use low-VOC products where appropriate and ensure adequate ventilation per OSHA and EPA recommendations."
+      },
+      {
+        "question": "Can this calculator be used for exterior projects?",
+        "answer": "Yes. Use exterior-appropriate coverage, waste allowances, and labor rates. Exterior work may require additional prep, scaffolding, and permits; include these as specialty_surface_prep or separate line items."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST – Weights and Measures and unit standards",
+        "url": "https://www.nist.gov/pml"
+      },
+      {
+        "label": "OSHA – Worker safety guidance",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "EPA – Indoor air and volatile organic compounds (VOCs)",
+        "url": "https://www.epa.gov/indoor-air-quality-iaq/volatile-organic-compounds"
+      },
+      {
+        "label": "U.S. Department of Energy – Building and envelope guidance",
+        "url": "https://www.energy.gov"
+      },
+      {
+        "label": "CDC – Lead paint safety for painters",
+        "url": "https://www.cdc.gov/nceh/lead/prevention/painters.htm"
+      },
+      {
+        "label": "MIT – Building and construction research resources",
+        "url": "https://architecture.mit.edu"
+      }
+    ],
+    "examples": [
+      "Example (quick): area_sqft=1200, coats=2, coverage=350 sqft/gal, paint_cost_per_gallon=$40, labor=$1.75/sqft → gallons ≈ (1200×1.1×2)/350 ≈ 7.54 gal, purchase 8 gal, total = paint + labor + prep.",
+      "Example (detailed): 3 rooms × 220 sqft walls, ceiling_area=300 sqft, 2 doors, 4 windows, trim 200 ft, repair_hours=4 → net area computed, trim and repair added, totals aggregated for final budget."
+    ],
+    "glossary": [
+      "Coverage (sqft/gal): Manufacturer-stated area a gallon of paint covers under ideal conditions.",
+      "Waste percent: Material allowance to cover trimming, overlap, porosity, and color-change loss.",
+      "Primer: Preparatory coating applied before paint; can change the number of topcoats needed."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": []
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "Estimate"
+    ]
+  }
+}
