@@ -115,7 +115,8 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
   const compiledOutputs = useMemo<CompiledOutput[]>(() => {
     return logic.outputs.map((output) => ({
       ...output,
-      evaluate: compileExpression(output.expression, fieldIds)
+      evaluate: compileExpression(output.expression, fieldIds),
+      expression: output.expression
     }));
   }, [logic.outputs, fieldIds]);
 
@@ -183,7 +184,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
             <label key={field.id} className="space-y-2">
               <span className="text-sm font-medium text-slate-700">{field.label}</span>
               {renderInput(field, values[field.id] ?? "", (next) =>
-                setValues((prev) => ({ ...prev, [field.id]: next }))
+                setValues((prev) => ({ ...prev, [field.id]: sanitizeInput(next) }))
               )}
               {renderFieldMeta(field, fetchMeta[field.id])}
             </label>
@@ -229,6 +230,14 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
             <SharedResultsTable outputs={outputs} />
           </div>
         )}
+        {outputs.length > 0 && (
+          <div className="sticky bottom-4 mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm shadow-emerald-100 md:static md:bg-transparent md:border-0 md:shadow-none">
+            <div className="flex items-center justify-between text-sm font-semibold text-emerald-700">
+              <span>Primary result</span>
+              <span>{formatOutputValue(outputs[0].value, outputs[0].format, outputs[0].unit)}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {proMode && (
@@ -252,7 +261,10 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
                   <p className="text-sm font-semibold text-slate-800">{output.label}</p>
                   <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Expression</p>
                   <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-                    {getOutputExpression(compiledOutputs, output.id)}
+                    {formatExpressionWithValues(
+                      getOutputExpression(compiledOutputs, output.id),
+                      numericValues
+                    )}
                   </code>
                   <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Inputs used</p>
                   <ul className="mt-2 space-y-1 text-xs text-slate-600">
@@ -479,4 +491,29 @@ function isFormulaLogic(
 function getOutputExpression(outputs: CompiledOutput[], outputId: string) {
   const match = outputs.find((o) => o.id === outputId);
   return match && "expression" in match ? (match as unknown as { expression?: string }).expression ?? "" : "";
+}
+
+function sanitizeInput(raw: string) {
+  if (!raw) return "";
+  let value = raw.replace(/[,\\s]/g, "").toLowerCase();
+  const suffixes: Record<string, number> = { k: 1_000, m: 1_000_000, b: 1_000_000_000 };
+  const suffix = value.slice(-1);
+  let factor = 1;
+  if (suffix in suffixes) {
+    factor = suffixes[suffix];
+    value = value.slice(0, -1);
+  }
+  const parsed = Number.parseFloat(value);
+  if (Number.isNaN(parsed)) return raw;
+  return String(parsed * factor);
+}
+
+function formatExpressionWithValues(expression: string, values: Record<string, number>) {
+  if (!expression) return "";
+  return expression.replace(/[a-zA-Z_][a-zA-Z0-9_]*/g, (match) => {
+    if (typeof values[match] === "number" && Number.isFinite(values[match])) {
+      return values[match].toLocaleString("en-US", { maximumFractionDigits: 6 });
+    }
+    return match;
+  });
 }

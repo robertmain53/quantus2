@@ -135,17 +135,22 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
   }, [activeMethod, numericValues]);
 
   const [proMode, setProMode] = useState(false);
+  const [showChart, setShowChart] = useState(false);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "p") {
+      const key = event.key.toLowerCase();
+      if (key === "p") {
         setProMode((prev) => !prev);
       }
-      if (event.key.toLowerCase() === "r") {
+      if (key === "r") {
         setValues(initialValues);
       }
-      if (event.key.toLowerCase() === "a") {
+      if (key === "a") {
         setShowAudit((prev) => !prev);
+      }
+      if (key === "v") {
+        setShowChart((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handler);
@@ -263,6 +268,13 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
             >
               {proMode ? "Pro On (P)" : "Pro Off (P)"}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowChart((prev) => !prev)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700 shadow-sm hover:border-slate-300"
+            >
+              {showChart ? "Chart On (V)" : "Chart Off (V)"}
+            </button>
           </div>
         </div>
         {evaluation.outputs.length > 0 ? (
@@ -337,14 +349,31 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
 
       {evaluation.outputs.length > 1 && (
         <div className="bento-tile bento-span-2 p-6">
-          <SharedChart
-            title="Visualization"
-            description="Trend across computed outputs"
-            points={evaluation.outputs.map((o, idx) => ({
-              label: o.label ?? `Output ${idx + 1}`,
-              value: o.value
-            }))}
-          />
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Visualization
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowChart((prev) => !prev)}
+              className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+            >
+              {showChart ? "Hide chart (V)" : "Load chart (V)"}
+            </button>
+          </div>
+          {showChart ? (
+            <div className="mt-3">
+              <SharedChart
+                description="Trend across computed outputs"
+                points={evaluation.outputs.map((o, idx) => ({
+                  label: o.label ?? `Output ${idx + 1}`,
+                  value: o.value
+                }))}
+              />
+            </div>
+          ) : (
+            <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100" />
+          )}
         </div>
       )}
     </section>
@@ -591,6 +620,16 @@ function getOutputExpression(method: AdvancedMethodConfig, outputId: string): st
   if (!variable) return "";
   const expr = method.variables[variable]?.expression;
   return expr ?? "";
+}
+
+function formatExpressionWithValues(expression: string, values: Record<string, number>) {
+  if (!expression) return "";
+  return expression.replace(/[a-zA-Z_][a-zA-Z0-9_]*/g, (token) => {
+    if (typeof values[token] === "number" && Number.isFinite(values[token])) {
+      return values[token].toLocaleString("en-US", { maximumFractionDigits: 6 });
+    }
+    return token;
+  });
 }
 
 function normalizeMethods(
