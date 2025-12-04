@@ -446,10 +446,18 @@ def run_git_commands(start_row_number: int) -> None:
       git commit -m "row {start_row_number}"
       git push -u origin main
     """
-    subprocess.run(["git", "add", "."], check=True)
-    commit_msg = f"row {start_row_number}"
-    subprocess.run(["git", "commit", "-m", commit_msg], check=True)
-    subprocess.run(["git", "push", "-u", "origin", "main"], check=True)
+    if os.environ.get("SKIP_GIT_PUSH") == "1":
+        print("SKIP_GIT_PUSH=1 set; skipping git add/commit/push.")
+        return
+
+    try:
+        subprocess.run(["git", "add", "."], check=True)
+        commit_msg = f"row {start_row_number}"
+        subprocess.run(["git", "commit", "-m", commit_msg], check=True)
+        subprocess.run(["git", "push", "-u", "origin", "main"], check=True)
+    except subprocess.CalledProcessError as e:
+        # Best-effort: do not break the generation pipeline if credentials are missing.
+        print(f"WARNING: git command failed (likely missing credentials). Continuing without push. Details: {e}")
 
 
 # ------------ MAIN LOGIC ------------
@@ -645,11 +653,7 @@ def main() -> None:
 
     # After processing, run git commands
     print("\nRunning git add/commit/push ...")
-    try:
-        run_git_commands(start_row_number)
-    except subprocess.CalledProcessError as e:
-        print(f"Git command failed: {e}")
-        sys.exit(1)
+    run_git_commands(start_row_number)
 
     print("Done.")
 
