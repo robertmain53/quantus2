@@ -206,10 +206,12 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
           inputs to speed up exploration.
         </p>
         {isValid && (
-          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          <div className="sticky bottom-4 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm shadow-emerald-100 md:static md:bg-transparent md:border-0 md:shadow-none">
             <div className="flex items-center justify-between">
               <span>Result</span>
-              <span>{formatNumber(targetValue, toUnit.decimalPlaces)} {toUnit.symbol}</span>
+              <span>
+                {formatNumber(targetValue, toUnit.decimalPlaces)} {toUnit.symbol}
+              </span>
             </div>
           </div>
         )}

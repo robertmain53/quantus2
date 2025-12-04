@@ -85,14 +85,11 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
   }, [logic]);
 
   const defaultMethodId = useMemo(() => {
-    if (!logic || logic.methods.length === 0) {
-      return "";
-    }
-
-    const fallback = logic.methods[0]?.id ?? "";
-    const candidate = logic.defaultMethod ?? fallback;
-    return logic.methods.some((method) => method.id === candidate) ? candidate : fallback;
-  }, [logic]);
+    if (!methods.length) return "";
+    const fallback = methods[0]?.id ?? "";
+    const candidate = logic?.defaultMethod ?? fallback;
+    return methods.some((method) => method.id === candidate) ? candidate : fallback;
+  }, [methods, logic?.defaultMethod]);
 
   const [activeMethodId, setActiveMethodId] = useState<string>(defaultMethodId);
 
@@ -418,7 +415,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
         </div>
       )}
 
-      {evaluation.outputs.length > 1 && (
+      {evaluation.outputs.length > 0 && (
         <div className="bento-tile bento-span-2 p-6">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
