@@ -16,6 +16,7 @@ interface ConversionCalculatorProps {
 }
 
 export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalculatorProps) {
+  const storageKey = useMemo(() => `converter-${fromUnitId}-${toUnitId}`, [fromUnitId, toUnitId]);
   const [direction, setDirection] = useState<"forward" | "reverse">("forward");
   const [inputValue, setInputValue] = useState<string>("1");
   const [showChart, setShowChart] = useState(false);
@@ -34,6 +35,29 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { inputValue?: string; direction?: "forward" | "reverse" };
+        if (parsed.inputValue) setInputValue(parsed.inputValue);
+        if (parsed.direction === "forward" || parsed.direction === "reverse") {
+          setDirection(parsed.direction);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify({ inputValue, direction }));
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey, inputValue, direction]);
 
   const context = useMemo<ConversionContext | null>(() => {
     const from = getUnitById(fromUnitId);
@@ -125,7 +149,7 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
               type="number"
               inputMode="decimal"
               value={inputValue}
-              onChange={(event) => setInputValue(event.target.value)}
+              onChange={(event) => setInputValue(sanitizeInput(event.target.value))}
               className="w-full rounded-lg border border-slate-200 px-4 py-2 text-lg font-semibold text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </label>
@@ -181,6 +205,14 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
           factors in reverse when you swap units. Reference values are precomputed for common
           inputs to speed up exploration.
         </p>
+        {isValid && (
+          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+            <div className="flex items-center justify-between">
+              <span>Result</span>
+              <span>{formatNumber(targetValue, toUnit.decimalPlaces)} {toUnit.symbol}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {table.length > 0 && proMode && (
@@ -225,4 +257,19 @@ function formatNumber(value: number, decimals = 4) {
     maximumFractionDigits: decimals,
     minimumFractionDigits: 0
   });
+}
+
+function sanitizeInput(raw: string) {
+  if (!raw) return "";
+  let value = raw.replace(/[,\\s]/g, "").toLowerCase();
+  const suffixes: Record<string, number> = { k: 1_000, m: 1_000_000, b: 1_000_000_000 };
+  const suffix = value.slice(-1);
+  let factor = 1;
+  if (suffix in suffixes) {
+    factor = suffixes[suffix];
+    value = value.slice(0, -1);
+  }
+  const parsed = Number.parseFloat(value);
+  if (Number.isNaN(parsed)) return raw;
+  return String(parsed * factor);
 }
