@@ -220,6 +220,35 @@ export function ConversionCalculator({ fromUnitId, toUnitId, methodology = [] }:
           ) : (
             <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100" />
           )}
+
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              How this is calculated
+            </h4>
+            {methodology.length > 0 ? (
+              <ul className="mt-2 space-y-2 text-sm text-slate-700">
+                {methodology.map((item, idx) => (
+                  <li key={idx} className="list-disc pl-4">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-700">
+                Conversions use precise factors from our unit library. We normalize to SI base
+                units, then apply forward and reverse factors so swapping directions keeps
+                accuracy.
+              </p>
+            )}
+            {isValid && (
+              <div className="sticky bottom-4 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm shadow-emerald-100 md:static md:bg-transparent md:border-0 md:shadow-none">
+                <div className="flex items-center justify-between">
+                  <span>Primary result</span>
+                  <span>{formatNumber(targetValue, toUnit.decimalPlaces)}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
       
@@ -250,36 +279,6 @@ export function ConversionCalculator({ fromUnitId, toUnitId, methodology = [] }:
           </table>
         </div>
       </div>
-
-      {proMode && (
-        <div className="bento-tile bento-span-2 p-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            How this is calculated
-          </h3>
-          {methodology.length > 0 ? (
-            <ul className="mt-2 space-y-2 text-sm text-slate-700">
-              {methodology.map((item, idx) => (
-                <li key={idx} className="list-disc pl-4">
-                  {item}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-sm text-slate-700">
-              Conversions use precise factors from our unit library. We normalize to SI base units,
-              then apply forward and reverse factors so swapping directions keeps accuracy.
-            </p>
-          )}
-          {isValid && (
-            <div className="sticky bottom-4 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm shadow-emerald-100 md:static md:bg-transparent md:border-0 md:shadow-none">
-              <div className="flex items-center justify-between">
-                <span>Primary result</span>
-                <span>{formatNumber(targetValue, toUnit.decimalPlaces)}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
     </section>
   );
