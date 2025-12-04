@@ -9,6 +9,10 @@ interface GenericConverterProps {
 
 export function GenericConverter({ config }: GenericConverterProps) {
   const conversionLogic = getConversionLogic(config);
+  const methodology =
+    (config?.page_content && "methodology" in config.page_content
+      ? (config.page_content as { methodology?: string[] }).methodology
+      : undefined) ?? [];
 
   if (!conversionLogic) {
     return (
@@ -24,21 +28,13 @@ export function GenericConverter({ config }: GenericConverterProps) {
   }
 
   return (
-    <div className="bento-grid "> 
+    <div className="bento-grid">
       <div className="bento-tile bento-span-2  p-3">
         <ConversionCalculator
           fromUnitId={conversionLogic.fromUnitId}
           toUnitId={conversionLogic.toUnitId}
+          methodology={methodology}
         />
-      </div>
-      <div className="bento-tile bento-span-2 p-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          How this is calculated
-        </h3>
-        <p className="mt-2 text-sm text-slate-700">
-          Conversions use precise factors from our unit library. We normalize to SI base units,
-          then apply the forward and reverse factors so swapping directions keeps accuracy.
-        </p>
       </div>
     </div>
   );
