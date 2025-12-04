@@ -164,9 +164,10 @@ def find_best_prompt_file_for_row(
         # Prefer matching category/subcategory, then exact suffix, then shortest name
         def direct_score(p: Path) -> tuple:
             stem = p.stem.lower()
+            cat_prefix_hit = 0 if stem.startswith(f"{category}_") else 1
             cat_hit = 0 if f"{category}_{subcategory}" in stem else 1
             suffix_hit = 0 if stem.endswith(slug_plain) else 1
-            return (cat_hit, suffix_hit, len(stem))
+            return (cat_prefix_hit, cat_hit, suffix_hit, len(stem))
 
         direct_matches.sort(key=direct_score)
         best_direct = direct_matches[0]
