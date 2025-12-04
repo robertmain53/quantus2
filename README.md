@@ -213,6 +213,7 @@ Requirements for the JSON you return:
   - `page_content`: use arrays of plain-text sentences; do not embed HTML. Provide:
     * `introduction`: 2–3 short paragraphs explaining intent and user value.
     * `methodology`: authoritative walkthrough referencing standards/regulations.
+    * `how_is_calculated`: concise formulas/steps users see under Pro view (fallback to methodology if absent).
     * `examples`: optional worked scenarios expressed as plain-text sentences (no nested objects).
     * `faqs`: 3–5 Q&As covering expert intent, edge cases, and trust-building topics.
     * `citations`: authoritative sources (label + URL + optional summary).

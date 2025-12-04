@@ -58,6 +58,7 @@ Before you start, determine which calculator type is needed:
 - `page_content` (required): object with these fields ONLY:
   - `introduction`: array of plain-text strings (2–3 paragraphs)
   - `methodology`: array of plain-text strings (authoritative walkthrough)
+  - `how_is_calculated`: array of plain-text strings (concise formulas/steps users see under Pro view)
   - `faqs`: array of objects: `[{ "question": "...", "answer": "..." }]`
   - `citations`: array of objects: `[{ "label": "...", "url": "..." }]`
   - **Optional**: `examples`, `summary`, `glossary` (same format)
@@ -350,7 +351,7 @@ Make it more rigid and explicit:
   - advanced_calc → "advanced"
 - [ ] `fromUnitId` and `toUnitId` are real units in lib/conversions.ts (e.g., "lumen", "lux", "meter", "foot")
 - [ ] `metadata` has ONLY: `title` (string, no HTML) and `description` (string, no HTML)
-- [ ] `page_content` has ONLY these fields (as arrays of strings): `introduction`, `methodology`, and optional `examples`, `summary`, `glossary`
+- [ ] `page_content` has ONLY these fields (as arrays of strings): `introduction`, `methodology`, `how_is_calculated`, and optional `examples`, `summary`, `glossary`
 - [ ] `page_content.faqs` is an array of objects: `[{ "question": "...", "answer": "..." }]` – NO "items" nested object
 - [ ] `page_content.citations` is an array of objects: `[{ "label": "...", "url": "..." }]` – URLs are PLAIN STRINGS, not Markdown
 - [ ] All URLs are bare HTTPS strings like `"https://example.com"` – NOT `"[https://example.com](https://example.com)"` or `"<a href='...'>"`

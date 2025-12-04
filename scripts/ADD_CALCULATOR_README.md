@@ -103,6 +103,15 @@ The config file should be the **inner `config_json` object only**, not the wrapp
 }
 ```
 
+### Required `page_content` keys (flat arrays, plain text)
+
+- `introduction`: 2–3 short paragraphs.
+- `methodology`: authoritative walk-through.
+- `how_is_calculated`: concise formulas/steps shown in Pro view (fallback will use methodology if omitted).
+- `faqs`: array of `{ "question": "...", "answer": "..." }`.
+- `citations`: array of `{ "label": "...", "url": "..." }`.
+- Optional: `examples`, `summary`, `glossary`.
+
 ## How It Works
 
 1. **Parses CLI arguments** – validates all required fields

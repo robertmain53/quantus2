@@ -128,6 +128,7 @@ export interface GenericLogicConfig {
 export interface PageContentConfig {
   introduction?: string[];
   methodology?: string[];
+  how_is_calculated?: string[];
   examples?: string[];
   faqs?: Array<{ question: string; answer: string }>;
   citations?: Array<{ label?: string; text?: string; url: string }>;
@@ -165,6 +166,7 @@ const ALLOWED_TOP_LEVEL_KEYS = new Set([
 const ALLOWED_PAGE_CONTENT_KEYS = new Set([
   "introduction",
   "methodology",
+  "how_is_calculated",
   "examples",
   "faqs",
   "citations",
@@ -949,6 +951,11 @@ function parsePageContent(
 
   const introduction = coerceStringArray(pageContentCandidate.introduction, `${context}: page_content.introduction`, errors);
   const methodology = coerceStringArray(pageContentCandidate.methodology, `${context}: page_content.methodology`, errors);
+  const howIsCalculated = coerceStringArray(
+    pageContentCandidate.how_is_calculated,
+    `${context}: page_content.how_is_calculated`,
+    errors
+  );
   const examples = coerceStringArray(pageContentCandidate.examples, `${context}: page_content.examples`, errors);
   const summary = coerceStringArray(pageContentCandidate.summary, `${context}: page_content.summary`, errors);
   const faqs = parseFaqs(pageContentCandidate.faqs, context, errors);
@@ -958,6 +965,7 @@ function parsePageContent(
   return {
     introduction,
     methodology,
+    how_is_calculated: howIsCalculated,
     examples,
     summary,
     faqs,

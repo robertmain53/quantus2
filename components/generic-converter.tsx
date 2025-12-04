@@ -10,6 +10,7 @@ interface GenericConverterProps {
 export function GenericConverter({ config }: GenericConverterProps) {
   const conversionLogic = getConversionLogic(config);
   const methodology = config?.pageContent?.methodology ?? [];
+  const howIsCalculated = config?.pageContent?.how_is_calculated ?? [];
 
   if (!conversionLogic) {
     return (
@@ -31,6 +32,7 @@ export function GenericConverter({ config }: GenericConverterProps) {
           fromUnitId={conversionLogic.fromUnitId}
           toUnitId={conversionLogic.toUnitId}
           methodology={methodology}
+          howIsCalculated={howIsCalculated}
         />
       </div>
     </div>

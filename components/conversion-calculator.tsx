@@ -14,9 +14,15 @@ interface ConversionCalculatorProps {
   fromUnitId: string;
   toUnitId: string;
   methodology?: string[];
+  howIsCalculated?: string[];
 }
 
-export function ConversionCalculator({ fromUnitId, toUnitId, methodology = [] }: ConversionCalculatorProps) {
+export function ConversionCalculator({
+  fromUnitId,
+  toUnitId,
+  methodology = [],
+  howIsCalculated = []
+}: ConversionCalculatorProps) {
   const storageKey = useMemo(() => `converter-${fromUnitId}-${toUnitId}`, [fromUnitId, toUnitId]);
   const [direction, setDirection] = useState<"forward" | "reverse">("forward");
   const [inputValue, setInputValue] = useState<string>("1");
@@ -225,7 +231,15 @@ export function ConversionCalculator({ fromUnitId, toUnitId, methodology = [] }:
             <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               How this is calculated
             </h4>
-            {methodology.length > 0 ? (
+            {howIsCalculated.length > 0 ? (
+              <ul className="mt-2 space-y-2 text-sm text-slate-700">
+                {howIsCalculated.map((item, idx) => (
+                  <li key={idx} className="list-disc pl-4">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            ) : methodology.length > 0 ? (
               <ul className="mt-2 space-y-2 text-sm text-slate-700">
                 {methodology.map((item, idx) => (
                   <li key={idx} className="list-disc pl-4">
