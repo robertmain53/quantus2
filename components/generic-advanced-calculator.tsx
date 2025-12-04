@@ -372,6 +372,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
         )}
       </div>
 
+
       {evaluation.outputs.length > 0 && (
         <div className="bento-tile bento-span-2 p-6">
           <div className="flex items-center justify-between gap-2">

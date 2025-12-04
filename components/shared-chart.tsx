@@ -17,7 +17,7 @@ export function SharedChart({ title, description, points }: SharedChartProps) {
   const validPoints = useMemo(() => points.filter((p) => Number.isFinite(p.value)), [points]);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  if (validPoints.length < 2) {
+  if (validPoints.length < 1) {
     return (
       <div className="space-y-2">
         {title && (
@@ -25,18 +25,21 @@ export function SharedChart({ title, description, points }: SharedChartProps) {
         )}
         {description && <p className="text-xs text-slate-500">{description}</p>}
         <div className="h-32 animate-pulse rounded-xl bg-slate-100" />
-        <p className="text-xs text-slate-500">Add more inputs to see a trend.</p>
+        <p className="text-xs text-slate-500">Add inputs to see a visualization.</p>
       </div>
     );
   }
 
-  const { min, max } = validPoints.reduce(
-    (acc, p) => ({
-      min: Math.min(acc.min, p.value),
-      max: Math.max(acc.max, p.value)
-    }),
-    { min: validPoints[0].value, max: validPoints[0].value }
-  );
+  const { min, max } =
+    validPoints.length === 1
+      ? { min: validPoints[0].value, max: validPoints[0].value }
+      : validPoints.reduce(
+          (acc, p) => ({
+            min: Math.min(acc.min, p.value),
+            max: Math.max(acc.max, p.value)
+          }),
+          { min: validPoints[0].value, max: validPoints[0].value }
+        );
 
   const range = max - min || 1;
   const height = 120;
@@ -45,7 +48,10 @@ export function SharedChart({ title, description, points }: SharedChartProps) {
 
   const path = validPoints
     .map((p, idx) => {
-      const x = margin + (idx / (validPoints.length - 1)) * (width - margin * 2);
+      const x =
+        validPoints.length === 1
+          ? width / 2
+          : margin + (idx / (validPoints.length - 1)) * (width - margin * 2);
       const y = height - margin - ((p.value - min) / range) * (height - margin * 2);
       return `${idx === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
     })
@@ -112,7 +118,10 @@ export function SharedChart({ title, description, points }: SharedChartProps) {
           <rect width={width} height={height} fill="#f8fafc" />
           <path d={path} fill="none" stroke="#0ea5e9" strokeWidth={2} />
           {validPoints.map((p, idx) => {
-            const x = margin + (idx / (validPoints.length - 1)) * (width - margin * 2);
+            const x =
+              validPoints.length === 1
+                ? width / 2
+                : margin + (idx / (validPoints.length - 1)) * (width - margin * 2);
             const y = height - margin - ((p.value - min) / range) * (height - margin * 2);
             return <circle key={p.label + idx} cx={x} cy={y} r={3} fill="#1e3a8a" />;
           })}
@@ -120,7 +129,7 @@ export function SharedChart({ title, description, points }: SharedChartProps) {
       </div>
       <p className="text-xs text-slate-500">
         Range {min.toLocaleString("en-US")} → {max.toLocaleString("en-US")} across{" "}
-        {validPoints.length} points.
+        {validPoints.length} point{validPoints.length === 1 ? "" : "s"}.
       </p>
     </div>
   );
