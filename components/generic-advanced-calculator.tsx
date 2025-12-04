@@ -34,7 +34,10 @@ const HELPER_FUNCTIONS: Record<string, (...args: number[]) => number> = {
   abs: Math.abs,
   sqrt: Math.sqrt,
   log: Math.log,
-  exp: Math.exp
+  exp: Math.exp,
+  sin: Math.sin,
+  cos: Math.cos,
+  tan: Math.tan
 };
 
 export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorProps) {
@@ -108,8 +111,11 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
 
   const initialValues = useMemo(() => {
     return allFields.reduce<Record<string, string>>((acc, field) => {
+      // Support both defaultValue and default (legacy) plus sensible fallbacks
+      const legacyDefault = (field as unknown as { default?: number | string })?.default;
       const sample =
         field.defaultValue ??
+        legacyDefault ??
         (typeof field.min === "number" ? String(field.min) : field.placeholder ?? "1");
       acc[field.id] = sample;
       return acc;
@@ -366,6 +372,36 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
         )}
       </div>
 
+      {evaluation.outputs.length > 0 && (
+        <div className="bento-tile bento-span-2 p-6">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Visualization
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowChart((prev) => !prev)}
+              className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+            >
+              {showChart ? "Hide chart (V)" : "Load chart (V)"}
+            </button>
+          </div>
+          {showChart ? (
+            <div className="mt-3">
+              <SharedChart
+                description="Trend across computed outputs"
+                points={evaluation.outputs.map((o, idx) => ({
+                  label: o.label ?? `Output ${idx + 1}`,
+                  value: o.value
+                }))}
+              />
+            </div>
+          ) : (
+            <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100" />
+          )}
+        </div>
+      )}
+
       {proMode && (
         <div className="bento-tile bento-span-2 p-6">
           <button
@@ -411,36 +447,6 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      )}
-
-      {evaluation.outputs.length > 0 && (
-        <div className="bento-tile bento-span-2 p-6">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Visualization
-            </h3>
-            <button
-              type="button"
-              onClick={() => setShowChart((prev) => !prev)}
-              className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
-            >
-              {showChart ? "Hide chart (V)" : "Load chart (V)"}
-            </button>
-          </div>
-          {showChart ? (
-            <div className="mt-3">
-              <SharedChart
-                description="Trend across computed outputs"
-                points={evaluation.outputs.map((o, idx) => ({
-                  label: o.label ?? `Output ${idx + 1}`,
-                  value: o.value
-                }))}
-              />
-            </div>
-          ) : (
-            <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100" />
           )}
         </div>
       )}

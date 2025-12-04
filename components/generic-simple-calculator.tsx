@@ -139,13 +139,13 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchSignature]);
 
-  const compiledOutputs = useMemo<CompiledOutput[]>(() => {
-    return logic.outputs.map((output) => ({
-      ...output,
-      evaluate: compileExpression(output.expression, fieldIds),
-      expression: output.expression
-    }));
-  }, [logic.outputs, fieldIds]);
+const compiledOutputs = useMemo<CompiledOutput[]>(() => {
+  return logic.outputs.map((output) => ({
+    ...output,
+    evaluate: compileExpression(output.expression, fieldIds),
+    expression: output.expression
+  }));
+}, [logic.outputs, fieldIds]);
 
   const numericValues = useMemo<Record<string, number>>(() => {
     return fieldIds.reduce<Record<string, number>>((acc, id) => {
@@ -512,6 +512,9 @@ function compileExpression(expression: string, fieldIds: string[]) {
     ["sqrt", Math.sqrt],
     ["log", Math.log],
     ["exp", Math.exp],
+    ["sin", Math.sin],
+    ["cos", Math.cos],
+    ["tan", Math.tan],
     ["Math", Math]
   ];
   const helperKeys = helperEntries.map(([key]) => key);
