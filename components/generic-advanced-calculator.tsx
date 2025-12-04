@@ -117,7 +117,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
         field.defaultValue ??
         legacyDefault ??
         (typeof field.min === "number" ? String(field.min) : field.placeholder ?? "1");
-      acc[field.id] = sample;
+      acc[field.id] = String(sample);
       return acc;
     }, {});
   }, [allFields]);
