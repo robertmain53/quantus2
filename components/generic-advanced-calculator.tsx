@@ -76,7 +76,7 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
     if (!logic) {
       return [];
     }
-    return [...logic.methods];
+    return normalizeMethods(logic.methods);
   }, [logic]);
 
   const defaultMethodId = useMemo(() => {
@@ -562,4 +562,19 @@ function getOutputExpression(method: AdvancedMethodConfig, outputId: string): st
   if (!variable) return "";
   const expr = method.variables[variable]?.expression;
   return expr ?? "";
+}
+
+function normalizeMethods(
+  methods: AdvancedLogicConfig["methods"] | Record<string, AdvancedMethodConfig>
+): AdvancedMethodConfig[] {
+  if (Array.isArray(methods)) {
+    return methods;
+  }
+  if (methods && typeof methods === "object") {
+    return Object.entries(methods).map(([id, value]) => ({
+      ...value,
+      id: (value as AdvancedMethodConfig).id ?? id
+    }));
+  }
+  return [];
 }

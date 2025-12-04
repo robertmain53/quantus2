@@ -8,6 +8,7 @@ import {
   convertValue,
   getUnitById
 } from "@/lib/conversions";
+import { SharedChart } from "@/components/shared-chart";
 
 interface ConversionCalculatorProps {
   fromUnitId: string;
@@ -17,6 +18,7 @@ interface ConversionCalculatorProps {
 export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalculatorProps) {
   const [direction, setDirection] = useState<"forward" | "reverse">("forward");
   const [inputValue, setInputValue] = useState<string>("1");
+  const [showChart, setShowChart] = useState(false);
 
   const context = useMemo<ConversionContext | null>(() => {
     const from = getUnitById(fromUnitId);
@@ -156,6 +158,36 @@ export function ConversionCalculator({ fromUnitId, toUnitId }: ConversionCalcula
           inputs to speed up exploration.
         </p>
       </div>
+
+      {table.length > 0 && (
+        <div className="bento-tile bento-span-2 p-6">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Visualization
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowChart((prev) => !prev)}
+              className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+            >
+              {showChart ? "Hide chart" : "Load chart"}
+            </button>
+          </div>
+          {showChart ? (
+            <div className="mt-3">
+              <SharedChart
+                description="Reference curve for common inputs"
+                points={table.map((row) => ({
+                  label: `${row.input} ${fromUnit.symbol}`,
+                  value: row.output
+                }))}
+              />
+            </div>
+          ) : (
+            <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100" />
+          )}
+        </div>
+      )}
     </section>
   );
 }
