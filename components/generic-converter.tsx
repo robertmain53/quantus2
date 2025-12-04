@@ -25,13 +25,13 @@ export function GenericConverter({ config }: GenericConverterProps) {
 
   return (
     <div className="bento-grid  bento-span-1 "> 
-      <div className="bento-tile bento-span-2  p-6">
+      <div className="bento-tile bento-span-2  ">
         <ConversionCalculator
           fromUnitId={conversionLogic.fromUnitId}
           toUnitId={conversionLogic.toUnitId}
         />
       </div>
-      <div className="bento-tile bento-span-2 p-6">
+      <div className="bento-tile bento-span-2 ">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
           How this is calculated
         </h3>
