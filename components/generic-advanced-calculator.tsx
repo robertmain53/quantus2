@@ -134,6 +134,24 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
     return evaluateAdvancedMethod(activeMethod, numericValues);
   }, [activeMethod, numericValues]);
 
+  const [proMode, setProMode] = useState(false);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === "p") {
+        setProMode((prev) => !prev);
+      }
+      if (event.key.toLowerCase() === "r") {
+        setValues(initialValues);
+      }
+      if (event.key.toLowerCase() === "a") {
+        setShowAudit((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [initialValues]);
+
   if (!logic || methods.length === 0) {
     return (
       <section className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
@@ -236,7 +254,16 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Results
           </h3>
-          <span className="text-xs font-semibold text-emerald-600">Updates as you type</span>
+          <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
+            <span className="text-emerald-600">Updates as you type</span>
+            <button
+              type="button"
+              onClick={() => setProMode((prev) => !prev)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700 shadow-sm hover:border-slate-300"
+            >
+              {proMode ? "Pro On (P)" : "Pro Off (P)"}
+            </button>
+          </div>
         </div>
         {evaluation.outputs.length > 0 ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -262,49 +289,51 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
         )}
       </div>
 
-      <div className="bento-tile bento-span-2 p-6">
-        <button
-          type="button"
-          onClick={() => setShowAudit((prev) => !prev)}
-          className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:border-slate-300"
-        >
-          <span>How this is calculated</span>
-          <span aria-hidden className="text-slate-500">
-            {showAudit ? "▲" : "▼"}
-          </span>
-        </button>
-        {showAudit && (
-          <div className="mt-4 space-y-4 text-sm text-slate-700">
-            {evaluation.outputs.map((output) => (
-              <div
-                key={`audit-${activeMethod.id}-${output.id}`}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-3"
-              >
-                <p className="text-sm font-semibold text-slate-800">{output.label}</p>
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Expression</p>
-                <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-                  {getOutputExpression(activeMethod, output.id)}
-                </code>
-                <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Inputs used</p>
-                <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                  {Object.keys(activeMethod.variables).map((id) => (
-                    <li key={`input-${activeMethod.id}-${id}`} className="flex justify-between">
-                      <span className="text-slate-500">{id}</span>
-                      <span className="font-semibold text-slate-800">
-                        {Number.isFinite(evaluation.variables[id])
-                          ? evaluation.variables[id].toLocaleString("en-US", {
-                              maximumFractionDigits: 6
-                            })
-                          : "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {proMode && (
+        <div className="bento-tile bento-span-2 p-6">
+          <button
+            type="button"
+            onClick={() => setShowAudit((prev) => !prev)}
+            className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:border-slate-300"
+          >
+            <span>How this is calculated</span>
+            <span aria-hidden className="text-slate-500">
+              {showAudit ? "▲" : "▼"}
+            </span>
+          </button>
+          {showAudit && (
+            <div className="mt-4 space-y-4 text-sm text-slate-700">
+              {evaluation.outputs.map((output) => (
+                <div
+                  key={`audit-${activeMethod.id}-${output.id}`}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3"
+                >
+                  <p className="text-sm font-semibold text-slate-800">{output.label}</p>
+                  <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Expression</p>
+                  <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+                    {getOutputExpression(activeMethod, output.id)}
+                  </code>
+                  <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Inputs used</p>
+                  <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                    {Object.keys(activeMethod.variables).map((id) => (
+                      <li key={`input-${activeMethod.id}-${id}`} className="flex justify-between">
+                        <span className="text-slate-500">{id}</span>
+                        <span className="font-semibold text-slate-800">
+                          {Number.isFinite(evaluation.variables[id])
+                            ? evaluation.variables[id].toLocaleString("en-US", {
+                                maximumFractionDigits: 6
+                              })
+                            : "—"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {evaluation.outputs.length > 1 && (
         <div className="bento-tile bento-span-2 p-6">
