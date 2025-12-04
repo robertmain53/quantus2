@@ -1,0 +1,148 @@
+'use client';
+
+import { useMemo, useRef } from "react";
+
+interface Point {
+  label: string;
+  value: number;
+}
+
+interface SharedChartProps {
+  title?: string;
+  description?: string;
+  points: Point[];
+}
+
+export function SharedChart({ title, description, points }: SharedChartProps) {
+  const validPoints = useMemo(() => points.filter((p) => Number.isFinite(p.value)), [points]);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  if (validPoints.length < 2) {
+    return (
+      <div className="space-y-2">
+        {title && (
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h3>
+        )}
+        {description && <p className="text-xs text-slate-500">{description}</p>}
+        <div className="h-32 animate-pulse rounded-xl bg-slate-100" />
+        <p className="text-xs text-slate-500">Add more inputs to see a trend.</p>
+      </div>
+    );
+  }
+
+  const { min, max } = validPoints.reduce(
+    (acc, p) => ({
+      min: Math.min(acc.min, p.value),
+      max: Math.max(acc.max, p.value)
+    }),
+    { min: validPoints[0].value, max: validPoints[0].value }
+  );
+
+  const range = max - min || 1;
+  const height = 120;
+  const width = 320;
+  const margin = 8;
+
+  const path = validPoints
+    .map((p, idx) => {
+      const x = margin + (idx / (validPoints.length - 1)) * (width - margin * 2);
+      const y = height - margin - ((p.value - min) / range) * (height - margin * 2);
+      return `${idx === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  const handleExportCsv = () => {
+    const header = "label,value\n";
+    const rows = validPoints.map((p) => `${escapeCsv(p.label)},${p.value}`).join("\n");
+    downloadFile("chart.csv", "text/csv", header + rows);
+  };
+
+  const handleExportJson = () => {
+    downloadFile("chart.json", "application/json", JSON.stringify(validPoints, null, 2));
+  };
+
+  const handleExportSvg = () => {
+    if (!svgRef.current) return;
+    const blob = new Blob([svgRef.current.outerHTML], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    downloadUrl("chart.svg", url);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          {title && (
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h3>
+          )}
+          {description && <p className="text-xs text-slate-500">{description}</p>}
+        </div>
+        <div className="flex gap-2 text-xs">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+          >
+            CSV
+          </button>
+          <button
+            type="button"
+            onClick={handleExportJson}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+          >
+            JSON
+          </button>
+          <button
+            type="button"
+            onClick={handleExportSvg}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
+          >
+            SVG
+          </button>
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={title ?? "Chart"}
+        >
+          <rect width={width} height={height} fill="#f8fafc" />
+          <path d={path} fill="none" stroke="#0ea5e9" strokeWidth={2} />
+          {validPoints.map((p, idx) => {
+            const x = margin + (idx / (validPoints.length - 1)) * (width - margin * 2);
+            const y = height - margin - ((p.value - min) / range) * (height - margin * 2);
+            return <circle key={p.label + idx} cx={x} cy={y} r={3} fill="#1e3a8a" />;
+          })}
+        </svg>
+      </div>
+      <p className="text-xs text-slate-500">
+        Range {min.toLocaleString("en-US")} → {max.toLocaleString("en-US")} across{" "}
+        {validPoints.length} points.
+      </p>
+    </div>
+  );
+}
+
+function downloadFile(filename: string, type: string, content: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  downloadUrl(filename, url);
+  URL.revokeObjectURL(url);
+}
+
+function downloadUrl(filename: string, url: string) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+}
+
+function escapeCsv(value: string) {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}

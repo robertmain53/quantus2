@@ -10,6 +10,7 @@ import type {
   CalculatorFormSection
 } from "@/lib/calculator-config";
 import { SharedResultsTable } from "@/components/shared-results-table";
+import { SharedChart } from "@/components/shared-chart";
 
 interface GenericAdvancedCalculatorProps {
   config: CalculatorConfig | null;
@@ -304,6 +305,19 @@ export function GenericAdvancedCalculator({ config }: GenericAdvancedCalculatorP
           </div>
         )}
       </div>
+
+      {evaluation.outputs.length > 1 && (
+        <div className="bento-tile bento-span-2 p-6">
+          <SharedChart
+            title="Visualization"
+            description="Trend across computed outputs"
+            points={evaluation.outputs.map((o, idx) => ({
+              label: o.label ?? `Output ${idx + 1}`,
+              value: o.value
+            }))}
+          />
+        </div>
+      )}
     </section>
   );
 }

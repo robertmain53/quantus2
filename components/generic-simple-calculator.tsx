@@ -11,6 +11,7 @@ import type {
   FormulaLogicConfig
 } from "@/lib/calculator-config";
 import { SharedResultsTable } from "@/components/shared-results-table";
+import { SharedChart } from "@/components/shared-chart";
 
 interface GenericSimpleCalculatorProps {
   config: CalculatorConfig | null;
@@ -177,9 +178,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Results
           </h3>
-          <span className="text-xs font-semibold text-emerald-600">
-            Updates as you type
-          </span>
+          <span className="text-xs font-semibold text-emerald-600">Updates as you type</span>
         </div>
         {outputs.length > 0 ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -196,9 +195,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
             ))}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-slate-500">
-            Start entering values to see calculated results.
-          </p>
+          <p className="mt-3 text-sm text-slate-500">Start entering values to see calculated results.</p>
         )}
         {outputs.length > 0 && (
           <div className="mt-4">
@@ -214,9 +211,7 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
           className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:border-slate-300"
         >
           <span>How this is calculated</span>
-          <span aria-hidden className="text-slate-500">
-            {showDetails ? "▲" : "▼"}
-          </span>
+          <span aria-hidden className="text-slate-500">{showDetails ? "▲" : "▼"}</span>
         </button>
 
         {showDetails && (
@@ -226,36 +221,64 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
                 key={`audit-${output.id}`}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-3"
               >
-            <p className="text-sm font-semibold text-slate-800">{output.label}</p>
-            <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
-              Expression
-            </p>
-            <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-              {getOutputExpression(compiledOutputs, output.id)}
-            </code>
-            <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">
-              Inputs used
-            </p>
-            <ul className="mt-2 space-y-1 text-xs text-slate-600">
-              {fieldIds.map((id) => (
-                <li key={`input-${output.id}-${id}`} className="flex justify-between">
-                  <span className="text-slate-500">{id}</span>
-                  <span className="font-semibold text-slate-800">
-                    {Number.isFinite(numericValues[id])
-                      ? numericValues[id].toLocaleString("en-US", {
-                          maximumFractionDigits: 6
-                        })
-                      : "—"}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                <p className="text-sm font-semibold text-slate-800">{output.label}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Expression</p>
+                <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+                  {getOutputExpression(compiledOutputs, output.id)}
+                </code>
+                <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Inputs used</p>
+                <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                  {fieldIds.map((id) => (
+                    <li key={`input-${output.id}-${id}`} className="flex justify-between">
+                      <span className="text-slate-500">{id}</span>
+                      <span className="font-semibold text-slate-800">
+                        {Number.isFinite(numericValues[id])
+                          ? numericValues[id].toLocaleString("en-US", {
+                              maximumFractionDigits: 6
+                            })
+                          : "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
-    )}
-  </div>
-</section>
+
+      {outputs.length > 1 && (
+        <div className="bento-tile bento-span-2 p-6">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Visualization
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowChart((prev) => !prev)}
+              className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+            >
+              {showChart ? "Hide chart" : "Load chart"}
+            </button>
+          </div>
+          {showChart ? (
+            <div className="mt-3">
+              <SharedChart
+                description="Trend across computed outputs"
+                points={outputs.map((o, idx) => ({
+                  label: o.label ?? `Output ${idx + 1}`,
+                  value: o.value
+                }))}
+              />
+            </div>
+          ) : (
+            <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100" />
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
   );
 }
 
