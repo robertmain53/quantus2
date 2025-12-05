@@ -141,12 +141,17 @@ async function processKeyword(keyword, page, engine, customFilename = null) {
   const zipFilename = getZipFilename(keyword, customFilename);
   const zipPath = path.join(OUTPUT_DIR, zipFilename);
 
+  const keywordDir = path.join(OUTPUT_DIR, slug);
+  if (fs.existsSync(keywordDir)) {
+    console.log(`\n⏭️  Skipping "${keyword}" because folder already exists at ${keywordDir}`);
+    return;
+  }
+
+  await fsp.mkdir(keywordDir, { recursive: true });
+
   if (fs.existsSync(zipPath)) {
     console.log(`\n♻️ Overwriting existing ZIP for "${keyword}" at ${zipPath}`);
   }
-
-  const keywordDir = path.join(OUTPUT_DIR, slug);
-  await fsp.mkdir(keywordDir, { recursive: true });
 
   console.log(`\n🔎 Keyword: "${keyword}" (engine: ${engine})`);
   let results;
