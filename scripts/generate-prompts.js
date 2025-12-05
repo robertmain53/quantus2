@@ -3,28 +3,20 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-// Resolve paths relative to project root, not script location
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 
-function parseDate(value) {
-  if (!value) {
-    return null;
-  }
+// ------------------------ Helpers ------------------------
 
+function parseDate(value) {
+  if (!value) return null;
   const normalized = value.trim();
-  if (!normalized) {
-    return null;
-  }
+  if (!normalized) return null;
 
   const parts = normalized.split("/");
-  if (parts.length !== 3) {
-    return null;
-  }
+  if (parts.length !== 3) return null;
 
-  const [month, day, year] = parts.map((part) => parseInt(part, 10));
-  if (Number.isNaN(month) || Number.isNaN(day) || Number.isNaN(year)) {
-    return null;
-  }
+  const [month, day, year] = parts.map((p) => parseInt(p, 10));
+  if (Number.isNaN(month) || Number.isNaN(day) || Number.isNaN(year)) return null;
 
   return new Date(year, month - 1, day);
 }
@@ -39,48 +31,27 @@ function readCalcRows() {
     .slice(1)
     .map((line) => {
       const parts = line.split(",");
-      const category = parts[0]?.trim() || "";
-      const subcategory = parts[1]?.trim() || "";
-      const slug = parts[2]?.trim() || "";
-      const title = parts[3]?.trim() || "";
-      const traffic = parts[4]?.trim() || "";
-      const publishDate = parseDate(parts[5]);
-
       return {
-        category,
-        subcategory,
-        slug,
-        title,
-        traffic,
-        publishDate,
+        category: parts[0]?.trim() || "",
+        subcategory: parts[1]?.trim() || "",
+        slug: parts[2]?.trim() || "",
+        title: parts[3]?.trim() || "",
+        traffic: parts[4]?.trim() || "",
+        publishDate: parseDate(parts[5]),
         raw: line
       };
     })
     .filter((row) => row.slug && row.title);
 }
 
-function selectPublishedRows(rows) {
-  // Generate prompts for all rows, regardless of publish date
-  return rows;
-}
-
 function buildTemplate() {
   const readme = fs.readFileSync(path.join(PROJECT_ROOT, "README.md"), "utf8");
   const anchor = "Replace the bracketed placeholders in the template below";
   const start = readme.indexOf(anchor);
-  if (start === -1) {
-    throw new Error("Could not find the prompt anchor in README.md");
-  }
+  if (start === -1) throw new Error("Prompt anchor not found.");
 
   const codeBlockStart = readme.indexOf("```text", start);
-  if (codeBlockStart === -1) {
-    throw new Error("Template block not found in README.md");
-  }
-
   const codeBlockEnd = readme.indexOf("```", codeBlockStart + "```text".length);
-  if (codeBlockEnd === -1) {
-    throw new Error("Template block not properly terminated");
-  }
 
   return readme
     .slice(codeBlockStart + "```text".length, codeBlockEnd)
@@ -91,17 +62,15 @@ function findMatchingZip(slug) {
   const slugFragment = slug.replace(/^\//, "").split("/").pop() || "";
   const base = slugFragment.replace("-converter", "").toLowerCase();
   const inputRoot = path.join(PROJECT_ROOT, "input");
-  if (!fs.existsSync(inputRoot)) {
-    return [];
-  }
+
+  if (!fs.existsSync(inputRoot)) return [];
 
   const zipFiles = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(fullPath);
-      } else if (
+      if (entry.isDirectory()) walk(fullPath);
+      else if (
         entry.isFile() &&
         entry.name.toLowerCase().includes(base) &&
         entry.name.toLowerCase().endsWith(".zip")
@@ -132,33 +101,36 @@ function collectInternalLinks(rows, current) {
 }
 
 function ensureDir(dir) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
+
+// ------------------------ Main Logic ------------------------
 
 function main() {
   const rows = readCalcRows();
-  const published = selectPublishedRows(rows);
   const template = buildTemplate();
-  ensureDir(path.join(PROJECT_ROOT, "generated", "prompts"));
+  const promptsDir = path.join(PROJECT_ROOT, "generated", "prompts");
+  ensureDir(promptsDir);
 
-  published.forEach((row) => {
-    const sanitizedTitle = row.title || "the calculator";
-    const filledTemplate = template.replace(
-      "[CALCULATOR NAME]",
-      sanitizedTitle
-    );
+  const schemaRules = fs.readFileSync(
+    path.join(PROJECT_ROOT, "scripts", "generate-prompts", "SCHEMA_STRICT_RULES.md"),
+    "utf8"
+  );
 
-    const schemaRules = fs.readFileSync(path.join(PROJECT_ROOT, "scripts", "generate-prompts", "SCHEMA_STRICT_RULES.md"), "utf8");
+  const extraInstructions = [
+    "STRICT SCHEMA ENFORCEMENT:",
+    schemaRules,
+    "\nBefore you construct the config, scan ./input for asset research. Use it to refine EEAT, UX, methodology depth.",
+    "Mention sibling Cernarus pages only when relevant.",
+    "Only the config_json object is persisted; wrapper keys must not appear in config_json."
+  ].join(" ");
 
-    const extraInstructions = [
-      "STRICT SCHEMA ENFORCEMENT:",
-      schemaRules,
-      "\nBefore you construct the config, scan the ./input folder and all subdirectories for competitor research assets (HTML snapshots, spreadsheets, or PDFs) and let the response draw from that corpus to raise information depth, EEAT, SEO, UX, and transparency.",
-      "Also mention which internal Cernarus pages (e.g., category hubs or sibling calculators) provide related context, but avoid repeating any URLs already used in the citations that follow.",
-      "Persistence note: if you include the wrapper, the repo saves only the inner config_json file under data/configs/...; do not introduce wrapper-specific keys into config_json."
-    ].join(" ");
+  const index = {};
+  const seenFiles = new Map(); // filename → slug
+
+  for (const row of rows) {
+    const sanitizedTitle = row.title;
+    const filledTemplate = template.replace("[CALCULATOR NAME]", sanitizedTitle);
 
     const internalLinks = collectInternalLinks(rows, row);
     const assets = findMatchingZip(row.slug);
@@ -167,24 +139,38 @@ function main() {
       slug: row.slug,
       title: sanitizedTitle,
       prompt: `${filledTemplate}\n\n${extraInstructions}`,
-      context: {
-        internalLinks,
-        researchDirs: ["input"]
-      },
-      assets: {
-        zips: assets
-      }
+      context: { internalLinks, researchDirs: ["input"] },
+      assets: { zips: assets }
     };
 
-    const outputPath = path.join(
-      PROJECT_ROOT,
-      "generated",
-      "prompts",
-      `${formatSlugName(row.slug)}.json`
-    );
+    const filename = `${formatSlugName(row.slug)}.json`;
+    const outputPath = path.join(promptsDir, filename);
+
+    // Duplicate filename behavior: last one wins
+    if (fs.existsSync(outputPath)) {
+      console.log(`Duplicate filename detected → replacing: ${filename}`);
+      fs.unlinkSync(outputPath);
+    }
+
+    if (seenFiles.has(filename)) {
+      console.log(
+        `Duplicate filename generated for slugs:\n` +
+          `  First: ${seenFiles.get(filename)}\n` +
+          `  Second: ${row.slug}\n→ Keeping the SECOND version.`
+      );
+    }
+    seenFiles.set(filename, row.slug);
+
     fs.writeFileSync(outputPath, JSON.stringify(promptEntry, null, 2));
-    console.log(`Prepared prompt for ${row.title} -> ${outputPath}`);
-  });
+    console.log(`Prepared prompt → ${outputPath}`);
+
+    // Index: slug → relative prompt path
+    index[row.slug] = `generated/prompts/${filename}`;
+  }
+
+  const indexPath = path.join(promptsDir, "index.json");
+  fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
+  console.log(`Wrote index → ${indexPath}`);
 }
 
 main();

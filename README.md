@@ -16,13 +16,13 @@ npm install
 npm run dev
 ```
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start local development server |
+| Command         | Purpose                                 |
+| --------------- | --------------------------------------- |
+| `npm run dev`   | Start local development server          |
 | `npm run build` | Create production build (SSG/ISR ready) |
-| `npm run start` | Serve production build |
-| `npm run lint` | Run Next.js ESLint rules |
-| `npm run test` | Execute Vitest suite for data layer |
+| `npm run start` | Serve production build                  |
+| `npm run lint`  | Run Next.js ESLint rules                |
+| `npm run test`  | Execute Vitest suite for data layer     |
 
 > **Note:** Tests and linting require dependencies to be installed. Network access may be needed when running `npm install` within a sandboxed environment.
 
@@ -35,19 +35,19 @@ npm run dev
 
 ### CSV schema (AI-first)
 
-| Column | Purpose |
-| --- | --- |
-| `category` | Human-readable cluster name (e.g. `Finance`). Used for taxonomy grouping and navigation copy. |
-| `subcategory` | Optional sub-cluster label (e.g. `Loans`). Empty cells keep calculators directly under the category. |
-| `slug` | Absolute path (e.g. `/finance/loans/personal-loan-payment-calculator`). Uniqueness is enforced in the loader. |
-| `title` | Page H1 and default metadata title. AI copy should be final-ready. |
-| `traffic_estimate` | Daily sessions forecast. Drives prioritisation and projected totals. |
-| `New_Publish_Date` | ISO-friendly date. Items with a future date stay hidden until the next rebuild after that date. |
-| `component_type` | Enum describing which generic engine should render the calculator. Supported values: `converter`, `simple_calc`, `advanced_calc`. |
-| `config_json` | JSON blob containing the full calculator contract: inputs, outputs, validation rules, structured page copy, schema hints, internal/external link plans, and presentation settings (no raw HTML). |
-| `creation_date` | ISO date when the initial calculator JSON was first committed to git and deployed to production. Set during Phase 1 Step 2. |
-| `revision1_date` | ISO date when the first revision cycle (Phase 2) was completed and deployed. Set during Phase 2 Step 9. Optional until revision is complete. |
-| `revision2_date` | ISO date when the second revision cycle (Phase 3) was completed and deployed. Optional for subsequent revisions. |
+| Column             | Purpose                                                                                                                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `category`         | Human-readable cluster name (e.g. `Finance`). Used for taxonomy grouping and navigation copy.                                                                                                    |
+| `subcategory`      | Optional sub-cluster label (e.g. `Loans`). Empty cells keep calculators directly under the category.                                                                                             |
+| `slug`             | Absolute path (e.g. `/finance/loans/personal-loan-payment-calculator`). Uniqueness is enforced in the loader.                                                                                    |
+| `title`            | Page H1 and default metadata title. AI copy should be final-ready.                                                                                                                               |
+| `traffic_estimate` | Daily sessions forecast. Drives prioritisation and projected totals.                                                                                                                             |
+| `New_Publish_Date` | ISO-friendly date. Items with a future date stay hidden until the next rebuild after that date.                                                                                                  |
+| `component_type`   | Enum describing which generic engine should render the calculator. Supported values: `converter`, `simple_calc`, `advanced_calc`.                                                                |
+| `config_json`      | JSON blob containing the full calculator contract: inputs, outputs, validation rules, structured page copy, schema hints, internal/external link plans, and presentation settings (no raw HTML). |
+| `creation_date`    | ISO date when the initial calculator JSON was first committed to git and deployed to production. Set during Phase 1 Step 2.                                                                      |
+| `revision1_date`   | ISO date when the first revision cycle (Phase 2) was completed and deployed. Set during Phase 2 Step 9. Optional until revision is complete.                                                     |
+| `revision2_date`   | ISO date when the second revision cycle (Phase 3) was completed and deployed. Optional for subsequent revisions.                                                                                 |
 
 > **Tip:** Keep JSON payloads in valid UTF-8 and escape double quotes if editing the CSV manually. For bulk edits, prefer tooling (Airtable export, Google Sheets + script) that can manage multi-line cells safely.
 
@@ -79,11 +79,14 @@ Adding a new calculator never requires building another bespoke React component.
 This model removes bespoke React development from the daily cadence. Humans concentrate on research, validation, and governance; AI generates production-ready configuration and content.
 
 1. **Research (human)**
+
    - Assemble a corpus of 20–30 competitor calculators plus primary sources.
    - Store assets in a shared drive; provenance is mandatory for compliance and post-hoc audits.
 
 2. **Synthesis & generation (AI)**
+
    - Feed the corpus into your AI workspace with a prompt that requests:
+
      - Final `component_type` selection.
      - A unified `config_json` matching the engine contract, including inputs, units, computed outputs, validation, display rules, structured page copy (plain text/Markdown snippets), link plans, and schema metadata. A representative structure might look like:
        ```json
@@ -95,14 +98,40 @@ This model removes bespoke React development from the daily cadence. Humans conc
          },
          "form": {
            "fields": [
-             { "id": "principal", "label": "Loan amount", "type": "currency", "min": 1000, "max": 500000 },
-             { "id": "apr", "label": "APR", "type": "percent", "min": 0.1, "max": 60 },
-             { "id": "term_months", "label": "Term", "type": "integer", "min": 6, "max": 360 }
+             {
+               "id": "principal",
+               "label": "Loan amount",
+               "type": "currency",
+               "min": 1000,
+               "max": 500000
+             },
+             {
+               "id": "apr",
+               "label": "APR",
+               "type": "percent",
+               "min": 0.1,
+               "max": 60
+             },
+             {
+               "id": "term_months",
+               "label": "Term",
+               "type": "integer",
+               "min": 6,
+               "max": 360
+             }
            ],
            "result": {
              "outputs": [
-               { "id": "monthlyPayment", "label": "Monthly payment", "unit": "usd" },
-               { "id": "totalInterest", "label": "Total interest", "unit": "usd" }
+               {
+                 "id": "monthlyPayment",
+                 "label": "Monthly payment",
+                 "unit": "usd"
+               },
+               {
+                 "id": "totalInterest",
+                 "label": "Total interest",
+                 "unit": "usd"
+               }
              ]
            }
          },
@@ -119,10 +148,16 @@ This model removes bespoke React development from the daily cadence. Humans conc
              "We compute payments using the standard amortization (PMT) formula that assumes fixed APR across the life of the loan."
            ],
            "faqs": [
-             { "question": "How do I lower my monthly payment?", "answer": "Lower the APR, extend the term, or reduce the principal. Each lever has trade-offs covered below." }
+             {
+               "question": "How do I lower my monthly payment?",
+               "answer": "Lower the APR, extend the term, or reduce the principal. Each lever has trade-offs covered below."
+             }
            ],
            "citations": [
-             { "label": "Consumer Finance Protection Bureau", "url": "https://www.consumerfinance.gov" }
+             {
+               "label": "Consumer Finance Protection Bureau",
+               "url": "https://www.consumerfinance.gov"
+             }
            ]
          },
          "schema": {
@@ -131,7 +166,10 @@ This model removes bespoke React development from the daily cadence. Humans conc
          "links": {
            "internal": ["/finance/loans/auto-loan-payment-calculator"],
            "external": [
-             { "url": "https://www.fdic.gov/resources/consumers/consumer-news/2023-12.pdf", "rel": ["noopener", "noreferrer"] }
+             {
+               "url": "https://www.fdic.gov/resources/consumers/consumer-news/2023-12.pdf",
+               "rel": ["noopener", "noreferrer"]
+             }
            ]
          }
        }
@@ -140,13 +178,14 @@ This model removes bespoke React development from the daily cadence. Humans conc
 
      IMPORTANT: Never output raw '<' or '>' characters inside JSON values. Replace all '<' with '\u003C' and all '>' with '\u003E'. This prevents HTML interpretation, JSX parsing, and CSV corruption.
 
-
 3. **Review (human)**
+
    - Senior engineer validates the JSON: formulas, units, rounding, and accessibility properties.
    - Editor reviews the generated copy for EEAT, tone, compliance, and citation accuracy.
    - Both sign off by updating the row status in the source spreadsheet (optional but recommended).
 
 4. **Data entry (human)**
+
    - Paste the approved `config_json` into the CSV (or upstream database). Avoid manual tweaks elsewhere; the runtime should stay deterministic.
 
 5. **Publication**
@@ -158,6 +197,7 @@ This model removes bespoke React development from the daily cadence. Humans conc
 ### AI prompt template
 
 **How to use**
+
 - Gather your research corpus (competitor pages, regulations, spreadsheets, notes) in a single folder. Compress it into a `.zip` when sending to a chat model, or keep it beside the repo when using a VS Code AI assistant that can read local files.
 - Prepare a short "context packet" to paste alongside the prompt:
   - Target calculator slug and objective (e.g., `/finance/loans/personal-loan-payment-calculator`).
@@ -168,72 +208,66 @@ This model removes bespoke React development from the daily cadence. Humans conc
 
 Replace the bracketed placeholders in the template below before sending it to the model. When you paste the AI response into `/admin/playground`, you may either paste the entire wrapper (with `component_type` + `config_json`) or only the inner `config_json`.
 
-```text
+````text
 You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Cernarus config schema.
 
-Goals:
+### CORE OBJECTIVES
+1.  **Deployable JSON:** Produce a single, valid JSON object (`component_type` + `config_json`). No markdown, no commentary.
+2.  **User-Centricity:** Trade internal jargon for user intent. Focus on practical reassurance (calibration, limits, regulatory compliance).
+3.  **High-Trust EEAT:** You must cite specific standards (NIST, ISO, IEEE, OSHA) and include accuracy caveats. Do not mention competitors or filenames.
+4.  **Schema Compliance:** Adhere strictly to the data types defined below (e.g., Glossary must be objects, not strings).
 
-1. Deliver a deployable JSON config that matches the Cernarus schema, keeps the converter lean, and trades in user-facing value rather than internal talk.
+### JSON REQUIREMENTS
+**Top-level shape:**
+```json
+{
+  "component_type": "converter | simple_calc | advanced_calc",
+  "config_json": { ... }
+}
+```
 
-2. Keep metadata, page copy, and FAQs focused on address user's intent plus practical reassurance (calibration, instrument limits, regulatory cues).
+**`config_json` Structure:**
 
-3. Use strong EEAT language (citations, references to NIST/OSHA/DOE/MIT/ISO, practical FAQs) without mentioning competitors, filenames, or the fact that this is a benchmark exercise.
+1.  **`version`**: Semantic string (bump major.minor if schema capabilities change).
+2.  **`metadata`**:
+    * `title`: Persuasive, SEO-optimized title (No HTML).
+    * `description`: 150-160 chars max. Differentiates us from generic tools.
+3.  **`logic`**:
+    * **IF `converter`**: Set `type: "conversion"`. Provide `fromUnitId` and `toUnitId` matching `lib/conversions.ts`. No custom arrays or factors.
+    * **IF `simple_calc`**: Set `type: "formula"`. `outputs` array must contain `{ id, label, expression, unit (opt), format (opt) }`. No `expressions` or `precision` keys.
+    * **IF `advanced_calc`**: Set `type: "advanced"`. Define `methods` object.
+        * `variables`: Map of `{ "var_name": { "expression", "dependencies", "label", "unit", "format", "display": bool } }`. Use helper functions: `pow`, `min`, `max`, `abs`, `sqrt`, `log`, `exp`.
+        * `outputs`: Array of `{ "id", "label", "variable", "unit", "format" }`.
+        * `defaultMethod`: String ID of the primary method.
+4.  **`form`**:
+    * **Converters**: Set to `null`.
+    * **Simple Calc**: Flat `fields` array. Use `form.result.outputs` for result cards.
+    * **Advanced Calc**: Combine `fields` (global) and `sections` (grouped). Use `show_when` for conditional logic.
+    * **Validation**: All numeric fields must have sensible `min`, `max`, `step`, and `default`.
+5.  **`page_content`** (Plain text arrays, NO HTML):
+    * `introduction`: 2 short paragraphs max. Clear user value proposition.
+    * `methodology`: **Mandatory.**
+        * Must reference the governing standard (e.g., "Calculations align with ISO 80000-1").
+        * **Precision Note:** explicitly state if the conversion factor is **exact** (defined by treaty/standard) or **derived**. (e.g., "1 inch is exactly 25.4mm per international agreement. Output rounded to 4 significant figures").
+    * `how_is_calculated`: Concise step-by-step or formula for Pro view.
+    * `examples`: **Strict Format:** "Input [X] results in Output [Y]." Max 1 sentence per example. No narrative, no storytelling.
+    * `faqs`: 3-5 high-value Q&As (focus on edge cases, safety, and regulatory alignment).
+    * `citations`: Array of objects: `{ "label": "Source Name", "url": "...", "summary": "..." }`. Prioritize .gov and .edu.
+    * `summary`: Bullet points capturing key insights from attached assets.
+    * `glossary`: **Strict Schema:** Array of objects `{ "term": "...", "definition": "..." }`. Do NOT use strings.
+6.  **`links`**:
+    * `internal`: List existing Cernarus slugs (e.g., `/finance/loans/roi`).
+    * `external`: Objects with `{ "url": "...", "label": "...", "rel": ["noopener", "noreferrer"] }`.
+7.  **`schema.additionalTypes`**: Structured data hints (e.g., `HowTo`, `Dataset`) if applicable.
 
-3. capture recipe & lab traffic with trust signals
-5. reference attached assets only for gaps in accuracy, authority, or UX and do not mention them in copy. 
-6 reference universities, and *.gov site for informations, formulas, insights and do mention them or even better link the in the copy
-7. strong EEAT copy (beyond methodology/faq)
-8. the output must be deployable JSON . I’ll review it directly via Cernarus (so no placeholder commentary)
-9. Produce a single JSON object compatible with Cernarus engines (`component_type` + `config_json`). No additional commentary.
+### ANALYTICAL & STYLE GUIDELINES
+* **Unit Precision:** Explicitly distinguish between Binary (GiB) and Decimal (GB) prefixes for data tools. Cite JEDEC vs IEC standards where applicable.
+* **Tone:** Authoritative yet accessible. Use active voice. Avoid fluff.
+* **Math:** Ensure all expressions use variables defined in `form.fields[].id`.
+* **Safety:** For health/finance, include specific caveats (e.g., "Not a substitute for professional medical advice").
 
-Requirements for the JSON you return:
-- Top-level shape:
-  ```json
-  {
-    "component_type": "converter | simple_calc | advanced_calc",
-    "config_json": { ... }
-  }
-  ```
-- Inside `config_json`:
-  - `version`: semantic string, bump `major.minor` if you introduce new schema capabilities.
-  - `metadata.title` and `metadata.description`: persuasive copy that differentiates us; no HTML.
-  - `logic`:
-    * For `component_type = "converter"` set `type` to `"conversion"` and provide only `fromUnitId` and `toUnitId` that match entries in `lib/conversions.ts`. Do not emit custom unit arrays, conversion factors, precision settings, or formula strings.
-    * For `component_type = "simple_calc"` set `type` to `"formula"` with an `outputs` array (each item needs `id`, `label`, `expression`, optional `unit`/`format`). Do **not** create extra properties such as `expressions`, `precision`, `isPrimary`, or `description`.
-    * For `component_type = "advanced_calc"` set `type` to `"advanced"` and supply a `methods` object. Each method must define:
-      - `label` + optional `description`.
-      - `variables`: map of `{ "variable_name": { "expression": "...", "dependencies": [], "label": "...", "unit": "...", "format": "...", "display": true|false } }`. Expressions may reference form field IDs, other variables, or helper functions (`pow`, `min`, `max`, `abs`, `sqrt`, `log`, `exp`).
-      - `outputs`: array of `{ "id": "...", "label": "...", "variable": "variable_name", "unit": "...", "format": "currency|percent|decimal|integer" }`. At least one output must be present per method. Use `"display": true` and/or `label` on variables to surface additional metrics.
-      - `formula` (optional) to indicate the primary variable if you want a default highlight.
-    * Always populate `defaultMethod` with the method id that should load first.
-  - `form`:
-    * Converters render their own inputs; omit `form` or set it to `null` unless a companion UX pattern (e.g., presets) is explicitly required.
-    * For simple calculators, supply a flat `fields` array (labels, types, sensible defaults, min/max, step, options). Use `form.result.outputs` when you want companion result cards—each entry should only include `id`, `label`, `format`, and optional `unit`.
-    * For advanced calculators you may combine `fields` (global inputs) and `sections` (grouped inputs). Each section can include an optional `description` and `show_when` object (`field`, `equals`, `in`) to control conditional rendering. Every field may include `help_text`, `placeholder`, `default`, and validation limits.
-  - `page_content`: use arrays of plain-text sentences; do not embed HTML. Provide:
-    * `introduction`: 2–3 short paragraphs explaining intent and user value.
-    * `methodology`: authoritative walkthrough referencing standards/regulations.
-    * `how_is_calculated`: concise formulas/steps users see under Pro view (fallback to methodology if absent).
-    * `examples`: optional worked scenarios expressed as plain-text sentences (no nested objects).
-    * `faqs`: 3–5 Q&As covering expert intent, edge cases, and trust-building topics.
-    * `citations`: authoritative sources (label + URL + optional summary).
-    * `summary`: short bullet sentences capturing key insights from the attached assets (reference filenames when helpful).
-    * `glossary` if helpful.
-  - `links`: `internal` should list existing Cernarus slugs (e.g., `"/finance/loans/roi-calculator"`). `external` entries must be objects with `url` and optional `label`, `rel` (array of tokens such as `"noopener"` or `"noreferrer"`).
-  - `schema.additionalTypes`: include structured data hints (e.g., `"HowTo"`, `"Dataset"`) when justified by the copy.
-- Never emit HTML tags; formatting is handled by the React engine.
-- Ensure math expressions use variables that match `form.fields[].id`.
-- All numeric conversions must reference official standards (cite them).
-
-Analytical expectations:
-- Benchmark formulas, ranges, and UX patterns against every attached competitor. Flag weaknesses and improve them in our config.
-- Address user mental models (e.g., disclaimers, validation states, error copy) inside the appropriate JSON fields.
-- Surface compliance or safety caveats when the topic demands it (loans, health, etc.).
-- Recommend internal links that strengthen our topical authority; avoid duplicates already in the citations list.
-- When you create multiple calculation methods (`advanced_calc`), ensure each method exposes distinct outputs and clearly communicates when it should be used.
-
-Output:
-- Return ONLY the final JSON object (containing `component_type` and `config_json`). It must parse without post-processing and conform to the schema above.
+### OUTPUT
+Return **ONLY** the raw JSON object. Do not wrap in markdown code blocks. Do not add conversational text.
 ```
 
 
@@ -257,31 +291,33 @@ The component_type field routes to the right engine; config_json contains the fu
 The new workflow introduces a **multi-phase review cycle** with deep auditing and iterative improvement. Each calculator undergoes initial production deployment, then structured review, refinement, and revision cycles. Subsequent revisions follow the same Phase 2 pattern.
 
 ```
+
 Phase 1: Initial Production
-Step 1: ChatGPT Generation   [AI, 5 min]     → Use provided prompt + assets → Get JSON
-       ↓
-Step 2: Claude Code Commit   [Human, 2 min] → Commit JSON to git and push to main
-       ↓
-Step 3: Vercel Deploy        [Automated]    → Deploy to staging/production
-       ↓
-Step 4: CSV Entry            [Human, 1 min] → Add row to calc.csv with creation_date
-       ↓
+Step 1: ChatGPT Generation [AI, 5 min] → Use provided prompt + assets → Get JSON
+↓
+Step 2: Claude Code Commit [Human, 2 min] → Commit JSON to git and push to main
+↓
+Step 3: Vercel Deploy [Automated] → Deploy to staging/production
+↓
+Step 4: CSV Entry [Human, 1 min] → Add row to calc.csv with creation_date
+↓
 Phase 2: First Revision
-Step 5: Gemini Deep Audit    [AI, 10 min]   → Download MHTML files, perform deep research + criticism
-       ↓
-Step 6: ChatGPT Improvement  [AI, 10 min]   → Process Gemini report, enhance JSON with revisions
-       ↓
-Step 7: Claude Code Update   [Human, 2 min] → Update original calculator JSON with revisions
-       ↓
-Step 8: Vercel Re-Deploy     [Automated]    → Deploy updated calculator
-       ↓
-Step 9: CSV Revision Date    [Human, 1 min] → Update calc.csv revision1_date column
-       ↓
+Step 5: Gemini Deep Audit [AI, 10 min] → Download MHTML files, perform deep research + criticism
+↓
+Step 6: ChatGPT Improvement [AI, 10 min] → Process Gemini report, enhance JSON with revisions
+↓
+Step 7: Claude Code Update [Human, 2 min] → Update original calculator JSON with revisions
+↓
+Step 8: Vercel Re-Deploy [Automated] → Deploy updated calculator
+↓
+Step 9: CSV Revision Date [Human, 1 min] → Update calc.csv revision1_date column
+↓
 Phase 3: Subsequent Revisions (repeat Phase 2 pattern as needed)
-Step 10: Audit & Improve     [AI, ~20 min]  → Additional review cycles
-       ↓
-Step 11: CSV Update          [Human, 1 min] → Update calc.csv revision2_date (or later columns)
-```
+Step 10: Audit & Improve [AI, ~20 min] → Additional review cycles
+↓
+Step 11: CSV Update [Human, 1 min] → Update calc.csv revision2_date (or later columns)
+
+````
 
 ---
 
@@ -310,6 +346,9 @@ Using the prompt template from this README:
    git commit -m "JSON #N: [Calculator Name] – Production Upload"
    git push origin main
    ```
+
+````
+
 3. **production_date** is automatically recorded as today's date when this commit lands.
 
 **Output:** Calculator JSON is now in git and deploying to production.
@@ -338,6 +377,7 @@ node scripts/add-calculator.js \
 ```
 
 **Ensure the CSV row includes:**
+
 - `creation_date`: Set to the date you committed the JSON (e.g., `11/29/2025`)
 - `revision1_date`: Leave empty for now (will be updated in Phase 2)
 - `revision2_date`: Leave empty for now (will be updated in Phase 3 if applicable)
@@ -430,6 +470,7 @@ Assemble competitor data and primary sources:
 1. Identify 20–30 competitor calculator pages
 2. Capture as HTML/PDF/screenshots
 3. Save to `scripts/generate-zip/keywords.txt`:
+
    ```
    google.com|Convert Lumens to Lux|lumens-to-lux-converter.zip
    google.com|Convert Fahrenheit to Celsius|fahrenheit-to-celsius-converter.zip
@@ -452,6 +493,7 @@ npm run prepare-prompts
 ```
 
 This creates `generated/prompts/conversions_*_your-converter.json` with:
+
 - Strict schema enforcement rules (prevents bad JSON)
 - Calculator-specific context (slug, title, internal links)
 - Research assets reference (point to ZIP in `input/`)
@@ -497,6 +539,7 @@ node scripts/add-calculator.js \
 ```
 
 **The script automatically:**
+
 - ✅ Loads your JSON config
 - ✅ Escapes quotes, commas, newlines for CSV
 - ✅ Validates JSON before appending
@@ -515,6 +558,7 @@ npm run build && npm start
 ```
 
 **What happens:**
+
 1. Next.js reads `data/calc.csv`
 2. For each row, selects the matching generic engine
 3. Pre-renders all calculator pages with structured data
@@ -559,6 +603,7 @@ git push origin main
 ```
 
 **CSV Row Structure (Phase 1):**
+
 - `creation_date`: 11/29/2025 (set to commit date)
 - `revision1_date`: (empty, set in Phase 2)
 - `revision2_date`: (empty, set in Phase 3 if needed)
@@ -597,6 +642,7 @@ git push origin main
 ```
 
 **CSV Row Structure (Phase 2):**
+
 - `creation_date`: 11/29/2025 (unchanged from Phase 1)
 - `revision1_date`: 11/30/2025 (set to revision completion date)
 - `revision2_date`: (empty, set in Phase 3 if needed)
@@ -614,6 +660,7 @@ git commit -m "Update calc.csv: Add revision2_date for [Calculator Name]"
 ```
 
 **CSV Row Structure (Phase 3+):**
+
 - `creation_date`: 11/29/2025 (unchanged)
 - `revision1_date`: 11/30/2025 (unchanged)
 - `revision2_date`: 12/1/2025 (set to next revision completion date)
@@ -629,15 +676,14 @@ git commit -m "Update calc.csv: Add revision2_date for [Calculator Name]"
 
 ### Documentation & Tools
 
-| Document | Purpose |
-|----------|---------|
-| [QUICK_START.md](QUICK_START.md) | 3-minute quick reference |
-| [scripts/ADD_CALCULATOR_README.md](scripts/ADD_CALCULATOR_README.md) | Full script documentation |
-| [SCHEMA_ENFORCEMENT_GUIDE.md](SCHEMA_ENFORCEMENT_GUIDE.md) | ChatGPT integration guide |
-| [WORKFLOW_SUMMARY.md](WORKFLOW_SUMMARY.md) | Complete end-to-end process |
+| Document                                                             | Purpose                     |
+| -------------------------------------------------------------------- | --------------------------- |
+| [QUICK_START.md](QUICK_START.md)                                     | 3-minute quick reference    |
+| [scripts/ADD_CALCULATOR_README.md](scripts/ADD_CALCULATOR_README.md) | Full script documentation   |
+| [SCHEMA_ENFORCEMENT_GUIDE.md](SCHEMA_ENFORCEMENT_GUIDE.md)           | ChatGPT integration guide   |
+| [WORKFLOW_SUMMARY.md](WORKFLOW_SUMMARY.md)                           | Complete end-to-end process |
 
 ---
-
 
 The generated/prompts folder
 
@@ -653,16 +699,16 @@ Is ready to copy-paste into an AI model (ChatGPT, Claude, Gemini, etc.)
 
 Structure (from the example above)
 {
-  "slug": "/conversions/length/feet-to-meters-converter",
-  "title": "Convert Feet to Meters – Length Converter",
-  "prompt": "[Full AI prompt template + schema rules + guardrails...]",
-  "context": {
-    "internalLinks": ["related calculators..."],
-    "researchDirs": ["input"]
-  },
-  "assets": {
-    "zips": []
-  }
+"slug": "/conversions/length/feet-to-meters-converter",
+"title": "Convert Feet to Meters – Length Converter",
+"prompt": "[Full AI prompt template + schema rules + guardrails...]",
+"context": {
+"internalLinks": ["related calculators..."],
+"researchDirs": ["input"]
+},
+"assets": {
+"zips": []
+}
 }
 
 How It Fits the Workflow
@@ -670,10 +716,10 @@ How It Fits the Workflow
 1 Human (Research phase) – Gathers competitor assets, stores in input/ folder
 
 2 Human → AI (Synthesis phase) –
-  Opens the relevant file in generated/prompts/
-  Copies the prompt field
-  Attaches research assets (from input/) to the AI model
-  AI returns component_type + config_json
+Opens the relevant file in generated/prompts/
+Copies the prompt field
+Attaches research assets (from input/) to the AI model
+AI returns component_type + config_json
 3 Human (Review phase) – Validates the JSON
 4 Human (Data entry) – Pastes into CSV
 5 Publish – npm run build
@@ -687,18 +733,18 @@ Pre-fills internal links and context metadata
 
 Bottom line: generated/prompts/ is a convenience layer that pre-seeds AI requests with the right schema rules, internal links, and research context. It accelerates the synthesis phase by eliminating manual prompt construction
 
-
-
 ## Implementation guidance & critique
 
-- **Review tooling***
+- **Review tooling\***
   - Use `/admin/playground` to validate and preview `config_json` before it reaches the CSV. The textarea+preview workflow lets reviewers catch schema violations immediately and see how each generic engine renders the experience.
 - **Strengths of the AI-first plan**
+
   - Eliminates bespoke React work; throughput is governed by research and validation capacity, not engineering.
   - Centralises all business logic in `config_json`, enabling reproducible builds and lightweight rollbacks (revert CSV rows).
   - Encourages consistent UX patterns because engines evolve once and instantly benefit every calculator.
 
 - **Risk areas to address**
+
   - `config_json` must be strictly versioned. Introduce a `config_version` field or embed schema IDs so older rows do not break when engines evolve.
   - Large JSON blobs in CSV cells are fragile. Consider mirroring the data in Airtable or a headless CMS with an automated export to guarantee quoting and encoding fidelity.
   - Even with structured text, enforce validation so the AI cannot inject unsupported Markdown or scripting fragments. Fail fast in the loader and surface actionable errors to editors.
@@ -747,3 +793,4 @@ Bottom line: generated/prompts/ is a convenience layer that pre-seeds AI request
 - Add editorial notes/FAQs per calculator by extending the CSV or introducing MDX content overrides.
 - Wire revalidation hooks (GitHub Actions + Vercel) to publish scheduled content automatically on its `New_Publish_Date`.
 - Build AI-assisted gap analysis scripts that flag categories lacking depth compared to competitors.
+````

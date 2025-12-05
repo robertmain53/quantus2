@@ -1,39 +1,71 @@
 # Cernarus Config Schema – STRICT ENFORCEMENT RULES
 
-**You MUST follow these rules exactly. Do not deviate. Do not add extra fields.**
+You MUST follow these rules exactly.  
+Do not deviate. Do not add extra fields.
+
+These rules apply to the inner `config_json` object only.
 
 ---
 
-## CHOOSING THE RIGHT COMPONENT_TYPE
+## 1. Choosing the correct `component_type`
 
-Before you start, determine which calculator type is needed:
+Before generating any JSON, decide which calculator type is appropriate:
 
-### Use "converter" IF:
-- Converting between two units (kilocalories ↔ kilojoules, lumens ↔ lux, miles ↔ kilometers, fahrenheit ↔ celsius)
-- The conversion has a FIXED mathematical relationship
-- Users need to input ONE value and get ONE output
-- No variables or intermediate calculations needed
-- Example: "Convert Lumens to Lux" (fixed ratio, no extra inputs)
+### `component_type: "converter"`
 
-### Use "simple_calc" IF:
-- Calculating a value using a FORMULA with multiple inputs
-- Users input several related values to compute a result
-- The formula has ONE primary output
-- Examples: BMI calculator (weight + height → BMI), mortgage payment (principal + rate + term → payment), tip calculator (bill + percentage → tip)
-- The "form" object is REQUIRED with "fields" array for user inputs
+Use **converter** if:
 
-### Use "advanced_calc" IF:
-- Multiple calculation methods or variable dependencies
-- Users need to switch between different formulas or scenarios
-- Complex workflows with conditional logic
-- Example: Retirement calculator (choose method: simple savings, compound interest, with conditions based on age)
-- The "logic.methods" object is REQUIRED
+- You are converting between **two units** (e.g. kilocalories ↔ kilojoules, lumens ↔ lux, miles ↔ kilometers).
+- The conversion is a **fixed mathematical relationship**.
+- The user typically enters **one value** and gets **one primary output**.
+- No additional variables or intermediate expressions are needed.
 
-**CRITICAL: DO NOT use simple_calc or advanced_calc for unit conversions. DO NOT add a form object to a converter.**
+Examples:
+
+- “Convert Kilocalories to Kilojoules”
+- “Lumens to Lux Converter”
+- “Miles to Kilometers Converter”
+
+### `component_type: "simple_calc"`
+
+Use **simple_calc** if:
+
+- You are computing values using **one formula block** with multiple inputs.
+- There is **one primary result** (possibly with a small number of supporting outputs).
+- The calculator logic is straightforward and can be expressed as:
+  - `logic.type = "formula"`
+  - `logic.outputs[]` with `expression` fields referencing `form.fields[].id`.
+
+Examples:
+
+- BMI calculator (weight + height → BMI)
+- Mortgage payment calculator
+- Break-even point calculator
+
+### `component_type: "advanced_calc"`
+
+Use **advanced_calc** if:
+
+- There are **multiple methods** or scenarios in a single tool.
+- Users can switch between different formulas or workflows.
+- You need an internal graph of **variables** with dependencies and multiple outputs per method.
+
+Examples:
+
+- Retirement planner with multiple methods
+- Complex engineering calculators with several modes
+- “From Volume” vs “From Area × Depth” methods within one tool
+
+> **CRITICAL:**
+>
+> - Do NOT use `simple_calc` or `advanced_calc` for pure unit conversions.
+> - Do NOT add a `form` object to a pure converter.
 
 ---
 
-## Top-Level Structure
+## 2. Top-level wrapper structure (for ChatGPT output)
+
+Your full response to the user (outside this schema) may include a wrapper like:
 
 ```json
 {
@@ -42,114 +74,129 @@ Before you start, determine which calculator type is needed:
 }
 ```
 
-## For `component_type: "converter"`
+The repo, however, saves **only** the inner `config_json` to `data/configs/*.json`.
+
+---
+
+## 3. `config_json` for `component_type: "converter"`
 
 **Allowed fields in `config_json`:**
-- `version` (required): semantic string, e.g., "1.0.0"
-- `metadata` (required):
-  - `title` (string, no HTML)
-  - `description` (string, no HTML)
-- `logic` (required):
-  - `type`: MUST be exactly `"conversion"`
-  - `fromUnitId`: string matching lib/conversions.ts (e.g., "kilocalorie", "foot")
-  - `toUnitId`: string matching lib/conversions.ts (e.g., "kilojoule", "meter")
-  - **DO NOT add**: `factor`, `formula`, `precision`, `units`, `customFactors`
-- `form`: OMIT or set to `null` (converters render their own inputs)
-- `page_content` (required): object with these fields ONLY:
-  - `introduction`: array of plain-text strings (2–3 paragraphs)
-  - `methodology`: array of plain-text strings (authoritative walkthrough)
-  - `how_is_calculated`: array of plain-text strings (concise formulas/steps users see under Pro view)
-  - `faqs`: array of objects: `[{ "question": "...", "answer": "..." }]`
-  - `citations`: array of objects: `[{ "label": "...", "url": "..." }]`
-  - **Optional**: `examples`, `summary`, `glossary` (same format)
-  - **DO NOT add**: `title`, `body`, `items` nested objects, HTML tags
-- `links` (optional): object with:
-  - `internal`: array of slug strings (e.g., `["/conversions/length/..."]`)
-  - `external`: array of objects: `[{ "url": "...", "label": "...", "rel": [...] }]`
-- `schema` (optional): object with:
-  - `additionalTypes`: array of strings (e.g., `["HowTo"]`)
 
-## For `component_type: "simple_calc"`
+- `version` (required)
 
-**Allowed fields in `config_json`:**
-- `version`, `metadata` (same as converter)
-- `logic` (required):
-  - `type`: MUST be exactly `"formula"`
-  - `outputs`: array of:
+  - String, semantic version, e.g. `"1.0.0"`.
+
+- `metadata` (required)
+
+  - `title`: string, no HTML.
+  - `description`: string, no HTML.
+
+- `logic` (required)
+
+  - `type`: MUST be exactly `"conversion"`.
+  - `fromUnitId`: string; MUST match a valid unit ID in `lib/conversions.ts`.
+  - `toUnitId`: string; MUST match a valid unit ID in `lib/conversions.ts`.
+  - **Do NOT add**: `factor`, `formula`, `precision`, `units`, `customFactors`, `methods`, `variables`, or any other fields.
+
+- `form`
+
+  - **Omit entirely** or set to `null` for simple conversions.
+  - Converters normally rely on the generic converter UI, not custom forms.
+
+- `page_content` (required)
+
+  - Object with these keys ONLY:
+    - `introduction`: array of plain-text strings (2–3 paragraphs).
+    - `methodology`: array of plain-text strings (authoritative explanation).
+    - `how_is_calculated`: array of plain-text strings (concise formulas / steps).
+    - `faqs`: array of objects `{ "question": ".", "answer": "." }`.
+    - `citations`: array of objects `{ "label": ".", "url": "." }`.
+  - Optional additional arrays (same flat format as above):
+    - `examples`
+    - `summary`
+    - `glossary` (if used, must be array of `{ "term": ".", "definition": "." }`).
+  - **Do NOT add** nested structures like `{ "title": "...", "body": "..." }`.
+  - **Do NOT use HTML or Markdown** (no `<p>`, `<br>`, `**bold**`, or `[link](url)`).
+
+- `links` (optional)
+
+  - `internal`: array of string slugs (e.g. `"/conversions/length/meters-to-feet"`).
+  - `external`: array of objects:
+    ```json
+    {
+      "url": "https://example.com",
+      "label": "Example Label",
+      "rel": ["noopener", "noreferrer"]
+    }
+    ```
+
+- `schema` (optional)
+  - `additionalTypes`: array of strings, e.g. `["HowTo"]`.
+
+---
+
+## 4. `config_json` for `component_type: "simple_calc"`
+
+**Allowed fields:**
+
+- `version`, `metadata` – same constraints as converters.
+
+- `logic` (required)
+
+  - `type`: MUST be exactly `"formula"`.
+  - `outputs`: array of objects:
     ```json
     {
       "id": "string",
       "label": "string",
       "expression": "math expression referencing form.fields[].id",
-      "unit": "optional",
+      "unit": "optional string",
       "format": "currency|percent|decimal|integer"
     }
     ```
-  - **DO NOT add**: `expressions`, `precision`, `isPrimary`, `description`
-- `form` (required): object with:
-  - `fields`: array of input objects (labels, types, defaults, min/max)
-  - `result`: optional object with `outputs` (simple card display)
-- `page_content`, `links`, `schema` (same as converter)
+  - **Do NOT add**: `expressions`, `engine`, `precision`, `isPrimary`, `description` or any custom logic fields.
 
-### For `component_type: "simple_calc"`
+- `form` (required)
 
-[...]
+  - `fields`: array of input field objects:
+    ```json
+    {
+      "id": "string",
+      "label": "string",
+      "type": "number|integer|select|text",
+      "default": number|string,
+      "min": optional number,
+      "max": optional number,
+      "step": optional number,
+      "options": [
+        { "label": "string", "value": "string" }
+      ] // for select
+    }
+    ```
+  - `result` (optional)
+    - `outputs`: **array of objects**, never strings.
+      - Each object MUST have:
+        - `id`: string – must match one of `logic.outputs[].id`.
+        - `label`: string – user-facing label.
+      - May also include:
+        - `format`: `"currency" | "percent" | "decimal" | "integer"`.
+        - `unit`: string (e.g. `"kg"`, `"years"`, `"%"`).
 
-- `form` (required): object with:
-  - `fields`: array of input objects (labels, types, defaults, min/max)
-  - `result`: optional object with:
-    - `outputs`: **array of objects**, NEVER strings.  
-      Each object MUST have at least:
-      - `id`: string – must match one of `logic.outputs[].id`
-      - `label`: string – user-facing label for that output card  
-      You MAY also include:
-      - `format`: `"currency" | "percent" | "decimal" | "integer"`
-      - `unit`: string (e.g., `"currency"`, `"percent"`, `"years"`)
+  #### ❌ WRONG (will break the build)
 
-#### ❌ WRONG (will break the build)
+  ```json
+  "result": {
+    "outputs": [
+      "ebit",
+      "ebit_reconciled",
+      "ebit_margin"
+    ]
+  }
+  ```
 
-```json
-"result": {
-  "outputs": [
-    "ebit",
-    "ebit_reconciled",
-    "ebit_margin"
-  ]
-}
+  #### ✅ CORRECT
 
-✅ CORRECT
-"result": {
-  "outputs": [
-    { "id": "ebit", "label": "EBIT (Earnings Before Interest & Taxes)" },
-    { "id": "ebit_reconciled", "label": "EBIT (reconciled from Net Income)" },
-    { "id": "ebit_margin", "label": "EBIT Margin (%)" }
-  ]
-}
-
-
-This way, when `generate-prompts.js` injects `SCHEMA_STRICT_RULES.md` into every prompt, the model gets a **hard schema rule** for `form.result.outputs`.
-
----
-
-### 4. What to tweak in the README prompt (optional but recommended)
-
-In `README.md`, inside the AI prompt template section where you describe `form`, update this bullet:
-
-Current-ish:
-
-> Use `form.result.outputs` when you want companion result cards—each entry should only include `id`, `label`, `format`, and optional `unit`.
-
-Make it more rigid and explicit:
-
-```text
-- For simple calculators, supply a flat `fields` array (labels, types, defaults, min/max, step, options).
-- If you want companion result cards, use `form.result.outputs`:
-
-  - `form.result.outputs` MUST be an array of OBJECTS, NOT strings.
-  - Each object MUST include `id` and `label`.
-  - You MAY also include `format` and `unit`.
-
-  Example (CORRECT):
+  ```json
   "result": {
     "outputs": [
       { "id": "ebit", "label": "EBIT (Earnings Before Interest & Taxes)" },
@@ -157,16 +204,24 @@ Make it more rigid and explicit:
       { "id": "ebit_margin", "label": "EBIT Margin (%)" }
     ]
   }
-  
+  ```
 
-## For `component_type: "advanced_calc"`
+- `page_content`, `links`, `schema`
+  - Same format and restrictions as for converters.
 
-**Allowed fields in `config_json`:**
-- `version`, `metadata` (same as converter)
-- `logic` (required):
-  - `type`: MUST be exactly `"advanced"`
-  - `defaultMethod`: string (id of method to load first)
-  - `methods`: object where each key is a method id:
+---
+
+## 5. `config_json` for `component_type: "advanced_calc"`
+
+**Allowed fields:**
+
+- `version`, `metadata` – same constraints as converters.
+
+- `logic` (required)
+
+  - `type`: MUST be exactly `"advanced"`.
+  - `defaultMethod`: string – key of the default method.
+  - `methods`: object map of method definitions:
     ```json
     {
       "method_id": {
@@ -175,11 +230,11 @@ Make it more rigid and explicit:
         "variables": {
           "var_name": {
             "expression": "math expression",
-            "dependencies": [],
+            "dependencies": ["other_var", "field_id"],
             "label": "string",
-            "unit": "optional",
+            "unit": "optional string",
             "format": "currency|percent|decimal|integer",
-            "display": true|false
+            "display": true
           }
         },
         "outputs": [
@@ -187,52 +242,87 @@ Make it more rigid and explicit:
             "id": "string",
             "label": "string",
             "variable": "var_name",
-            "unit": "optional",
+            "unit": "optional string",
             "format": "currency|percent|decimal|integer"
           }
         ]
       }
     }
     ```
-- `form` (optional): object with:
-  - `fields`: global inputs
-  - `sections`: grouped inputs with optional `show_when` conditional logic
-- `page_content`, `links`, `schema` (same as converter)
 
-## Critical Rules (VIOLATIONS WILL CAUSE REJECTION)
+- `form` (optional)
 
-1. **NO HTML**: Never use `<div>`, `<p>`, `<br>`, markdown, or any markup. Use plain-text strings only.
+  - `fields`: global inputs (same format as simple_calc).
+  - `sections`: grouped inputs with optional `show_when`:
+    ```json
+    {
+      "id": "section_id",
+      "label": "Section label",
+      "show_when": { "field": "field_id", "is": "value" },
+      "fields": [
+        {
+          "id": "field_id",
+          "label": "string",
+          "type": "number|integer|select|text",
+          "default": number|string,
+          "min": optional number,
+          "max": optional number,
+          "step": optional number,
+          "options": [
+            { "label": "string", "value": "string" }
+          ]
+        }
+      ]
+    }
+    ```
 
-2. **NO custom fields**: Don't add `description`, `notes`, `help`, `ui`, `layout`, `styling`, `canonical_url`, `robots`, `keywords`, `schema_org`, `open_graph`, `twitter_card`, or any field not listed above.
+- `page_content`, `links`, `schema`
+  - Same format and restrictions as for converters.
 
-3. **NO nested `page_content` objects**: Don't use `{ "title": "...", "body": "..." }` format. Use flat arrays of strings instead.
+---
 
-4. **Converters don't have `form`**: Omit the field entirely or set to `null`. Only simple_calc and advanced_calc have form objects.
+## 6. `page_content` rules (all types)
 
-5. **component_type must match content**:
-   - "converter" = unit conversion (NO form, logic.type = "conversion")
-   - "simple_calc" = formula calculation (form REQUIRED, logic.type = "formula")
-   - "advanced_calc" = multiple methods (form optional, logic.type = "advanced")
+- `page_content` MUST be a flat object of arrays and simple objects:
 
-6. **Expressions must be valid**: Math expressions in `logic.outputs[].expression` or `logic.methods[].variables[].expression` must reference field IDs or other variables that exist.
+  - `introduction`: `string[]`
+  - `methodology`: `string[]`
+  - `how_is_calculated`: `string[]`
+  - `examples`: `string[]` (optional)
+  - `summary`: `string[]` (optional)
+  - `faqs`: `{ question, answer }[]`
+  - `citations`: `{ label, url }[]`
+  - `glossary`: `{ term, definition }[]` (optional)
 
-7. **Unit IDs must exist**: `fromUnitId` and `toUnitId` must match actual entries in `lib/conversions.ts`.
+- **No HTML, no Markdown**:
 
-8. **`page_content.introduction` is array of strings**: Not a single string, not an object with "title" + "body". Example: `["String 1", "String 2", "String 3"]`
+  - No `<div>`, `<p>`, `<br>`, `<strong>`, etc.
+  - No `**bold**`, `_italic_`, `[link](url)`, or `> blockquote`.
 
-9. **`page_content.faqs` is array of objects**: Each object must have `question` and `answer` keys only. Example: `[{ "question": "Q?", "answer": "A." }]`
+- **URLs**:
 
-10. **`page_content.citations` is array of objects**: Each object must have `label` and `url` keys (no HTML in either). **URLs MUST be plain strings like `"https://example.com"` – NEVER use Markdown syntax `[url](url)` or HTML `<a>` tags.**
+  - `citations[].url` must be plain strings like:
+    - `"https://example.com/path"`
+  - Do NOT wrap in Markdown or HTML.
 
-11. **No trailing commas, no undefined values, no comments in JSON**.
+- **Glossary**:
+  - If used, MUST look like:
+    ```json
+    "glossary": [
+      { "term": "Bulk density", "definition": "Mass per unit volume..." },
+      { "term": "Compaction factor", "definition": "Ratio that describes..." }
+    ]
+    ```
+  - NOT an array of strings.
 
-## Common Mistakes (DON'T DO THIS)
+---
 
-### ❌ WRONG: Converter with form and expression engine
-```json
-{
-  "component_type": "converter",
-  "config_json": {
+## 7. Forbidden patterns (will be rejected)
+
+- Converters with form + expression engine:
+
+  ```json
+  {
     "logic": {
       "type": "expression",
       "engine": "math-expression",
@@ -240,172 +330,50 @@ Make it more rigid and explicit:
     },
     "form": { ... }
   }
-}
-```
-**Problem**: Converters use "conversion" type, not "expression". No form needed.
+  ```
 
-### ❌ WRONG: Markdown URLs in citations
-```json
-"citations": [
-  {
-    "label": "NIST Standards",
-    "url": "[https://nist.gov/...](https://nist.gov/...)"
-  }
-]
-```
-**Problem**: URLs have [brackets]. Should be plain: `"url": "https://nist.gov/..."`
+- Markdown URLs:
 
-### ❌ WRONG: Nested page_content structure
-```json
-"page_content": {
-  "formula": {
-    "heading": "How to Convert",
-    "body": "Step by step..."
-  },
-  "faq": {
-    "items": [...]
-  }
-}
-```
-**Problem**: Should use flat arrays. Correct format:
-```json
-"page_content": {
-  "introduction": ["String 1", "String 2"],
-  "faqs": [{ "question": "Q?", "answer": "A." }]
-}
-```
-
-### ❌ WRONG: Extra metadata fields
-```json
-"metadata": {
-  "title": "...",
-  "description": "...",
-  "canonical_url": "...",
-  "robots": "...",
-  "keywords": [...],
-  "schema_org": {...},
-  "open_graph": {...}
-}
-```
-**Problem**: Only `title` and `description` allowed. SEO fields belong in Next.js config, not here.
-
----
-
-## Example: Minimal Converter (COPY THIS STRUCTURE)
-
-```json
-{
-    "version": "1.0.0",
-    "metadata": {
-      "title": "Convert Kilocalories to Kilojoules",
-      "description": "Convert energy values between kilocalories and kilojoules using SI-consistent standards."
-    },
-    "logic": {
-      "type": "conversion",
-      "fromUnitId": "kilocalorie",
-      "toUnitId": "kilojoule"
-    },
-    "page_content": {
-      "introduction": [
-        "Convert energy values between kilocalories and kilojoules.",
-        "Based on the thermochemical definition: 1 kcal = 4.184 kJ."
-      ],
-      "methodology": [
-        "The conversion factor comes from NIST standards."
-      ],
-      "faqs": [
-        {
-          "question": "What is the exact relationship?",
-          "answer": "1 kcal = 4.184 kJ by thermochemical definition."
-        }
-      ],
-      "citations": [
-        {
-          "label": "NIST SI unit conversion",
-          "url": "https://nvlpubs.nist.gov/..."
-        }
-      ]
-    },
-    "links": {
-      "internal": ["/conversions/energy/..."],
-      "external": []
-    },
-    "schema": {
-      "additionalTypes": ["HowTo"]
+  ```json
+  "citations": [
+    {
+      "label": "NIST",
+      "url": "[https://nist.gov/...](https://nist.gov/...)"
     }
-  
-}
-```
+  ]
+  ```
+
+- Nested `page_content`:
+
+  ```json
+  "page_content": {
+    "formula": {
+      "heading": "How to Convert",
+      "body": "..."
+    }
+  }
+  ```
+
+- Extra metadata fields in `metadata`:
+  - Do **not** add `canonical_url`, `robots`, `keywords`, `schema_org`, `open_graph`, etc.
 
 ---
 
-## VALIDATION CHECKLIST (Before you respond with JSON)
+## 8. Internal checklist (for the model, not to be printed)
 
-**Read this checklist and verify every item:**
+Before you output JSON you must internally verify:
 
-- [ ] My JSON is valid (no syntax errors, balanced quotes/braces)
-- [ ] `component_type` is EXACTLY one of: "converter", "simple_calc", "advanced_calc"
-- [ ] `logic.type` matches the component_type:
-  - converter → "conversion"
-  - simple_calc → "formula"
-  - advanced_calc → "advanced"
-- [ ] `fromUnitId` and `toUnitId` are real units in lib/conversions.ts (e.g., "lumen", "lux", "meter", "foot")
-- [ ] `metadata` has ONLY: `title` (string, no HTML) and `description` (string, no HTML)
-- [ ] `page_content` has ONLY these fields (as arrays of strings): `introduction`, `methodology`, `how_is_calculated`, and optional `examples`, `summary`, `glossary`
-- [ ] `page_content.faqs` is an array of objects: `[{ "question": "...", "answer": "..." }]` – NO "items" nested object
-- [ ] `page_content.citations` is an array of objects: `[{ "label": "...", "url": "..." }]` – URLs are PLAIN STRINGS, not Markdown
-- [ ] All URLs are bare HTTPS strings like `"https://example.com"` – NOT `"[https://example.com](https://example.com)"` or `"<a href='...'>"`
-- [ ] No HTML tags (`<div>`, `<p>`, `<br>`, etc.) in any text field
-- [ ] No forbidden fields like `form` (for converters), `description`, `canonical_url`, `robots`, `keywords`, etc.
-- [ ] Arrays like `introduction`, `methodology`, `faqs`, `citations` are NOT nested in objects like `{ "title": "...", "body": [...] }`
+1. `component_type` is exactly `"converter"`, `"simple_calc"`, or `"advanced_calc"`.
+2. `logic.type` matches:
+   - converter → `"conversion"`
+   - simple_calc → `"formula"`
+   - advanced_calc → `"advanced"`.
+3. `fromUnitId` / `toUnitId` (if present) exist in `lib/conversions.ts`.
+4. `page_content` uses only allowed keys and flat arrays (no nested objects).
+5. `page_content.faqs` and `page_content.citations` are arrays of objects with the required keys.
+6. `page_content.glossary` (if present) is an array of `{ term, definition }` objects.
+7. No HTML or Markdown is present in any text.
+8. No forbidden fields are present.
+9. All expressions reference existing field IDs or variables.
 
-**If any checkbox fails, fix it before responding.**
-
----
-
-## CRITICAL: Internal checklist before you generate JSON
-
-Before you generate the JSON, you must internally verify ALL of the following.
-These checks are for your own reasoning only – do NOT print this checklist,
-do NOT explain it, do NOT ask any follow-up questions. You will only return
-the final JSON object.
-
-1. You have correctly chosen the calculator type:
-   `component_type` is exactly one of `"converter"`, `"simple_calc"`, or `"advanced_calc"`,
-   and `logic.type` matches (`"conversion"`, `"formula"`, or `"advanced"`).
-
-2. You will use `page_content` as **flat arrays only**:
-   `introduction[]`, `methodology[]`, `faqs[]`, `citations[]`
-   (plus any allowed optional arrays like `examples`, `summary`, `glossary`).
-
-3. All URLs in `page_content.citations[].url` are **plain HTTPS strings**,
-   with no Markdown like `[url](url)` and no HTML tags.
-
-4. You have NOT added any forbidden fields (no `slug`, `name`, `category`,
-   `meta`, `schema_org`, `canonical_url`, `robots`, `keywords`, or any other
-   field not explicitly listed in this schema).
-
-5. All math expressions reference existing field IDs or variables, and
-   `fromUnitId` / `toUnitId` (if used) are valid unit IDs.
-
-6. You understand that this is the final JSON and you cannot add commentary
-   or explanations afterward.
-
-Once all points above are satisfied IN YOUR INTERNAL REASONING,
-you directly output the final JSON object and nothing else.
-Do not print the checklist, do not ask “Ready for me to produce the JSON?”.
-
-
-This ensures you have understood the schema before committing to output.
-
----
-
-
-## Reference Documentation
-
-For any ambiguity not covered here, see:
-- **QUANTUS_SCHEMA_DEFINITIVE.md** – Complete specification with no exceptions
-- **SCHEMA_ENFORCEMENT_GUIDE.md** – User guide for following this schema
-- **lib/conversions.ts** – Current list of supported unit IDs
-
-If something is not in QUANTUS_SCHEMA_DEFINITIVE.md, it is NOT allowed.
+Once all checks pass in your internal reasoning, output ONLY the final JSON object (for `config_json`), no commentary.
