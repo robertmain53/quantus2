@@ -1,0 +1,576 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Correlation Coefficient Toolkit",
+    "description": "Interactive calculator supporting multiple correlation measures (Pearson, Spearman, Kendall Tau, Matthews). Paste paired lists or enter confusion-matrix counts. Includes method selection, clear outputs, and accuracy / limitations guidance tied to NIST, ISO, IEEE, and OSHA best practices."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "pearson",
+    "methods": {
+      "pearson": {
+        "label": "Pearson correlation (r)",
+        "description": "Measures linear association between two continuous variables. Appropriate when relationships are approximately linear and data are interval or ratio scale.",
+        "variables": {
+          "n": {
+            "expression": "length(x_values, y_values)",
+            "dependencies": [
+              "x_values",
+              "y_values"
+            ],
+            "label": "Paired sample size",
+            "format": "integer",
+            "display": true
+          },
+          "mean_x": {
+            "expression": "mean(x_values)",
+            "dependencies": [
+              "x_values"
+            ],
+            "label": "Mean of X",
+            "format": "decimal",
+            "display": false
+          },
+          "mean_y": {
+            "expression": "mean(y_values)",
+            "dependencies": [
+              "y_values"
+            ],
+            "label": "Mean of Y",
+            "format": "decimal",
+            "display": false
+          },
+          "cov_xy": {
+            "expression": "cov(x_values, y_values)",
+            "dependencies": [
+              "x_values",
+              "y_values"
+            ],
+            "label": "Covariance (X, Y)",
+            "format": "decimal",
+            "display": false
+          },
+          "std_x": {
+            "expression": "std(x_values)",
+            "dependencies": [
+              "x_values"
+            ],
+            "label": "Standard deviation X",
+            "format": "decimal",
+            "display": false
+          },
+          "std_y": {
+            "expression": "std(y_values)",
+            "dependencies": [
+              "y_values"
+            ],
+            "label": "Standard deviation Y",
+            "format": "decimal",
+            "display": false
+          },
+          "r": {
+            "expression": "cov_xy / (std_x * std_y)",
+            "dependencies": [
+              "cov_xy",
+              "std_x",
+              "std_y"
+            ],
+            "label": "Pearson r",
+            "format": "decimal",
+            "display": true
+          },
+          "t_stat": {
+            "expression": "r * sqrt((n - 2) / (1 - r * r))",
+            "dependencies": [
+              "r",
+              "n"
+            ],
+            "label": "t statistic for r",
+            "format": "decimal",
+            "display": false
+          },
+          "p_value": {
+            "expression": "2 * (1 - t_cdf(abs(t_stat), n - 2))",
+            "dependencies": [
+              "t_stat",
+              "n"
+            ],
+            "label": "Two-tailed p-value (approx.)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "r",
+            "label": "Pearson correlation coefficient (r)",
+            "variable": "r",
+            "format": "decimal"
+          },
+          {
+            "id": "p_value",
+            "label": "Two-tailed p-value (approx.)",
+            "variable": "p_value",
+            "format": "decimal"
+          }
+        ]
+      },
+      "spearman": {
+        "label": "Spearman rank correlation (rho)",
+        "description": "Nonparametric measure of monotonic association based on ranks. Use when data are ordinal or when linearity assumptions are violated.",
+        "variables": {
+          "rank_x": {
+            "expression": "rank(x_values)",
+            "dependencies": [
+              "x_values"
+            ],
+            "label": "Ranks of X",
+            "format": "decimal",
+            "display": false
+          },
+          "rank_y": {
+            "expression": "rank(y_values)",
+            "dependencies": [
+              "y_values"
+            ],
+            "label": "Ranks of Y",
+            "format": "decimal",
+            "display": false
+          },
+          "cov_ranks": {
+            "expression": "cov(rank_x, rank_y)",
+            "dependencies": [
+              "rank_x",
+              "rank_y"
+            ],
+            "label": "Covariance of ranks",
+            "format": "decimal",
+            "display": false
+          },
+          "std_rank_x": {
+            "expression": "std(rank_x)",
+            "dependencies": [
+              "rank_x"
+            ],
+            "label": "Std dev ranks X",
+            "format": "decimal",
+            "display": false
+          },
+          "std_rank_y": {
+            "expression": "std(rank_y)",
+            "dependencies": [
+              "rank_y"
+            ],
+            "label": "Std dev ranks Y",
+            "format": "decimal",
+            "display": false
+          },
+          "rho": {
+            "expression": "cov_ranks / (std_rank_x * std_rank_y)",
+            "dependencies": [
+              "cov_ranks",
+              "std_rank_x",
+              "std_rank_y"
+            ],
+            "label": "Spearman rho",
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "length(x_values, y_values)",
+            "dependencies": [
+              "x_values",
+              "y_values"
+            ],
+            "label": "Sample size",
+            "format": "integer",
+            "display": false
+          },
+          "p_value": {
+            "expression": "approx_spearman_pval(rho, n)",
+            "dependencies": [
+              "rho",
+              "n"
+            ],
+            "label": "Two-tailed p-value (approx.)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "rho",
+            "label": "Spearman rank correlation (rho)",
+            "variable": "rho",
+            "format": "decimal"
+          },
+          {
+            "id": "p_value",
+            "label": "Two-tailed p-value (approx.)",
+            "variable": "p_value",
+            "format": "decimal"
+          }
+        ]
+      },
+      "kendall": {
+        "label": "Kendall Tau",
+        "description": "Measure of ordinal association based on concordant and discordant pairs. Robust for small samples and many ties.",
+        "variables": {
+          "tau": {
+            "expression": "kendall_tau(x_values, y_values)",
+            "dependencies": [
+              "x_values",
+              "y_values"
+            ],
+            "label": "Kendall Tau",
+            "format": "decimal",
+            "display": true
+          },
+          "p_value": {
+            "expression": "kendall_pval(x_values, y_values)",
+            "dependencies": [
+              "x_values",
+              "y_values"
+            ],
+            "label": "Two-tailed p-value (exact or approx.)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "tau",
+            "label": "Kendall Tau",
+            "variable": "tau",
+            "format": "decimal"
+          },
+          {
+            "id": "p_value",
+            "label": "Two-tailed p-value (exact or approx.)",
+            "variable": "p_value",
+            "format": "decimal"
+          }
+        ]
+      },
+      "matthews": {
+        "label": "Matthews correlation coefficient (MCC)",
+        "description": "Correlation between observed and predicted binary classifications using confusion-matrix counts. Use for balanced evaluation of binary classifiers.",
+        "variables": {
+          "tp": {
+            "expression": "tp",
+            "dependencies": [
+              "tp"
+            ],
+            "label": "True positives",
+            "format": "integer",
+            "display": false
+          },
+          "tn": {
+            "expression": "tn",
+            "dependencies": [
+              "tn"
+            ],
+            "label": "True negatives",
+            "format": "integer",
+            "display": false
+          },
+          "fp": {
+            "expression": "fp",
+            "dependencies": [
+              "fp"
+            ],
+            "label": "False positives",
+            "format": "integer",
+            "display": false
+          },
+          "fn": {
+            "expression": "fn",
+            "dependencies": [
+              "fn"
+            ],
+            "label": "False negatives",
+            "format": "integer",
+            "display": false
+          },
+          "mcc": {
+            "expression": "(tp * tn - fp * fn) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))",
+            "dependencies": [
+              "tp",
+              "tn",
+              "fp",
+              "fn"
+            ],
+            "label": "Matthews correlation coefficient",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "mcc",
+            "label": "Matthews correlation coefficient (MCC)",
+            "variable": "mcc",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method_select",
+        "label": "Method",
+        "type": "select",
+        "default": "pearson",
+        "options": [
+          {
+            "label": "Pearson (linear)",
+            "value": "pearson"
+          },
+          {
+            "label": "Spearman (rank)",
+            "value": "spearman"
+          },
+          {
+            "label": "Kendall Tau",
+            "value": "kendall"
+          },
+          {
+            "label": "Matthews (confusion matrix)",
+            "value": "matthews"
+          }
+        ]
+      },
+      {
+        "id": "x_values",
+        "label": "X values (comma, space or newline separated)",
+        "type": "text",
+        "default": "1, 2, 3, 4, 5"
+      },
+      {
+        "id": "y_values",
+        "label": "Y values (comma, space or newline separated)",
+        "type": "text",
+        "default": "2, 4, 6, 8, 10"
+      },
+      {
+        "id": "tp",
+        "label": "True positives (TP)",
+        "type": "integer",
+        "default": 0,
+        "min": 0
+      },
+      {
+        "id": "fp",
+        "label": "False positives (FP)",
+        "type": "integer",
+        "default": 0,
+        "min": 0
+      },
+      {
+        "id": "fn",
+        "label": "False negatives (FN)",
+        "type": "integer",
+        "default": 0,
+        "min": 0
+      },
+      {
+        "id": "tn",
+        "label": "True negatives (TN)",
+        "type": "integer",
+        "default": 0,
+        "min": 0
+      }
+    ],
+    "sections": [
+      {
+        "id": "paired_data_notes",
+        "label": "Paired data",
+        "show_when": {
+          "field": "method_select",
+          "is": "pearson"
+        },
+        "fields": [
+          {
+            "id": "paired_hint_pearson",
+            "label": "Note",
+            "type": "text",
+            "default": "Paste paired numeric lists for X and Y. Lists must have equal length and represent matched observations."
+          }
+        ]
+      },
+      {
+        "id": "paired_data_notes_spearman",
+        "label": "Paired data (Spearman)",
+        "show_when": {
+          "field": "method_select",
+          "is": "spearman"
+        },
+        "fields": [
+          {
+            "id": "paired_hint_spearman",
+            "label": "Note",
+            "type": "text",
+            "default": "Spearman computes correlation on ranks. Tied ranks are handled by average ranking."
+          }
+        ]
+      },
+      {
+        "id": "paired_data_notes_kendall",
+        "label": "Paired data (Kendall)",
+        "show_when": {
+          "field": "method_select",
+          "is": "kendall"
+        },
+        "fields": [
+          {
+            "id": "paired_hint_kendall",
+            "label": "Note",
+            "type": "text",
+            "default": "Kendall Tau counts concordant and discordant pairs; robust for small samples and ties."
+          }
+        ]
+      },
+      {
+        "id": "confusion_matrix",
+        "label": "Confusion matrix counts",
+        "show_when": {
+          "field": "method_select",
+          "is": "matthews"
+        },
+        "fields": [
+          {
+            "id": "cm_hint",
+            "label": "Note",
+            "type": "text",
+            "default": "Enter integer counts for TP, FP, FN, TN. MCC requires all denominators non-zero."
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This toolkit computes multiple correlation measures to quantify association between variables or classifier outputs. Choose the appropriate method for your data: Pearson for linear continuous relationships, Spearman or Kendall for ordinal or non-linear monotonic relationships, and Matthews for binary classification confusion matrices.",
+      "The interface accepts paired lists for rank- and value-based measures and integer confusion-matrix counts for MCC. Results include the coefficient and an approximate p-value where applicable, plus guidance about assumptions and limitations."
+    ],
+    "methodology": [
+      "Pearson r is computed as covariance divided by the product of standard deviations. A t-test approximation provides a two-tailed p-value when sample size is sufficient (at least three observations) and assumptions hold.",
+      "Spearman rho is computed by converting values to ranks then applying the Pearson formula to ranks; p-values use standard approximations suitable for moderate to large samples or exact methods for small samples.",
+      "Kendall Tau is computed by counting concordant and discordant pairs; exact or asymptotic p-values are reported depending on sample size and ties.",
+      "Matthews correlation coefficient (MCC) is computed from confusion-matrix counts using the standard formula and is appropriate for evaluating binary classifiers especially when class sizes are imbalanced."
+    ],
+    "how_is_calculated": [
+      "Pearson r = cov(X, Y) / (std(X) * std(Y)). t = r * sqrt((n-2)/(1-r^2)). p ≈ 2 * (1 - T_cdf(|t|, n-2)).",
+      "Spearman rho = Pearson r computed on rank(X) and rank(Y). For tied ranks, average ranks are used.",
+      "Kendall Tau = (concordant_pairs - discordant_pairs) / total_pairs; p computed exact or approximated with normal approximation for large n.",
+      "Matthews mcc = (TP*TN - FP*FN) / sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))."
+    ],
+    "examples": [
+      "Example 1: Pearson — X: 1,2,3,4,5 and Y: 2,4,6,8,10 returns r = 1.0 and p ≈ 0 (perfect linear relationship).",
+      "Example 2: Spearman — X and Y with monotonic but non-linear relationship will show high rho even if Pearson r is lower.",
+      "Example 3: Matthews — For TP=50, FP=10, FN=5, TN=35, MCC summarizes classifier quality in a single value between -1 and 1."
+    ],
+    "summary": [
+      "Select Pearson for linear associations, Spearman or Kendall when data are ordinal or assumptions are violated, and Matthews for binary classification evaluation.",
+      "Always inspect scatterplots or contingency tables and check assumptions before interpreting correlation coefficients. Correlation does not imply causation."
+    ],
+    "faqs": [
+      {
+        "question": "Which correlation should I use if data are not normally distributed?",
+        "answer": "Use Spearman or Kendall Tau, which are nonparametric and rely on ranks rather than raw values; they are more robust to non-normal distributions and outliers."
+      },
+      {
+        "question": "Can I use Pearson with tied or duplicated values?",
+        "answer": "Pearson is sensitive to ties and outliers. If ties are common or relationship is monotonic but non-linear, prefer Spearman or Kendall."
+      },
+      {
+        "question": "How reliable are p-values reported here?",
+        "answer": "P-values are approximate when using asymptotic formulas. For small samples or many ties use exact methods. See the methodology and the cited standards for guidance on sample-size thresholds and exact tests."
+      },
+      {
+        "question": "What input formats are accepted for paired lists?",
+        "answer": "Paste comma-, space-, or newline-separated numeric lists into the X and Y fields. Lists must match in length and represent paired observations in order."
+      },
+      {
+        "question": "Are negative or zero denominators possible in MCC?",
+        "answer": "MCC denominator can be zero when any of the products (TP+FP), (TP+FN), (TN+FP), or (TN+FN) equals zero. The calculator will indicate invalid or undefined MCC in that case."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST/SEMATECH Engineering Statistics Handbook",
+        "url": "https://www.itl.nist.gov/div898/handbook/"
+      },
+      {
+        "label": "ISO (standards search and statistics standards reference)",
+        "url": "https://www.iso.org/standards.html"
+      },
+      {
+        "label": "IEEE Standards Association (statistics and measurement best practices)",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA Technical Resources and Industrial Statistics Guidance",
+        "url": "https://www.osha.gov/data"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Covariance",
+        "definition": "A measure of joint variability between two variables. Positive covariance indicates a tendency to increase together; negative indicates opposite directions."
+      },
+      {
+        "term": "Pearson correlation (r)",
+        "definition": "A standardized measure of linear association that ranges from -1 (perfect negative linear relationship) to 1 (perfect positive linear relationship)."
+      },
+      {
+        "term": "Spearman rho",
+        "definition": "A correlation measure based on ranks, capturing monotonic relationships; robust to non-normality and some outliers."
+      },
+      {
+        "term": "Kendall Tau",
+        "definition": "Ordinal association measure based on concordant and discordant pairs; interpretable as probability of agreement minus disagreement."
+      },
+      {
+        "term": "Matthews correlation coefficient (MCC)",
+        "definition": "A single-number measure of binary classification quality that accounts for true/false positives and negatives; ranges from -1 to 1."
+      },
+      {
+        "term": "p-value",
+        "definition": "The probability under a specified null hypothesis of observing data as extreme or more extreme than the observed; here used as an approximate significance indicator."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/statistics/sample-size-guidance",
+      "/statistics/assumptions-and-diagnostics"
+    ],
+    "external": [
+      {
+        "url": "https://www.itl.nist.gov/div898/handbook/",
+        "label": "NIST Engineering Statistics Handbook",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standards.html",
+        "label": "ISO Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FAQPage"
+    ]
+  }
+}

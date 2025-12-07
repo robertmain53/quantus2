@@ -1,0 +1,638 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Debt Avalanche & Comparator Calculator (Advanced)",
+    "description": "Advanced debt payoff calculator supporting Debt Avalanche and Debt Snowball scenarios. Enter up to six debts (balance, APR, minimum payment), set an extra monthly payment or total monthly budget, and compare estimated payoff time, total interest, and total paid. Includes accuracy caveats and references to numerical standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "avalanche",
+    "methods": {
+      "avalanche": {
+        "label": "Debt Avalanche (highest APR first)",
+        "description": "Allocates any extra monthly payment to the debt with the highest APR while paying each account's minimum. Uses an aggregated effective-rate approximation to estimate payoff time and totals. See methodology notes and accuracy caveats in page content.",
+        "variables": {
+          "total_balance": {
+            "expression": "debt1_balance+debt2_balance+debt3_balance+debt4_balance+debt5_balance+debt6_balance",
+            "dependencies": [
+              "debt1_balance",
+              "debt2_balance",
+              "debt3_balance",
+              "debt4_balance",
+              "debt5_balance",
+              "debt6_balance"
+            ],
+            "label": "Total outstanding balance",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "weighted_apr_annual": {
+            "expression": "(debt1_balance*debt1_apr+debt2_balance*debt2_apr+debt3_balance*debt3_apr+debt4_balance*debt4_apr+debt5_balance*debt5_apr+debt6_balance*debt6_apr)/max(total_balance,1e-9)",
+            "dependencies": [
+              "debt1_balance",
+              "debt2_balance",
+              "debt3_balance",
+              "debt4_balance",
+              "debt5_balance",
+              "debt6_balance",
+              "debt1_apr",
+              "debt2_apr",
+              "debt3_apr",
+              "debt4_apr",
+              "debt5_apr",
+              "debt6_apr",
+              "total_balance"
+            ],
+            "label": "Weighted average APR (annual)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "weighted_monthly_rate": {
+            "expression": "weighted_apr_annual/12/100",
+            "dependencies": [
+              "weighted_apr_annual"
+            ],
+            "label": "Weighted effective monthly rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "total_min_payment": {
+            "expression": "debt1_min_payment+debt2_min_payment+debt3_min_payment+debt4_min_payment+debt5_min_payment+debt6_min_payment",
+            "dependencies": [
+              "debt1_min_payment",
+              "debt2_min_payment",
+              "debt3_min_payment",
+              "debt4_min_payment",
+              "debt5_min_payment",
+              "debt6_min_payment"
+            ],
+            "label": "Total minimum payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_monthly_payment": {
+            "expression": "total_min_payment+extra_payment",
+            "dependencies": [
+              "total_min_payment",
+              "extra_payment"
+            ],
+            "label": "Monthly payment applied (minimums + extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_to_payoff": {
+            "expression": "total_monthly_payment<=0?0:(weighted_monthly_rate<=0?(total_balance/max(total_monthly_payment,1e-9)): -log(max(1 - weighted_monthly_rate * total_balance / max(total_monthly_payment,1e-9),1e-12))/log(1+weighted_monthly_rate))",
+            "dependencies": [
+              "total_monthly_payment",
+              "weighted_monthly_rate",
+              "total_balance"
+            ],
+            "label": "Estimated months to payoff (approx.)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "months_to_payoff/12",
+            "dependencies": [
+              "months_to_payoff"
+            ],
+            "label": "Estimated years to payoff (approx.)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "total_monthly_payment*months_to_payoff",
+            "dependencies": [
+              "total_monthly_payment",
+              "months_to_payoff"
+            ],
+            "label": "Estimated total paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_paid": {
+            "expression": "total_paid - total_balance",
+            "dependencies": [
+              "total_paid",
+              "total_balance"
+            ],
+            "label": "Estimated total interest",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff",
+            "label": "Months to payoff (approx.)",
+            "variable": "months_to_payoff",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Years to payoff (approx.)",
+            "variable": "payoff_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_paid",
+            "label": "Total interest paid (approx.)",
+            "variable": "total_interest_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total amount paid (approx.)",
+            "variable": "total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_balance",
+            "label": "Total balance",
+            "variable": "total_balance",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "snowball": {
+        "label": "Debt Snowball (smallest balance first)",
+        "description": "Allocates extra payments to the smallest balance while paying each account's minimum. Calculation uses the same aggregated-rate approximation for comparability; the methodology notes explain behavioral differences and when this estimator may be conservative.",
+        "variables": {
+          "total_balance": {
+            "expression": "debt1_balance+debt2_balance+debt3_balance+debt4_balance+debt5_balance+debt6_balance",
+            "dependencies": [
+              "debt1_balance",
+              "debt2_balance",
+              "debt3_balance",
+              "debt4_balance",
+              "debt5_balance",
+              "debt6_balance"
+            ],
+            "label": "Total outstanding balance",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "weighted_apr_annual": {
+            "expression": "(debt1_balance*debt1_apr+debt2_balance*debt2_apr+debt3_balance*debt3_apr+debt4_balance*debt4_apr+debt5_balance*debt5_apr+debt6_balance*debt6_apr)/max(total_balance,1e-9)",
+            "dependencies": [
+              "debt1_balance",
+              "debt2_balance",
+              "debt3_balance",
+              "debt4_balance",
+              "debt5_balance",
+              "debt6_balance",
+              "debt1_apr",
+              "debt2_apr",
+              "debt3_apr",
+              "debt4_apr",
+              "debt5_apr",
+              "debt6_apr",
+              "total_balance"
+            ],
+            "label": "Weighted average APR (annual)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "weighted_monthly_rate": {
+            "expression": "weighted_apr_annual/12/100",
+            "dependencies": [
+              "weighted_apr_annual"
+            ],
+            "label": "Weighted effective monthly rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "total_min_payment": {
+            "expression": "debt1_min_payment+debt2_min_payment+debt3_min_payment+debt4_min_payment+debt5_min_payment+debt6_min_payment",
+            "dependencies": [
+              "debt1_min_payment",
+              "debt2_min_payment",
+              "debt3_min_payment",
+              "debt4_min_payment",
+              "debt5_min_payment",
+              "debt6_min_payment"
+            ],
+            "label": "Total minimum payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_monthly_payment": {
+            "expression": "total_min_payment+extra_payment",
+            "dependencies": [
+              "total_min_payment",
+              "extra_payment"
+            ],
+            "label": "Monthly payment applied (minimums + extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_to_payoff": {
+            "expression": "total_monthly_payment<=0?0:(weighted_monthly_rate<=0?(total_balance/max(total_monthly_payment,1e-9)): -log(max(1 - weighted_monthly_rate * total_balance / max(total_monthly_payment,1e-9),1e-12))/log(1+weighted_monthly_rate))",
+            "dependencies": [
+              "total_monthly_payment",
+              "weighted_monthly_rate",
+              "total_balance"
+            ],
+            "label": "Estimated months to payoff (approx.)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "months_to_payoff/12",
+            "dependencies": [
+              "months_to_payoff"
+            ],
+            "label": "Estimated years to payoff (approx.)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "total_monthly_payment*months_to_payoff",
+            "dependencies": [
+              "total_monthly_payment",
+              "months_to_payoff"
+            ],
+            "label": "Estimated total paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_paid": {
+            "expression": "total_paid - total_balance",
+            "dependencies": [
+              "total_paid",
+              "total_balance"
+            ],
+            "label": "Estimated total interest",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff",
+            "label": "Months to payoff (approx.)",
+            "variable": "months_to_payoff",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Years to payoff (approx.)",
+            "variable": "payoff_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_paid",
+            "label": "Total interest paid (approx.)",
+            "variable": "total_interest_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total amount paid (approx.)",
+            "variable": "total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_balance",
+            "label": "Total balance",
+            "variable": "total_balance",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "extra_payment",
+        "label": "Extra monthly payment (applied above minimums)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "debt1_name",
+        "label": "Debt 1 - name (optional)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "debt1_balance",
+        "label": "Debt 1 - balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt1_apr",
+        "label": "Debt 1 - APR (annual %)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "debt1_min_payment",
+        "label": "Debt 1 - minimum monthly payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt2_name",
+        "label": "Debt 2 - name (optional)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "debt2_balance",
+        "label": "Debt 2 - balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt2_apr",
+        "label": "Debt 2 - APR (annual %)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "debt2_min_payment",
+        "label": "Debt 2 - minimum monthly payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt3_name",
+        "label": "Debt 3 - name (optional)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "debt3_balance",
+        "label": "Debt 3 - balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt3_apr",
+        "label": "Debt 3 - APR (annual %)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "debt3_min_payment",
+        "label": "Debt 3 - minimum monthly payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt4_name",
+        "label": "Debt 4 - name (optional)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "debt4_balance",
+        "label": "Debt 4 - balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt4_apr",
+        "label": "Debt 4 - APR (annual %)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "debt4_min_payment",
+        "label": "Debt 4 - minimum monthly payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt5_name",
+        "label": "Debt 5 - name (optional)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "debt5_balance",
+        "label": "Debt 5 - balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt5_apr",
+        "label": "Debt 5 - APR (annual %)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "debt5_min_payment",
+        "label": "Debt 5 - minimum monthly payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt6_name",
+        "label": "Debt 6 - name (optional)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "debt6_balance",
+        "label": "Debt 6 - balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt6_apr",
+        "label": "Debt 6 - APR (annual %)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "debt6_min_payment",
+        "label": "Debt 6 - minimum monthly payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "months_to_payoff",
+          "label": "Months to payoff (approx.)",
+          "format": "integer"
+        },
+        {
+          "id": "payoff_years",
+          "label": "Years to payoff (approx.)",
+          "format": "decimal"
+        },
+        {
+          "id": "total_interest_paid",
+          "label": "Estimated total interest",
+          "format": "currency"
+        },
+        {
+          "id": "total_paid",
+          "label": "Estimated total paid",
+          "format": "currency"
+        },
+        {
+          "id": "total_balance",
+          "label": "Total balance",
+          "format": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares the Debt Avalanche and Debt Snowball approaches and provides estimated payoff time, total interest, and total amount paid based on your entries. Enter balances, APRs, and minimum monthly payments for up to six debts, and specify any extra monthly amount you will apply above minimums.",
+      "The tool uses an aggregated effective-rate approximation to provide fast, comparable estimates for both approaches. It is designed for planning and comparison; it is not a legally binding amortization schedule."
+    ],
+    "methodology": [
+      "To make multi-account estimates tractable and responsive in a browser environment, the calculator aggregates individual debts into an effective single-loan model by computing a weighted average APR (weights: current balances). It then applies a closed-form amortization approximation to estimate months to payoff given the total monthly payment (sum of minimums plus any extra).",
+      "The Avalanche method described here is conceptual: in practice extra payments are applied to the highest-interest account first. The Snowball method applies extra payments to the smallest-balance account first. For transparency and speed we keep the same aggregated numeric estimator for both methods so users can compare estimated outcomes quickly; exact schedules can differ and are discussed in caveats."
+    ],
+    "how_is_calculated": [
+      "Step 1: Sum balances to compute total_balance = sum(balance_i).",
+      "Step 2: Compute weighted_apr_annual = sum(balance_i * apr_i) / total_balance; derive weighted_monthly_rate = weighted_apr_annual / 12 / 100.",
+      "Step 3: Compute total_monthly_payment = sum(min_payment_i) + extra_payment.",
+      "Step 4: Estimate months using the standard fixed-payment amortization formula for monthly_rate > 0: months = -log(1 - monthly_rate * total_balance / payment) / log(1 + monthly_rate). If monthly_rate is zero, months = total_balance / payment. The calculator clamps divisions to avoid numeric exceptions and reports approximate results."
+    ],
+    "examples": [
+      "Example: Three debts totaling $12,000 with a weighted APR of 14% and a total monthly payment of $600 yields an estimated payoff time of approximately 24 months and estimated interest of about $2,400 using the aggregated approximation.",
+      "Example: Same balances and payments under Snowball may produce similar aggregated estimates but can differ in real schedules if small balances are paid early; use the Snowball method in the UI to compare behavioral differences."
+    ],
+    "faqs": [
+      {
+        "question": "Are these results exact?",
+        "answer": "No. Results are approximate. The tool uses a weighted-average approximation and closed-form estimator to produce quick, comparable outcomes. For exact per-account amortization schedules you should use a detailed iterative amortization engine or export data to a spreadsheet and compute per-debt stepwise allocations."
+      },
+      {
+        "question": "Why use a weighted APR instead of modeling each debt separately?",
+        "answer": "A weighted APR + closed-form approach gives fast, explainable estimates and lets people quickly compare strategies. Exact modeling requires iterative, account-by-account simulation which is slower and more complex to present in compact UI. We provide guidance and limits so users know when to seek a detailed schedule."
+      },
+      {
+        "question": "What inputs make the estimator unreliable?",
+        "answer": "Cases with extremely low total monthly payment (less than monthly interest), promotional 0% APR periods, negative interest, or changing minimum payments over time can make the approximation inaccurate. The calculator clamps values to avoid division-by-zero and reports zero months when payment is nonpositive. See the methodology and accuracy notes."
+      },
+      {
+        "question": "Is my data stored or shared?",
+        "answer": "This configuration does not specify storage. Implementations should follow applicable privacy laws and best practices such as least-privilege data handling and encryption in transit and at rest when personal financial data is stored."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Numerical Standards and Guidelines",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization (numeric accuracy and quality management)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Standards Association",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - Organizational safety & process guidance (governance best practices)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The nominal annual interest rate expressed as a percentage."
+      },
+      {
+        "term": "Minimum payment",
+        "definition": "The required monthly payment on an account stated by the creditor. This calculator sums minimums across accounts as the baseline payment."
+      },
+      {
+        "term": "Debt Avalanche",
+        "definition": "A payoff strategy that applies extra payments to the highest-interest debt first while paying minimums on others."
+      },
+      {
+        "term": "Debt Snowball",
+        "definition": "A payoff strategy that applies extra payments to the smallest-balance debt first while paying minimums on others."
+      },
+      {
+        "term": "Weighted APR",
+        "definition": "An average APR weighted by each debt's balance used here to create an effective single-rate approximation for quick estimation."
+      }
+    ]
+  }
+}

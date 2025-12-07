@@ -1,0 +1,313 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Personal Loan Balloon Payment Calculator (supports bi-weekly payments)",
+    "description": "Calculate scheduled periodic payments and the remaining balloon balance for loans with a balloon due before full amortization. Supports custom payment frequency (e.g., bi-weekly or monthly), amortization period, and balloon timing."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "balloon_schedule",
+    "methods": {
+      "balloon_schedule": {
+        "label": "Balloon schedule (custom frequency)",
+        "description": "Computes the regular periodic payment based on an amortization schedule, then computes the outstanding balance at the balloon date.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "n_amort": {
+            "expression": "amortization_years * payments_per_year",
+            "dependencies": [
+              "amortization_years",
+              "payments_per_year"
+            ],
+            "label": "Number of amortization payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "n_balloon": {
+            "expression": "balloon_years * payments_per_year",
+            "dependencies": [
+              "balloon_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments until balloon",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "payment": {
+            "expression": "r * loan_amount / (1 - pow(1 + r, -n_amort))",
+            "dependencies": [
+              "r",
+              "loan_amount",
+              "n_amort"
+            ],
+            "label": "Scheduled periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_at_balloon": {
+            "expression": "loan_amount * pow(1 + r, n_balloon) - payment * ((pow(1 + r, n_balloon) - 1) / r)",
+            "dependencies": [
+              "loan_amount",
+              "r",
+              "n_balloon",
+              "payment"
+            ],
+            "label": "Outstanding balance (balloon) at balloon date",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_until_balloon": {
+            "expression": "payment * n_balloon",
+            "dependencies": [
+              "payment",
+              "n_balloon"
+            ],
+            "label": "Total scheduled payments made before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_paid_until_balloon": {
+            "expression": "total_paid_until_balloon - (loan_amount - balance_at_balloon)",
+            "dependencies": [
+              "total_paid_until_balloon",
+              "loan_amount",
+              "balance_at_balloon"
+            ],
+            "label": "Interest paid up to balloon date",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_rate_percent": {
+            "expression": "r * 100",
+            "dependencies": [
+              "r"
+            ],
+            "label": "Periodic rate (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment",
+            "label": "Scheduled periodic payment",
+            "variable": "payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon",
+            "label": "Balloon amount due at balloon date",
+            "variable": "balance_at_balloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_until_balloon",
+            "label": "Total paid before balloon",
+            "variable": "total_paid_until_balloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid_until_balloon",
+            "label": "Interest paid before balloon",
+            "variable": "interest_paid_until_balloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_balloon",
+            "label": "Number of payments until balloon",
+            "variable": "n_balloon",
+            "unit": "payments",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "balloon_years",
+        "label": "Time until balloon due (years)",
+        "type": "number",
+        "default": 2,
+        "min": 0.1,
+        "max": 40,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (use 26 for bi-weekly, 12 for monthly)",
+        "type": "integer",
+        "default": 26,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the scheduled periodic payment and the outstanding balloon payment for loans that are amortized over a longer schedule but have a large lump-sum (balloon) due earlier. It supports any payment frequency by letting you set payments per year (for example, 26 for bi-weekly or 12 for monthly).",
+      "Use this tool to compare how changing the payment frequency, amortization length, or balloon timing affects the scheduled payment and the amount of the balloon due. Results assume level periodic payments and a constant interest rate for the term provided."
+    ],
+    "methodology": [
+      "The tool converts the nominal annual interest rate to a periodic rate by dividing by the chosen payments per year. It computes the level periodic payment that would amortize the loan over the amortization period and then computes the remaining principal after the number of payments made up to the balloon date.",
+      "Formulas used follow standard time-value-of-money mathematics for fixed-rate installment loans. The calculator assumes interest compounds at the same frequency as payments."
+    ],
+    "how_is_calculated": [
+      "Periodic interest rate r = annual_rate / 100 / payments_per_year.",
+      "Number of amortization payments N = amortization_years * payments_per_year.",
+      "Scheduled periodic payment P = r * Loan / (1 - (1 + r)^(-N)).",
+      "Number of payments until balloon K = balloon_years * payments_per_year.",
+      "Outstanding balance at balloon = Loan*(1 + r)^K - P * (( (1 + r)^K - 1) / r).",
+      "Total paid until balloon = P * K. Interest paid = Total paid - (Loan - balance at balloon)."
+    ],
+    "faqs": [
+      {
+        "question": "Can I use this for bi-weekly payments?",
+        "answer": "Yes. Set Payments per year to 26 to model bi-weekly schedules. For semi-monthly or other frequencies set the appropriate payments per year value."
+      },
+      {
+        "question": "What if the interest rate is zero?",
+        "answer": "At a 0% interest rate, periodic payment is Loan / N and the balloon balance equals the remaining principal. The general formula divides by the periodic rate; consult the accuracy caveats if your rate is zero or extremely small."
+      },
+      {
+        "question": "Is the balloon amount the same as the last scheduled payment?",
+        "answer": "Not necessarily. A balloon is typically a lump sum equal to the remaining principal after scheduled payments; it can be larger than a regular periodic payment."
+      },
+      {
+        "question": "Does this include fees, prepayment penalties, or interest capitalization?",
+        "answer": "No. This calculator models only principal and periodic interest at a fixed rate. Add fees to the loan amount or account for penalties separately."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results follow the standard mathematical model for fixed-rate amortizing loans and are accurate to typical numerical precision. For regulatory disclosures, taxation, or contract-level computations rely on servicer statements and lender-provided amortization schedules."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Guide to Software Verification and Validation",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO Standards Collection",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau - Loan Details",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A lump-sum payment due at the end of a loan term that pays off the remaining principal balance."
+      },
+      {
+        "term": "Amortization period",
+        "definition": "The time span used to calculate the scheduled periodic payment as if the loan were to be paid off over that span."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate per payment period, equal to the quoted annual rate divided by the number of payments per year."
+      },
+      {
+        "term": "Payments per year",
+        "definition": "Number of periodic installments made in one year (e.g., 12 monthly, 26 bi-weekly)."
+      }
+    ],
+    "summary": [
+      "This calculator provides scheduled periodic payment and balloon balance at a chosen balloon date for fixed-rate loans. It supports bi-weekly and monthly payment frequencies through the payments-per-year input.",
+      "For contractual or legal purposes, always use lender-provided amortization schedules and disclosures. This tool is intended for planning and comparison only."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loans",
+      "/guides/loan-amortization"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculator"
+    ]
+  }
+}

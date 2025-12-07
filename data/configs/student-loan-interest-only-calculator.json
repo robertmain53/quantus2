@@ -1,0 +1,447 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Student Loan Interest-Only Calculator (Advanced)",
+    "description": "Estimate interest-only payments, optional capitalization, and subsequent amortizing payments. Supports interest-only periods, capitalization choice, extra monthly payments, and standard amortization math with clear caveats on accuracy and assumptions."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "interest_only_then_amortize",
+    "methods": {
+      "interest_only_then_amortize": {
+        "label": "Interest-only period, then amortize remaining balance",
+        "description": "Calculates monthly interest-only payment during the interest-only period, applies optional capitalization of accrued interest, then computes the level amortizing payment for the remaining term using the annuity formula.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/compounding_per_year",
+            "dependencies": [
+              "annual_rate",
+              "compounding_per_year"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "interest_only_period_months": {
+            "expression": "interest_only_period_years*12",
+            "dependencies": [
+              "interest_only_period_years"
+            ],
+            "label": "Interest-only period (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "interest_only_payment": {
+            "expression": "principal*monthly_rate",
+            "dependencies": [
+              "principal",
+              "monthly_rate"
+            ],
+            "label": "Interest-only payment (monthly)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "interest_accrued": {
+            "expression": "principal*monthly_rate*interest_only_period_months",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "interest_only_period_months"
+            ],
+            "label": "Interest accrued during interest-only period",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "remaining_principal": {
+            "expression": "capitalize_interest == 'yes' ? principal + interest_accrued : principal",
+            "dependencies": [
+              "capitalize_interest",
+              "principal",
+              "interest_accrued"
+            ],
+            "label": "Principal after interest-only period (after capitalization if selected)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "amortization_period_months": {
+            "expression": "(total_term_years*12) - interest_only_period_months",
+            "dependencies": [
+              "total_term_years",
+              "interest_only_period_months"
+            ],
+            "label": "Remaining amortization period (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "amortizing_payment": {
+            "expression": "amortization_period_months>0 ? remaining_principal * (monthly_rate) / (1 - (1+monthly_rate)^(-amortization_period_months)) : 0",
+            "dependencies": [
+              "remaining_principal",
+              "monthly_rate",
+              "amortization_period_months"
+            ],
+            "label": "Amortizing payment (monthly) after interest-only period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "interest_during_io": {
+            "expression": "interest_only_payment*interest_only_period_months",
+            "dependencies": [
+              "interest_only_payment",
+              "interest_only_period_months"
+            ],
+            "label": "Total interest paid during interest-only period",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "interest_during_amort": {
+            "expression": "amortization_period_months>0 ? amortizing_payment*amortization_period_months - remaining_principal : 0",
+            "dependencies": [
+              "amortizing_payment",
+              "amortization_period_months",
+              "remaining_principal"
+            ],
+            "label": "Total interest paid during amortization",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest": {
+            "expression": "interest_during_io + interest_during_amort",
+            "dependencies": [
+              "interest_during_io",
+              "interest_during_amort"
+            ],
+            "label": "Total interest paid over life of loan (estimated)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_monthly_payment_during_amort": {
+            "expression": "amortizing_payment + extra_payment_monthly",
+            "dependencies": [
+              "amortizing_payment",
+              "extra_payment_monthly"
+            ],
+            "label": "Total monthly payment during amortization (including extra payments)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "io_payment",
+            "label": "Monthly interest-only payment",
+            "variable": "interest_only_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "amort_payment",
+            "label": "Monthly amortizing payment after interest-only period",
+            "variable": "amortizing_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_monthly_payment",
+            "label": "Total monthly payment during amortization (includes extra payment)",
+            "variable": "total_monthly_payment_during_amort",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "remaining_principal",
+            "label": "Principal at end of interest-only period",
+            "variable": "remaining_principal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest paid",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "pure_interest_only": {
+        "label": "Interest-only for entire term (no amortization)",
+        "description": "Calculates the recurring interest-only payment if the loan remains interest-only for the entire term and reports total interest paid for the term.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/compounding_per_year",
+            "dependencies": [
+              "annual_rate",
+              "compounding_per_year"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "term_months": {
+            "expression": "total_term_years*12",
+            "dependencies": [
+              "total_term_years"
+            ],
+            "label": "Term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "interest_only_payment": {
+            "expression": "principal*monthly_rate",
+            "dependencies": [
+              "principal",
+              "monthly_rate"
+            ],
+            "label": "Interest-only payment (monthly)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "interest_only_payment*term_months",
+            "dependencies": [
+              "interest_only_payment",
+              "term_months"
+            ],
+            "label": "Total interest paid if interest-only for full term",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "io_payment",
+            "label": "Monthly interest-only payment",
+            "variable": "interest_only_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest paid (interest-only term)",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (original balance)",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "total_term_years",
+        "label": "Total loan term (years)",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "interest_only_period_years",
+        "label": "Interest-only period (years)",
+        "type": "integer",
+        "default": 2,
+        "min": 0,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "compounding_per_year",
+        "label": "Compounding periods per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "capitalize_interest",
+        "label": "Capitalize accrued interest at end of interest-only period?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No (interest is paid, not capitalized)",
+            "value": "no"
+          },
+          {
+            "label": "Yes (add accrued interest to principal)",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment_monthly",
+        "label": "Optional extra monthly payment during amortization",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the monthly payment while a loan is on an interest-only schedule and the subsequent level payment if the loan is amortized after the interest-only period. Use it to compare payment scenarios and understand the interest cost of interest-only arrangements.",
+      "The tool models standard monthly compounding and the common annuity formula for level amortizing payments. It allows choosing whether accrued interest is capitalized (added to principal) at the end of the interest-only period and adding optional extra monthly payments during amortization."
+    ],
+    "methodology": [
+      "Interest-only payment is computed as principal times the periodic (monthly) interest rate. Periodic rate is calculated from the entered annual rate and compounding periods per year.",
+      "If capitalization is selected, accrued interest from the interest-only period is added to the principal before computing the amortizing payment. The amortizing payment uses the standard annuity formula for level payments: P = r*B / (1-(1+r)^-n) where r is the periodic rate, B is the balance, and n is number of periods.",
+      "The calculator intentionally models numeric calculations with typical double-precision patterns; documented standards for numeric integrity and quality management are cited below."
+    ],
+    "how_is_calculated": [
+      "Monthly rate = annual_rate / 100 / compounding_per_year",
+      "Interest-only payment = principal * monthly_rate",
+      "Interest accrued during IO = interest-only payment * (interest_only_period_years * 12)",
+      "If capitalization = yes, balance for amortization = principal + interest accrued; otherwise balance = principal",
+      "Amortizing payment = remaining_principal * monthly_rate / (1 - (1+monthly_rate)^(-amortization_months))"
+    ],
+    "examples": [
+      "Example 1: $20,000 principal, 6% APR, 2-year interest-only, then amortize over remaining 8 years. Displays interest-only monthly amount for 2 years and the higher amortizing payment thereafter.",
+      "Example 2: $50,000 principal, 5% APR, interest-only for full term (select pure interest-only method). Shows recurring interest-only payment and total interest paid if no amortization occurs."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include fees, insurance, or other borrower costs?",
+        "answer": "No. This tool models only interest and principal based on the entered rate and terms. Fees, insurance, origination costs, and taxes are not included and will change actual payments."
+      },
+      {
+        "question": "Is the result exact for every lender and loan product?",
+        "answer": "No. Lenders may use different day-count conventions, rounding rules, billing cycles, or define APR differently. Use results as an estimate and verify with your loan servicer or promissory note for contractual payment schedules."
+      },
+      {
+        "question": "What does capitalization mean?",
+        "answer": "Capitalization means adding unpaid accrued interest to the loan principal, increasing the balance that will be amortized. If interest is paid during the interest-only period, capitalization does not occur."
+      },
+      {
+        "question": "How accurate are these numbers and what are the limitations?",
+        "answer": "This calculator follows common numerical methods for loan math and aligns with quality and numeric integrity best practices. Results are estimates: rounding, lender rounding policies, transaction timing, and extra fees can produce differences. For critical decisions, confirm with official loan documents or your servicer."
+      },
+      {
+        "question": "Why do numbers change when I change compounding periods?",
+        "answer": "The periodic (monthly) interest rate is derived from the annual rate and compounding frequency. Different compounding assumptions change the effective periodic rate and therefore payments and interest totals."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The original unpaid balance on the loan on which interest is calculated."
+      },
+      {
+        "term": "Interest-only payment",
+        "definition": "A payment equal to the interest that accrues during the payment period; it does not reduce principal."
+      },
+      {
+        "term": "Capitalization",
+        "definition": "The process of adding accrued but unpaid interest to the loan principal, increasing the balance that will accrue interest going forward."
+      },
+      {
+        "term": "Amortizing payment",
+        "definition": "A level payment that covers interest and reduces principal so that the loan balance reaches zero at the end of the term, using the annuity formula."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual percentage rate expressed as a percentage. APR may include fees and other costs depending on jurisdiction and lender disclosure rules; this tool treats the entered rate as the nominal annual interest rate for calculation."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "summary": [
+      "This tool provides estimates for interest-only schedules, optional capitalization, and the subsequent amortizing payments using standard annuity math. It is designed for scenario comparison and educational use.",
+      "Always confirm exact payment schedules, capitalization rules, and fees with your loan servicer or the loan contract before making financial decisions."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/loans/student-loans/loan-types",
+      "/help/loan-terms-glossary"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

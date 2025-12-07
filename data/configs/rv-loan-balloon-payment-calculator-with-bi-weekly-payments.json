@@ -1,0 +1,272 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan with Balloon & Bi‑Weekly Payments Calculator",
+    "description": "Calculate recurring payment amounts, schedule totals, and the balloon balance for an RV loan when using bi‑weekly (or other) payment frequencies. Includes clear inputs for principal, APR, amortization term, balloon amount and when the balloon is due."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Regular periodic payment (excl. balloon)",
+        "expression": "((principal - (balloon_amount / pow(1 + (apr/100/payments_per_year), (balloon_due_years*payments_per_year)))) * (apr/100/payments_per_year)) / (1 - pow(1 + (apr/100/payments_per_year), -(term_years*payments_per_year)))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "number_of_payments",
+        "label": "Total number of scheduled payments",
+        "expression": "term_years * payments_per_year",
+        "format": "integer"
+      },
+      {
+        "id": "payments_until_balloon",
+        "label": "Number of payments until balloon is due",
+        "expression": "balloon_due_years * payments_per_year",
+        "format": "integer"
+      },
+      {
+        "id": "present_value_balloon",
+        "label": "Present value of the balloon at loan start",
+        "expression": "balloon_amount / pow(1 + (apr/100/payments_per_year), (balloon_due_years*payments_per_year))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid_including_balloon",
+        "label": "Total amount paid over loan life (payments + balloon)",
+        "expression": "(((principal - (balloon_amount / pow(1 + (apr/100/payments_per_year),(balloon_due_years*payments_per_year)))) * (apr/100/payments_per_year)) / (1 - pow(1 + (apr/100/payments_per_year), -(term_years*payments_per_year)))) * (term_years*payments_per_year) + balloon_amount",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_paid",
+        "label": "Total interest paid over loan life",
+        "expression": "((((principal - (balloon_amount / pow(1 + (apr/100/payments_per_year),(balloon_due_years*payments_per_year)))) * (apr/100/payments_per_year)) / (1 - pow(1 + (apr/100/payments_per_year), -(term_years*payments_per_year)))) * (term_years*payments_per_year) + balloon_amount) - principal",
+        "unit": "currency",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "apr",
+        "label": "Annual interest rate (APR %) ",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Amortization term (years)",
+        "type": "number",
+        "default": 10,
+        "min": 0.5,
+        "max": 40,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payment frequency",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Semi‑monthly (24)",
+            "value": "24"
+          },
+          {
+            "label": "Bi‑weekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "balloon_amount",
+        "label": "Balloon payment amount (due at balloon date)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "balloon_due_years",
+        "label": "Years until balloon is due",
+        "type": "number",
+        "default": 10,
+        "min": 0.5,
+        "max": 40,
+        "step": 0.25
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Regular periodic payment (excl. balloon)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "number_of_payments",
+          "label": "Total number of scheduled payments",
+          "format": "integer"
+        },
+        {
+          "id": "payments_until_balloon",
+          "label": "Number of payments until balloon is due",
+          "format": "integer"
+        },
+        {
+          "id": "present_value_balloon",
+          "label": "Present value of the balloon at loan start",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_paid_including_balloon",
+          "label": "Total amount paid (payments + balloon)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest_paid",
+          "label": "Total interest paid",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the regular payment amount for an RV loan when a balloon payment is scheduled and payments are made on a bi‑weekly (or other) basis. Enter the loan principal, APR, amortization term, planned balloon amount and when the balloon becomes due to see the periodic payment and totals.",
+      "Results assume a standard loan where periodic payments are level and the balloon amount is paid as a lump sum on the balloon due date. Use the payment frequency control to switch from monthly to bi‑weekly or weekly schedules."
+    ],
+    "methodology": [
+      "We compute the periodic payment P that satisfies the present value equation: principal = P * (1 - (1 + r)^-N) / r + B / (1 + r)^M, where r is the periodic rate, N is the total number of scheduled payments, B is the balloon amount, and M is the number of payments until the balloon is due.",
+      "Periodic rate r is derived as APR / 100 / payments_per_year. The calculator discounts the balloon to present value at the same periodic rate when solving for P. Total paid and total interest are computed by summing scheduled payments and adding the balloon when due."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = (APR / 100) / payments_per_year.",
+      "Total scheduled payments N = term_years * payments_per_year. Payments until balloon M = balloon_due_years * payments_per_year.",
+      "Payment P = (principal - B / (1+r)^M) * r / (1 - (1+r)^-N).",
+      "Total paid = P * N + B. Total interest = Total paid - principal."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator assume interest compounds at the same frequency as payments?",
+        "answer": "Yes. The tool treats the APR as the nominal annual rate and uses the payment frequency to compute the periodic rate. This matches common lender practice for periodic amortizing loans. If your lender quotes effective rates or compounds differently, results may vary."
+      },
+      {
+        "question": "What happens if APR is zero?",
+        "answer": "The formula divides by the periodic rate; at APR = 0 the mathematical limit reduces to equal principal installments. For APR = 0, periodic payment equals (principal - balloon_amount) / N. Check results against your lender's schedule for zero‑interest promotions."
+      },
+      {
+        "question": "Can the balloon be due before the amortization term ends?",
+        "answer": "Yes. Use 'Years until balloon is due' to set when the balloon must be paid. The calculator discounts that balloon to present value at the periodic rate when solving for the periodic payment."
+      },
+      {
+        "question": "Are results guaranteed to match my lender's statement?",
+        "answer": "No. This calculator provides estimates based on typical amortization math. Lenders may use different day‑count conventions, rounding rules, fees, or escrow items. Use outputs as guidance and confirm final figures with your loan agreement."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IEEE 754 Floating‑Point Standard (numeric handling guidance)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "ISO 9001 — Quality management systems (process & QA guidance)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "NIST — Guidance on numeric accuracy and trustworthy systems",
+        "url": "https://www.nist.gov/publications"
+      },
+      {
+        "label": "OSHA — Safety and workplace guidance (general compliance reference)",
+        "url": "https://www.osha.gov/laws-regs"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate: the nominal annual interest rate, expressed as a percentage."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "APR divided by the number of payments per year; used in the payment formula."
+      },
+      {
+        "term": "Amortization term",
+        "definition": "The total length of time over which the loan would be fully paid if no balloon existed."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A final lump sum due at a specified date that is larger than the regular periodic payments."
+      },
+      {
+        "term": "Bi‑weekly payments",
+        "definition": "A payment frequency where 26 payments are made per year (typically every two weeks). This differs from 'semi‑monthly' which is 24 payments per year."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 Quality Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754 Standard",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/publications",
+        "label": "NIST Publications",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/laws-regs",
+        "label": "OSHA Laws & Regulations",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

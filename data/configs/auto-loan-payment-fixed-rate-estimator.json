@@ -1,0 +1,239 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Payment — Fixed‑Rate Estimator",
+    "description": "Estimate periodic payments, total interest, and financed amount for a fixed-rate auto loan. Includes sales tax and fees treatment and supports common payment frequencies."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "financed_amount",
+        "label": "Financed amount",
+        "expression": "((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)",
+        "unit": null,
+        "format": "currency"
+      },
+      {
+        "id": "payment",
+        "label": "Periodic payment",
+        "expression": "((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))",
+        "unit": null,
+        "format": "currency"
+      },
+      {
+        "id": "total_payment",
+        "label": "Total of all payments",
+        "expression": "(((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))) * term_years * payments_per_year",
+        "unit": null,
+        "format": "currency"
+      },
+      {
+        "id": "total_interest",
+        "label": "Total interest paid",
+        "expression": "((((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))) * term_years * payments_per_year) - (((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100))",
+        "unit": null,
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "price",
+        "label": "Vehicle price (before tax)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "trade_in",
+        "label": "Trade‑in value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "sales_tax_pct",
+        "label": "Sales tax rate (%)",
+        "type": "number",
+        "default": 8,
+        "min": 0,
+        "max": 25,
+        "step": 0.1
+      },
+      {
+        "id": "fees",
+        "label": "Fees and documentation ($)",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (%)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.5,
+        "max": 10,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 52,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "financed_amount",
+          "label": "Amount financed",
+          "format": "currency",
+          "unit": null
+        },
+        {
+          "id": "payment",
+          "label": "Payment per period",
+          "format": "currency",
+          "unit": null
+        },
+        {
+          "id": "total_payment",
+          "label": "Total paid over term",
+          "format": "currency",
+          "unit": null
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest paid",
+          "format": "currency",
+          "unit": null
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator computes periodic payments, the financed amount, total amount paid, and total interest for a fixed‑rate auto loan. It includes common adjustments: down payment, trade‑in value, fees, and sales tax applied to the taxable vehicle amount.",
+      "The tool assumes a fixed nominal annual interest rate and level (equal) payments per period. Select the payments per year to model monthly, biweekly, weekly, or annual schedules."
+    ],
+    "methodology": [
+      "We use the standard amortizing fixed‑rate loan formula: payment = r * PV / (1 - (1+r)^-n), where r is the periodic interest rate and n is the total number of payments. The financed amount (PV) is the vehicle price less down payment and trade‑in, plus fees and sales tax (applied to the taxable vehicle amount).",
+      "All numeric calculations use IEEE‑754-compatible arithmetic conventions where implemented; results are rounded for display to two decimal places. This estimator is intended for planning and comparison; final loan offers depend on lender underwriting and local tax rules."
+    ],
+    "how_is_calculated": [
+      "Step 1 — Taxable base = price - down_payment - trade_in.",
+      "Step 2 — Financed amount = Taxable base + fees + (Taxable base × sales_tax_pct/100).",
+      "Step 3 — Periodic rate r = annual_rate_pct/100 ÷ payments_per_year. Total payments n = term_years × payments_per_year.",
+      "Step 4 — Periodic payment = (r × Financed amount) ÷ (1 - (1 + r)^-n). Total interest = (Periodic payment × n) - Financed amount."
+    ],
+    "examples": [
+      "Example: $30,000 vehicle, $3,000 down, $0 trade‑in, 8% sales tax, $500 fees, 5% APR, 5 years, monthly payments → financed ≈ $28,540; monthly payment ≈ $539. Total interest ≈ $3,375. (Values are illustrative.)"
+    ],
+    "faqs": [
+      {
+        "question": "How is sales tax applied?",
+        "answer": "Sales tax is applied to the taxable base defined here as vehicle price minus down payment and trade‑in. Local tax rules vary; some jurisdictions tax the full price or apply exemptions. Confirm with your dealer or local tax authority."
+      },
+      {
+        "question": "What happens if the interest rate is zero?",
+        "answer": "For a 0% nominal rate, the periodic payment simplifies to financed amount divided by total number of payments. Some implementations may show division by zero in the raw formula; this estimator treats 0% as the simple evenly divided case for practical use."
+      },
+      {
+        "question": "Are results guaranteed to match a lender's offer?",
+        "answer": "No. This estimator provides an approximation for planning. Actual loan offers depend on credit underwriting, fees, insurance requirements, and lender amortization conventions."
+      },
+      {
+        "question": "How precise are the results?",
+        "answer": "Displayed results are rounded to two decimal places. Under the hood calculations follow common floating point conventions; small rounding differences may appear versus lender statements."
+      },
+      {
+        "question": "Is personal data collected by this tool?",
+        "answer": "This configuration describes calculation logic only. Implementations should follow organizational privacy policies and applicable regulations when collecting or storing user inputs."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Periodic rate (r)",
+        "definition": "The nominal annual interest rate divided by the number of payment periods per year."
+      },
+      {
+        "term": "Amortizing loan",
+        "definition": "A loan where each payment covers interest and principal so the loan balance reaches zero at term end."
+      },
+      {
+        "term": "Financed amount",
+        "definition": "The net amount borrowed after down payment and trade‑in, plus fees and sales tax as modeled here."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

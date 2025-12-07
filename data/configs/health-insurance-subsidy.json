@@ -1,0 +1,500 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Health Insurance Subsidy Calculator (Estimate)",
+    "description": "Interactive estimator for expected premium tax credit and out-of-pocket monthly premium under ACA marketplace rules. Provides quick and a detailed mode, uses Federal Poverty Level (FPL) and user-provided benchmark premium to estimate monthly and annual subsidy amounts. Includes accuracy caveats and references to standards and official guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "simple_estimate",
+    "methods": {
+      "simple_estimate": {
+        "label": "Quick estimate (FPL-based)",
+        "description": "Fast estimate that uses household income and size to compute percent of Federal Poverty Level (FPL), an approximate applicable percentage, and a subsidy based on a benchmark monthly premium you provide or accept as the default.",
+        "variables": {
+          "fpl": {
+            "expression": "14580 + 5110 * (household_size - 1)",
+            "dependencies": [
+              "household_size"
+            ],
+            "label": "Federal Poverty Level (annual, contiguous US)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "income_pct": {
+            "expression": "annual_income / fpl",
+            "dependencies": [
+              "annual_income",
+              "fpl"
+            ],
+            "label": "Income as fraction of FPL",
+            "format": "decimal",
+            "display": true
+          },
+          "applicable_pct": {
+            "expression": "min(0.085, max(0.02, 0.02 + 0.015 * (income_pct - 1)))",
+            "dependencies": [
+              "income_pct"
+            ],
+            "label": "Estimated applicable percentage (household share of income)",
+            "format": "percent",
+            "display": true
+          },
+          "benchmark_annual": {
+            "expression": "benchmark_monthly_premium * 12",
+            "dependencies": [
+              "benchmark_monthly_premium"
+            ],
+            "label": "Benchmark plan annual premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "annual_contribution_limit": {
+            "expression": "applicable_pct * annual_income",
+            "dependencies": [
+              "applicable_pct",
+              "annual_income"
+            ],
+            "label": "Annual household contribution limit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_contribution_limit": {
+            "expression": "annual_contribution_limit / 12",
+            "dependencies": [
+              "annual_contribution_limit"
+            ],
+            "label": "Monthly household contribution limit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "subsidy_monthly": {
+            "expression": "max(0, benchmark_monthly_premium - monthly_contribution_limit)",
+            "dependencies": [
+              "benchmark_monthly_premium",
+              "monthly_contribution_limit"
+            ],
+            "label": "Estimated monthly premium tax credit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "subsidy_annual": {
+            "expression": "subsidy_monthly * 12",
+            "dependencies": [
+              "subsidy_monthly"
+            ],
+            "label": "Estimated annual premium tax credit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_premium_monthly": {
+            "expression": "benchmark_monthly_premium - subsidy_monthly",
+            "dependencies": [
+              "benchmark_monthly_premium",
+              "subsidy_monthly"
+            ],
+            "label": "Estimated monthly premium after subsidy",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_premium_annual": {
+            "expression": "net_premium_monthly * 12",
+            "dependencies": [
+              "net_premium_monthly"
+            ],
+            "label": "Estimated annual premium after subsidy",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "subsidy_monthly",
+            "label": "Estimated premium tax credit (monthly)",
+            "variable": "subsidy_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "subsidy_annual",
+            "label": "Estimated premium tax credit (annual)",
+            "variable": "subsidy_annual",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_premium_monthly",
+            "label": "Estimated monthly premium after subsidy",
+            "variable": "net_premium_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "applicable_pct",
+            "label": "Estimated applicable percentage (household share)",
+            "variable": "applicable_pct",
+            "format": "percent"
+          },
+          {
+            "id": "income_pct",
+            "label": "Income as percent of FPL",
+            "variable": "income_pct",
+            "format": "decimal"
+          }
+        ]
+      },
+      "detailed_estimate": {
+        "label": "Detailed estimate (age and plan metal adjustments)",
+        "description": "Adds an age-based loading and allows selecting expected plan metal level to adjust the benchmark premium. Use if you want a more tailored estimate; still an approximation and does not replace official marketplace calculations.",
+        "variables": {
+          "fpl": {
+            "expression": "14580 + 5110 * (household_size - 1)",
+            "dependencies": [
+              "household_size"
+            ],
+            "label": "Federal Poverty Level (annual, contiguous US)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "income_pct": {
+            "expression": "annual_income / fpl",
+            "dependencies": [
+              "annual_income",
+              "fpl"
+            ],
+            "label": "Income as fraction of FPL",
+            "format": "decimal",
+            "display": true
+          },
+          "age_factor": {
+            "expression": "max(0.8, min(1.8, 1 + (age - 40) * 0.01))",
+            "dependencies": [
+              "age"
+            ],
+            "label": "Estimated age loading factor (relative to age 40)",
+            "format": "decimal",
+            "display": false
+          },
+          "metal_factor": {
+            "expression": "if(metal == 'bronze', 0.85, if(metal == 'silver', 1.0, if(metal == 'gold', 1.15, 1.0)))",
+            "dependencies": [
+              "metal"
+            ],
+            "label": "Plan metal multiplier",
+            "format": "decimal",
+            "display": false
+          },
+          "adjusted_benchmark_monthly": {
+            "expression": "benchmark_monthly_premium * age_factor * metal_factor",
+            "dependencies": [
+              "benchmark_monthly_premium",
+              "age_factor",
+              "metal_factor"
+            ],
+            "label": "Adjusted benchmark monthly premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "applicable_pct": {
+            "expression": "min(0.085, max(0.02, 0.02 + 0.015 * (income_pct - 1)))",
+            "dependencies": [
+              "income_pct"
+            ],
+            "label": "Estimated applicable percentage (household share)",
+            "format": "percent",
+            "display": true
+          },
+          "annual_contribution_limit": {
+            "expression": "applicable_pct * annual_income",
+            "dependencies": [
+              "applicable_pct",
+              "annual_income"
+            ],
+            "label": "Annual household contribution limit",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_contribution_limit": {
+            "expression": "annual_contribution_limit / 12",
+            "dependencies": [
+              "annual_contribution_limit"
+            ],
+            "label": "Monthly household contribution limit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "subsidy_monthly": {
+            "expression": "max(0, adjusted_benchmark_monthly - monthly_contribution_limit)",
+            "dependencies": [
+              "adjusted_benchmark_monthly",
+              "monthly_contribution_limit"
+            ],
+            "label": "Estimated monthly premium tax credit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "subsidy_annual": {
+            "expression": "subsidy_monthly * 12",
+            "dependencies": [
+              "subsidy_monthly"
+            ],
+            "label": "Estimated annual premium tax credit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_premium_monthly": {
+            "expression": "adjusted_benchmark_monthly - subsidy_monthly",
+            "dependencies": [
+              "adjusted_benchmark_monthly",
+              "subsidy_monthly"
+            ],
+            "label": "Estimated monthly premium after subsidy",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "subsidy_monthly",
+            "label": "Estimated premium tax credit (monthly)",
+            "variable": "subsidy_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "subsidy_annual",
+            "label": "Estimated premium tax credit (annual)",
+            "variable": "subsidy_annual",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_premium_monthly",
+            "label": "Estimated monthly premium after subsidy",
+            "variable": "net_premium_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_benchmark_monthly",
+            "label": "Adjusted benchmark monthly premium",
+            "variable": "adjusted_benchmark_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "income_pct",
+            "label": "Income as percent of FPL",
+            "variable": "income_pct",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "annual_income",
+        "label": "Household annual income (pre-tax)",
+        "type": "number",
+        "default": 36000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "household_size",
+        "label": "Household size (number of people)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 15,
+        "step": 1
+      },
+      {
+        "id": "benchmark_monthly_premium",
+        "label": "Benchmark (silver) monthly premium you expect or want to use",
+        "type": "number",
+        "default": 600,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "age",
+        "label": "Primary applicant age (years)",
+        "type": "integer",
+        "default": 40,
+        "min": 0,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "metal",
+        "label": "Expected plan metal level (detailed mode)",
+        "type": "select",
+        "default": "silver",
+        "options": [
+          {
+            "label": "Bronze",
+            "value": "bronze"
+          },
+          {
+            "label": "Silver",
+            "value": "silver"
+          },
+          {
+            "label": "Gold",
+            "value": "gold"
+          }
+        ]
+      },
+      {
+        "id": "state",
+        "label": "State (for guidance and special programs)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "zip_code",
+        "label": "ZIP code (optional, for localization in detailed workflows)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator provides a practical approximation of the premium tax credit (subsidy) and your resulting monthly premium under marketplace rules. It uses household income, household size, and a benchmark monthly premium to compute an estimated monthly and annual subsidy and the net premium after subsidy.",
+      "Use the Quick estimate for a fast, conservative calculation. Use the Detailed estimate to include simple age and plan-metal adjustments. This tool is an estimator and does not replace official eligibility checks or precise calculations performed by state or federal enrollment systems."
+    ],
+    "methodology": [
+      "Calculations use the Federal Poverty Level (FPL) as the income benchmark and an approximate applicable percentage schedule that maps income relative to FPL to an estimated household contribution rate. The FPL baseline used is 14,580 USD for a single-person household and adds 5,110 USD per additional household member (standard contiguous-US reference).",
+      "The tool computes an annual household contribution limit as applicable_percentage × annual_income, converts it to a monthly contribution limit, and then estimates the premium tax credit as the difference between the benchmark monthly premium and the household monthly contribution (floored at zero).",
+      "Detailed mode applies an age loading factor and a plan-metal multiplier to allow a more representative benchmark premium when you have specific plan expectations. All formulas are simplified approximations; actual marketplace calculations use official published tables and state adjustments."
+    ],
+    "how_is_calculated": [
+      "1) Compute FPL: FPL = base_fpl + per_person * (household_size - 1).",
+      "2) Income share: income_pct = annual_income / FPL.",
+      "3) Applicable percentage (approximation): applicable_pct = clamp between 2% and 8.5% of income, scaled linearly with income_pct using a conservative interpolation.",
+      "4) Annual household contribution = applicable_pct × annual_income; monthly contribution = annual contribution / 12.",
+      "5) Subsidy (monthly) = max(0, benchmark_monthly_premium - monthly_contribution); Subsidy (annual) = subsidy_monthly × 12.",
+      "6) Net premium monthly = benchmark_monthly_premium - subsidy_monthly."
+    ],
+    "examples": [
+      "Example: Household income $36,000, size 2, benchmark monthly premium $600. The tool computes FPL, income as percent of FPL, an applicable percentage, and returns an estimated monthly subsidy and the net monthly premium after subsidy.",
+      "Detailed example: Same inputs but age 60 and selecting Gold metal will increase the adjusted benchmark premium via the age and metal multipliers, which changes estimated subsidy and net premium accordingly."
+    ],
+    "faqs": [
+      {
+        "question": "Is this the official subsidy amount I will receive?",
+        "answer": "No. This is an estimator for planning purposes. Official subsidy amounts are determined by the marketplace when you enroll and may depend on more detailed household data, state-specific rules, plan availability, and legislative changes."
+      },
+      {
+        "question": "What is the benchmark premium?",
+        "answer": "The benchmark is typically the second-lowest-cost Silver plan in your area for the household. If you do not know the benchmark, enter an expected monthly premium or use the default; a marketplace or broker can provide the official benchmark for your ZIP code."
+      },
+      {
+        "question": "Why do results differ from other calculators?",
+        "answer": "Different calculators use different FPL base values, applicable percentage schedules, and may include state or ARPA adjustments. This tool uses a clear, conservative interpolation and documents its assumptions; always verify with official enrollment systems or tax professionals."
+      },
+      {
+        "question": "How accurate is the age and metal adjustment in detailed mode?",
+        "answer": "Age and metal multipliers are simplified approximations to help reflect typical price differences. They are not a substitute for quoting an actual plan in your ZIP code and may not capture insurer-specific rating factors."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Federal Poverty Level (FPL)",
+        "definition": "A federal income measure used to determine eligibility for certain programs and benefits. This calculator uses a contiguous-US reference amount per household size."
+      },
+      {
+        "term": "Benchmark plan",
+        "definition": "The second-lowest-cost Silver plan available in a household's rating area; used to calculate premium tax credit eligibility and size."
+      },
+      {
+        "term": "Applicable percentage",
+        "definition": "The percentage of household income the household is expected to contribute toward premiums; used to calculate the premium tax credit."
+      },
+      {
+        "term": "Premium tax credit",
+        "definition": "A subsidy that lowers monthly premiums for eligible households purchasing insurance through the marketplace."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Department of Health & Human Services - Federal Poverty Guidelines",
+        "url": "https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines"
+      },
+      {
+        "label": "Internal Revenue Service - Affordable Care Act estimator tools",
+        "url": "https://www.irs.gov/affordable-care-act"
+      },
+      {
+        "label": "NIST Cybersecurity Framework (for secure processing and data handling best practices)",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO 9001 Quality Management (for QA and validation practices)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE Software Engineering Standards (for engineering rigor)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) guidance (for operational safety and controls)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines",
+        "label": "FPL guidance (HHS)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.irs.gov/affordable-care-act",
+        "label": "ACA estimator resources (IRS)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FAQPage"
+    ]
+  }
+}

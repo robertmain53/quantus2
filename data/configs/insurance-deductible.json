@@ -1,0 +1,560 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Insurance Deductible Calculator (multi-policy)",
+    "description": "Estimate how much you are likely to pay toward deductibles and related out-of-pocket exposure for common insurance types (health, auto, home, equipment). Includes adjustable assumptions for coinsurance, number of claims, and percent-based deductibles."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "health_insurance",
+    "methods": {
+      "health_insurance": {
+        "label": "Health insurance (individual / family)",
+        "description": "Estimate remaining deductible, expected deductible portion of projected annual medical costs, post-deductible cost share, and capped out-of-pocket where applicable.",
+        "variables": {
+          "remaining_deductible": {
+            "expression": "max(0, ind_deductible - deductible_paid_to_date)",
+            "dependencies": [
+              "ind_deductible",
+              "deductible_paid_to_date"
+            ],
+            "label": "Remaining deductible",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "deductible_paid_on_expected": {
+            "expression": "min(remaining_deductible, expected_annual_med_costs)",
+            "dependencies": [
+              "remaining_deductible",
+              "expected_annual_med_costs"
+            ],
+            "label": "Deductible amount expected to be paid this year",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "post_deductible_cost_share": {
+            "expression": "max(0, expected_annual_med_costs - deductible_paid_on_expected) * (coinsurance_pct / 100)",
+            "dependencies": [
+              "expected_annual_med_costs",
+              "deductible_paid_on_expected",
+              "coinsurance_pct"
+            ],
+            "label": "Estimated post-deductible cost share (coinsurance)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_out_of_pocket_before_oop_limit": {
+            "expression": "deductible_paid_on_expected + post_deductible_cost_share",
+            "dependencies": [
+              "deductible_paid_on_expected",
+              "post_deductible_cost_share"
+            ],
+            "label": "Estimated total out-of-pocket before applying OOP max",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "total_out_of_pocket": {
+            "expression": "min(total_out_of_pocket_before_oop_limit, oop_max)",
+            "dependencies": [
+              "total_out_of_pocket_before_oop_limit",
+              "oop_max"
+            ],
+            "label": "Estimated total out-of-pocket (capped by OOP max)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "remaining_deductible",
+            "label": "Remaining deductible",
+            "variable": "remaining_deductible",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "deductible_paid_on_expected",
+            "label": "Deductible expected to be paid this year",
+            "variable": "deductible_paid_on_expected",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "post_deductible_cost_share",
+            "label": "Estimated coinsurance (post-deductible) cost",
+            "variable": "post_deductible_cost_share",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_out_of_pocket",
+            "label": "Estimated total annual out-of-pocket (deductible + coinsurance, limited by OOP max)",
+            "variable": "total_out_of_pocket",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "auto_collision": {
+        "label": "Auto insurance (per-claim deductible)",
+        "description": "Estimate annual deductible payments and expected insurer payout given per-claim deductible and an expected number and size of claims.",
+        "variables": {
+          "per_claim_deductible_applied": {
+            "expression": "per_claim_deductible",
+            "dependencies": [
+              "per_claim_deductible"
+            ],
+            "label": "Per-claim deductible",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "insurer_payout_per_claim_est": {
+            "expression": "max(0, avg_claim_cost - per_claim_deductible)",
+            "dependencies": [
+              "avg_claim_cost",
+              "per_claim_deductible"
+            ],
+            "label": "Estimated insurer payout per claim after deductible",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_insurer_payout_est": {
+            "expression": "est_claims_per_year * insurer_payout_per_claim_est",
+            "dependencies": [
+              "est_claims_per_year",
+              "insurer_payout_per_claim_est"
+            ],
+            "label": "Estimated annual insurer payout",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_user_deductible_total": {
+            "expression": "est_claims_per_year * per_claim_deductible",
+            "dependencies": [
+              "est_claims_per_year",
+              "per_claim_deductible"
+            ],
+            "label": "Estimated total annual deductible payments",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_user_total_estimate": {
+            "expression": "annual_user_deductible_total + max(0, est_claims_per_year * (avg_claim_cost - per_claim_deductible) * 0)",
+            "dependencies": [
+              "annual_user_deductible_total",
+              "est_claims_per_year",
+              "avg_claim_cost",
+              "per_claim_deductible"
+            ],
+            "label": "Estimated annual user outlay from deductibles (claims below deductible are assumed paid by user)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_user_deductible_total",
+            "label": "Estimated annual deductible paid by you",
+            "variable": "annual_user_deductible_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_insurer_payout_est",
+            "label": "Estimated annual insurer payout",
+            "variable": "annual_insurer_payout_est",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "home_percent": {
+        "label": "Home insurance (percentage deductible)",
+        "description": "Calculate a percentage-based deductible (common for high-value or hurricane coverage) and estimate deductible amount for a given replacement/insured value.",
+        "variables": {
+          "calculated_deductible": {
+            "expression": "home_coverage_amount * (home_deductible_pct / 100)",
+            "dependencies": [
+              "home_coverage_amount",
+              "home_deductible_pct"
+            ],
+            "label": "Calculated deductible (percentage of coverage amount)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "calculated_deductible",
+            "label": "Estimated deductible amount (percent-based)",
+            "variable": "calculated_deductible",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "equipment": {
+        "label": "Equipment / commercial property",
+        "description": "Estimate expected annual deductible exposure and insurer payout for equipment or commercial property claims, using per-claim or per-item deductible inputs.",
+        "variables": {
+          "annual_user_deductible_total": {
+            "expression": "expected_eq_claims * eq_deductible",
+            "dependencies": [
+              "expected_eq_claims",
+              "eq_deductible"
+            ],
+            "label": "Estimated annual total of deductibles for equipment claims",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_insurer_payout_est": {
+            "expression": "max(0, expected_eq_claims * (avg_eq_claim_cost - eq_deductible))",
+            "dependencies": [
+              "expected_eq_claims",
+              "avg_eq_claim_cost",
+              "eq_deductible"
+            ],
+            "label": "Estimated annual insurer payout",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_user_deductible_total",
+            "label": "Estimated annual deductible payments (equipment)",
+            "variable": "annual_user_deductible_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_insurer_payout_est",
+            "label": "Estimated insurer payout (equipment)",
+            "variable": "annual_insurer_payout_est",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "policy_type",
+        "label": "Policy type",
+        "type": "select",
+        "default": "health",
+        "options": [
+          {
+            "label": "Health insurance",
+            "value": "health"
+          },
+          {
+            "label": "Auto insurance (collision/comprehensive)",
+            "value": "auto"
+          },
+          {
+            "label": "Home insurance (percent or flat)",
+            "value": "home"
+          },
+          {
+            "label": "Equipment / commercial",
+            "value": "equipment"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "health_section",
+        "label": "Health insurance inputs",
+        "show_when": {
+          "field": "policy_type",
+          "is": "health"
+        },
+        "fields": [
+          {
+            "id": "ind_deductible",
+            "label": "Individual deductible (USD)",
+            "type": "number",
+            "default": 1500,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "family_deductible",
+            "label": "Family deductible (USD)",
+            "type": "number",
+            "default": 3000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "deductible_paid_to_date",
+            "label": "Deductible already paid this plan year (USD)",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 10
+          },
+          {
+            "id": "coinsurance_pct",
+            "label": "Coinsurance after deductible (%)",
+            "type": "number",
+            "default": 20,
+            "min": 0,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "oop_max",
+            "label": "Out-of-pocket maximum (USD)",
+            "type": "number",
+            "default": 8000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "expected_annual_med_costs",
+            "label": "Your expected total medical costs this year (USD)",
+            "type": "number",
+            "default": 5000,
+            "min": 0,
+            "step": 50
+          }
+        ]
+      },
+      {
+        "id": "auto_section",
+        "label": "Auto insurance inputs",
+        "show_when": {
+          "field": "policy_type",
+          "is": "auto"
+        },
+        "fields": [
+          {
+            "id": "per_claim_deductible",
+            "label": "Per-claim deductible (USD)",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "est_claims_per_year",
+            "label": "Estimated number of claims per year",
+            "type": "number",
+            "default": 0.1,
+            "min": 0,
+            "step": 0.1
+          },
+          {
+            "id": "avg_claim_cost",
+            "label": "Average claim size (USD)",
+            "type": "number",
+            "default": 5000,
+            "min": 0,
+            "step": 50
+          }
+        ]
+      },
+      {
+        "id": "home_section",
+        "label": "Home insurance inputs",
+        "show_when": {
+          "field": "policy_type",
+          "is": "home"
+        },
+        "fields": [
+          {
+            "id": "home_coverage_amount",
+            "label": "Insured value / coverage amount (USD)",
+            "type": "number",
+            "default": 300000,
+            "min": 0,
+            "step": 1000
+          },
+          {
+            "id": "home_deductible_pct",
+            "label": "Deductible (% of coverage)",
+            "type": "number",
+            "default": 2,
+            "min": 0,
+            "max": 100,
+            "step": 0.1
+          }
+        ]
+      },
+      {
+        "id": "equipment_section",
+        "label": "Equipment / commercial inputs",
+        "show_when": {
+          "field": "policy_type",
+          "is": "equipment"
+        },
+        "fields": [
+          {
+            "id": "eq_coverage_amount",
+            "label": "Average covered value per item or claim (USD)",
+            "type": "number",
+            "default": 10000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "eq_deductible",
+            "label": "Per-claim deductible (USD)",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 10
+          },
+          {
+            "id": "expected_eq_claims",
+            "label": "Estimated number of equipment claims per year",
+            "type": "number",
+            "default": 0.2,
+            "min": 0,
+            "step": 0.1
+          },
+          {
+            "id": "avg_eq_claim_cost",
+            "label": "Average equipment claim cost (USD)",
+            "type": "number",
+            "default": 5000,
+            "min": 0,
+            "step": 50
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps estimate how much you might pay toward deductibles and related cost-sharing for common insurance policies: health, auto, home, and equipment. Use realistic estimates for claims and service costs to get a practical outlook on annual exposure.",
+      "Results are illustrative estimates only. They do not replace your policy wording, insurer statements, or professional advice. The tool assumes common deductible and coinsurance mechanics; it does not model every state rule, special endorsement, or network balance-billing scenario."
+    ],
+    "methodology": [
+      "The tool models common deductible flows per policy type: health (annual individual deductible, family deductible, coinsurance, and out-of-pocket maximum), auto (per-claim deductible applied per incident), home (flat or percent-of-value deductible), and equipment (per-claim deductible).",
+      "Calculations use user-supplied inputs and apply deterministic arithmetic: remaining deductible is current deductible minus amounts already paid; expected deductible portion is the lesser of remaining deductible and projected annual costs; post-deductible cost uses coinsurance percentage where applicable.",
+      "For percent-based deductibles (common in home/hurricane coverages), the deductible amount equals coverage amount times deductible percentage."
+    ],
+    "how_is_calculated": [
+      "Health remaining deductible = max(0, individual deductible − deductible already paid).",
+      "Health deductible expected to be paid = min(remaining deductible, expected annual medical costs).",
+      "Health post-deductible cost = (expected annual medical costs − deductible expected to be paid) × (coinsurance % / 100).",
+      "Auto insurer payout per claim ≈ max(0, average claim cost − per-claim deductible). Annual insurer payout ≈ insurer payout per claim × expected number of claims.",
+      "Home percent deductible = coverage amount × (deductible percentage / 100).",
+      "Equipment annual deductible estimate = expected number of equipment claims × per-claim deductible."
+    ],
+    "faqs": [
+      {
+        "question": "Are these results exact for my policy?",
+        "answer": "No. These are estimates based on the inputs and common deductible rules. Actual amounts depend on policy terms, network pricing, copay structures, state regulations, and claim-specific adjustments. Always verify using your policy documents or consult your insurer or broker."
+      },
+      {
+        "question": "Does this calculator include copays, non-covered services, or balance billing?",
+        "answer": "No. Copays, non-covered services, and balance billing are not modeled. For health plans, copays and provider billing practices can materially change your out-of-pocket expenses and should be considered separately."
+      },
+      {
+        "question": "What should I enter for expected number and size of claims?",
+        "answer": "Use your historical experience (claims per year and average claim cost) or conservative estimates. For infrequent events (e.g., hurricanes), scenario-based stress testing (0, 1, 2+ claims) gives better planning insight."
+      },
+      {
+        "question": "How precise are arithmetic results and rounding rules?",
+        "answer": "Values are rounded to two decimal places for currency and one decimal place for percentages in the UI. Results are computational estimates and should be rounded as required for formal reporting."
+      },
+      {
+        "question": "Is my data stored or transmitted securely?",
+        "answer": "This tool is designed for client-side calculation. If any data is transmitted or stored by a service, it should follow recognized security practices such as ISO/IEC 27001 and NIST guidance. Check the service's privacy information before submitting personal data."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Privacy Framework",
+        "url": "https://www.nist.gov/privacy-framework"
+      },
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO/IEC 27001 — Information security management",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE Standard for Floating-Point Arithmetic (for numeric accuracy guidance)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "U.S. Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Deductible",
+        "definition": "The portion of a covered loss you must pay before your insurer pays on a covered claim. Can be per-claim or annual depending on policy type."
+      },
+      {
+        "term": "Coinsurance",
+        "definition": "The percentage of covered costs you pay after meeting the deductible, up to any out-of-pocket maximum."
+      },
+      {
+        "term": "Out-of-pocket maximum (OOP max)",
+        "definition": "A cap on the total amount you must pay during a plan period for covered services. Once reached, the insurer pays 100% of covered costs."
+      },
+      {
+        "term": "Per-claim deductible",
+        "definition": "A deductible amount applied to each separate claim or incident (common in auto and property policies)."
+      },
+      {
+        "term": "Percent-based deductible",
+        "definition": "A deductible calculated as a percentage of the insured value or coverage amount (common for certain home or hurricane endorsements)."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/insurance/compare-deductibles",
+      "/guides/understanding-insurance-terms"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/privacy-framework",
+        "label": "NIST Privacy Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/isoiec-27001-information-security.html",
+        "label": "ISO/IEC 27001 information security",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

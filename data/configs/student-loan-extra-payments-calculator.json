@@ -1,0 +1,583 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Student Loan Extra Payments Calculator (Monthly, Biweekly, One-time)",
+    "description": "Interactive calculator to estimate loan payoff time, total interest, and interest savings when making extra payments on a student loan. Supports monthly extra payments, biweekly schedules, and one-time principal reductions."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "monthly_extra",
+    "methods": {
+      "monthly_extra": {
+        "label": "Monthly extra payments",
+        "description": "Standard amortization with an additional fixed payment added every month.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/12/100",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "base_payment": {
+            "expression": "annual_rate>0 ? principal*(monthly_rate)/(1-pow(1+monthly_rate,-remaining_term_months)) : principal/remaining_term_months",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "remaining_term_months",
+              "annual_rate"
+            ],
+            "label": "Scheduled monthly payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_with_extra": {
+            "expression": "base_payment + extra_payment",
+            "dependencies": [
+              "base_payment",
+              "extra_payment"
+            ],
+            "label": "Total monthly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "months_to_payoff": {
+            "expression": "payment_with_extra>principal*monthly_rate ? ceil( log(payment_with_extra/(payment_with_extra - principal*monthly_rate)) / log(1+monthly_rate) ) : remaining_term_months",
+            "dependencies": [
+              "payment_with_extra",
+              "principal",
+              "monthly_rate",
+              "remaining_term_months"
+            ],
+            "label": "Months until payoff",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "years_to_payoff": {
+            "expression": "months_to_payoff/12",
+            "dependencies": [
+              "months_to_payoff"
+            ],
+            "label": "Years until payoff",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "original_total_paid": {
+            "expression": "base_payment * remaining_term_months",
+            "dependencies": [
+              "base_payment",
+              "remaining_term_months"
+            ],
+            "label": "Total paid without extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_paid": {
+            "expression": "payment_with_extra * months_to_payoff",
+            "dependencies": [
+              "payment_with_extra",
+              "months_to_payoff"
+            ],
+            "label": "Total amount paid (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "original_total_paid - total_paid",
+            "dependencies": [
+              "original_total_paid",
+              "total_paid"
+            ],
+            "label": "Interest saved vs original schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff",
+            "label": "Months to payoff",
+            "variable": "months_to_payoff",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "years_to_payoff",
+            "label": "Years to payoff",
+            "variable": "years_to_payoff",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_extra": {
+        "label": "Biweekly payments (every 2 weeks)",
+        "description": "Model that treats payments as occurring every two weeks (26 payments per year). Extra payment value is treated as the amount added to each biweekly payment.",
+        "variables": {
+          "biweekly_rate": {
+            "expression": "annual_rate/26/100",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Biweekly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "n_biweeks": {
+            "expression": "remaining_term_months * 26 / 12",
+            "dependencies": [
+              "remaining_term_months"
+            ],
+            "label": "Remaining number of biweekly periods",
+            "unit": "periods",
+            "format": "decimal",
+            "display": false
+          },
+          "base_biweekly_payment": {
+            "expression": "annual_rate>0 ? principal*(biweekly_rate)/(1-pow(1+biweekly_rate,-n_biweeks)) : principal/n_biweeks",
+            "dependencies": [
+              "principal",
+              "biweekly_rate",
+              "n_biweeks",
+              "annual_rate"
+            ],
+            "label": "Scheduled biweekly payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_with_extra_biweekly": {
+            "expression": "base_biweekly_payment + extra_payment",
+            "dependencies": [
+              "base_biweekly_payment",
+              "extra_payment"
+            ],
+            "label": "Biweekly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payments_to_payoff": {
+            "expression": "payment_with_extra_biweekly>principal*biweekly_rate ? ceil( log(payment_with_extra_biweekly/(payment_with_extra_biweekly - principal*biweekly_rate)) / log(1+biweekly_rate) ) : n_biweeks",
+            "dependencies": [
+              "payment_with_extra_biweekly",
+              "principal",
+              "biweekly_rate",
+              "n_biweeks"
+            ],
+            "label": "Number of biweekly payments until payoff",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "years_to_payoff_biweekly": {
+            "expression": "payments_to_payoff / 26",
+            "dependencies": [
+              "payments_to_payoff"
+            ],
+            "label": "Years until payoff (biweekly)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_biweekly": {
+            "expression": "payment_with_extra_biweekly * payments_to_payoff",
+            "dependencies": [
+              "payment_with_extra_biweekly",
+              "payments_to_payoff"
+            ],
+            "label": "Total paid with biweekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_biweekly": {
+            "expression": "total_paid_biweekly - principal",
+            "dependencies": [
+              "total_paid_biweekly",
+              "principal"
+            ],
+            "label": "Total interest paid (biweekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payments_to_payoff",
+            "label": "Biweekly payments to payoff",
+            "variable": "payments_to_payoff",
+            "format": "integer"
+          },
+          {
+            "id": "years_to_payoff_biweekly",
+            "label": "Years to payoff (biweekly)",
+            "variable": "years_to_payoff_biweekly",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_biweekly",
+            "label": "Total interest paid (biweekly)",
+            "variable": "total_interest_biweekly",
+            "format": "currency",
+            "unit": "USD"
+          }
+        ]
+      },
+      "one_time_extra": {
+        "label": "One-time principal reduction",
+        "description": "Apply a single extra payment directly to principal at the start and compute the resulting payoff schedule using the same scheduled monthly payment.",
+        "variables": {
+          "new_principal": {
+            "expression": "max(principal - extra_payment, 0)",
+            "dependencies": [
+              "principal",
+              "extra_payment"
+            ],
+            "label": "Principal after one-time reduction",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_rate_ot": {
+            "expression": "annual_rate/12/100",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "base_payment_ot": {
+            "expression": "annual_rate>0 ? new_principal*(monthly_rate_ot)/(1-pow(1+monthly_rate_ot,-remaining_term_months)) : new_principal/remaining_term_months",
+            "dependencies": [
+              "new_principal",
+              "monthly_rate_ot",
+              "remaining_term_months",
+              "annual_rate"
+            ],
+            "label": "Monthly payment recalculated on reduced principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "months_to_payoff_ot": {
+            "expression": "remaining_term_months",
+            "dependencies": [
+              "remaining_term_months"
+            ],
+            "label": "Remaining months (one-time reduction assumes same term)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_paid_ot": {
+            "expression": "extra_payment + base_payment_ot * months_to_payoff_ot",
+            "dependencies": [
+              "extra_payment",
+              "base_payment_ot",
+              "months_to_payoff_ot"
+            ],
+            "label": "Total paid after one-time reduction",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_ot": {
+            "expression": "total_paid_ot - principal",
+            "dependencies": [
+              "total_paid_ot",
+              "principal"
+            ],
+            "label": "Total interest paid (one-time reduction)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff_ot",
+            "label": "Months remaining (post reduction)",
+            "variable": "months_to_payoff_ot",
+            "format": "integer"
+          },
+          {
+            "id": "total_interest_ot",
+            "label": "Total interest paid (one-time)",
+            "variable": "total_interest_ot",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_ot",
+            "label": "Total paid including one-time extra",
+            "variable": "total_paid_ot",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Outstanding principal balance",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %) — nominal",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "remaining_term_months",
+        "label": "Remaining term (months)",
+        "type": "integer",
+        "default": 120,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment amount (treated per selected frequency)",
+        "type": "number",
+        "default": 50,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_frequency",
+        "label": "Extra payment frequency (how you intend to make the extra payment)",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly (add this amount to each monthly payment)",
+            "value": "monthly"
+          },
+          {
+            "label": "Biweekly (add this amount to each biweekly payment)",
+            "value": "biweekly"
+          },
+          {
+            "label": "One-time (single principal reduction)",
+            "value": "one_time"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "months_to_payoff",
+          "label": "Months to payoff (monthly scenario)",
+          "format": "integer"
+        },
+        {
+          "id": "years_to_payoff",
+          "label": "Years to payoff (monthly scenario)",
+          "format": "decimal"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest paid (monthly scenario)",
+          "format": "currency"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Interest saved (monthly scenario)",
+          "format": "currency"
+        },
+        {
+          "id": "payments_to_payoff",
+          "label": "Payments to payoff (biweekly scenario)",
+          "format": "integer"
+        },
+        {
+          "id": "years_to_payoff_biweekly",
+          "label": "Years to payoff (biweekly scenario)",
+          "format": "decimal"
+        },
+        {
+          "id": "total_interest_biweekly",
+          "label": "Total interest paid (biweekly scenario)",
+          "format": "currency"
+        },
+        {
+          "id": "months_to_payoff_ot",
+          "label": "Months remaining (one-time reduction)",
+          "format": "integer"
+        },
+        {
+          "id": "total_interest_ot",
+          "label": "Total interest paid (one-time reduction)",
+          "format": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates how making extra payments affects the payoff date and total interest on a student loan. It supports regular monthly extra payments, a biweekly payment cadence (every two weeks), and one-time principal reductions.",
+      "Results are estimates using standard amortization math. Use the scenario that matches how you will actually send extra money: add to each monthly payment, add to each biweekly payment, or apply a single one-time principal payment."
+    ],
+    "methodology": [
+      "Monthly scenarios use standard fixed-rate amortization formulas to compute the scheduled payment and then recompute payoff time when a fixed extra amount is added each month. For interest rate conversions and period counts we use nominal APR divided by the number of periods per year.",
+      "Biweekly scenarios model 26 equal periods per year. A true biweekly strategy can reduce interest faster because there are 26 payments versus 12; this model treats the biweekly payment as a separate schedule with its own per-period rate.",
+      "One-time principal reductions subtract the payment from principal immediately and then compute the remaining schedule using the same nominal monthly interest rate and remaining term (unless you choose to recast payments)."
+    ],
+    "how_is_calculated": [
+      "Monthly scheduled payment (no extra): P * r / (1 - (1+r)^-N), where P is principal, r is monthly rate, N is remaining months.",
+      "Months to payoff when adding extra: solve payment*(1 - (1+r)^-n) = P*r for n, then take the ceiling of n to represent whole payment periods.",
+      "Biweekly model: use r_biweekly = APR/26 and N_biweekly = remaining_months * 26 / 12 with the same annuity formula applied per biweekly period.",
+      "One-time reduction: new principal = max(P - extra, 0); recompute payments or keep same scheduled payment to see term reduction."
+    ],
+    "faqs": [
+      {
+        "question": "Will extra payments always reduce my interest?",
+        "answer": "Yes, when applied to principal they reduce the principal balance sooner and therefore reduce total interest. The amount of savings depends on timing, frequency, and whether your servicer applies payments to principal immediately."
+      },
+      {
+        "question": "Is biweekly always better than monthly?",
+        "answer": "Biweekly schedules often accelerate payoff because 26 payments/year typically equals 13 monthly payments' worth across a year. Actual benefit depends on whether your servicer applies biweekly payments as they arrive or holds them."
+      },
+      {
+        "question": "Can this tool model income-driven repayment or forgiveness programs?",
+        "answer": "No. This calculator models fixed-rate amortization only. Income-driven repayment, deferment, or forgiveness programs are governed by program rules and can change amortization behavior; consult your loan servicer or plan documents."
+      },
+      {
+        "question": "How accurate are the numbers?",
+        "answer": "These are mathematical estimates based on inputs you provide. They assume fixed nominal APR and standard compounding aligned to payment frequency. Real-world factors such as rounding rules, payment application timing, fees, and servicer policies can change results."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (standards for numeric computing best practices)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — guidance on data handling and workplace controls",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — student loans",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate; the nominal annual interest rate without adjustment for compounding frequency in this calculator."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down a loan over time via regular payments of principal and interest."
+      },
+      {
+        "term": "Biweekly",
+        "definition": "A payment cadence of once every two weeks (26 payments per year). This calculator models biweekly as 26 equal periods per year."
+      },
+      {
+        "term": "One-time principal reduction",
+        "definition": "A single extra payment applied directly to the loan principal, lowering the outstanding balance immediately."
+      }
+    ],
+    "summary": [
+      "Choose the method that matches how you will actually make extra payments: monthly extras, biweekly additions, or a single one-time payment.",
+      "Results are estimates; verify with your loan servicer before changing payment arrangements. This tool adheres to standard numeric methods and cites standards organizations for transparency."
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau — student loans",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

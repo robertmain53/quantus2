@@ -1,0 +1,499 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Portfolio Standard Deviation Calculator (Two-asset & N-asset)",
+    "description": "Calculate portfolio standard deviation from weights and asset-level risk inputs. Supports a closed-form two-asset formula and matrix-based covariance or correlation CSV inputs for portfolios of arbitrary size. Includes guidance on interpretation, annualization, numerical accuracy, and limitations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "two_asset",
+    "methods": {
+      "two_asset": {
+        "label": "Two-asset closed-form",
+        "description": "Direct formula for a portfolio of two assets using weights, individual standard deviations, and their correlation.",
+        "variables": {
+          "variance_terms": {
+            "expression": "w1*w1*sd1*sd1 + w2*w2*sd2*sd2 + 2*w1*w2*corr12*sd1*sd2",
+            "dependencies": [
+              "w1",
+              "w2",
+              "sd1",
+              "sd2",
+              "corr12"
+            ],
+            "label": "Portfolio variance (two-asset)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "portfolio_sd": {
+            "expression": "sqrt(variance_terms)",
+            "dependencies": [
+              "variance_terms"
+            ],
+            "label": "Portfolio standard deviation",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "portfolio_sd",
+            "label": "Portfolio standard deviation (two-asset)",
+            "variable": "portfolio_sd",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "covariance_matrix_csv": {
+        "label": "N-asset via covariance matrix (CSV)",
+        "description": "Accepts a weights vector CSV and a covariance matrix CSV. The tool computes w' Σ w and returns the square root. CSV format: comma-separated rows; rows separated by newline or semicolon. Weights are a single row or column CSV.",
+        "variables": {
+          "parsed_weights": {
+            "expression": "parseVectorCSV(weights_csv)",
+            "dependencies": [
+              "weights_csv"
+            ],
+            "label": "Parsed weights vector",
+            "display": false
+          },
+          "parsed_cov": {
+            "expression": "parseMatrixCSV(cov_csv)",
+            "dependencies": [
+              "cov_csv"
+            ],
+            "label": "Parsed covariance matrix",
+            "display": false
+          },
+          "portfolio_variance_matrix": {
+            "expression": "quadraticForm(parsed_weights, parsed_cov)",
+            "dependencies": [
+              "parsed_weights",
+              "parsed_cov"
+            ],
+            "label": "Portfolio variance (matrix)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "portfolio_sd_matrix": {
+            "expression": "sqrt(portfolio_variance_matrix)",
+            "dependencies": [
+              "portfolio_variance_matrix"
+            ],
+            "label": "Portfolio standard deviation (matrix)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "portfolio_sd_matrix",
+            "label": "Portfolio standard deviation (from covariance CSV)",
+            "variable": "portfolio_sd_matrix",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "correlation_plus_sds_csv": {
+        "label": "N-asset via correlation matrix + asset SDs (CSV)",
+        "description": "Accepts a correlation matrix CSV and a standard-deviations CSV (one row) plus weights. The tool converts correlation to covariance by cov_ij = corr_ij * sd_i * sd_j, then computes w' Σ w.",
+        "variables": {
+          "parsed_weights_corr": {
+            "expression": "parseVectorCSV(weights_csv)",
+            "dependencies": [
+              "weights_csv"
+            ],
+            "label": "Parsed weights vector",
+            "display": false
+          },
+          "parsed_corr": {
+            "expression": "parseMatrixCSV(corr_csv)",
+            "dependencies": [
+              "corr_csv"
+            ],
+            "label": "Parsed correlation matrix",
+            "display": false
+          },
+          "parsed_sds": {
+            "expression": "parseVectorCSV(sds_csv)",
+            "dependencies": [
+              "sds_csv"
+            ],
+            "label": "Parsed asset standard deviations",
+            "display": false
+          },
+          "constructed_cov": {
+            "expression": "constructCovarianceFromCorrelation(parsed_corr, parsed_sds)",
+            "dependencies": [
+              "parsed_corr",
+              "parsed_sds"
+            ],
+            "label": "Constructed covariance matrix",
+            "display": false
+          },
+          "portfolio_variance_corr": {
+            "expression": "quadraticForm(parsed_weights_corr, constructed_cov)",
+            "dependencies": [
+              "parsed_weights_corr",
+              "constructed_cov"
+            ],
+            "label": "Portfolio variance (from correlation + sds)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "portfolio_sd_corr": {
+            "expression": "sqrt(portfolio_variance_corr)",
+            "dependencies": [
+              "portfolio_variance_corr"
+            ],
+            "label": "Portfolio standard deviation (from correlation + sds)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "portfolio_sd_corr",
+            "label": "Portfolio standard deviation (from correlation + sds)",
+            "variable": "portfolio_sd_corr",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "w1",
+        "label": "Weight: Asset 1 (decimal)",
+        "type": "number",
+        "default": 0.5,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "w2",
+        "label": "Weight: Asset 2 (decimal)",
+        "type": "number",
+        "default": 0.5,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "sd1",
+        "label": "Standard deviation: Asset 1 (decimal, e.g. 0.15 = 15%)",
+        "type": "number",
+        "default": 0.15,
+        "min": 0,
+        "max": 10,
+        "step": 0.0001
+      },
+      {
+        "id": "sd2",
+        "label": "Standard deviation: Asset 2 (decimal, e.g. 0.20 = 20%)",
+        "type": "number",
+        "default": 0.2,
+        "min": 0,
+        "max": 10,
+        "step": 0.0001
+      },
+      {
+        "id": "corr12",
+        "label": "Correlation between Asset 1 and Asset 2 (−1 to 1)",
+        "type": "number",
+        "default": 0.2,
+        "min": -1,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "weights_csv",
+        "label": "Weights CSV (for N-asset methods). Example: 0.4,0.6 or 0.4;0.6",
+        "type": "text",
+        "default": "0.5,0.5"
+      },
+      {
+        "id": "cov_csv",
+        "label": "Covariance matrix CSV (rows separated by newline or semicolon). Example for 2 assets: 0.0225,0.003;0.003,0.04",
+        "type": "text",
+        "default": "0.0225,0.003;0.003,0.04"
+      },
+      {
+        "id": "corr_csv",
+        "label": "Correlation matrix CSV (rows separated by newline or semicolon). Example for 2 assets: 1,0.2;0.2,1",
+        "type": "text",
+        "default": "1,0.2;0.2,1"
+      },
+      {
+        "id": "sds_csv",
+        "label": "Asset standard deviations CSV (one row). Example for 2 assets: 0.15,0.20",
+        "type": "text",
+        "default": "0.15,0.20"
+      },
+      {
+        "id": "annualize_periods",
+        "label": "Periods per year for annualization (set to 1 if inputs already annualized)",
+        "type": "integer",
+        "default": 252,
+        "min": 1,
+        "max": 10000,
+        "step": 1
+      },
+      {
+        "id": "method_select",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "two_asset",
+        "options": [
+          {
+            "label": "Two-asset closed-form",
+            "value": "two_asset"
+          },
+          {
+            "label": "N-asset from covariance matrix (CSV)",
+            "value": "covariance_matrix_csv"
+          },
+          {
+            "label": "N-asset from correlation matrix + SDs (CSV)",
+            "value": "correlation_plus_sds_csv"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "two_asset_section",
+        "label": "Two-asset inputs",
+        "show_when": {
+          "field": "method_select",
+          "is": "two_asset"
+        },
+        "fields": [
+          {
+            "id": "w1",
+            "label": "Weight: Asset 1 (decimal)",
+            "type": "number",
+            "default": 0.5,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "w2",
+            "label": "Weight: Asset 2 (decimal)",
+            "type": "number",
+            "default": 0.5,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "sd1",
+            "label": "Standard deviation: Asset 1 (decimal)",
+            "type": "number",
+            "default": 0.15,
+            "min": 0,
+            "max": 10,
+            "step": 0.0001
+          },
+          {
+            "id": "sd2",
+            "label": "Standard deviation: Asset 2 (decimal)",
+            "type": "number",
+            "default": 0.2,
+            "min": 0,
+            "max": 10,
+            "step": 0.0001
+          },
+          {
+            "id": "corr12",
+            "label": "Correlation between Asset 1 and Asset 2",
+            "type": "number",
+            "default": 0.2,
+            "min": -1,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "matrix_section",
+        "label": "Matrix inputs",
+        "show_when": {
+          "field": "method_select",
+          "is": "covariance_matrix_csv"
+        },
+        "fields": [
+          {
+            "id": "weights_csv",
+            "label": "Weights CSV",
+            "type": "text",
+            "default": "0.5,0.5"
+          },
+          {
+            "id": "cov_csv",
+            "label": "Covariance matrix CSV",
+            "type": "text",
+            "default": "0.0225,0.003;0.003,0.04"
+          }
+        ]
+      },
+      {
+        "id": "corr_plus_sds_section",
+        "label": "Correlation + SDs inputs",
+        "show_when": {
+          "field": "method_select",
+          "is": "correlation_plus_sds_csv"
+        },
+        "fields": [
+          {
+            "id": "weights_csv",
+            "label": "Weights CSV",
+            "type": "text",
+            "default": "0.5,0.5"
+          },
+          {
+            "id": "corr_csv",
+            "label": "Correlation matrix CSV",
+            "type": "text",
+            "default": "1,0.2;0.2,1"
+          },
+          {
+            "id": "sds_csv",
+            "label": "Asset standard deviations CSV",
+            "type": "text",
+            "default": "0.15,0.20"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes portfolio standard deviation from user-supplied weights and risk inputs. It supports a closed-form two-asset formula for quick checks and a matrix-based workflow for portfolios of arbitrary size (upload or paste CSV matrices). Use the two-asset method for simple portfolios and matrix methods when you have covariance or correlation data.",
+      "The tool returns portfolio variance and the square root of variance (standard deviation). It includes guidance on annualization, numeric accuracy, input validation, and operational limits. Results are indicative and depend entirely on the quality of the input data."
+    ],
+    "methodology": [
+      "Two-asset closed form: Uses the exact algebraic formula var_p = w1^2 σ1^2 + w2^2 σ2^2 + 2 w1 w2 ρ12 σ1 σ2. SD is sqrt(var_p).",
+      "N-asset matrix: Accepts a covariance matrix Σ and weight vector w, computes portfolio variance as w' Σ w (a quadratic form). SD is sqrt(w' Σ w).",
+      "Correlation workflow: If you supply a correlation matrix and per-asset standard deviations, the calculator converts correlation to covariance by cov_ij = corr_ij * σ_i * σ_j, then applies the quadratic form.",
+      "Annualization: If inputs are period-level (e.g., daily returns), convert to annual SD by multiplying period SD by sqrt(periods_per_year). Ensure all inputs use the same periodicity before comparison."
+    ],
+    "how_is_calculated": [
+      "Two-asset formula (inputs: weights w1,w2; standard deviations σ1,σ2; correlation ρ12): var_p = w1^2σ1^2 + w2^2σ2^2 + 2w1w2ρ12σ1σ2. SD_p = sqrt(var_p).",
+      "Matrix formula (inputs: weight vector w, covariance matrix Σ): var_p = w' Σ w. SD_p = sqrt(var_p).",
+      "From correlation matrix (inputs: correlation matrix R, SD vector σ): construct Σ where Σ_ij = R_ij * σ_i * σ_j, then compute var_p = w' Σ w and SD_p = sqrt(var_p).",
+      "Numerical note: All formulae assume weights sum to 1 if you are computing portfolio-level SD. If weights do not sum to 1, results represent scaled exposure; normalize weights if necessary."
+    ],
+    "examples": [
+      "Example (two-asset): w1=0.6, w2=0.4, σ1=0.15, σ2=0.20, ρ12=0.2 → compute var_p and SD_p using the two-asset expression;",
+      "Example (matrix): weights_csv = 0.5,0.5; cov_csv = 0.0225,0.003;0.003,0.04 → parsed into vector and 2x2 matrix, compute w'Σw and then sqrt() for SD."
+    ],
+    "faqs": [
+      {
+        "question": "Do weights need to sum to 1?",
+        "answer": "For portfolio-level standard deviation, weights should normally sum to 1. If they do not, the calculated standard deviation scales with exposure. The tool accepts any weights but recommends normalizing them if comparing portfolios."
+      },
+      {
+        "question": "Should I provide covariance or correlation?",
+        "answer": "Both are acceptable. If you only have correlations, provide per-asset standard deviations so the tool can convert correlations to covariances. If you have covariances already, provide them directly."
+      },
+      {
+        "question": "How do I annualize the result?",
+        "answer": "If your input SDs are per-period (for example, daily), multiply the resulting SD by sqrt(periods_per_year) where periods_per_year is typically 252 for trading days or 12 for months. Ensure consistency of input periodicity."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Numerical accuracy depends on input precision, matrix condition, and floating-point arithmetic. For very large or ill-conditioned covariance matrices, rounding error can be material. See accuracy caveats and standards below."
+      },
+      {
+        "question": "What are common failure modes?",
+        "answer": "Common issues include malformed CSV input, mismatched matrix dimensions, non-numeric entries, and correlation matrices that are not positive semi-definite. The tool validates dimensions and basic numeric content but cannot correct fundamentally inconsistent data."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST e-Handbook of Statistical Methods (statistics reference and guidance)",
+        "url": "https://www.itl.nist.gov/div898/handbook/"
+      },
+      {
+        "label": "ISO 31000:2018 Risk management — Principles and guidelines",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE 754-2019 Standard for Floating-Point Arithmetic (numeric accuracy guidance)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA — General duty and safe data handling practices",
+        "url": "https://www.osha.gov/laws-regs"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Standard deviation (SD)",
+        "definition": "A measure of dispersion of a single asset's returns around its mean. Here SD is specified as a decimal (0.15 = 15%)."
+      },
+      {
+        "term": "Covariance",
+        "definition": "A measure of how two asset returns move together. Used in matrix Σ where Σ_ij is covariance between assets i and j."
+      },
+      {
+        "term": "Correlation",
+        "definition": "Normalized covariance bounded between −1 and 1. Correlation can be converted to covariance via cov_ij = corr_ij * σ_i * σ_j."
+      },
+      {
+        "term": "Quadratic form",
+        "definition": "Mathematical expression w' Σ w giving portfolio variance for weight vector w and covariance matrix Σ."
+      },
+      {
+        "term": "Positive semi-definite",
+        "definition": "A matrix property required for a valid covariance matrix. If a covariance or correlation matrix is not positive semi-definite, computed variances may be invalid."
+      }
+    ],
+    "summary": [
+      "Use the two-asset method for quick, exact calculations when you have two assets. Use matrix methods for portfolios with many assets.",
+      "Ensure input consistency (periodicity, units) and check matrix validity. The accuracy of results is governed by input quality, numeric stability, and floating-point arithmetic limits."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/portfolio/expected-return",
+      "/calculators/annualization"
+    ],
+    "external": [
+      {
+        "url": "https://www.itl.nist.gov/div898/handbook/",
+        "label": "NIST e-Handbook of Statistical Methods",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754-2019 Floating-Point Standard",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

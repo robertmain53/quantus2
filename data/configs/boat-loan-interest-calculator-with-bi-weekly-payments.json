@@ -1,0 +1,240 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Boat Loan Calculator (Bi-Weekly Payments)",
+    "description": "Estimate bi-weekly boat loan payments, total cost, and interest using annual APR, term, and optional extra payments. Includes equivalent monthly conversion and accuracy caveats."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Payment per period (before extra)",
+        "expression": "((loan_amount - down_payment + fees) * (annual_interest_rate/100/payments_per_year)) / (1 - pow(1 + (annual_interest_rate/100/payments_per_year), -(term_years*payments_per_year)))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "periodic_payment_with_extra",
+        "label": "Payment per period (including extra)",
+        "expression": "((loan_amount - down_payment + fees) * (annual_interest_rate/100/payments_per_year)) / (1 - pow(1 + (annual_interest_rate/100/payments_per_year), -(term_years*payments_per_year))) + extra_payment",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "number_of_payments",
+        "label": "Number of scheduled payments",
+        "expression": "term_years * payments_per_year",
+        "format": "integer"
+      },
+      {
+        "id": "total_paid",
+        "label": "Total paid over scheduled term (incl. extras)",
+        "expression": "(((loan_amount - down_payment + fees) * (annual_interest_rate/100/payments_per_year)) / (1 - pow(1 + (annual_interest_rate/100/payments_per_year), -(term_years*payments_per_year))) + extra_payment) * (term_years * payments_per_year)",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest",
+        "label": "Total interest paid (approx., scheduled term)",
+        "expression": "((((loan_amount - down_payment + fees) * (annual_interest_rate/100/payments_per_year)) / (1 - pow(1 + (annual_interest_rate/100/payments_per_year), -(term_years*payments_per_year))) + extra_payment) * (term_years * payments_per_year)) - (loan_amount - down_payment + fees)",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "equivalent_monthly_payment",
+        "label": "Equivalent monthly payment (approx.)",
+        "expression": "(((loan_amount - down_payment + fees) * (annual_interest_rate/100/payments_per_year)) / (1 - pow(1 + (annual_interest_rate/100/payments_per_year), -(term_years*payments_per_year))) + extra_payment) * (payments_per_year/12)",
+        "unit": "USD",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Boat price / financed amount",
+        "type": "number",
+        "default": 50000,
+        "min": 1000,
+        "step": 100
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment / trade-in (applied to principal)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "fees",
+        "label": "Upfront fees rolled into loan",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR %) ",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 10,
+        "min": 1,
+        "max": 30,
+        "step": 0.5
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payment frequency (payments per year)",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Semi-monthly (24)",
+            "value": "24"
+          },
+          {
+            "label": "Bi-weekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment",
+        "label": "Optional extra payment per period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Payment per period"
+        },
+        {
+          "id": "periodic_payment_with_extra",
+          "label": "Payment per period (with extra)"
+        },
+        {
+          "id": "number_of_payments",
+          "label": "Scheduled payments"
+        },
+        {
+          "id": "total_paid",
+          "label": "Total paid (scheduled)"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest (scheduled)"
+        },
+        {
+          "id": "equivalent_monthly_payment",
+          "label": "Equivalent monthly payment"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments and total cost for a boat loan when payments are made on a bi-weekly schedule (26 payments per year). Enter the financed amount, APR, term, and any optional extra payments to see scheduled payment amounts and an approximate total interest cost over the scheduled term.",
+      "The tool uses standard loan amortization mathematics to produce per-period payment values and basic aggregates. It provides an equivalent monthly estimate for budgeting, and includes accuracy notes on rounding and extra-payment effects."
+    ],
+    "methodology": [
+      "We compute the periodic interest rate by dividing the annual percentage rate (APR) by the number of payments per year. The scheduled payment formula is the standard annuity payment formula applied to the chosen periodic rate and total number of scheduled periods.",
+      "If extra payments are entered, the calculator adds the extra amount to each scheduled payment and calculates totals assuming the same number of scheduled payments. This provides an upper-bound estimate of total paid and interest; making extra payments typically shortens the loan and reduces total interest but requires an amortization schedule to compute the exact shortened term."
+    ],
+    "how_is_calculated": [
+      "Principal = financed amount - down payment + fees",
+      "Periodic rate r = (APR / 100) / payments_per_year",
+      "Number of scheduled payments n = term_years * payments_per_year",
+      "Scheduled payment (per period) = [Principal * r] / [1 - (1 + r)^(-n)]",
+      "Payment with extras = Scheduled payment + extra payment",
+      "Total paid (scheduled) = Payment with extras * n",
+      "Total interest (scheduled) = Total paid (scheduled) - Principal",
+      "Equivalent monthly = Payment with extras * (payments_per_year / 12)"
+    ],
+    "faqs": [
+      {
+        "question": "Does bi-weekly payment schedule reduce total interest?",
+        "answer": "Bi-weekly schedules can reduce total interest compared with monthly payments when the payment cadence results in more frequent principal reduction (for example, 26 bi-weekly payments vs 12 monthly). This calculator shows scheduled-term aggregates; if extra payments shorten the term, total interest will be lower than the 'scheduled' estimate here."
+      },
+      {
+        "question": "Are results exact for extra payments that change term length?",
+        "answer": "No. For exact remaining-term calculations and precise interest savings from extra payments, a full amortization schedule that re-computes balance and term after each extra payment is required. This tool provides accurate scheduled-term math but treats extras as applied each period without re-amortizing the schedule."
+      },
+      {
+        "question": "How do rounding and numeric precision affect results?",
+        "answer": "Results are subject to floating-point rounding and formatting. IEEE 754 floating-point behavior and local currency rounding rules can cause cent-level differences. See the accuracy caveats and standards citations below."
+      },
+      {
+        "question": "Is APR the same as periodic rate?",
+        "answer": "APR is an annual percentage rate; the periodic rate used in the payment formula is APR divided by the number of payments per year. This tool uses the nominal APR supplied by the user and does not derive APR from payment history or fees beyond the 'fees' input."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (National Institute of Standards and Technology)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (International Organization for Standardization)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association (floating-point arithmetic reference)",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA (Occupational Safety and Health Administration)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The annual interest rate quoted for the loan before converting to a periodic rate."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The APR divided by the number of payments per year; used in the payment formula for each period."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down principal and interest over time according to a schedule of payments."
+      },
+      {
+        "term": "Bi-weekly",
+        "definition": "Payment frequency of 26 payments per year (every two weeks)."
+      },
+      {
+        "term": "Principal",
+        "definition": "The amount financed after subtracting down payment and adding any rolled-in fees."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "An additional payment applied each period to reduce principal faster. Exact term reduction requires a re-amortized schedule."
+      }
+    ]
+  }
+}

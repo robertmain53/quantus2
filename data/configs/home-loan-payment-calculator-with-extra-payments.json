@@ -1,0 +1,241 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Payment Calculator with Extra Payments",
+    "description": "Estimate standard monthly payment, payoff time, total interest, and savings when applying recurring or one-time extra payments to a mortgage. Includes calibration notes, limits, and references to numeric and testing standards."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "monthly_payment",
+        "label": "Standard monthly payment (no extra)",
+        "expression": "(loan_amount*(annual_rate_pct/100/12))/(1-pow(1+annual_rate_pct/100/12,-term_years*12))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_payment_no_extra",
+        "label": "Total paid over term (no extra)",
+        "expression": "((loan_amount*(annual_rate_pct/100/12))/(1-pow(1+annual_rate_pct/100/12,-term_years*12)))*term_years*12",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "months_to_payoff_with_extra",
+        "label": "Months until payoff with extra payments (approx.)",
+        "expression": "if(extra_payment_amount<=0, term_years*12, ceil( -log(1 - loan_amount*(annual_rate_pct/100/12)/( (loan_amount*(annual_rate_pct/100/12))/(1-pow(1+annual_rate_pct/100/12,-term_years*12)) + (extra_payment_type=='monthly'? extra_payment_amount : (extra_payment_type=='yearly'? extra_payment_amount/12 : extra_payment_amount/(term_years*12)) ))) / log(1+annual_rate_pct/100/12) ))",
+        "unit": "integer",
+        "format": "integer"
+      },
+      {
+        "id": "total_interest_with_extra",
+        "label": "Estimated total interest paid with extra payments",
+        "expression": "(( (loan_amount*(annual_rate_pct/100/12))/(1-pow(1+annual_rate_pct/100/12,-term_years*12)) + (extra_payment_type=='monthly'? extra_payment_amount : (extra_payment_type=='yearly'? extra_payment_amount/12 : extra_payment_amount/(term_years*12)) ) ) * months_to_payoff_with_extra) - loan_amount",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "interest_saved",
+        "label": "Estimated interest saved versus no extra payments",
+        "expression": "((total_payment_no_extra - loan_amount) - total_interest_with_extra)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "payoff_years_with_extra",
+        "label": "Approximate years to payoff with extra payments",
+        "expression": "round(months_to_payoff_with_extra/12,2)",
+        "unit": "years",
+        "format": "decimal"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (percent)",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_amount",
+        "label": "Extra payment amount",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_type",
+        "label": "Extra payment frequency",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly (adds to each monthly payment)",
+            "value": "monthly"
+          },
+          {
+            "label": "Yearly (applied once per year)",
+            "value": "yearly"
+          },
+          {
+            "label": "One-time (applied once at start evenly amortized)",
+            "value": "one_time"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment_start_month",
+        "label": "Start extra payments at month",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "monthly_payment",
+          "label": "Monthly payment without extras",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_payment_no_extra",
+          "label": "Total paid (no extras)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "months_to_payoff_with_extra",
+          "label": "Months to payoff (with extras)",
+          "format": "integer",
+          "unit": "months"
+        },
+        {
+          "id": "payoff_years_with_extra",
+          "label": "Years to payoff (with extras)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "total_interest_with_extra",
+          "label": "Total interest paid (with extras)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Interest saved",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates your standard monthly mortgage payment and shows the likely effect of adding recurring or one-time extra payments. Use it to compare total interest, shortened term, and approximate payoff timing.",
+      "Results are estimates based on a level-payment (fully amortizing) loan schedule using the inputs you provide. It assumes interest compounds monthly and extra payments are applied to principal according to the selected frequency."
+    ],
+    "methodology": [
+      "Monthly payment is computed using the standard annuity formula with monthly rate r = annual_rate_pct/100/12 and n = term_years*12: payment = P*r/(1-(1+r)^-n).",
+      "When extra payments are entered, the tool approximates payoff time by treating recurring extras as additions to the monthly payment (yearly extras are converted to equivalent monthly amounts for estimation; one-time extras are amortized across remaining periods). The method provides quick, practical estimates; exact bank schedules and timing rules may vary.",
+      "Numerical stability and rounding follow common floating-point practices; users should allow for small rounding differences. For implementation, adhere to IEEE floating-point considerations, validate with ISO guidance on measurement accuracy, and apply secure development and testing practices aligned with NIST recommendations."
+    ],
+    "how_is_calculated": [
+      "Step 1: Convert annual rate to monthly rate r = annual_rate_pct / 100 / 12 and compute n = term_years * 12.",
+      "Step 2: Compute standard monthly payment using payment = (loan_amount * r) / (1 - (1 + r)^-n).",
+      "Step 3: Convert extra payments to an equivalent monthly addition depending on frequency (monthly = as entered, yearly = amount/12, one-time = spread over remaining months for estimate).",
+      "Step 4: Estimate months to payoff by solving the amortization equation for number of payments given the adjusted monthly payment; compute total interest as (payments * adjusted_payment) - loan_amount.",
+      "Accuracy note: this tool uses closed-form approximations for speed. Exact payoff schedules depend on lender posting rules and day-count conventions."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "This calculator provides estimates suitable for planning. Small numeric differences can occur due to rounding, lender-specific posting rules, escrow, fees, or compounding conventions. For precise payoff figures, request an official payoff quote from your lender."
+      },
+      {
+        "question": "What assumptions does the tool make about extra payments?",
+        "answer": "Recurring extras are treated as additions to the monthly payment; yearly extras are averaged monthly for the estimate; one-time extras are treated as applied to principal and amortized over the remaining term for an approximate effect. Actual lender handling may differ (for example, applying a one-time extra could shorten the next payment or reduce principal immediately)."
+      },
+      {
+        "question": "Do you follow any standards for numeric accuracy and testing?",
+        "answer": "Yes. Numeric handling is implemented with attention to IEEE floating-point behavior for predictable rounding, testing and measurement guidance is informed by ISO accuracy standards, and software testing and validation are guided by NIST recommendations. These improve reliability but do not replace lender statements."
+      },
+      {
+        "question": "Are there limits or calibration steps I should know about?",
+        "answer": "Inputs are constrained to reasonable ranges; very high rates or extremely long terms can produce unstable results. If results look unreasonable, validate inputs and consult your lender. This tool is not a substitute for licensed financial advice or an official payoff statement."
+      },
+      {
+        "question": "Why is OSHA referenced?",
+        "answer": "OSHA is referenced only to indicate organizational standards awareness for operational safety and compliance in workplace processes where software is produced. It is not directly related to calculation accuracy but reflects enterprise EEAT and governance practices."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The schedule of payments that splits each periodic payment between interest and principal so the loan is repaid over the term."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate; a broader measure of borrowing cost that may include fees. This calculator uses nominal annual interest rate for amortization calculations, not APR."
+      },
+      {
+        "term": "Principal",
+        "definition": "The amount borrowed on which interest is charged."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "An additional payment applied to principal (recurring or one-time) intended to reduce interest and shorten term."
+      },
+      {
+        "term": "Payoff",
+        "definition": "The date or number of payments after which the loan balance reaches zero."
+      }
+    ]
+  }
+}

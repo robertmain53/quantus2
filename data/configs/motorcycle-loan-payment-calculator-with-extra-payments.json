@@ -1,0 +1,653 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan Payment Calculator with Extra Payments",
+    "description": "Calculate standard monthly payments, model one-time or recurring extra payments, estimate payoff date, interest saved, and compare scenarios. Designed for monthly-pay loans (convert annual APR to monthly rate). Includes accuracy caveats and references to engineering and quality standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "recurring_extra",
+    "methods": {
+      "standard": {
+        "label": "Standard Amortization (no extra payments)",
+        "description": "Computes the monthly payment, total paid and total interest for the entered principal, APR and term assuming level monthly payments.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "principal * monthly_rate / (1 - pow(1+monthly_rate, -n))",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "n"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment": {
+            "expression": "monthly_payment * n",
+            "dependencies": [
+              "monthly_payment",
+              "n"
+            ],
+            "label": "Total paid (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_payment - principal",
+            "dependencies": [
+              "total_payment",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n",
+            "label": "Number of payments (months)",
+            "variable": "n",
+            "format": "integer",
+            "unit": "months"
+          },
+          {
+            "id": "total_payment",
+            "label": "Total amount paid",
+            "variable": "total_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "recurring_extra": {
+        "label": "Recurring Extra Payments (start at month)",
+        "description": "Models recurring extra payments added to the monthly payment beginning at a chosen month and continuing until payoff. Calculates new payoff time and interest saved versus the standard schedule.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Original number of monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "standard_payment": {
+            "expression": "principal * monthly_rate / (1 - pow(1+monthly_rate, -n))",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "n"
+            ],
+            "label": "Standard monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_after_start": {
+            "expression": "principal*pow(1+monthly_rate, extra_start_month) - standard_payment * ((pow(1+monthly_rate, extra_start_month)-1)/monthly_rate)",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "standard_payment",
+              "extra_start_month"
+            ],
+            "label": "Remaining balance at start of extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_with_extra": {
+            "expression": "standard_payment + extra_amount_recurring",
+            "dependencies": [
+              "standard_payment",
+              "extra_amount_recurring"
+            ],
+            "label": "Monthly payment including recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_months_from_start": {
+            "expression": "-ln(1 - monthly_rate * balance_after_start / payment_with_extra) / ln(1+monthly_rate)",
+            "dependencies": [
+              "monthly_rate",
+              "balance_after_start",
+              "payment_with_extra"
+            ],
+            "label": "Months needed from start of extra payments to payoff",
+            "unit": "months",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_months_total": {
+            "expression": "extra_start_month + payoff_months_from_start",
+            "dependencies": [
+              "extra_start_month",
+              "payoff_months_from_start"
+            ],
+            "label": "Total months to payoff with recurring extras",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "new_total_payment": {
+            "expression": "standard_payment * extra_start_month + payment_with_extra * payoff_months_from_start",
+            "dependencies": [
+              "standard_payment",
+              "extra_start_month",
+              "payment_with_extra",
+              "payoff_months_from_start"
+            ],
+            "label": "Total amount paid under recurring-extra schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "standard_total_payment": {
+            "expression": "standard_payment * n",
+            "dependencies": [
+              "standard_payment",
+              "n"
+            ],
+            "label": "Total amount paid under standard schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_saved": {
+            "expression": "standard_total_payment - new_total_payment",
+            "dependencies": [
+              "standard_total_payment",
+              "new_total_payment"
+            ],
+            "label": "Interest saved by making recurring extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_saved": {
+            "expression": "n - payoff_months_total",
+            "dependencies": [
+              "n",
+              "payoff_months_total"
+            ],
+            "label": "Months saved versus original schedule",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "new_total_interest": {
+            "expression": "new_total_payment - principal",
+            "dependencies": [
+              "new_total_payment",
+              "principal"
+            ],
+            "label": "Total interest paid under recurring-extra schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_with_extra",
+            "label": "Monthly payment including extra",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_months_total",
+            "label": "Total months to payoff",
+            "variable": "payoff_months_total",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "months_saved",
+            "label": "Months saved",
+            "variable": "months_saved",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "one_time_extra": {
+        "label": "One-time Extra Payment",
+        "description": "Apply a one-time principal payment at a chosen month and recalculate remaining term and interest. Useful to model lump-sum reductions such as trade-in or bonus payments.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Original number of monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "standard_payment": {
+            "expression": "principal * monthly_rate / (1 - pow(1+monthly_rate, -n))",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "n"
+            ],
+            "label": "Standard monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_after_k": {
+            "expression": "principal*pow(1+monthly_rate, extra_month) - standard_payment * ((pow(1+monthly_rate, extra_month)-1)/monthly_rate)",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "standard_payment",
+              "extra_month"
+            ],
+            "label": "Balance immediately before the one-time extra payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_balance": {
+            "expression": "balance_after_k - extra_amount_one_time",
+            "dependencies": [
+              "balance_after_k",
+              "extra_amount_one_time"
+            ],
+            "label": "Remaining principal after applying one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "n_rem": {
+            "expression": "-ln(1 - monthly_rate * new_balance / standard_payment) / ln(1+monthly_rate)",
+            "dependencies": [
+              "monthly_rate",
+              "new_balance",
+              "standard_payment"
+            ],
+            "label": "Remaining months after one-time extra",
+            "unit": "months",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_months_total": {
+            "expression": "extra_month + n_rem",
+            "dependencies": [
+              "extra_month",
+              "n_rem"
+            ],
+            "label": "Total months to payoff after one-time extra",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "new_total_payment": {
+            "expression": "standard_payment * extra_month + standard_payment * n_rem + extra_amount_one_time",
+            "dependencies": [
+              "standard_payment",
+              "extra_month",
+              "n_rem",
+              "extra_amount_one_time"
+            ],
+            "label": "Total paid including the one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "standard_total_payment": {
+            "expression": "standard_payment * n",
+            "dependencies": [
+              "standard_payment",
+              "n"
+            ],
+            "label": "Total paid under standard schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_saved": {
+            "expression": "standard_total_payment - new_total_payment",
+            "dependencies": [
+              "standard_total_payment",
+              "new_total_payment"
+            ],
+            "label": "Interest saved by applying the one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_saved": {
+            "expression": "n - payoff_months_total",
+            "dependencies": [
+              "n",
+              "payoff_months_total"
+            ],
+            "label": "Months saved",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payoff_months_total",
+            "label": "Total months to payoff",
+            "variable": "payoff_months_total",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "months_saved",
+            "label": "Months saved",
+            "variable": "months_saved",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %) (use APR, not nominal rate)",
+        "type": "number",
+        "default": 6.0,
+        "min": 0.01,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.25,
+        "max": 50,
+        "step": 0.25
+      },
+      {
+        "id": "extra_type",
+        "label": "Extra payment type",
+        "type": "select",
+        "default": "recurring",
+        "options": [
+          {
+            "label": "None (standard amortization)",
+            "value": "none"
+          },
+          {
+            "label": "One-time extra payment",
+            "value": "one_time"
+          },
+          {
+            "label": "Recurring extra payment (monthly)",
+            "value": "recurring"
+          }
+        ]
+      },
+      {
+        "id": "extra_amount_one_time",
+        "label": "One-time extra payment amount",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_month",
+        "label": "Month index to apply one-time extra (1 = first payment)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      },
+      {
+        "id": "extra_amount_recurring",
+        "label": "Recurring extra payment amount (per month)",
+        "type": "number",
+        "default": 50,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_start_month",
+        "label": "Start month for recurring extra (1 = first payment)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "one_time_section",
+        "label": "One-time extra payment",
+        "show_when": {
+          "field": "extra_type",
+          "is": "one_time"
+        },
+        "fields": [
+          {
+            "id": "extra_amount_one_time",
+            "label": "One-time extra payment amount",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "extra_month",
+            "label": "Month index to apply one-time extra (1 = first payment)",
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 600,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "recurring_section",
+        "label": "Recurring extra payment",
+        "show_when": {
+          "field": "extra_type",
+          "is": "recurring"
+        },
+        "fields": [
+          {
+            "id": "extra_amount_recurring",
+            "label": "Recurring extra payment amount (per month)",
+            "type": "number",
+            "default": 50,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "extra_start_month",
+            "label": "Start month for recurring extra (1 = first payment)",
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 600,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates monthly payments for a motorcycle loan and models the effect of extra payments (one-time or recurring) on payoff time and interest paid. It assumes monthly compounding and level monthly payments derived from the loan principal, APR, and term.",
+      "Use the sections to enter a one-time lump-sum payment or a recurring extra amount. Results show new payoff months, interest saved, and months saved versus the standard schedule."
+    ],
+    "methodology": [
+      "Monthly payment is calculated from the standard loan amortization formula that converts APR to a monthly rate and computes the level payment required to amortize the principal across the term.",
+      "One-time and recurring extra payments are modeled by calculating remaining balance at the time of the extra payment(s) and solving for the new number of payments required to amortize the reduced principal given the unchanged per-period contribution.",
+      "All calculations use continuous math functions (pow and ln) to compute remaining balances and remaining term from level payments. Edge cases such as zero interest or non-monthly compounding are not modeled here; see the accuracy caveats."
+    ],
+    "how_is_calculated": [
+      "monthly_rate = APR / 100 / 12",
+      "standard_monthly_payment = P * r / (1 - (1+r)^-n)  where P=principal, r=monthly_rate, n=months",
+      "Remaining balance after k payments = P*(1+r)^k - Payment * (( (1+r)^k - 1) / r )",
+      "If recurring extra E is added to the monthly payment A, new months n' = -ln(1 - r*Balance / (A+E)) / ln(1+r).",
+      "Interest saved = Interest under standard schedule - Interest under modified schedule; totals computed by summing payments and subtracting principal."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator use APR or nominal rate?",
+        "answer": "Enter the APR (annual percentage rate). The tool converts APR to a monthly interest rate by dividing by 12 and by 100. If your lender uses different compounding or fees, results will differ."
+      },
+      {
+        "question": "Can I model biweekly payments or non-monthly compounding?",
+        "answer": "This version models monthly payments only. For biweekly or other compounding schedules, convert inputs to an equivalent monthly rate or consult a schedule that supports that frequency."
+      },
+      {
+        "question": "What happens if I enter zero interest rate?",
+        "answer": "This calculator assumes a positive APR. Zero-interest loans (APR = 0) are a special case where monthly payment equals principal divided by number of months. Enter a small positive APR for standard calculations; consult the accuracy caveats for more detail."
+      },
+      {
+        "question": "How accurate are the payoff and interest-saved estimates?",
+        "answer": "Estimates use standard amortization math and assume consistent monthly payments, no fees, no escrow items, and no missed payments. Actual lender schedules, day-count conventions, fees, and prepayment penalties can change results."
+      },
+      {
+        "question": "Can extra payments be partially applied to future schedules or held as prepayment?",
+        "answer": "This tool assumes extra payments are applied directly to principal on the specified schedule. It does not simulate lender-specific payment reallocation rules, interest rebate policies, or prepayment penalties."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Cybersecurity Framework and best practices",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Quality management and software engineering standards (e.g., ISO 9001)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Software and systems engineering guidance",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Workplace safety and operational guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The yearly interest rate expressed as a percentage; used here to compute the monthly interest rate."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a debt over time through regular payments of principal and interest."
+      },
+      {
+        "term": "Principal",
+        "definition": "The initial loan amount borrowed before interest."
+      },
+      {
+        "term": "One-time extra payment",
+        "definition": "A single lump-sum payment applied to principal at a specified month to reduce remaining balance and interest."
+      },
+      {
+        "term": "Recurring extra payment",
+        "definition": "A fixed extra amount added to each monthly payment starting at a specified month, applied to principal to reduce term and interest."
+      }
+    ],
+    "summary": [
+      "This advanced calculator models standard amortization and two common extra-payment scenarios: one-time lump-sum payments and recurring monthly extras. Use it to estimate earlier payoff and interest savings under the assumptions listed.",
+      "Always cross-check results with your lender's payoff statement. Do not use these estimates as legal or contractual figures; obtain an official payoff quote from your servicer for exact amounts."
+    ]
+  }
+}

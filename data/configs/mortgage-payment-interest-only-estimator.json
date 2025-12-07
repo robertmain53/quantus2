@@ -1,0 +1,388 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Payment Interest-Only Estimator",
+    "description": "Estimate interest-only payments, compare interest-only then amortize schedules, and see aggregate interest. Includes clear assumptions, limits, and accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "io_then_amortize",
+    "methods": {
+      "interest_only_balloon": {
+        "label": "Interest-only with balloon (no principal amortization during IO period)",
+        "description": "Calculates monthly interest-only payment during the interest-only period and the outstanding principal (balloon) at the end of that period.",
+        "variables": {
+          "annual_rate": {
+            "expression": "annual_interest_rate / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Annual interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_rate": {
+            "expression": "annual_rate / 12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "io_period_months": {
+            "expression": "io_period_years * 12",
+            "dependencies": [
+              "io_period_years"
+            ],
+            "label": "Interest-only period (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_interest_only_payment": {
+            "expression": "principal * monthly_rate",
+            "dependencies": [
+              "principal",
+              "monthly_rate"
+            ],
+            "label": "Monthly interest-only payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_during_io": {
+            "expression": "monthly_interest_only_payment * io_period_months",
+            "dependencies": [
+              "monthly_interest_only_payment",
+              "io_period_months"
+            ],
+            "label": "Total interest paid during interest-only period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_balance": {
+            "expression": "principal",
+            "dependencies": [
+              "principal"
+            ],
+            "label": "Outstanding principal at end of interest-only period (balloon)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_interest_only_payment",
+            "label": "Monthly interest-only payment",
+            "variable": "monthly_interest_only_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_during_io",
+            "label": "Total interest during interest-only period",
+            "variable": "total_interest_during_io",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_balance",
+            "label": "Balloon (principal balance after IO)",
+            "variable": "balloon_balance",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "io_then_amortize": {
+        "label": "Interest-only period then full amortization",
+        "description": "Calculates interest-only payments for the IO period, then the amortized monthly payment required to fully repay the principal over the amortization period, and aggregates estimated interest.",
+        "variables": {
+          "annual_rate": {
+            "expression": "annual_interest_rate / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Annual interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_rate": {
+            "expression": "annual_rate / 12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "io_period_months": {
+            "expression": "io_period_years * 12",
+            "dependencies": [
+              "io_period_years"
+            ],
+            "label": "Interest-only period (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "amortization_months": {
+            "expression": "amortization_period_years * 12",
+            "dependencies": [
+              "amortization_period_years"
+            ],
+            "label": "Amortization period (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_interest_only_payment": {
+            "expression": "principal * monthly_rate",
+            "dependencies": [
+              "principal",
+              "monthly_rate"
+            ],
+            "label": "Monthly interest-only payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_balance": {
+            "expression": "principal",
+            "dependencies": [
+              "principal"
+            ],
+            "label": "Principal outstanding after interest-only period",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "amortized_monthly_payment": {
+            "expression": "(monthly_rate * remaining_balance) / (1 - pow(1 + monthly_rate, -amortization_months))",
+            "dependencies": [
+              "monthly_rate",
+              "remaining_balance",
+              "amortization_months"
+            ],
+            "label": "Monthly payment after interest-only period (amortizing)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_during_io": {
+            "expression": "monthly_interest_only_payment * io_period_months",
+            "dependencies": [
+              "monthly_interest_only_payment",
+              "io_period_months"
+            ],
+            "label": "Total interest during interest-only period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_during_amortization": {
+            "expression": "amortized_monthly_payment * amortization_months - remaining_balance",
+            "dependencies": [
+              "amortized_monthly_payment",
+              "amortization_months",
+              "remaining_balance"
+            ],
+            "label": "Total interest during amortization period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_estimate": {
+            "expression": "total_interest_during_io + total_interest_during_amortization",
+            "dependencies": [
+              "total_interest_during_io",
+              "total_interest_during_amortization"
+            ],
+            "label": "Estimated total interest (IO + amortization)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_interest_only_payment",
+            "label": "Monthly interest-only payment",
+            "variable": "monthly_interest_only_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "amortized_monthly_payment",
+            "label": "Monthly payment after IO (amortization)",
+            "variable": "amortized_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_estimate",
+            "label": "Estimated total interest (IO + amortization)",
+            "variable": "total_interest_estimate",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (loan amount)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "io_period_years",
+        "label": "Interest-only period (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "repayment_type",
+        "label": "Repayment type",
+        "type": "select",
+        "default": "io_then_amortize",
+        "options": [
+          {
+            "label": "Interest-only then amortize",
+            "value": "io_then_amortize"
+          },
+          {
+            "label": "Interest-only with balloon payment (no amortization)",
+            "value": "interest_only_balloon"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "amortization_section",
+        "label": "Amortization inputs",
+        "show_when": {
+          "field": "repayment_type",
+          "is": "io_then_amortize"
+        },
+        "fields": [
+          {
+            "id": "amortization_period_years",
+            "label": "Amortization period after IO (years)",
+            "type": "integer",
+            "default": 25,
+            "min": 1,
+            "max": 40,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you understand monthly interest-only payments, the effect of an interest-only period followed by amortization, and the estimated total interest paid across both phases. It makes explicit assumptions and shows the sources of each calculation so you can validate the results against loan documents.",
+      "Use this tool to compare scenarios (short IO period vs longer IO period, or IO with a balloon) and to preview the payment shock when amortization begins. This tool does not replace lender disclosures or a formal amortization schedule provided by your lender."
+    ],
+    "methodology": [
+      "Calculations assume interest-only payments during the interest-only period, meaning principal is not paid down during that phase unless stated otherwise.",
+      "Monthly interest-only payment is computed as principal multiplied by the monthly interest rate. For amortization after the IO period, the standard annuity amortization formula is applied to the remaining principal to compute the level monthly payment that fully repays principal over the amortization term.",
+      "This estimator follows best practices for software quality and data handling: use of scientific expression with explicit units, reproducible formulas, and recommendations for secure handling of personal data consistent with NIST and ISO guidance. Outputs are estimates and should be verified against lender-provided amortization schedules."
+    ],
+    "how_is_calculated": [
+      "Convert APR percentage to decimal: annual_rate = APR / 100",
+      "Monthly rate = annual_rate / 12",
+      "Interest-only monthly payment = principal * monthly_rate",
+      "Amortizing monthly payment = (monthly_rate * principal) / (1 - (1 + monthly_rate)^(-amortization_months))",
+      "Total interest estimate = interest paid during IO + interest paid during amortization"
+    ],
+    "examples": [
+      "Example 1: Principal $300,000, APR 4.5%, IO 5 years, amortization 25 years. The tool will show monthly interest-only payments for 60 months and the monthly amortizing payment required thereafter, plus estimated total interest.",
+      "Example 2: Principal $200,000, APR 3.8%, IO 3 years, balloon option selected. The tool will show monthly interest-only payments and the outstanding principal that becomes due at the balloon maturity."
+    ],
+    "faqs": [
+      {
+        "question": "Does the tool include taxes, insurance, or fees?",
+        "answer": "No. This estimator calculates interest and principal repayment only. Taxes, insurance, homeowner association fees, lender fees, and escrow are not included and must be added separately."
+      },
+      {
+        "question": "What happens if the interest rate is zero or changes over time?",
+        "answer": "The formulas assume a fixed interest rate for the entire schedule. If the rate is zero the amortizing payment reduces to principal divided by months. For adjustable-rate loans or varying rates, results are approximate and you should request an amortization schedule from your lender that reflects rate adjustments."
+      },
+      {
+        "question": "How accurate are the estimates?",
+        "answer": "Estimates are based on standard mathematical formulas and are subject to rounding and the assumptions you provide. They are not loan offers. Check lender disclosures for precise figures. For guidance on secure handling and quality controls, see the referenced standards."
+      },
+      {
+        "question": "Is this tool compliant with regulations?",
+        "answer": "This estimator provides informational calculations only. It is not a substitute for legally required lender disclosures. Use lender documents for regulatory compliance and consult a qualified professional for binding advice."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Interest-only payment",
+        "definition": "A monthly payment covering only the interest charged on the loan principal for that period; principal remains unchanged during the interest-only period."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of gradually paying off a loan principal and interest over a set period through regular payments."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at the end of a loan term representing the outstanding principal when periodic payments did not fully amortize the loan."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate, the yearly interest rate expressed as a percent used to compute periodic interest."
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

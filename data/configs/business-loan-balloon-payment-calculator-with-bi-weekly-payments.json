@@ -1,0 +1,276 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan Balloon Payment Calculator (bi‑weekly capable)",
+    "description": "Calculate periodic payments and the balloon amount for a business loan. Supports bi‑weekly (26) payments and other frequencies, optional custom balloon amount, and a clear breakdown of payments, remaining balance at balloon, and interest paid during the term."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Periodic payment",
+        "expression": "loan_amount * (annual_rate_pct/100 / payments_per_year) / (1 - (1 + annual_rate_pct/100 / payments_per_year) ^ (- amortization_years * payments_per_year))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "payments_in_term",
+        "label": "Number of payments in term",
+        "expression": "term_years * payments_per_year",
+        "format": "integer"
+      },
+      {
+        "id": "remaining_balance",
+        "label": "Remaining balance at end of term (if amortized as scheduled)",
+        "expression": "loan_amount * (1 + annual_rate_pct/100 / payments_per_year) ^ (term_years * payments_per_year) - (loan_amount * (annual_rate_pct/100 / payments_per_year) / (1 - (1 + annual_rate_pct/100 / payments_per_year) ^ (- amortization_years * payments_per_year))) * (((1 + annual_rate_pct/100 / payments_per_year) ^ (term_years * payments_per_year) - 1) / (annual_rate_pct/100 / payments_per_year))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "balloon_due",
+        "label": "Balloon due at loan maturity",
+        "expression": "balloon_amount > 0 ? balloon_amount : (loan_amount * (1 + annual_rate_pct/100 / payments_per_year) ^ (term_years * payments_per_year) - (loan_amount * (annual_rate_pct/100 / payments_per_year) / (1 - (1 + annual_rate_pct/100 / payments_per_year) ^ (- amortization_years * payments_per_year))) * (((1 + annual_rate_pct/100 / payments_per_year) ^ (term_years * payments_per_year) - 1) / (annual_rate_pct/100 / payments_per_year)))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_cash_due_at_balloon",
+        "label": "Total cash due at balloon date (last payment + balloon)",
+        "expression": "(loan_amount * (annual_rate_pct/100 / payments_per_year) / (1 - (1 + annual_rate_pct/100 / payments_per_year) ^ (- amortization_years * payments_per_year))) + (balloon_amount > 0 ? balloon_amount : (loan_amount * (1 + annual_rate_pct/100 / payments_per_year) ^ (term_years * payments_per_year) - (loan_amount * (annual_rate_pct/100 / payments_per_year) / (1 - (1 + annual_rate_pct/100 / payments_per_year) ^ (- amortization_years * payments_per_year))) * (((1 + annual_rate_pct/100 / payments_per_year) ^ (term_years * payments_per_year) - 1) / (annual_rate_pct/100 / payments_per_year))))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid_during_term",
+        "label": "Total paid in regular payments during the term",
+        "expression": "(loan_amount * (annual_rate_pct/100 / payments_per_year) / (1 - (1 + annual_rate_pct/100 / payments_per_year) ^ (- amortization_years * payments_per_year))) * (term_years * payments_per_year)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "interest_paid_during_term",
+        "label": "Interest paid during the term",
+        "expression": "( (loan_amount * (annual_rate_pct/100 / payments_per_year) / (1 - (1 + annual_rate_pct/100 / payments_per_year) ^ (- amortization_years * payments_per_year))) * (term_years * payments_per_year) ) - (loan_amount - (loan_amount * (1 + annual_rate_pct/100 / payments_per_year) ^ (term_years * payments_per_year) - (loan_amount * (annual_rate_pct/100 / payments_per_year) / (1 - (1 + annual_rate_pct/100 / payments_per_year) ^ (- amortization_years * payments_per_year))) * (((1 + annual_rate_pct/100 / payments_per_year) ^ (term_years * payments_per_year) - 1) / (annual_rate_pct/100 / payments_per_year))))",
+        "unit": "currency",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years) used to calculate scheduled payment",
+        "type": "integer",
+        "default": 25,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term until balloon is due (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (use 26 for bi‑weekly)",
+        "type": "integer",
+        "default": 26,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "balloon_amount",
+        "label": "Custom balloon amount (leave 0 to use remaining amortization balance)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Periodic payment"
+        },
+        {
+          "id": "payments_in_term",
+          "label": "Payments in term"
+        },
+        {
+          "id": "remaining_balance",
+          "label": "Remaining balance at term"
+        },
+        {
+          "id": "balloon_due",
+          "label": "Balloon due"
+        },
+        {
+          "id": "total_cash_due_at_balloon",
+          "label": "Total cash due at balloon"
+        },
+        {
+          "id": "total_paid_during_term",
+          "label": "Total paid during term"
+        },
+        {
+          "id": "interest_paid_during_term",
+          "label": "Interest paid during term"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes periodic payments for a business loan using a standard amortization formula and shows the remaining balance (the default balloon) at the end of a chosen term. It supports bi‑weekly (26 payments/year) and other payment frequencies.",
+      "You may optionally specify a custom balloon amount. If you leave the custom balloon at zero, the tool reports the outstanding balance after the scheduled amortization payments that occur during the chosen term.",
+      "Use this tool for planning and comparison. It is not a loan offer; final figures from a lender may differ because of fees, day‑count conventions, or different interest compounding rules."
+    ],
+    "methodology": [
+      "We calculate the periodic payment by converting the annual percentage rate (APR) to a periodic rate (APR / payments per year) and applying the standard fixed‑rate annuity formula for an amortizing loan.",
+      "The remaining balance at the end of the specified term is computed using the closed‑form outstanding balance formula for amortizing loans (principal grown by periodic rate minus the accumulated value of payments).",
+      "If a custom balloon amount is provided, that value is used instead of the calculated remaining balance. The calculator assumes fixed payments and constant interest rate for the entire amortization and term."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = APR / 100 / payments_per_year.",
+      "Number of scheduled payments for amortization n_total = amortization_years * payments_per_year.",
+      "Number of payments until balloon n_term = term_years * payments_per_year.",
+      "Periodic payment P = L * r / (1 - (1 + r)^(-n_total)), where L is loan_amount.",
+      "Remaining balance after n_term = L*(1+r)^n_term - P * (((1+r)^n_term - 1)/r).",
+      "Balloon due equals the custom balloon_amount when that amount is positive; otherwise it uses the remaining balance as calculated above."
+    ],
+    "examples": [
+      "Example: $100,000 loan, 6% APR, amortized over 25 years, 5‑year term, bi‑weekly payments (26/year). The calculator shows the bi‑weekly payment, the remaining balance after 5 years (balloon), and total interest paid during those 5 years.",
+      "If you enter a custom balloon of $60,000, the calculator uses that value as the balloon payable at the end of the term instead of the calculated remaining balance."
+    ],
+    "summary": [
+      "This tool provides a clear breakdown of periodic payments (including bi‑weekly), calculated remaining balance at term, optional custom balloon handling, and interest paid during the term.",
+      "For legally binding payoff figures or to account for fees and specific lender conventions, obtain an amortization schedule or payoff statement from your lender."
+    ],
+    "faqs": [
+      {
+        "question": "What does bi‑weekly (26) payments mean?",
+        "answer": "Bi‑weekly (26) means two payments per month on average, producing 26 payments per year. Use 26 in Payments per year to model bi‑weekly schedules. This calculator treats each payment as equal and spaced evenly according to payments_per_year."
+      },
+      {
+        "question": "When should I enter a custom balloon amount?",
+        "answer": "Enter a custom balloon when your loan contract specifies a fixed lump sum due at maturity that differs from the scheduled remaining balance (for example, a negotiated residual or refinance target). Leave it zero to use the amortization‑based remaining balance."
+      },
+      {
+        "question": "How accurate are these calculations?",
+        "answer": "The formulas implement standard annuity and outstanding balance mathematics used in lending. Results are accurate for fixed‑rate loans with equal periodic payments. They do not include lender fees, prepayment penalties, interest capitalization rules, or alternative day‑count/convention adjustments. Always verify final payoff amounts with your lender."
+      },
+      {
+        "question": "What if the APR is zero?",
+        "answer": "At a zero APR, the periodic payment reduces to principal divided by the number of amortization payments. Some calculation engines may need a nonzero rate branch to avoid division by zero; if you see errors, set APR to 0.0001 and interpret results accordingly, or consult the lender for a formal schedule."
+      },
+      {
+        "question": "Is the balloon shown the amount I must pay in one lump sum?",
+        "answer": "Yes: the balloon due displayed is the lump sum outstanding at the end of the term. Many borrowers refinance or sell assets to cover this payment; confirm with your lender whether additional fees or accrued interest apply at maturity."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A lump‑sum payment due at the end of a loan term representing the remaining principal balance when scheduled amortization does not fully repay the loan."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of gradually paying down a loan through regular payments that cover interest and principal according to a fixed schedule."
+      },
+      {
+        "term": "Bi‑weekly payments",
+        "definition": "Payments made every two weeks, typically resulting in 26 payments per year."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied to each payment period. Calculated as APR divided by the number of payments per year."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - general guidance on software and calculation validation",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - quality management principles",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association - numerical and software engineering best practices",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - organizational risk management principles",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

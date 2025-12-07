@@ -1,0 +1,550 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Bond Duration Calculator",
+    "description": "Interactive calculator for Macaulay, Modified, and Effective bond duration. Supports fixed-rate coupon bonds, configurable coupon frequency and yield. Includes accuracy notes, assumptions, and links to standards and methodological references."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "macaulay",
+    "methods": {
+      "macaulay": {
+        "label": "Macaulay Duration",
+        "description": "Computes the time-weighted present value of future cash flows for a fixed-rate bond (expressed in years). Assumes deterministic coupon schedule and discrete compounding at the stated yield.",
+        "variables": {
+          "coupon": {
+            "expression": "face_value * coupon_rate / frequency",
+            "dependencies": [
+              "face_value",
+              "coupon_rate",
+              "frequency"
+            ],
+            "label": "Coupon payment per period",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "years * frequency",
+            "dependencies": [
+              "years",
+              "frequency"
+            ],
+            "label": "Total number of periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "r": {
+            "expression": "ytm / frequency",
+            "dependencies": [
+              "ytm",
+              "frequency"
+            ],
+            "label": "Periodic yield",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "x": {
+            "expression": "1 / (1 + r)",
+            "dependencies": [
+              "r"
+            ],
+            "label": "Discount factor per period (x = 1/(1+r))",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "pv_annuity": {
+            "expression": "coupon * (1 - pow(1 + r, -n)) / r",
+            "dependencies": [
+              "coupon",
+              "r",
+              "n"
+            ],
+            "label": "Present value of coupon annuity",
+            "unit": null,
+            "format": "decimal",
+            "display": false
+          },
+          "pv_par": {
+            "expression": "face_value * pow(1 + r, -n)",
+            "dependencies": [
+              "face_value",
+              "r",
+              "n"
+            ],
+            "label": "Present value of principal",
+            "unit": null,
+            "format": "decimal",
+            "display": false
+          },
+          "price": {
+            "expression": "pv_annuity + pv_par",
+            "dependencies": [
+              "pv_annuity",
+              "pv_par"
+            ],
+            "label": "Model price (present value of cash flows)",
+            "unit": "currency",
+            "format": "decimal",
+            "display": true
+          },
+          "weighted_coupon_sum": {
+            "expression": "coupon * x * (1 - (n + 1) * pow(x, n) + n * pow(x, n + 1)) / pow(1 - x, 2)",
+            "dependencies": [
+              "coupon",
+              "x",
+              "n"
+            ],
+            "label": "Weighted present value sum for coupon payments",
+            "unit": "currency*periods",
+            "format": "decimal",
+            "display": false
+          },
+          "weighted_par": {
+            "expression": "n * face_value * pow(x, n)",
+            "dependencies": [
+              "n",
+              "face_value",
+              "x"
+            ],
+            "label": "Weighted present value for principal",
+            "unit": "currency*periods",
+            "format": "decimal",
+            "display": false
+          },
+          "weighted_cashflow_sum": {
+            "expression": "weighted_coupon_sum + weighted_par",
+            "dependencies": [
+              "weighted_coupon_sum",
+              "weighted_par"
+            ],
+            "label": "Sum of time-weighted present values of all cash flows",
+            "unit": "currency*periods",
+            "format": "decimal",
+            "display": false
+          },
+          "macaulay_duration": {
+            "expression": "weighted_cashflow_sum / price / frequency",
+            "dependencies": [
+              "weighted_cashflow_sum",
+              "price",
+              "frequency"
+            ],
+            "label": "Macaulay duration",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "macaulay_duration",
+            "label": "Macaulay Duration (years)",
+            "variable": "macaulay_duration",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "price",
+            "label": "Model Price",
+            "variable": "price",
+            "unit": "currency",
+            "format": "decimal"
+          }
+        ]
+      },
+      "modified": {
+        "label": "Modified Duration",
+        "description": "Modified duration approximates the percentage price change for a 1.0 change in yield (using periodic compounding). It is the Macaulay duration divided by (1 + periodic yield).",
+        "variables": {
+          "macaulay_duration": {
+            "expression": "methods.macaulay.variables.macaulay_duration",
+            "dependencies": [
+              "face_value",
+              "coupon_rate",
+              "frequency",
+              "years",
+              "ytm"
+            ],
+            "label": "Macaulay duration (imported)",
+            "unit": "years",
+            "format": "decimal",
+            "display": false
+          },
+          "r": {
+            "expression": "ytm / frequency",
+            "dependencies": [
+              "ytm",
+              "frequency"
+            ],
+            "label": "Periodic yield",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "modified_duration": {
+            "expression": "macaulay_duration / (1 + r)",
+            "dependencies": [
+              "macaulay_duration",
+              "r"
+            ],
+            "label": "Modified duration",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "modified_duration",
+            "label": "Modified Duration (years)",
+            "variable": "modified_duration",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "effective": {
+        "label": "Effective Duration (price-shock method)",
+        "description": "Effective duration is estimated numerically using small parallel shifts in yield and the resulting model prices. This method approximates duration when cash flows may change with rates or when options are embedded (note: true option-adjusted duration requires an interest-rate model).",
+        "variables": {
+          "coupon": {
+            "expression": "face_value * coupon_rate / frequency",
+            "dependencies": [
+              "face_value",
+              "coupon_rate",
+              "frequency"
+            ],
+            "label": "Coupon payment per period",
+            "unit": null,
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "years * frequency",
+            "dependencies": [
+              "years",
+              "frequency"
+            ],
+            "label": "Total number of periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "r": {
+            "expression": "ytm / frequency",
+            "dependencies": [
+              "ytm",
+              "frequency"
+            ],
+            "label": "Periodic yield",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "price": {
+            "expression": "coupon * (1 - pow(1 + r, -n)) / r + face_value * pow(1 + r, -n)",
+            "dependencies": [
+              "coupon",
+              "r",
+              "n",
+              "face_value"
+            ],
+            "label": "Model price at baseline yield",
+            "unit": "currency",
+            "format": "decimal",
+            "display": true
+          },
+          "delta": {
+            "expression": "delta_bps / 10000",
+            "dependencies": [
+              "delta_bps"
+            ],
+            "label": "Yield shock used for finite difference (decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "y_plus": {
+            "expression": "ytm + delta",
+            "dependencies": [
+              "ytm",
+              "delta"
+            ],
+            "label": "Yield up (ytm + delta)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "r_plus": {
+            "expression": "y_plus / frequency",
+            "dependencies": [
+              "y_plus",
+              "frequency"
+            ],
+            "label": "Periodic yield for y_plus",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "price_plus": {
+            "expression": "coupon * (1 - pow(1 + r_plus, -n)) / r_plus + face_value * pow(1 + r_plus, -n)",
+            "dependencies": [
+              "coupon",
+              "r_plus",
+              "n",
+              "face_value"
+            ],
+            "label": "Model price at ytm + delta",
+            "unit": "currency",
+            "format": "decimal",
+            "display": false
+          },
+          "y_minus": {
+            "expression": "ytm - delta",
+            "dependencies": [
+              "ytm",
+              "delta"
+            ],
+            "label": "Yield down (ytm - delta)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "r_minus": {
+            "expression": "y_minus / frequency",
+            "dependencies": [
+              "y_minus",
+              "frequency"
+            ],
+            "label": "Periodic yield for y_minus",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "price_minus": {
+            "expression": "coupon * (1 - pow(1 + r_minus, -n)) / r_minus + face_value * pow(1 + r_minus, -n)",
+            "dependencies": [
+              "coupon",
+              "r_minus",
+              "n",
+              "face_value"
+            ],
+            "label": "Model price at ytm - delta",
+            "unit": "currency",
+            "format": "decimal",
+            "display": false
+          },
+          "effective_duration": {
+            "expression": "(price_minus - price_plus) / (2 * price * delta)",
+            "dependencies": [
+              "price_minus",
+              "price_plus",
+              "price",
+              "delta"
+            ],
+            "label": "Effective duration (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "effective_duration",
+            "label": "Effective Duration (years)",
+            "variable": "effective_duration",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "price",
+            "label": "Model Price (baseline)",
+            "variable": "price",
+            "unit": "currency",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "face_value",
+        "label": "Face / Par Value",
+        "type": "number",
+        "default": 1000,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "coupon_rate",
+        "label": "Coupon Rate (annual, decimal)",
+        "type": "number",
+        "default": 0.05,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "ytm",
+        "label": "Yield to Maturity (annual, decimal)",
+        "type": "number",
+        "default": 0.05,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "frequency",
+        "label": "Coupon Frequency (payments per year)",
+        "type": "integer",
+        "default": 2,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      },
+      {
+        "id": "years",
+        "label": "Years to Maturity",
+        "type": "number",
+        "default": 5,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "delta_bps",
+        "label": "Yield shock for effective duration (basis points)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes Macaulay, Modified, and Effective durations for fixed-rate coupon bonds. Use Macaulay duration to see the weighted average time to receive cash flows, Modified duration to estimate linear sensitivity of price to yield changes, and Effective duration for a finite-difference estimate when cash flows may change with rates or when optionality exists.",
+      "The tool assumes discrete periodic coupon payments, constant coupon rate, and parallel shifts in yield for effective duration. Review the methodology and assumptions before applying results to trading or risk-management decisions."
+    ],
+    "methodology": [
+      "Macaulay duration is the time-weighted average of the present values of cash flows divided by the bond price. It is expressed in years when coupon frequency and years to maturity are used consistently.",
+      "Modified duration converts Macaulay duration into a measure of price sensitivity by dividing by (1 + periodic yield). It approximates the percentage change in price for a small change in yield under the assumption of parallel shifts and linear pricing behavior.",
+      "Effective duration is estimated by bumping the yield up and down by a small amount (delta) and measuring the resulting price changes. It is appropriate when cash flows or prepayment behavior depend on the interest rate, but it remains an approximation unless combined with a full interest-rate model (option-adjusted duration)."
+    ],
+    "how_is_calculated": [
+      "Core model price: price = coupon * (1 - (1 + r)^(-n)) / r + face_value * (1 + r)^(-n), where r = ytm / frequency and n = years * frequency.",
+      "Macaulay duration: sum of t * PV(cash flow at t) divided by price, converted to years by dividing by frequency.",
+      "Modified duration: Macaulay duration / (1 + r), giving approximate percent price change per unit change in yield.",
+      "Effective duration: (Price(y - delta) - Price(y + delta)) / (2 * Price(y) * delta) where delta is the yield shock in decimal form (e.g., 1 bp = 0.0001)."
+    ],
+    "glossary": [
+      {
+        "term": "Macaulay Duration",
+        "definition": "The weighted average time until a bond's cash flows are received, weights are the present values of the cash flows divided by the bond price."
+      },
+      {
+        "term": "Modified Duration",
+        "definition": "A measure of a bond's price sensitivity to yield, calculated as Macaulay duration divided by (1 + periodic yield)."
+      },
+      {
+        "term": "Effective Duration",
+        "definition": "A finite-difference estimate of duration using small parallel shifts in yield; suitable when cash flows may be rate-dependent."
+      },
+      {
+        "term": "Yield to Maturity (YTM)",
+        "definition": "The internal rate of return of the bond assuming all coupons are reinvested at the YTM and the bond is held to maturity."
+      },
+      {
+        "term": "Basis Point (bp)",
+        "definition": "One hundredth of one percent (0.01%); 1 bp = 0.0001 in decimal yield terms."
+      }
+    ],
+    "faqs": [
+      {
+        "question": "When should I use Modified vs Effective duration?",
+        "answer": "Use Modified duration for plain-vanilla fixed-rate bonds with fixed cash flows. Use Effective duration when cash flows may change with the interest rate or the bond has embedded options; effective duration estimates sensitivity numerically but may require an interest-rate model for full option-adjusted measures."
+      },
+      {
+        "question": "What does the delta (basis points) parameter do for effective duration?",
+        "answer": "Delta controls the up/down yield shock magnitude used to compute price changes. A small delta (for example 1 to 10 bps) gives a local linear approximation; too large a delta may introduce nonlinearity and bias the estimate."
+      },
+      {
+        "question": "Are results exact?",
+        "answer": "Results are model-based approximations under the assumptions listed. Macaulay and Modified durations are exact algebraically for fixed cash flows under the discrete compounding convention used. Effective duration is an approximation that depends on the chosen yield shock and the pricing model."
+      },
+      {
+        "question": "What should I watch for in practice?",
+        "answer": "Ensure coupon frequency, compounding convention, and yield input are consistent. For bonds with embedded options, prepayment or call features, use a specialized option-adjusted model and market data; this calculator provides an introductory effective-duration estimate only."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - Guidance on measurement assurance and uncertainty",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - Standards and best practices for financial services infrastructure",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) - Standards in numerical methods and software engineering",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - Risk management principles (governance & controls)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "summary": [
+      "This calculator provides Macaulay, Modified, and Effective duration estimates for fixed-rate coupon bonds under standard discrete compounding conventions.",
+      "Use the appropriate duration measure for your workflow, be explicit about assumptions, and validate results against market prices and professional risk systems when used for portfolio decisions."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,358 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Boat Loan APR & Extra-Payments Calculator (Advanced)",
+    "description": "Interactive boat loan calculator that projects scheduled payments, models recurring extra payments, estimates total interest and payoff time, and provides an APR estimate that incorporates upfront fees. Includes accuracy notes and standards-based testing guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "amortization_with_extras",
+    "methods": {
+      "amortization_with_extras": {
+        "label": "Amortization with recurring extra payments",
+        "description": "Calculates the regular payment for the loan term and projects the impact of a constant extra payment applied each payment period. Provides total interest paid, total paid, and estimated payoff time in years.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_pct / payments_per_year / 100",
+            "dependencies": [
+              "annual_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "principal * r / (1 - (1 + r) ^ (-n))",
+            "dependencies": [
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Scheduled payment (no extra)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "payment_total": {
+            "expression": "base_payment + extra_payment",
+            "dependencies": [
+              "base_payment",
+              "extra_payment"
+            ],
+            "label": "Payment including extra",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_periods": {
+            "expression": "-log(1 - principal * r / payment_total) / log(1 + r)",
+            "dependencies": [
+              "principal",
+              "r",
+              "payment_total"
+            ],
+            "label": "Estimated number of payments until payoff",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "payoff_periods / payments_per_year",
+            "dependencies": [
+              "payoff_periods",
+              "payments_per_year"
+            ],
+            "label": "Estimated payoff time (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment_total * payoff_periods",
+            "dependencies": [
+              "payment_total",
+              "payoff_periods"
+            ],
+            "label": "Total amount paid (principal + interest + fees)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal - fees_upfront",
+            "dependencies": [
+              "total_paid",
+              "principal",
+              "fees_upfront"
+            ],
+            "label": "Total interest paid (estimate)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "base_payment",
+            "label": "Scheduled payment (no extra)",
+            "variable": "base_payment",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "payment_total",
+            "label": "Payment including extra",
+            "variable": "payment_total",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Estimated payoff time",
+            "variable": "payoff_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest",
+            "variable": "total_interest",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Estimated total paid",
+            "variable": "total_paid",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "apr_with_fees_estimate": {
+        "label": "Approximate APR including upfront fees",
+        "description": "Provides an approximate APR that incorporates upfront fees by spreading the finance charge across the loan term. This is an estimate for planning; see caveats and official disclosures for regulatory APR.",
+        "variables": {
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "payment_total": {
+            "expression": "principal * (annual_rate_pct / payments_per_year / 100) / (1 - (1 + (annual_rate_pct / payments_per_year / 100)) ^ (-n)) + extra_payment",
+            "dependencies": [
+              "principal",
+              "annual_rate_pct",
+              "payments_per_year",
+              "n",
+              "extra_payment"
+            ],
+            "label": "Payment including extra (used for APR estimate)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "apr_estimate_pct": {
+            "expression": "(((payment_total * n) - (principal - fees_upfront)) / (principal - fees_upfront) / term_years) * 100",
+            "dependencies": [
+              "payment_total",
+              "n",
+              "principal",
+              "fees_upfront",
+              "term_years"
+            ],
+            "label": "Approximate APR (annual percent rate)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "apr_estimate_pct",
+            "label": "Approximate APR including upfront fees",
+            "variable": "apr_estimate_pct",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 35000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (nominal APR %) (for scheduled payments)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "fees_upfront",
+        "label": "Upfront fees financed or paid at closing (total)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Recurring extra payment applied each payment period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models a boat loan using standard amortization math and lets you add a fixed extra payment each payment period to show the impact on total interest and time to payoff. It also provides an approximate APR that spreads upfront fees across the loan term for planning purposes.",
+      "Use the inputs to represent your quoted rate, term, and any fees. Enter any recurring extra payment you plan to make each payment period (for example, an extra monthly amount). Results are estimates for planning and not a substitute for the lender's official disclosure."
+    ],
+    "methodology": [
+      "Payment calculations use standard amortizing loan formulas: the per-period interest rate is annual_rate_pct divided by payments per year. The scheduled payment (without extra) uses the annuity formula.",
+      "When a recurring extra payment is specified, the calculator treats it as an additional constant payment each period and computes the theoretical payoff time by solving the amortization equation for the number of periods.",
+      "The APR estimate method shown here is an approximation that spreads the effect of upfront fees across the scheduled payments to produce an annualized percentage. Precise APR as defined by regulation may require solving an internal rate of return on cash flows; consult lender disclosures for the legally required APR."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_rate_pct / payments_per_year / 100",
+      "Scheduled payment (no extra) = principal * r / (1 - (1 + r)^(-n)), where n = term_years * payments_per_year",
+      "Payment with extra = scheduled payment + extra_payment",
+      "Estimated payoff periods = -log(1 - principal * r / payment_with_extra) / log(1 + r)",
+      "Approximate APR including fees = [ (total payments over term) - (net proceeds to borrower) ] / (net proceeds) / term_years, expressed as a percent (this is an estimate)"
+    ],
+    "faqs": [
+      {
+        "question": "Is the APR shown here the official APR on my loan documents?",
+        "answer": "No. The APR shown by this calculator is an approximation intended for planning and comparison only. Legal APR disclosures follow regulatory rules and may use a different method or include additional finance charges. Always review the lender's Truth-in-Lending disclosure for the official APR."
+      },
+      {
+        "question": "How does an extra payment reduce interest and payoff time?",
+        "answer": "An extra payment reduces the outstanding principal more quickly. Since interest accrues on the remaining principal, reducing principal faster lowers future interest, shortening the loan term and reducing total interest paid."
+      },
+      {
+        "question": "Are fees included in the loan amount for APR?",
+        "answer": "This tool allows you to enter upfront fees to see an approximate APR effect. Some fees may be financed, some paid separately; the exact APR calculation depends on which fees are included by the lender and regulatory definitions."
+      },
+      {
+        "question": "How accurate are the payoff time and interest estimates?",
+        "answer": "Estimates use standard closed-form amortization formulas. Accuracy depends on exact payment timing, day-count conventions, compounding rules, and whether fees are financed. For legal or contractual purposes rely on lender-provided amortization tables and disclosures."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "A standardized annualized rate intended to represent the cost of credit, usually including interest and certain fees. Regulatory definitions vary; this tool provides an approximate APR when fees are entered."
+      },
+      {
+        "term": "Principal",
+        "definition": "The initial amount of money borrowed (loan amount) before interest and fees."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down a loan over time through regular payments that include principal and interest."
+      },
+      {
+        "term": "Finance charge",
+        "definition": "Total cost of credit over the life of the loan, typically including interest and certain fees."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Numerical software guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) — Usability and quality standards",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) — Software testing and verification standards",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — Recommended good-practice for workplace safety (applies to testing operations)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — Truth in Lending (guidance on APR disclosures)",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau - APR guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST - numerical accuracy and testing resources",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculator"
+    ]
+  }
+}

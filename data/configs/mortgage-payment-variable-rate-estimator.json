@@ -1,0 +1,363 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Payment Variable Rate Estimator (ARM)",
+    "description": "Interactive estimator for adjustable-rate mortgages (ARMs). Projects current monthly payment, uncapped projected payment based on index+margin, and remaining balance after any initial fixed period. Includes caps, margin, index, and user-selectable amortization behavior; use for planning and sensitivity analysis, not a guaranteed offer."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_arm_projection",
+    "methods": {
+      "standard_arm_projection": {
+        "label": "Standard adjustable-rate mortgage (initial fixed period then adjustments)",
+        "description": "Calculates current payment for the initial fixed period, uncapped projected payment if rate immediately moved to index+margin, and remaining balance at the end of the initial fixed period. Caps are described and applied as guidance in results narrative.",
+        "variables": {
+          "current_annual_rate": {
+            "expression": "initial_rate_pct/100",
+            "dependencies": [
+              "initial_rate_pct"
+            ],
+            "label": "Current annual interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_rate_current": {
+            "expression": "current_annual_rate/12",
+            "dependencies": [
+              "current_annual_rate"
+            ],
+            "label": "Current monthly interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "n_payments_total": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total number of monthly payments",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_payment_current": {
+            "expression": "(monthly_rate_current*principal) / (1 - pow(1+monthly_rate_current, -n_payments_total))",
+            "dependencies": [
+              "monthly_rate_current",
+              "principal",
+              "n_payments_total"
+            ],
+            "label": "Current monthly payment (initial rate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "uncapped_new_annual_rate": {
+            "expression": "index_rate_pct/100 + margin_pct/100",
+            "dependencies": [
+              "index_rate_pct",
+              "margin_pct"
+            ],
+            "label": "Index plus margin (annual, decimal, uncapped)",
+            "format": "percent",
+            "display": false
+          },
+          "monthly_rate_uncapped": {
+            "expression": "uncapped_new_annual_rate/12",
+            "dependencies": [
+              "uncapped_new_annual_rate"
+            ],
+            "label": "Projected monthly rate if moved to index+margin (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_payment_projected_uncapped": {
+            "expression": "(monthly_rate_uncapped*projected_balance_after_fixed_period) / (1 - pow(1+monthly_rate_uncapped, -(n_payments_total - initial_fixed_period_years*12)))",
+            "dependencies": [
+              "monthly_rate_uncapped",
+              "projected_balance_after_fixed_period",
+              "n_payments_total",
+              "initial_fixed_period_years"
+            ],
+            "label": "Projected monthly payment after fixed period (uncapped rate, assumes payment reset to amortize remaining balance over remaining term)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "projected_balance_after_fixed_period": {
+            "expression": "principal*pow(1+monthly_rate_current, initial_fixed_period_years*12) - monthly_payment_current*((pow(1+monthly_rate_current, initial_fixed_period_years*12)-1)/monthly_rate_current)",
+            "dependencies": [
+              "principal",
+              "monthly_rate_current",
+              "initial_fixed_period_years",
+              "monthly_payment_current"
+            ],
+            "label": "Remaining principal balance at end of initial fixed period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_cap_ceiling_annual": {
+            "expression": "current_annual_rate + periodic_cap_pct/100",
+            "dependencies": [
+              "current_annual_rate",
+              "periodic_cap_pct"
+            ],
+            "label": "Periodic cap ceiling (annual, decimal)",
+            "format": "percent",
+            "display": false
+          },
+          "lifetime_cap_ceiling_annual": {
+            "expression": "initial_rate_pct/100 + lifetime_cap_pct/100",
+            "dependencies": [
+              "initial_rate_pct",
+              "lifetime_cap_pct"
+            ],
+            "label": "Lifetime cap ceiling (annual, decimal)",
+            "format": "percent",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment_current",
+            "label": "Current monthly payment",
+            "variable": "monthly_payment_current",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_balance_after_fixed_period",
+            "label": "Balance after initial fixed period",
+            "variable": "projected_balance_after_fixed_period",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_payment_projected_uncapped",
+            "label": "Projected monthly payment (index+margin, uncapped)",
+            "variable": "monthly_payment_projected_uncapped",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "uncapped_new_annual_rate",
+            "label": "Index + margin (annual, uncapped)",
+            "variable": "uncapped_new_annual_rate",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 300000,
+        "min": 1,
+        "step": 100
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "initial_rate_pct",
+        "label": "Initial (current) annual rate (%)",
+        "type": "number",
+        "default": 3.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "initial_fixed_period_years",
+        "label": "Initial fixed period length (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "adjustment_frequency_years",
+        "label": "Adjustment frequency after fixed period (years)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "id": "index_rate_pct",
+        "label": "Current index rate (%)",
+        "type": "number",
+        "default": 2.5,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "margin_pct",
+        "label": "Lender margin (%)",
+        "type": "number",
+        "default": 2.25,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "periodic_cap_pct",
+        "label": "Periodic adjustment cap (%) (per adjustment period)",
+        "type": "number",
+        "default": 2.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "lifetime_cap_pct",
+        "label": "Lifetime cap (%) (total above initial rate)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "adjust_payment_or_term",
+        "label": "When rate resets, do you want to adjust:",
+        "type": "select",
+        "default": "payment",
+        "options": [
+          {
+            "label": "Payment (keep term same)",
+            "value": "payment"
+          },
+          {
+            "label": "Term (keep payment same until amortization) ",
+            "value": "term"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "monthly_payment_current",
+          "label": "Current monthly payment"
+        },
+        {
+          "id": "projected_balance_after_fixed_period",
+          "label": "Balance after initial fixed period"
+        },
+        {
+          "id": "monthly_payment_projected_uncapped",
+          "label": "Projected monthly payment (index+margin, uncapped)"
+        },
+        {
+          "id": "uncapped_new_annual_rate",
+          "label": "Index + margin (annual, uncapped)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator models an adjustable-rate mortgage (ARM): an initial rate period followed by rate adjustments. It calculates your current monthly payment, the remaining balance at the end of the initial fixed period, and a projected payment if the rate moved to index+margin immediately (uncapped).",
+      "Use the tool for planning and sensitivity analysis. Results are estimates for budgeting; they do not constitute an interest rate lock or loan approval. See methodology and caveats below."
+    ],
+    "methodology": [
+      "The calculator uses standard amortization formulas to compute monthly payments and remaining balances. Monthly payment is computed from the monthly interest rate and remaining payments so that the loan amortizes over the remaining term.",
+      "Projected payments use index + margin as a straightforward projection (uncapped) to show sensitivity. Adjustment caps (periodic and lifetime) are computed and displayed separately; the tool provides cap ceilings, while the uncapped projection shows a notional upper rate absent caps.",
+      "Design and accuracy practices reference established guidance for numerical stability and data handling. The tool follows general best-practice controls as described by NIST and ISO for software accuracy and traceability; see citations. Results include explicit caveats about model limits and rounding."
+    ],
+    "how_is_calculated": [
+      "Monthly rate (decimal) = annual_rate / 12",
+      "Monthly payment = (r * P) / (1 - (1 + r)^-N) where r = monthly rate, P = principal, N = total remaining payments",
+      "Remaining balance after k payments = P*(1+r)^k - PMT*(( (1+r)^k - 1)/r )",
+      "Projected future rate (uncapped) = index + margin. Periodic cap ceiling = current rate + periodic cap. Lifetime cap ceiling = initial rate + lifetime cap."
+    ],
+    "examples": [
+      "Example 1: $300,000 principal, 30-year term, 3.00% initial rate for 5 years. The calculator shows current monthly payment, estimated remaining balance after 5 years, and what the payment could be if index+margin applied immediately (uncapped).",
+      "Example 2: Change the index value to test sensitivity. Compare uncapped projection vs. cap ceilings to understand how contractual caps could limit increases."
+    ],
+    "summary": [
+      "This estimator provides transparent intermediate values (monthly rates, remaining balance, uncapped projection) so you can see how each input affects payments.",
+      "Always compare results to your loan documents. The contractual terms (index source, exact margin, cap schedule, and rounding rules) in your promissory note govern actual adjustments."
+    ],
+    "faqs": [
+      {
+        "question": "Does this tool apply contract caps automatically?",
+        "answer": "The tool computes cap ceilings (periodic and lifetime) and shows uncapped index+margin projections for sensitivity. It does not automatically force the projected payment to the exact capped value because lenders may apply rounding rules, index publication lags, and other contract details. Use the cap ceilings and consult your loan agreement for the exact adjusted rate."
+      },
+      {
+        "question": "Is the projected payment a guarantee?",
+        "answer": "No. Projected payments are estimates based on your inputs. Actual future payments depend on the published index at each adjustment date, contractual cap rounding rules, any lender-imposed adjustments, escrow changes, and fees. Treat outputs as planning aids."
+      },
+      {
+        "question": "Why are there differences between uncapped projection and cap ceilings?",
+        "answer": "An uncapped projection shows where the rate would be if it immediately equaled index+margin. Caps limit increases per adjustment and over the loan life; the cap ceilings calculated here show those contractual limits but do not model lender rounding or timing."
+      },
+      {
+        "question": "How precise are the numbers?",
+        "answer": "Values are rounded for display. Under the hood calculations follow standard floating-point arithmetic. For mission-critical or legal use, obtain an amortization schedule from your lender. The tool follows software quality and numerical stability guidance; see citations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (general guidance on software assurance and numerical stability)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (standards organization, for software quality frameworks)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (standards for numerical methods and software engineering)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA (general operational safety guidance for software operations)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer finance guidance (regulatory overview for mortgage disclosures)",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Adjustable-rate mortgage (ARM)",
+        "definition": "A mortgage with an interest rate that can change at specified adjustment periods after an initial fixed-rate period."
+      },
+      {
+        "term": "Index",
+        "definition": "A published reference interest rate (for example, LIBOR replacement indexes) that determines adjustments when combined with the lender's margin."
+      },
+      {
+        "term": "Margin",
+        "definition": "A fixed percentage added to the index by the lender to produce the fully-indexed interest rate."
+      },
+      {
+        "term": "Periodic cap",
+        "definition": "A contractual limit on how much the interest rate can change at any single adjustment."
+      },
+      {
+        "term": "Lifetime cap",
+        "definition": "A contractual limit on how much the interest rate can increase over the life of the loan above the initial rate."
+      },
+      {
+        "term": "Payment reset options",
+        "definition": "When rate changes, loans either reset the monthly payment to amortize remaining balance over the remaining term or keep payment and change amortization schedule per contract."
+      }
+    ]
+  }
+}

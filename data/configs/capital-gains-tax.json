@@ -1,0 +1,550 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Capital Gains Tax Calculator",
+    "description": "Estimate taxable capital gain and tax owed for asset sales (short-term and long-term), including primary residence exclusion and specific-identification basis. Allows switching between standard aggregated-basis and specific-identification workflows."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard",
+    "methods": {
+      "standard": {
+        "label": "Standard sale (aggregated basis)",
+        "description": "Compute gain using total acquisition cost plus improvements as the basis. Applies primary residence exclusion if selected and distinguishes short-term vs long-term rates by holding period.",
+        "variables": {
+          "total_sale_proceeds": {
+            "expression": "sale_price * quantity - selling_expenses",
+            "dependencies": [
+              "sale_price",
+              "quantity",
+              "selling_expenses"
+            ],
+            "label": "Total sale proceeds",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_basis": {
+            "expression": "acquisition_cost + improvements",
+            "dependencies": [
+              "acquisition_cost",
+              "improvements"
+            ],
+            "label": "Adjusted basis",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "raw_gain": {
+            "expression": "total_sale_proceeds - adjusted_basis",
+            "dependencies": [
+              "total_sale_proceeds",
+              "adjusted_basis"
+            ],
+            "label": "Gross gain (before exclusions & losses)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "excluded": {
+            "expression": "primary_residence == 'yes' ? (raw_gain < home_exclusion_amount ? raw_gain : home_exclusion_amount) : 0",
+            "dependencies": [
+              "primary_residence",
+              "raw_gain",
+              "home_exclusion_amount"
+            ],
+            "label": "Primary residence exclusion applied",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_gain": {
+            "expression": "(raw_gain - excluded - capital_losses_prior_years) < 0 ? 0 : (raw_gain - excluded - capital_losses_prior_years)",
+            "dependencies": [
+              "raw_gain",
+              "excluded",
+              "capital_losses_prior_years"
+            ],
+            "label": "Taxable capital gain",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "tax_rate": {
+            "expression": "holding_period_years >= 1 ? (long_term_cap_gains_rate_percent / 100) : (ordinary_income_tax_rate_percent / 100)",
+            "dependencies": [
+              "holding_period_years",
+              "long_term_cap_gains_rate_percent",
+              "ordinary_income_tax_rate_percent"
+            ],
+            "label": "Applicable tax rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "tax_due": {
+            "expression": "taxable_gain * tax_rate",
+            "dependencies": [
+              "taxable_gain",
+              "tax_rate"
+            ],
+            "label": "Estimated tax owed on gain",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_tax_rate": {
+            "expression": "raw_gain == 0 ? 0 : (tax_due / raw_gain)",
+            "dependencies": [
+              "raw_gain",
+              "tax_due"
+            ],
+            "label": "Effective tax rate (tax / gross gain)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "net_proceeds": {
+            "expression": "total_sale_proceeds - tax_due",
+            "dependencies": [
+              "total_sale_proceeds",
+              "tax_due"
+            ],
+            "label": "Net proceeds after estimated tax",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "taxable_gain",
+            "label": "Taxable capital gain",
+            "variable": "taxable_gain",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_due",
+            "label": "Estimated tax owed",
+            "variable": "tax_due",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_rate",
+            "label": "Applicable tax rate",
+            "variable": "tax_rate",
+            "format": "percent"
+          },
+          {
+            "id": "effective_tax_rate",
+            "label": "Effective tax rate",
+            "variable": "effective_tax_rate",
+            "format": "percent"
+          },
+          {
+            "id": "net_proceeds",
+            "label": "Net proceeds after tax",
+            "variable": "net_proceeds",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "specific_identification": {
+        "label": "Specific identification (user-specified basis)",
+        "description": "Use an identified basis for the sold lot(s). Useful when you select specific purchase lots to determine exact basis instead of aggregated averages.",
+        "variables": {
+          "total_sale_proceeds": {
+            "expression": "sale_price * quantity - selling_expenses",
+            "dependencies": [
+              "sale_price",
+              "quantity",
+              "selling_expenses"
+            ],
+            "label": "Total sale proceeds",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_basis": {
+            "expression": "identified_basis + improvements",
+            "dependencies": [
+              "identified_basis",
+              "improvements"
+            ],
+            "label": "Adjusted basis (identified)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "raw_gain": {
+            "expression": "total_sale_proceeds - adjusted_basis",
+            "dependencies": [
+              "total_sale_proceeds",
+              "adjusted_basis"
+            ],
+            "label": "Gross gain (before exclusions & losses)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "excluded": {
+            "expression": "primary_residence == 'yes' ? (raw_gain < home_exclusion_amount ? raw_gain : home_exclusion_amount) : 0",
+            "dependencies": [
+              "primary_residence",
+              "raw_gain",
+              "home_exclusion_amount"
+            ],
+            "label": "Primary residence exclusion applied",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_gain": {
+            "expression": "(raw_gain - excluded - capital_losses_prior_years) < 0 ? 0 : (raw_gain - excluded - capital_losses_prior_years)",
+            "dependencies": [
+              "raw_gain",
+              "excluded",
+              "capital_losses_prior_years"
+            ],
+            "label": "Taxable capital gain",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "tax_rate": {
+            "expression": "holding_period_years >= 1 ? (long_term_cap_gains_rate_percent / 100) : (ordinary_income_tax_rate_percent / 100)",
+            "dependencies": [
+              "holding_period_years",
+              "long_term_cap_gains_rate_percent",
+              "ordinary_income_tax_rate_percent"
+            ],
+            "label": "Applicable tax rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "tax_due": {
+            "expression": "taxable_gain * tax_rate",
+            "dependencies": [
+              "taxable_gain",
+              "tax_rate"
+            ],
+            "label": "Estimated tax owed on gain",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_tax_rate": {
+            "expression": "raw_gain == 0 ? 0 : (tax_due / raw_gain)",
+            "dependencies": [
+              "raw_gain",
+              "tax_due"
+            ],
+            "label": "Effective tax rate (tax / gross gain)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "net_proceeds": {
+            "expression": "total_sale_proceeds - tax_due",
+            "dependencies": [
+              "total_sale_proceeds",
+              "tax_due"
+            ],
+            "label": "Net proceeds after estimated tax",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "taxable_gain",
+            "label": "Taxable capital gain",
+            "variable": "taxable_gain",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_due",
+            "label": "Estimated tax owed",
+            "variable": "tax_due",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_rate",
+            "label": "Applicable tax rate",
+            "variable": "tax_rate",
+            "format": "percent"
+          },
+          {
+            "id": "effective_tax_rate",
+            "label": "Effective tax rate",
+            "variable": "effective_tax_rate",
+            "format": "percent"
+          },
+          {
+            "id": "net_proceeds",
+            "label": "Net proceeds after tax",
+            "variable": "net_proceeds",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "standard",
+        "options": [
+          {
+            "label": "Standard (aggregated basis)",
+            "value": "standard"
+          },
+          {
+            "label": "Specific identification (enter identified basis)",
+            "value": "specific_identification"
+          }
+        ]
+      },
+      {
+        "id": "sale_price",
+        "label": "Sale price (per unit)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "quantity",
+        "label": "Quantity sold (units)",
+        "type": "number",
+        "default": 1,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "selling_expenses",
+        "label": "Selling expenses (commissions, fees)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "acquisition_cost",
+        "label": "Acquisition cost (total basis)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "improvements",
+        "label": "Capital improvements (added to basis)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "holding_period_years",
+        "label": "Holding period (years)",
+        "type": "number",
+        "default": 1,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "ordinary_income_tax_rate_percent",
+        "label": "Ordinary income tax rate (for short-term, %)",
+        "type": "number",
+        "default": 24,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "long_term_cap_gains_rate_percent",
+        "label": "Long-term capital gains tax rate (%, typical)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "primary_residence",
+        "label": "Claiming primary residence exclusion?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "home_exclusion_amount",
+        "label": "Primary residence exclusion amount (USD)",
+        "type": "number",
+        "default": 250000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "capital_losses_prior_years",
+        "label": "Net capital losses carried forward (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      }
+    ],
+    "sections": [
+      {
+        "id": "specific_basis_section",
+        "label": "Specific identification inputs",
+        "show_when": {
+          "field": "method",
+          "is": "specific_identification"
+        },
+        "fields": [
+          {
+            "id": "identified_basis",
+            "label": "Identified basis for sold lot(s)",
+            "type": "number",
+            "default": 4000,
+            "min": 0,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the taxable capital gain and the estimated tax owed when you sell an asset. It supports both aggregated-basis calculations and specific-identification basis when you select particular purchase lots.",
+      "Use the fields to input sale proceeds, basis, holding period, and the tax rates that apply to you. For primary residence sales, you may apply a one-time exclusion up to the amount you enter."
+    ],
+    "methodology": [
+      "The tool computes gross gain as sale proceeds minus adjusted basis. Adjusted basis includes acquisition cost plus capital improvements and may use an identified basis when you select specific-identification.",
+      "If you indicate a primary residence and enter an exclusion amount, the calculator subtracts up to that exclusion from the gross gain before applying carried-forward capital losses.",
+      "Short-term gains (holding period less than one year) are taxed at your ordinary income rate input; long-term gains use the long-term rate input. The estimated tax owed equals taxable gain multiplied by the selected rate."
+    ],
+    "how_is_calculated": [
+      "Total sale proceeds = (Sale price × Quantity) − Selling expenses",
+      "Adjusted basis = Acquisition cost + Capital improvements (or identified basis + improvements for specific-identification)",
+      "Gross gain = Total sale proceeds − Adjusted basis",
+      "Taxable gain = max(0, Gross gain − Primary residence exclusion − Carried-forward capital losses)",
+      "Tax owed = Taxable gain × Applicable tax rate (long-term or ordinary rate based on holding period)"
+    ],
+    "examples": [
+      "Example: You sell 1 unit for $10,000 with an acquisition cost of $5,000 and $0 improvements. Selling expenses are $200 and you held the asset 2 years. Long-term rate 15%. Gross gain = $10,000 − $5,000 = $5,000. Taxable gain = $5,000. Tax owed = $750.",
+      "Example (primary residence): If the asset is a primary residence and you qualify for a $250,000 exclusion, and the gross gain is less than $250,000, the taxable gain will be reduced to zero."
+    ],
+    "faqs": [
+      {
+        "question": "Can this calculator determine the correct IRS tax bracket for my ordinary income?",
+        "answer": "No. This tool requires you to enter the ordinary income tax rate and long-term capital gains rate that apply to you. For exact marginal bracket calculations and filing guidance, consult your tax professional or the official tax authority guidance."
+      },
+      {
+        "question": "Does the calculator handle multiple lots with different acquisition dates and prices?",
+        "answer": "You can use the specific-identification method to enter the exact identified basis for the lot(s) you sold. For many lots, aggregate the identified basis manually and enter it as a single identified basis."
+      },
+      {
+        "question": "How accurate are the estimates?",
+        "answer": "Estimates are mathematical approximations based on your inputs and do not substitute for professional tax advice. They do not account for alternative minimum tax, state taxes, surtaxes, depreciation recapture, or other jurisdiction-specific rules."
+      },
+      {
+        "question": "What should I do if my situation is complex (e.g., depreciated property, trade or business assets)?",
+        "answer": "Complex situations may require additional calculations (such as depreciation recapture and section-specific rules). Consult a tax professional or authoritative guidance from your tax authority for those scenarios."
+      },
+      {
+        "question": "How should I use the primary residence exclusion fields?",
+        "answer": "Enter 'Yes' if you meet the specific ownership and use tests that permit a primary residence exclusion in your jurisdiction and enter the exclusion amount you expect to claim. The calculator will cap the exclusion at the lesser of the exclusion amount and the gross gain."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Adjusted basis",
+        "definition": "The original acquisition cost plus allowable capital improvements, used to determine gain or loss on a sale."
+      },
+      {
+        "term": "Holding period",
+        "definition": "The length of time you owned the asset. Typically, one year or longer classifies a gain as long-term for many jurisdictions."
+      },
+      {
+        "term": "Specific identification",
+        "definition": "A method where the seller identifies which purchased lot(s) are being sold so those exact bases apply to the calculation."
+      },
+      {
+        "term": "Primary residence exclusion",
+        "definition": "A tax exclusion for gains on the sale of a primary home subject to meeting ownership and use tests; limits vary by jurisdiction."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS - Topic No. 409: Capital gains and losses",
+        "url": "https://www.irs.gov/taxtopics/tc409"
+      },
+      {
+        "label": "NIST (standards and best practices)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Standards overview",
+        "url": "https://www.iso.org/standards.html"
+      },
+      {
+        "label": "IEEE - Standards and publications",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational safety and health standards",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/taxtopics/tc409",
+        "label": "IRS Topic No. 409 - Capital gains and losses",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST (standards and best practices)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

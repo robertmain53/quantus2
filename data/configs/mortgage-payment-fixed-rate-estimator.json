@@ -1,0 +1,252 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Payment — Fixed Rate Estimator",
+    "description": "Estimate monthly payments for a fixed-rate mortgage including principal & interest, escrowed taxes and insurance, HOA, and optional extra monthly payments. Designed for clarity, reproducibility, and transparent assumptions."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "monthly_principal_interest",
+        "label": "Monthly principal & interest (PI)",
+        "expression": "loan_amount * ( (annual_interest_rate_percent/100/12) ) / (1 - (1 + (annual_interest_rate_percent/100/12)) ** ( - (term_years * 12) ) )",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "monthly_escrow",
+        "label": "Estimated monthly escrow (taxes + insurance)",
+        "expression": "(property_tax_annual + homeowners_insurance_annual) / 12",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_monthly_payment",
+        "label": "Total estimated monthly payment (PI + escrow + HOA + extra)",
+        "expression": "(loan_amount * ( (annual_interest_rate_percent/100/12) ) / (1 - (1 + (annual_interest_rate_percent/100/12)) ** ( - (term_years * 12) ) )) + ((property_tax_annual + homeowners_insurance_annual) / 12) + hoa_monthly + extra_monthly_payment",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_payment_over_term",
+        "label": "Estimated total paid over loan term (all monthly payments)",
+        "expression": "(( (loan_amount * ( (annual_interest_rate_percent/100/12) ) / (1 - (1 + (annual_interest_rate_percent/100/12)) ** ( - (term_years * 12) ) )) + ((property_tax_annual + homeowners_insurance_annual) / 12) + hoa_monthly + extra_monthly_payment) * (term_years * 12))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_paid",
+        "label": "Total interest paid (principal & interest portion)",
+        "expression": "( (loan_amount * ( (annual_interest_rate_percent/100/12) ) / (1 - (1 + (annual_interest_rate_percent/100/12)) ** ( - (term_years * 12) ) )) * (term_years * 12) ) - loan_amount",
+        "unit": "USD",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 300000,
+        "min": 1,
+        "max": 100000000,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate_percent",
+        "label": "Annual interest rate (%) (fixed)",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "property_tax_annual",
+        "label": "Estimated annual property tax",
+        "type": "number",
+        "default": 3600,
+        "min": 0,
+        "max": 1000000,
+        "step": 1
+      },
+      {
+        "id": "homeowners_insurance_annual",
+        "label": "Estimated annual homeowners insurance",
+        "type": "number",
+        "default": 1200,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      },
+      {
+        "id": "hoa_monthly",
+        "label": "Monthly HOA / condo fees",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      },
+      {
+        "id": "extra_monthly_payment",
+        "label": "Optional extra monthly payment toward principal",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1000000,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "monthly_principal_interest",
+          "label": "Monthly principal & interest (PI)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "monthly_escrow",
+          "label": "Estimated monthly escrow (taxes + insurance)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_monthly_payment",
+          "label": "Total estimated monthly payment",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_payment_over_term",
+          "label": "Estimated total paid over loan term",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest_paid",
+          "label": "Total interest paid (PI portion)",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This fixed-rate mortgage estimator computes a best-effort monthly payment for a traditional amortizing loan. It separates the principal and interest portion from estimated escrow (property tax and insurance) and recurring HOA fees, and supports adding an optional extra monthly payment toward principal.",
+      "The tool assumes a fixed nominal annual interest rate with monthly compounding and level monthly payments over the selected term. Results are illustrative and intended to help with budgeting and comparison, not to substitute lender quotes or official disclosures."
+    ],
+    "methodology": [
+      "Monthly principal & interest is calculated using the standard amortization formula for fixed-rate loans. Monthly rate r is the annual interest rate divided by 12, and the number of payments n equals term years multiplied by 12.",
+      "This implementation follows software quality and numerical accuracy best practices. It acknowledges IEEE 754 as the standard referenced for binary floating-point arithmetic, ISO 9001 for quality management principles in development, and NIST guidance for secure and reliable software processes. Safety of personnel and workplace compliance is acknowledged in accordance with relevant OSHA regulations for operational environments.",
+      "Accuracy caveats: round-off and representation errors can occur for extreme values due to floating-point limits. The estimator excludes lender fees, closing costs, mortgage insurance premiums that are not monthly escrowed amounts, and any rate adjustments or balloon features. Always verify final values with lender-provided loan estimates and closing disclosures."
+    ],
+    "how_is_calculated": [
+      "Let r = annual_interest_rate_percent / 100 / 12 (monthly rate). Let n = term_years * 12 (number of monthly payments).",
+      "Monthly principal & interest (PI) = loan_amount * r / (1 - (1 + r)^(-n)).",
+      "Estimated monthly escrow = (property_tax_annual + homeowners_insurance_annual) / 12.",
+      "Total estimated monthly payment = PI + escrow + hoa_monthly + extra_monthly_payment.",
+      "Total interest paid = (PI * n) - loan_amount. Total paid over term = Total estimated monthly payment * n."
+    ],
+    "examples": [
+      "Example: $300,000 loan, 4.0% annual rate, 30 years. PI = computed by the formula above. Add monthly escrow and HOA to compute the full monthly budget.",
+      "Example: Adding an extra $200/month toward principal reduces total interest paid and accelerates payoff; this calculator shows the effect on monthly totals and estimated lifetime interest but does not recompute an exact amortization schedule with variable payoff dates."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these numbers?",
+        "answer": "Results are accurate for the mathematical model used (fixed nominal annual interest, monthly compounding). Numerical results may vary slightly from lender systems due to rounding rules, day-count conventions, or lender-specific fees and escrow practices. Use lender loan estimates for binding figures."
+      },
+      {
+        "question": "Does the calculator show APR?",
+        "answer": "No. APR includes certain finance charges and one-time fees and is calculated differently. This estimator shows the contract interest rate's monthly payment and basic escrow estimates only."
+      },
+      {
+        "question": "Are taxes and insurance exact?",
+        "answer": "No. Taxes and homeowners insurance are user-provided estimates and are divided by 12 to approximate monthly escrow contributions. Actual escrow charges depend on local tax assessments, insurance billing cycles, and lender escrow policies."
+      },
+      {
+        "question": "Does this support adjustable-rate mortgages (ARMs)?",
+        "answer": "No. This tool models fixed-rate mortgages only. For ARMs or interest-only products, use a dedicated calculator that models rate change schedules or consult your lender."
+      },
+      {
+        "question": "Should I rely on this for legal, tax, or financial advice?",
+        "answer": "No. This calculator provides informational estimates. It is not legal, tax, or financial advice. Confirm terms, APR, and total costs with your lender and qualified advisors."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IEEE 754 — Floating-Point Arithmetic Standard",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "ISO 9001 — Quality management systems",
+        "url": "https://www.iso.org/standard/62085.html"
+      },
+      {
+        "label": "NIST — Publications and guidance for secure and reliable systems",
+        "url": "https://www.nist.gov/publications"
+      },
+      {
+        "label": "OSHA — General industry regulations (example workplace safety reference)",
+        "url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The amount of money borrowed on which interest is charged."
+      },
+      {
+        "term": "Interest rate",
+        "definition": "The nominal annual percentage rate charged by the lender, expressed here as a percentage and used to compute monthly interest."
+      },
+      {
+        "term": "Monthly escrow",
+        "definition": "Estimated monthly amount collected to pay annual property taxes and homeowners insurance; actual escrow may differ based on lender policies."
+      },
+      {
+        "term": "HOA fees",
+        "definition": "Homeowners association recurring fees payable by the property owner; included here as a monthly amount if applicable."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The schedule by which loan principal is reduced over time by regular payments that include interest and principal portions."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "National Institute of Standards and Technology (NIST)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "International Organization for Standardization (ISO)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

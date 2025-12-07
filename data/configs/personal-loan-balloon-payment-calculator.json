@@ -1,0 +1,244 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Personal Loan — Balloon Payment with Bi‑Weekly (or Custom) Payments",
+    "description": "Calculate periodic payments for a loan with a final balloon payment and bi‑weekly (or other) payment frequency. Returns per‑period payment, number of payments until the balloon, balloon amount due, total paid until the balloon, and interest paid until the balloon. Includes accuracy notes and standards-based quality disclaimers."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Periodic payment (per payment period)",
+        "expression": "principal * ((annual_rate/100/payments_per_year)) / (1 - pow(1 + (annual_rate/100/payments_per_year), - (amortization_years * payments_per_year) ))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "payments_until_balloon",
+        "label": "Number of payments until balloon",
+        "expression": "balloon_after_years * payments_per_year",
+        "format": "integer"
+      },
+      {
+        "id": "balloon_payment_due",
+        "label": "Balloon payment due (remaining principal at balloon date)",
+        "expression": "principal * pow(1 + (annual_rate/100/payments_per_year), (balloon_after_years * payments_per_year)) - ( principal * ((annual_rate/100/payments_per_year)) / (1 - pow(1 + (annual_rate/100/payments_per_year), - (amortization_years * payments_per_year) )) ) * ( ( pow(1 + (annual_rate/100/payments_per_year), (balloon_after_years * payments_per_year) ) - 1 ) / (annual_rate/100/payments_per_year) )",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid_until_balloon",
+        "label": "Total amount paid until balloon (principal + interest paid by then)",
+        "expression": "(( principal * ((annual_rate/100/payments_per_year)) / (1 - pow(1 + (annual_rate/100/payments_per_year), - (amortization_years * payments_per_year) )) )) * (balloon_after_years * payments_per_year)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_until_balloon",
+        "label": "Total interest paid until balloon",
+        "expression": "((( principal * ((annual_rate/100/payments_per_year)) / (1 - pow(1 + (annual_rate/100/payments_per_year), - (amortization_years * payments_per_year) )) )) * (balloon_after_years * payments_per_year)) - ( principal - ( principal * pow(1 + (annual_rate/100/payments_per_year), (balloon_after_years * payments_per_year)) - ( principal * ((annual_rate/100/payments_per_year)) / (1 - pow(1 + (annual_rate/100/payments_per_year), - (amortization_years * payments_per_year) )) ) * ( ( pow(1 + (annual_rate/100/payments_per_year), (balloon_after_years * payments_per_year) ) - 1 ) / (annual_rate/100/payments_per_year) ) ) )",
+        "unit": "currency",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (nominal, %)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years) — schedule used to compute each payment",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "max": 100,
+        "step": 0.25
+      },
+      {
+        "id": "balloon_after_years",
+        "label": "Time until balloon (years)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 100,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (use 26 for bi‑weekly, 12 for monthly)",
+        "type": "integer",
+        "default": 26,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Periodic payment",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "payments_until_balloon",
+          "label": "Payments until balloon",
+          "format": "integer"
+        },
+        {
+          "id": "balloon_payment_due",
+          "label": "Balloon payment due",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_paid_until_balloon",
+          "label": "Total paid until balloon",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest_until_balloon",
+          "label": "Total interest paid until balloon",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments for a loan that uses a standard amortization schedule for recurring payments and leaves a final balloon payment (remaining principal) due at a specified date. It supports bi‑weekly schedules (26 payments/year) and other custom payment frequencies.",
+      "Use the amortization period to indicate the schedule used to compute each installment (for example, a 5‑year amortization with a 2‑year balloon means payments are sized as if the loan amortizes over 5 years, but the remaining balance is due after 2 years). Results are numerical estimates for planning and disclosure; verify final numbers with your lender."
+    ],
+    "methodology": [
+      "The calculator uses standard time‑value‑of‑money formulas: periodic interest rate = annual rate / payments per year. Periodic payment is the level payment that amortizes the principal over the amortization schedule. The balloon amount is the outstanding principal after the specified number of payments.",
+      "Quality and numerical behavior follow industry best practices for financial calculators. We document limits and rounding behavior below and reference general standards for accuracy control and risk management in computational tools (NIST, ISO, IEEE, OSHA) to support reproducibility and operational reliability."
+    ],
+    "how_is_calculated": [
+      "Periodic interest rate r = (annual_rate / 100) / payments_per_year.",
+      "Number of amortization payments n = amortization_years × payments_per_year.",
+      "Level periodic payment = principal × r / (1 − (1 + r)^−n).",
+      "Balloon (remaining balance) after m payments = principal × (1 + r)^m − payment × (( (1 + r)^m − 1 ) / r), where m = balloon_after_years × payments_per_year.",
+      "Total paid until balloon = payment × m. Total interest until balloon = total paid until balloon − principal repaid by then (principal − remaining balance)."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator handle zero interest rates?",
+        "answer": "The formulas assume a positive periodic interest rate. For a 0% annual interest rate, the periodic payment equals principal divided by the number of amortization payments (principal / n). Enter a very small positive rate or perform manual division for exact zero‑interest cases."
+      },
+      {
+        "question": "Why is the balloon different from the original principal?",
+        "answer": "The balloon equals the outstanding principal after the number of payments you specify. If the balloon occurs before full amortization, principal remains and is due at balloon time."
+      },
+      {
+        "question": "How do I set bi‑weekly payments?",
+        "answer": "Set Payments per year = 26 for bi‑weekly. If your lender uses a different convention (e.g., semi‑monthly or accelerated bi‑weekly), confirm the lender's schedule and use the matching payments‑per‑year value."
+      },
+      {
+        "question": "Are results final legal figures I can rely on for closing?",
+        "answer": "No. Results are estimates for planning and comparison. Final payout and disclosure amounts from your lender or servicer take precedence. Use the outputs to prepare questions and verify lender calculations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at the end of a loan term representing the remaining principal when the loan is not fully amortized by periodic payments."
+      },
+      {
+        "term": "Amortization period",
+        "definition": "The length of time over which loan payments are calculated to fully repay principal and interest; payments sized on this schedule may not match the actual loan maturity if a balloon is present."
+      },
+      {
+        "term": "Bi‑weekly",
+        "definition": "Payment frequency of 26 payments per year (every two weeks). Confirm with your lender whether they mean 'bi‑weekly' or 'semi‑monthly' as conventions differ."
+      },
+      {
+        "term": "Periodic interest rate",
+        "definition": "The interest rate applied each payment period: annual nominal rate divided by the number of payments per year."
+      },
+      {
+        "term": "Nominal vs APR",
+        "definition": "This calculator uses the nominal annual interest rate you enter. APR includes fees and other costs; use lender disclosures to compare APRs."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

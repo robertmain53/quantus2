@@ -1,0 +1,371 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Amortization — Bi‑Weekly & Custom Frequencies",
+    "description": "Accurate amortization with bi‑weekly (26) payments, weekly (52) and monthly (12) options. Shows periodic payment, projected payoff time, total paid, and interest with optional extra payments and one‑time fees. Includes assumptions, limits, and references to measurement and calculation best practices."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "amortization",
+    "methods": {
+      "amortization": {
+        "label": "Amortization with chosen payment frequency",
+        "description": "Computes periodic payment, projected number of payments and payoff time, total amount paid and total interest for a loan given principal, APR, term, payment frequency, optional per‑period extra payment, and one‑time fees. Assumes constant interest rate and level payments per period.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_pct / 100 / frequency",
+            "dependencies": [
+              "annual_rate_pct",
+              "frequency"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years * frequency",
+            "dependencies": [
+              "term_years",
+              "frequency"
+            ],
+            "label": "Total scheduled payments (n)",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "standard_payment": {
+            "expression": "(r == 0) ? principal / n : principal * r / (1 - pow(1 + r, -n))",
+            "dependencies": [
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Scheduled periodic payment (no extras, no fee allocation)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "standard_payment + extra_payment + (fees > 0 ? (fees / n) : 0)",
+            "dependencies": [
+              "standard_payment",
+              "extra_payment",
+              "fees",
+              "n"
+            ],
+            "label": "Periodic payment including extra payment and pro‑rated one‑time fees",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_required": {
+            "expression": "(r == 0) ? n : -log(1 - r * principal / payment_with_extra) / log(1 + r)",
+            "dependencies": [
+              "r",
+              "principal",
+              "payment_with_extra",
+              "n"
+            ],
+            "label": "Projected number of payments until payoff",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "payments_required_capped": {
+            "expression": "max(1, min(payments_required, n))",
+            "dependencies": [
+              "payments_required",
+              "n"
+            ],
+            "label": "Payments reported (capped to scheduled total when math anomalies occur)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "total_paid": {
+            "expression": "payment_with_extra * payments_required_capped",
+            "dependencies": [
+              "payment_with_extra",
+              "payments_required_capped"
+            ],
+            "label": "Total amount paid (payments sum)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal - fees",
+            "dependencies": [
+              "total_paid",
+              "principal",
+              "fees"
+            ],
+            "label": "Total interest paid (over life of loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "payments_required_capped / frequency",
+            "dependencies": [
+              "payments_required_capped",
+              "frequency"
+            ],
+            "label": "Projected payoff period in years",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "equivalent_monthly_payment": {
+            "expression": "monthly_r = annual_rate_pct / 100 / 12; monthly_n = term_years * 12; (monthly_r == 0) ? principal / monthly_n : principal * monthly_r / (1 - pow(1 + monthly_r, -monthly_n))",
+            "dependencies": [
+              "annual_rate_pct",
+              "term_years",
+              "principal"
+            ],
+            "label": "Equivalent monthly payment for comparison",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Periodic payment (including extras & pro‑rated fees)",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled periodic payment (no extras)",
+            "variable": "standard_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "number_payments",
+            "label": "Projected number of payments",
+            "variable": "payments_required_capped",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Projected payoff time (years)",
+            "variable": "payoff_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total amount paid (payments sum)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equivalent_monthly_payment",
+            "label": "Equivalent monthly payment (for comparison)",
+            "variable": "equivalent_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "max": 30,
+        "step": 0.25
+      },
+      {
+        "id": "frequency",
+        "label": "Payment frequency",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Bi‑weekly (26) — common accelerated schedule",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment per period (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "fees",
+        "label": "One‑time fees to add to loan balance (origination, doc fees)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models loan amortization for auto loans using a chosen payment frequency (monthly, bi‑weekly, or weekly). It computes scheduled periodic payments, the effect of optional per‑period extra payments and one‑time fees, projected number of payments until payoff, total amount paid, and total interest.",
+      "Bi‑weekly schedules (26 payments per year) commonly accelerate principal reduction versus monthly payments because there are effectively 13 full monthly equivalents per year when extras or split‑month strategies are applied. Use the extra payment field to model intentional overpayments per period; use fees to model one‑time costs rolled into the principal."
+    ],
+    "methodology": [
+      "The tool assumes a fixed annual percentage rate (APR), level payments per chosen period, and simple amortization (interest calculated on outstanding principal each period). Periodic rate r = APR / 100 / frequency. Total scheduled periods n = term_years * frequency. When r is positive, the scheduled periodic payment is P * r / (1 - (1 + r)^(-n)); when r equals zero, payments are principal divided by n.",
+      "Extra per‑period payments reduce the principal faster and thus shorten the number of payments. One‑time fees are pro‑rated across scheduled payments in the periodic payment shown; the calculator then projects the number of payments required to amortize the combined balance given the chosen periodic payment amount.",
+      "This calculator includes safeguards that cap or floor computed values to avoid nonsensical outputs (for example negative logarithms). Inputs near edge cases (zero APR, extremely small term, or very large extra payments relative to principal) may require manual validation; see the accuracy and limits section below."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = APR / 100 / frequency",
+      "Scheduled periods n = term_years * frequency",
+      "Scheduled periodic payment (no extras) = if r == 0 then principal / n else principal * r / (1 - (1 + r)^(-n))",
+      "Periodic payment shown = scheduled payment + extra_payment + (fees / n)",
+      "Projected payments until payoff (if periodic payment exceeds interest portion) = -log(1 - r * principal / periodic_payment) / log(1 + r) (uses numerical/log model; if r == 0 then payments = n)"
+    ],
+    "faqs": [
+      {
+        "question": "Why does a bi‑weekly schedule pay off faster than monthly?",
+        "answer": "Bi‑weekly schedules with 26 payments result in the equivalent of 13 monthly payments per year if you make every bi‑weekly payment. That extra half‑month each year reduces principal faster and lowers total interest compared with 12 monthly payments."
+      },
+      {
+        "question": "How does the calculator treat one‑time fees?",
+        "answer": "One‑time fees entered are pro‑rated across scheduled payments for the periodic payment displayed and included when projecting total paid and interest. If your lender handles fees differently, enter them into the principal field or adjust accordingly."
+      },
+      {
+        "question": "What happens if APR is zero?",
+        "answer": "Zero APR is supported; the scheduled payment becomes principal divided by total scheduled periods. Very low APR values are prone to rounding differences; review results and consider small tolerance adjustments for contracts with atypical compounding."
+      },
+      {
+        "question": "Are extra payments applied immediately to principal?",
+        "answer": "Yes. This tool models per‑period extra payments as immediately reducing principal at the time of payment, which shortens the projected amortization schedule and reduces total interest."
+      },
+      {
+        "question": "How accurate are these results for an actual loan statement?",
+        "answer": "Results are a projection based on the inputs and standard amortization math. Actual lender schedules may differ due to day‑count conventions, variable compounding, payment‑applied rules, rounding policies, fees timing, or escrow/insurance impounds. Use the calculator for planning and cross‑check with your loan contract."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — Loan Terms and Amortization",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The nominal annual rate charged for borrowing, expressed as a percentage."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period: APR divided by the number of payments per year."
+      },
+      {
+        "term": "Scheduled payment",
+        "definition": "The payment amount required each period to amortize the loan over the scheduled term without extras."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "An additional amount paid each period that goes directly to reduce principal and shortens the loan term."
+      },
+      {
+        "term": "One‑time fees",
+        "definition": "Upfront charges such as origination or documentation fees. In this tool they are optionally added to the financed amount via pro‑ration across scheduled payments."
+      }
+    ],
+    "summary": [
+      "Use the frequency selector to compare monthly, bi‑weekly, and weekly schedules. Enter any planned extra payment per period and any one‑time fees to see the effect on payoff time and interest.",
+      "This calculator is intended for planning and comparison. For contract‑level amortization, consult your lender’s schedule and disclosures."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loan/auto",
+      "/guides/loan-amortization"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/publications",
+        "label": "NIST publications",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standards.html",
+        "label": "ISO standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

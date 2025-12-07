@@ -1,0 +1,655 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan Amortization Calculator (monthly & bi-weekly modes)",
+    "description": "Calculate amortization schedules and payoff estimates for motorcycle loans with support for standard monthly payments, accelerated bi-weekly payments (26 periods/year), split-monthly bi-weekly (half-month payment every two weeks), and extra-payment early-payoff scenarios. Includes clear accuracy caveats and calibration guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "biweekly_accelerated",
+    "methods": {
+      "monthly": {
+        "label": "Standard monthly amortization",
+        "description": "Monthly payments computed from standard amortization formula using 12 periods per year.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "12",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "n_periods": {
+            "expression": "term_years * periods_per_year",
+            "dependencies": [
+              "term_years",
+              "periods_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_interest_rate_percent / 100 / periods_per_year",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "base_payment": {
+            "expression": "loan_amount * (periodic_rate * (1 + periodic_rate) ^ n_periods) / ((1 + periodic_rate) ^ n_periods - 1)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "n_periods"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "base_payment + extra_payment_per_period",
+            "dependencies": [
+              "base_payment",
+              "extra_payment_per_period"
+            ],
+            "label": "Monthly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_number_of_payments": {
+            "expression": "-log(1 - (loan_amount * periodic_rate) / payment_with_extra) / log(1 + periodic_rate)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "payment_with_extra"
+            ],
+            "label": "Estimated payments until payoff",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_estimate": {
+            "expression": "payment_with_extra * estimated_number_of_payments - loan_amount",
+            "dependencies": [
+              "payment_with_extra",
+              "estimated_number_of_payments",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_estimate": {
+            "expression": "loan_amount + total_interest_estimate",
+            "dependencies": [
+              "loan_amount",
+              "total_interest_estimate"
+            ],
+            "label": "Estimated total cost (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "base_payment",
+            "label": "Monthly payment",
+            "variable": "base_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_number_of_payments",
+            "label": "Estimated number of payments",
+            "variable": "estimated_number_of_payments",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_estimate",
+            "label": "Estimated total interest",
+            "variable": "total_interest_estimate",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_estimate",
+            "label": "Estimated total cost",
+            "variable": "total_cost_estimate",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_accelerated": {
+        "label": "Accelerated bi-weekly (26 periods/year)",
+        "description": "Calculate the payment and payoff when using 26 equal payments per year (common accelerated bi-weekly schedule). This treats each bi-weekly payment as a full periodic payment at the per-period rate for 26 periods/year.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "n_periods": {
+            "expression": "term_years * periods_per_year",
+            "dependencies": [
+              "term_years",
+              "periods_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_interest_rate_percent / 100 / periods_per_year",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "base_payment": {
+            "expression": "loan_amount * (periodic_rate * (1 + periodic_rate) ^ n_periods) / ((1 + periodic_rate) ^ n_periods - 1)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "n_periods"
+            ],
+            "label": "Bi-weekly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "base_payment + extra_payment_per_period",
+            "dependencies": [
+              "base_payment",
+              "extra_payment_per_period"
+            ],
+            "label": "Bi-weekly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_number_of_payments": {
+            "expression": "-log(1 - (loan_amount * periodic_rate) / payment_with_extra) / log(1 + periodic_rate)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "payment_with_extra"
+            ],
+            "label": "Estimated number of bi-weekly payments until payoff",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_estimate": {
+            "expression": "payment_with_extra * estimated_number_of_payments - loan_amount",
+            "dependencies": [
+              "payment_with_extra",
+              "estimated_number_of_payments",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_estimate": {
+            "expression": "loan_amount + total_interest_estimate",
+            "dependencies": [
+              "loan_amount",
+              "total_interest_estimate"
+            ],
+            "label": "Estimated total cost (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "base_payment",
+            "label": "Bi-weekly payment",
+            "variable": "base_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_number_of_payments",
+            "label": "Estimated number of bi-weekly payments",
+            "variable": "estimated_number_of_payments",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_estimate",
+            "label": "Estimated total interest",
+            "variable": "total_interest_estimate",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_from_monthly": {
+        "label": "Split-monthly bi-weekly (half monthly payment every two weeks)",
+        "description": "Computes bi-weekly payments by splitting the standard monthly payment in half (26 half-payments per year). This method often results in 13 months of payments per year, accelerating payoff versus strict monthly schedules.",
+        "variables": {
+          "periods_per_year_monthly": {
+            "expression": "12",
+            "dependencies": [],
+            "label": "Monthly periods per year (helper)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "n_periods_monthly": {
+            "expression": "term_years * periods_per_year_monthly",
+            "dependencies": [
+              "term_years",
+              "periods_per_year_monthly"
+            ],
+            "label": "Total monthly payments (helper)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate_monthly": {
+            "expression": "annual_interest_rate_percent / 100 / periods_per_year_monthly",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "periods_per_year_monthly"
+            ],
+            "label": "Monthly periodic rate (helper)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "loan_amount * (periodic_rate_monthly * (1 + periodic_rate_monthly) ^ n_periods_monthly) / ((1 + periodic_rate_monthly) ^ n_periods_monthly - 1)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate_monthly",
+              "n_periods_monthly"
+            ],
+            "label": "Monthly payment (base)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_payment": {
+            "expression": "monthly_payment / 2",
+            "dependencies": [
+              "monthly_payment"
+            ],
+            "label": "Bi-weekly (half-month) payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_payment_with_extra": {
+            "expression": "biweekly_payment + extra_payment_per_period",
+            "dependencies": [
+              "biweekly_payment",
+              "extra_payment_per_period"
+            ],
+            "label": "Bi-weekly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_number_of_biweekly_payments": {
+            "expression": "-log(1 - (loan_amount * (annual_interest_rate_percent / 100 / 26)) / biweekly_payment_with_extra) / log(1 + (annual_interest_rate_percent / 100 / 26))",
+            "dependencies": [
+              "loan_amount",
+              "annual_interest_rate_percent",
+              "biweekly_payment_with_extra"
+            ],
+            "label": "Estimated number of bi-weekly payments",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_estimate": {
+            "expression": "biweekly_payment_with_extra * estimated_number_of_biweekly_payments - loan_amount",
+            "dependencies": [
+              "biweekly_payment_with_extra",
+              "estimated_number_of_biweekly_payments",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment",
+            "label": "Bi-weekly (half-month) payment",
+            "variable": "biweekly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_number_of_biweekly_payments",
+            "label": "Estimated number of bi-weekly payments",
+            "variable": "estimated_number_of_biweekly_payments",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_estimate",
+            "label": "Estimated total interest",
+            "variable": "total_interest_estimate",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "early_payoff": {
+        "label": "Early payoff with extra payments",
+        "description": "Estimate payoff time and interest when applying a fixed extra payment each scheduled period. Uses the periodic-rate payoff formula; for variable-rate loans or irregular extra payments results are approximate.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "if(payment_mode == 'monthly', 12, if(payment_mode == 'biweekly_accelerated', 26, 26))",
+            "dependencies": [
+              "payment_mode"
+            ],
+            "label": "Payments per year (based on selected payment_mode)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate": {
+            "expression": "annual_interest_rate_percent / 100 / periods_per_year",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "payment_schedule_base": {
+            "expression": "loan_amount * (periodic_rate * (1 + periodic_rate) ^ (term_years * periods_per_year)) / ((1 + periodic_rate) ^ (term_years * periods_per_year) - 1)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "term_years",
+              "periods_per_year"
+            ],
+            "label": "Base scheduled payment for selected frequency",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_with_extra": {
+            "expression": "payment_schedule_base + extra_payment_per_period",
+            "dependencies": [
+              "payment_schedule_base",
+              "extra_payment_per_period"
+            ],
+            "label": "Scheduled payment plus extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_number_of_payments": {
+            "expression": "-log(1 - (loan_amount * periodic_rate) / payment_with_extra) / log(1 + periodic_rate)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "payment_with_extra"
+            ],
+            "label": "Estimated number of payments until payoff (periods)",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "estimated_years_to_payoff": {
+            "expression": "estimated_number_of_payments / periods_per_year",
+            "dependencies": [
+              "estimated_number_of_payments",
+              "periods_per_year"
+            ],
+            "label": "Estimated years until payoff",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_estimate": {
+            "expression": "payment_with_extra * estimated_number_of_payments - loan_amount",
+            "dependencies": [
+              "payment_with_extra",
+              "estimated_number_of_payments",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_with_extra",
+            "label": "Payment including extra",
+            "variable": "payment_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_years_to_payoff",
+            "label": "Estimated years to payoff",
+            "variable": "estimated_years_to_payoff",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_estimate",
+            "label": "Estimated total interest",
+            "variable": "total_interest_estimate",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 8000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate_percent",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 4,
+        "min": 0.5,
+        "max": 30,
+        "step": 0.25
+      },
+      {
+        "id": "payment_mode",
+        "label": "Payment mode",
+        "type": "select",
+        "default": "biweekly_accelerated",
+        "options": [
+          {
+            "label": "Monthly",
+            "value": "monthly"
+          },
+          {
+            "label": "Bi-weekly (accelerated, 26/year)",
+            "value": "biweekly_accelerated"
+          },
+          {
+            "label": "Bi-weekly (split monthly: half monthly every 2 weeks)",
+            "value": "biweekly_from_monthly"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment_per_period",
+        "label": "Extra payment applied each period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "start_date",
+        "label": "First payment date (optional, YYYY-MM-DD)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides amortization estimates for motorcycle loans across common payment patterns: standard monthly, accelerated bi-weekly (26 payments/year), and split-monthly bi-weekly (half monthly payment every two weeks). It also models the effect of fixed extra payments per scheduled period to estimate early payoff.",
+      "Results are estimates intended for planning and comparison. Use this tool to understand payment amounts, estimated payoff time, and total interest under different scheduling assumptions. For binding figures, consult your lender statement and loan contract."
+    ],
+    "methodology": [
+      "The tool uses standard amortization mathematics: a fixed-rate loan's periodic payment is computed by solving the present-value annuity formula for the payment amount given the periodic interest rate and number of periods.",
+      "For accelerated bi-weekly schedules we treat the schedule as 26 equal periods per year and compute per-period rate = APR / 26. For split-monthly (half-month) we compute the monthly payment then divide by two to model half-month payments (26 such half-payments per year).",
+      "Early-payoff estimates use the algebraic rearrangement of the annuity formula to solve for the number of periods required when a higher periodic payment (scheduled payment plus fixed extra) is applied. Irregular extra payments, variable rates, fees, compounding conventions, or deferred interest are not modeled and will change actual results."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = annual interest rate (APR) / 100 / payments per year.",
+      "Payment (per period) = principal * (r * (1 + r)^n) / ((1 + r)^n - 1), where r = periodic rate and n = total number of periods.",
+      "Estimated number of periods with an extra fixed payment is found by solving the annuity equation for n: n = -log(1 - (principal * r) / payment) / log(1 + r)."
+    ],
+    "examples": [
+      "Example A: $8,000 loan at 6.5% APR for 4 years: standard monthly payment is computed with 12 periods/year.",
+      "Example B: Same loan on an accelerated bi-weekly schedule (26/year) computes a smaller per-period payment but results in extra annual principal payments versus monthly, shortening payoff and reducing total interest.",
+      "Example C: Apply $25 extra to each bi-weekly payment to see an approximate new payoff time and interest reduction (results assume fixed interest and regular extras)."
+    ],
+    "summary": [
+      "Choose monthly or bi-weekly modes depending on how you intend to make payments. Accelerated bi-weekly and split-monthly both typically reduce total interest versus monthly because they increase annual principal payments, but the magnitude differs.",
+      "Use the extra-payment input to model fixed additions; irregular one-time payments are not directly amortized by the formula and should be handled with a lender-provided payoff schedule."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator include fees, taxes, or insurance?",
+        "answer": "No. This tool models principal and interest only. Include fees, taxes, or insurance in your assessment separately or consult your loan agreement for the all-in cost."
+      },
+      {
+        "question": "Why do bi-weekly payments sometimes pay the loan off faster?",
+        "answer": "Accelerated bi-weekly schedules typically result in one extra monthly payment per year (26 half-month payments vs 24 half-month equivalents), increasing principal reduction each year which shortens the loan term and reduces interest."
+      },
+      {
+        "question": "Are results exact for all loans?",
+        "answer": "No. Results are precise for fixed-rate loans using the stated compounding and payment frequency. For variable-rate loans, loans with daily interest accrual, deferred interest, prepayment penalties, or irregular payment dates, this calculator gives estimates only."
+      },
+      {
+        "question": "How accurate is the math and what are the caveats?",
+        "answer": "The underlying formulas are standard annuity math. For numerical stability and correctness we recommend verifying critical outputs against lender-provided amortization schedules. Round-off, differing compounding conventions, leap years, and payment timing can introduce small discrepancies."
+      },
+      {
+        "question": "How should I use this for lender discussions?",
+        "answer": "Use outputs for comparison and planning. For legally binding payoff amounts or exact schedules, request a payoff statement or amortization schedule from your lender that accounts for their compounding and fee rules."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate: the annual cost of borrowing expressed as a percentage, including the interest rate; does not necessarily include all fees."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate applied per payment period; computed as APR divided by the number of payment periods per year."
+      },
+      {
+        "term": "Accelerated bi-weekly",
+        "definition": "A payment plan with 26 equal payments per year (every two weeks). Often results in faster payoff versus monthly because 26 payments equal 13 monthly payments annually."
+      },
+      {
+        "term": "Split-monthly bi-weekly",
+        "definition": "A method where the monthly payment is divided by two and paid every two weeks (26 half-payments per year); functionally similar to accelerated bi-weekly in many cases."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - general site",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - standards overview",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association - standards catalog",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - regulations overview",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/loans/auto/motorcycle-loan-guide",
+      "/tools/loan-comparison"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

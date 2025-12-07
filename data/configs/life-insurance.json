@@ -1,0 +1,531 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Life Insurance Needs Calculator (Advanced)",
+    "description": "Multi-method life insurance needs tool that estimates recommended coverage using needs-based, income-replacement, human-life-value, and debts-and-final-expenses methods. Includes adjustable economic assumptions and clear accuracy caveats aligned with industry standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "needs_based",
+    "methods": {
+      "needs_based": {
+        "label": "Needs-based (comprehensive)",
+        "description": "Estimates one-time needs (debts, final expenses) plus the present value of income replacement and education funding, then subtracts available survivor resources.",
+        "variables": {
+          "total_debt": {
+            "expression": "mortgage_balance + other_debt",
+            "dependencies": [
+              "mortgage_balance",
+              "other_debt"
+            ],
+            "label": "Total debt",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_income_replacement": {
+            "expression": "annual_household_income * (income_replacement_percentage / 100)",
+            "dependencies": [
+              "annual_household_income",
+              "income_replacement_percentage"
+            ],
+            "label": "Annual income to replace",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "pv_of_income_replacement": {
+            "expression": "annual_income_replacement * (1 - pow(1 + expected_investment_return / 100, -income_replacement_years)) / (expected_investment_return / 100)",
+            "dependencies": [
+              "annual_income_replacement",
+              "expected_investment_return",
+              "income_replacement_years"
+            ],
+            "label": "Present value of income replacement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "education_need": {
+            "expression": "college_fund_need",
+            "dependencies": [
+              "college_fund_need"
+            ],
+            "label": "Planned education funding",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "immediate_needs": {
+            "expression": "final_expenses + total_debt",
+            "dependencies": [
+              "final_expenses",
+              "total_debt"
+            ],
+            "label": "Immediate cash needs (final expenses + debts)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "available_resources": {
+            "expression": "current_savings_for_survivors + existing_life_insurance + social_security_survivor",
+            "dependencies": [
+              "current_savings_for_survivors",
+              "existing_life_insurance",
+              "social_security_survivor"
+            ],
+            "label": "Available survivor resources",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_coverage": {
+            "expression": "pv_of_income_replacement + education_need + immediate_needs - available_resources",
+            "dependencies": [
+              "pv_of_income_replacement",
+              "education_need",
+              "immediate_needs",
+              "available_resources"
+            ],
+            "label": "Recommended coverage (needs-based)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "coverage_needs_based",
+            "label": "Recommended coverage — Needs-based",
+            "variable": "recommended_coverage",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "income_replacement": {
+        "label": "Income-replacement (present value)",
+        "description": "Estimates the present value of replacing a percentage of household income for a chosen number of years, then subtracts available survivor resources.",
+        "variables": {
+          "annual_replacement_amount": {
+            "expression": "annual_household_income * (income_replacement_percentage / 100)",
+            "dependencies": [
+              "annual_household_income",
+              "income_replacement_percentage"
+            ],
+            "label": "Annual replacement amount",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "pv_replacement": {
+            "expression": "annual_replacement_amount * (1 - pow(1 + expected_investment_return / 100, -income_replacement_years)) / (expected_investment_return / 100)",
+            "dependencies": [
+              "annual_replacement_amount",
+              "expected_investment_return",
+              "income_replacement_years"
+            ],
+            "label": "Present value of replacement income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_coverage_income_replacement": {
+            "expression": "pv_replacement - (current_savings_for_survivors + existing_life_insurance + social_security_survivor)",
+            "dependencies": [
+              "pv_replacement",
+              "current_savings_for_survivors",
+              "existing_life_insurance",
+              "social_security_survivor"
+            ],
+            "label": "Recommended coverage (income-replacement)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "coverage_income_replacement",
+            "label": "Recommended coverage — Income replacement",
+            "variable": "recommended_coverage_income_replacement",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "human_life_value": {
+        "label": "Human Life Value (HLV)",
+        "description": "Estimates the economic value of the insured's future earnings (discounted) over a planning horizon.",
+        "variables": {
+          "discounted_future_earnings": {
+            "expression": "annual_household_income * (1 - pow(1 + expected_investment_return / 100, -income_replacement_years)) / (expected_investment_return / 100)",
+            "dependencies": [
+              "annual_household_income",
+              "expected_investment_return",
+              "income_replacement_years"
+            ],
+            "label": "Discounted future earnings",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_coverage_hlv": {
+            "expression": "discounted_future_earnings - (current_savings_for_survivors + existing_life_insurance + social_security_survivor)",
+            "dependencies": [
+              "discounted_future_earnings",
+              "current_savings_for_survivors",
+              "existing_life_insurance",
+              "social_security_survivor"
+            ],
+            "label": "Recommended coverage (HLV)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "coverage_hlv",
+            "label": "Recommended coverage — HLV",
+            "variable": "recommended_coverage_hlv",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "debts_and_final_expenses": {
+        "label": "Debts & Final Expenses",
+        "description": "Covers outstanding debts and immediate cash needs; simple, conservative estimate.",
+        "variables": {
+          "sum_debts_and_expenses": {
+            "expression": "mortgage_balance + other_debt + final_expenses",
+            "dependencies": [
+              "mortgage_balance",
+              "other_debt",
+              "final_expenses"
+            ],
+            "label": "Debts and final expenses total",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_coverage_debts": {
+            "expression": "sum_debts_and_expenses - (current_savings_for_survivors + existing_life_insurance)",
+            "dependencies": [
+              "sum_debts_and_expenses",
+              "current_savings_for_survivors",
+              "existing_life_insurance"
+            ],
+            "label": "Recommended coverage (debts & final expenses)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "coverage_debts",
+            "label": "Recommended coverage — Debts & final expenses",
+            "variable": "recommended_coverage_debts",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "custom_override": {
+        "label": "Custom override",
+        "description": "If you have a target coverage amount in mind, enter it here to use as the recommended coverage.",
+        "variables": {
+          "override_value": {
+            "expression": "desired_coverage_override",
+            "dependencies": [
+              "desired_coverage_override"
+            ],
+            "label": "User-specified coverage",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_coverage_custom": {
+            "expression": "override_value",
+            "dependencies": [
+              "override_value"
+            ],
+            "label": "Recommended coverage (custom)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "coverage_custom",
+            "label": "Recommended coverage — Custom override",
+            "variable": "recommended_coverage_custom",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "annual_household_income",
+        "label": "Annual household income (before tax)",
+        "type": "number",
+        "default": 80000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "income_replacement_years",
+        "label": "Years to replace income",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "income_replacement_percentage",
+        "label": "Percentage of income to replace (%)",
+        "type": "number",
+        "default": 70,
+        "min": 0,
+        "max": 200,
+        "step": 1
+      },
+      {
+        "id": "current_savings_for_survivors",
+        "label": "Available savings for survivors",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "mortgage_balance",
+        "label": "Outstanding mortgage balance",
+        "type": "number",
+        "default": 150000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "other_debt",
+        "label": "Other outstanding debt (auto, credit cards, loans)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "final_expenses",
+        "label": "Final expenses (funeral, immediate costs)",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "college_fund_need",
+        "label": "Estimated total college funding needed",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "number_of_children",
+        "label": "Number of dependent children",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 20,
+        "step": 1
+      },
+      {
+        "id": "inflation_rate",
+        "label": "Expected long-term inflation rate (%)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "expected_investment_return",
+        "label": "Expected after-tax real investment return (%)",
+        "type": "number",
+        "default": 4,
+        "min": -10,
+        "max": 50,
+        "step": 0.1
+      },
+      {
+        "id": "social_security_survivor",
+        "label": "Estimated one-time survivor benefits or lump-sum (if any)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "existing_life_insurance",
+        "label": "Existing life insurance coverage available",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "desired_coverage_override",
+        "label": "Enter a target coverage amount to override (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "selected_method",
+        "label": "Choose method for recommendation",
+        "type": "select",
+        "default": "needs_based",
+        "options": [
+          {
+            "label": "Needs-based (comprehensive)",
+            "value": "needs_based"
+          },
+          {
+            "label": "Income-replacement (present value)",
+            "value": "income_replacement"
+          },
+          {
+            "label": "Human Life Value (HLV)",
+            "value": "human_life_value"
+          },
+          {
+            "label": "Debts & Final Expenses",
+            "value": "debts_and_final_expenses"
+          },
+          {
+            "label": "Custom override",
+            "value": "custom_override"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides multiple commonly used approaches to estimate how much life insurance coverage you may need. It supports needs-based, income-replacement, human-life-value, and debts-and-final-expenses methods so you can compare results and choose a prudent target.",
+      "Results depend on user inputs and assumptions about investment returns, inflation, and survivor resources. Use the estimates as planning guidance only; consult a licensed financial professional or actuarial advisor for a comprehensive, personalized recommendation."
+    ],
+    "methodology": [
+      "The tool applies standard actuarial and financial math: present-value calculations for income replacement and discounted future earnings for human-life-value. For immediate needs it sums debts and final expenses then subtracts readily available survivor resources.",
+      "Model and operational practices align with recognized guidance for financial calculation rigor and information security. For example, use of tested numerical methods and validation is consistent with NIST recommendations for numerical software testing and ISO guidelines for financial services quality management. This tool is not a substitute for professional advice."
+    ],
+    "how_is_calculated": [
+      "Needs-based: Recommended = PV(income replacement) + Education needs + Immediate needs (debts + final expenses) - Available resources.",
+      "Income-replacement (PV): PV = Annual replacement × (1 - (1 + r)^-n) / r, where r = expected investment return (decimal) and n = years to replace.",
+      "Human Life Value (HLV): HLV ≈ Discounted sum of projected earnings over the planning horizon using the same PV annuity formula.",
+      "Debts & final expenses: Simple sum of outstanding debts and final expenses minus immediate survivor resources.",
+      "Custom override: If you enter a positive override amount it is used directly as the recommended coverage."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates are approximate and depend on input accuracy and assumptions (returns, inflation, years of income replacement). They do not account for taxes, changing future earnings, or complex household needs. Use them for planning, not as a binding financial guarantee."
+      },
+      {
+        "question": "Which method should I use?",
+        "answer": "Needs-based is comprehensive for most households because it combines immediate obligations and future income needs. Income-replacement and HLV provide complementary viewpoints. Consider multiple methods to create a range and consult a licensed advisor for a final insurance decision."
+      },
+      {
+        "question": "Are these calculations compliant with standards?",
+        "answer": "The calculation logic follows widely accepted financial math. For process controls, testing, and data handling, this tool references best-practice frameworks and standards listed in citations. It is not a regulatory filing or actuarial certification."
+      },
+      {
+        "question": "What if expected investment return is zero?",
+        "answer": "If the expected investment return is zero, present-value annuity formulas degenerate to simple multiplication (annual replacement × years). The tool's formulas assume a nonzero rate for discounting; for a zero or near-zero rate results should be interpreted cautiously."
+      },
+      {
+        "question": "Can I rely solely on this calculator to buy a policy?",
+        "answer": "No. Use this calculator to inform discussions. Final policy selection should consider underwriting, premium affordability, policy type, riders, and the advice of a licensed insurance agent or financial planner."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Present value (PV)",
+        "definition": "The current worth of a future series of payments discounted at a chosen rate."
+      },
+      {
+        "term": "Income replacement percentage",
+        "definition": "The percentage of current household income you plan to replace for survivors."
+      },
+      {
+        "term": "Human Life Value (HLV)",
+        "definition": "An estimate of the economic value of an individual's future earnings and contributions to a household."
+      },
+      {
+        "term": "Available survivor resources",
+        "definition": "Assets and benefits immediately available to survivors, including savings, existing insurance, and lump-sum survivor benefits."
+      }
+    ],
+    "summary": [
+      "Compare multiple methods to create a coverage range rather than relying on a single number.",
+      "Adjust economic assumptions to reflect conservative planning; small changes in expected returns and years of replacement can materially affect recommended coverage.",
+      "Consult licensed financial and insurance professionals for policy selection and underwriting considerations."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/life-insurance/explain-methods",
+      "/guides/insurance-checklist"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

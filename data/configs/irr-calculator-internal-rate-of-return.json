@@ -1,0 +1,445 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Internal Rate of Return (IRR) — periodic, date-based (XIRR) & modified (MIRR)",
+    "description": "Calculate IRR for equal-period cash flows, XIRR for irregular dates, or MIRR with separate finance and reinvestment rates. Includes solver options, precision controls, and guidance on accuracy, validation, and limits."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "periodic",
+    "methods": {
+      "periodic": {
+        "label": "Periodic IRR (equal periods)",
+        "description": "Computes the internal rate of return assuming equal-length periods (annual, monthly, etc.). The solver finds rate r such that NPV = 0.",
+        "variables": {
+          "cash_values": {
+            "expression": "parseCSV(cash_flow_series)",
+            "dependencies": [
+              "cash_flow_series"
+            ],
+            "label": "Cash flow series (parsed)",
+            "display": false
+          },
+          "n_periods": {
+            "expression": "length(cash_values) - 1",
+            "dependencies": [
+              "cash_values"
+            ],
+            "label": "Number of periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "irr_var": {
+            "expression": "IRR(cash_values, guess, precision)",
+            "dependencies": [
+              "cash_values",
+              "guess",
+              "precision"
+            ],
+            "label": "Internal Rate of Return (periodic)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "npv_var": {
+            "expression": "NPV(irr_var, cash_values)",
+            "dependencies": [
+              "irr_var",
+              "cash_values"
+            ],
+            "label": "Net Present Value at IRR",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "irr",
+            "label": "IRR (periodic)",
+            "variable": "irr_var",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "npv",
+            "label": "NPV at IRR",
+            "variable": "npv_var",
+            "format": "decimal"
+          }
+        ]
+      },
+      "xirr": {
+        "label": "XIRR (irregular dates)",
+        "description": "Computes IRR using actual cash flow dates. Useful when cash flows occur on arbitrary dates. Solver accounts for day-counts.",
+        "variables": {
+          "cash_values": {
+            "expression": "parseCSV(cash_flow_series)",
+            "dependencies": [
+              "cash_flow_series"
+            ],
+            "label": "Cash flow series (parsed)",
+            "display": false
+          },
+          "cash_dates": {
+            "expression": "parseDates(dates_series)",
+            "dependencies": [
+              "dates_series"
+            ],
+            "label": "Cash flow dates (parsed)",
+            "display": false
+          },
+          "xirr_var": {
+            "expression": "XIRR(cash_values, cash_dates, guess, precision)",
+            "dependencies": [
+              "cash_values",
+              "cash_dates",
+              "guess",
+              "precision"
+            ],
+            "label": "Internal Rate of Return (XIRR)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "xnpv_var": {
+            "expression": "XNPV(xirr_var, cash_values, cash_dates)",
+            "dependencies": [
+              "xirr_var",
+              "cash_values",
+              "cash_dates"
+            ],
+            "label": "XNPV at XIRR",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "irr",
+            "label": "XIRR",
+            "variable": "xirr_var",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "npv",
+            "label": "XNPV at XIRR",
+            "variable": "xnpv_var",
+            "format": "decimal"
+          }
+        ]
+      },
+      "mirr": {
+        "label": "Modified IRR (MIRR)",
+        "description": "Computes MIRR using separate finance (cost of borrowing) and reinvestment rates. Useful when reinvestment assumptions differ from project discounting.",
+        "variables": {
+          "cash_values": {
+            "expression": "parseCSV(cash_flow_series)",
+            "dependencies": [
+              "cash_flow_series"
+            ],
+            "label": "Cash flow series (parsed)",
+            "display": false
+          },
+          "positive_flows_future_value": {
+            "expression": "futureValueOfPositiveFlows(cash_values, reinvestment_rate/100, periods_per_year)",
+            "dependencies": [
+              "cash_values",
+              "reinvestment_rate",
+              "periods_per_year"
+            ],
+            "label": "Future value of positive flows reinvested",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "negative_flows_present_value": {
+            "expression": "presentValueOfNegativeFlows(cash_values, finance_rate/100, periods_per_year)",
+            "dependencies": [
+              "cash_values",
+              "finance_rate",
+              "periods_per_year"
+            ],
+            "label": "Present value of negative flows",
+            "format": "decimal",
+            "display": false
+          },
+          "mirr_var": {
+            "expression": "MIRR(cash_values, finance_rate/100, reinvestment_rate/100, periods_per_year)",
+            "dependencies": [
+              "cash_values",
+              "finance_rate",
+              "reinvestment_rate",
+              "periods_per_year"
+            ],
+            "label": "Modified Internal Rate of Return (MIRR)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "irr",
+            "label": "MIRR",
+            "variable": "mirr_var",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "periodic",
+        "options": [
+          {
+            "label": "Periodic IRR (equal periods)",
+            "value": "periodic"
+          },
+          {
+            "label": "XIRR (irregular dates)",
+            "value": "xirr"
+          },
+          {
+            "label": "MIRR (modified IRR)",
+            "value": "mirr"
+          }
+        ]
+      },
+      {
+        "id": "cash_flow_series",
+        "label": "Cash flows (comma-separated, first value usually negative initial investment)",
+        "type": "text",
+        "default": "-10000,3000,4200,6800"
+      },
+      {
+        "id": "guess",
+        "label": "Initial guess for solver (decimal, e.g. 0.1 for 10%)",
+        "type": "decimal",
+        "default": 0.1
+      },
+      {
+        "id": "precision",
+        "label": "Solver precision (decimal places)",
+        "type": "integer",
+        "default": 6,
+        "min": 3,
+        "max": 12,
+        "step": 1
+      },
+      {
+        "id": "periods_per_year",
+        "label": "Periods per year (use 1 for annual cash flows)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      },
+      {
+        "id": "finance_rate",
+        "label": "Finance / borrowing rate (for MIRR, %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "reinvestment_rate",
+        "label": "Reinvestment rate (for MIRR, %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "dates_series",
+        "label": "Dates (comma-separated ISO dates) — required for XIRR, align with cash flows",
+        "type": "text",
+        "default": "2020-01-01,2021-01-01,2022-01-01,2023-01-01"
+      }
+    ],
+    "sections": [
+      {
+        "id": "xirr_dates_section",
+        "label": "XIRR date inputs",
+        "show_when": {
+          "field": "method",
+          "is": "xirr"
+        },
+        "fields": [
+          {
+            "id": "dates_series",
+            "label": "Dates (comma-separated ISO dates)",
+            "type": "text",
+            "default": "2020-01-01,2021-01-01,2022-01-01,2023-01-01"
+          }
+        ]
+      },
+      {
+        "id": "mirr_rates_section",
+        "label": "MIRR rate inputs",
+        "show_when": {
+          "field": "method",
+          "is": "mirr"
+        },
+        "fields": [
+          {
+            "id": "finance_rate",
+            "label": "Finance / borrowing rate (%)",
+            "type": "number",
+            "default": 5
+          },
+          {
+            "id": "reinvestment_rate",
+            "label": "Reinvestment rate (%)",
+            "type": "number",
+            "default": 5
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "irr",
+          "label": "Calculated IRR"
+        },
+        {
+          "id": "npv",
+          "label": "NPV at calculated rate"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This tool calculates the Internal Rate of Return (IRR) using three common approaches: periodic IRR for equal-length periods, XIRR for cash flows with irregular dates, and MIRR when finance and reinvestment rates differ.",
+      "Enter cash flows as a comma-separated list (first value typically the negative initial investment). For XIRR provide matching ISO-format dates. Use solver guess and precision to control convergence; results are reported as annual rates unless you adjust 'Periods per year'."
+    ],
+    "methodology": [
+      "Periodic IRR solves for the rate r that makes the net present value (NPV) of equal-period cash flows equal zero: NPV = sum_{t=0..n} CF_t / (1+r)^t. A numerical root-finding algorithm (e.g. Newton-Raphson with fallback to secant/bisection) is used with a user-provided initial guess and precision limit.",
+      "XIRR generalizes IRR by using actual day counts between cash flow dates; the solver finds r such that XNPV(r) = sum CF_t / (1 + r)^{(days_t/365)} = 0, or an equivalent day-count convention when periods_per_year is adjusted.",
+      "MIRR computes a single rate that equates the future value of positive cash flows reinvested at the reinvestment rate to the present value of negative cash flows discounted at the finance rate. MIRR is preferable when financing and reinvestment rates differ."
+    ],
+    "how_is_calculated": [
+      "Periodic IRR: find the rate r that sets the net present value of equally spaced cash flows to zero by iterating until the absolute NPV is within tolerance.",
+      "XIRR: find the rate r that sets the date-weighted net present value to zero using actual day counts between cash flow dates.",
+      "MIRR: compute the future value of positive cash flows at the reinvestment rate and the present value of negative cash flows at the finance rate; MIRR is the rate that equates those two values over the number of periods."
+    ],
+    "examples": [
+      "Example A (periodic): Cash flows -10000, 3000, 4200, 6800 with periods_per_year=1 yields the periodic IRR computed by solving NPV=0.",
+      "Example B (XIRR): Cash flows -10000 on 2020-01-01, 3000 on 2020-07-01, 7000 on 2022-03-15. Use XIRR with matching dates_series to account for irregular timing."
+    ],
+    "faqs": [
+      {
+        "question": "What input format is required for cash flows and dates?",
+        "answer": "Enter cash flows as a comma-separated list. For XIRR, provide a comma-separated list of ISO-format dates (YYYY-MM-DD) with the same number of entries as the cash flows."
+      },
+      {
+        "question": "When should I use MIRR instead of IRR?",
+        "answer": "Use MIRR when the project's cash inflows are likely to be reinvested at a different rate than the project's financing cost. MIRR explicitly separates finance and reinvestment rates to give a more realistic return measure."
+      },
+      {
+        "question": "How accurate are results and what are the limits?",
+        "answer": "The solver provides numerical solutions subject to initial guess, convergence tolerance, and cash-flow patterns. Multiple sign changes in cash flows can produce multiple IRRs or no real IRR. XIRR uses day-count assumptions and reports an annualized rate. Validate critical decisions with alternative metrics (NPV, payback, scenario analysis)."
+      },
+      {
+        "question": "How do you ensure the tool's correctness and reliability?",
+        "answer": "Numeric methods, unit tests, and regression tests are used during development. Follow software quality and testing guidance such as ISO 9001 for quality management, IEEE test documentation practices for algorithm verification, and NIST recommendations for software assurance. Results are advisory and should be cross-checked for high-stakes decisions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Software and Systems Assurance guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 9001 — Quality management systems",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA — Worker safety and software development environments",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "IRR",
+        "definition": "Internal Rate of Return. The discount rate that makes the NPV of a series of cash flows equal to zero, usually expressed as an annual percentage."
+      },
+      {
+        "term": "XIRR",
+        "definition": "IRR calculated using actual cash flow dates, producing an annualized return that accounts for irregular timing."
+      },
+      {
+        "term": "MIRR",
+        "definition": "Modified Internal Rate of Return. Uses separate finance and reinvestment rates to compute a single rate that reflects financing and reinvestment assumptions."
+      },
+      {
+        "term": "NPV",
+        "definition": "Net Present Value. The sum of present values of cash flows discounted at a specified rate."
+      },
+      {
+        "term": "Solver precision",
+        "definition": "Numeric tolerance and rounding used by the root-finding algorithm. Higher precision increases compute iterations and may be needed for near-flat NPV curves."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards Association",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

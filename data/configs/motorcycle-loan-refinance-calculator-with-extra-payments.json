@@ -1,0 +1,585 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan Refinance & Extra-Payments Calculator",
+    "description": "Compare your existing motorcycle loan to a refinance offer and model extra monthly or lump-sum payments. Estimates months to payoff, interest saved, monthly payment, and break-even. Includes conservative assumptions and accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "refinance_comparison",
+    "methods": {
+      "refinance_comparison": {
+        "label": "Refinance comparison",
+        "description": "Compare current loan vs new refinance offer to find new payment, monthly savings, interest saved, and breakeven point for refinance fees.",
+        "variables": {
+          "monthly_rate_current": {
+            "expression": "current_rate_annual / 12 / 100",
+            "dependencies": [
+              "current_rate_annual"
+            ],
+            "label": "Current monthly interest rate",
+            "format": "percent",
+            "display": false
+          },
+          "monthly_rate_refi": {
+            "expression": "refinance_rate_annual / 12 / 100",
+            "dependencies": [
+              "refinance_rate_annual"
+            ],
+            "label": "Refinance monthly interest rate",
+            "format": "percent",
+            "display": false
+          },
+          "refi_principal": {
+            "expression": "current_balance + refinance_fees",
+            "dependencies": [
+              "current_balance",
+              "refinance_fees"
+            ],
+            "label": "Refinance principal (balance + fees)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "new_monthly_payment": {
+            "expression": "(refi_principal * monthly_rate_refi) / (1 - pow(1 + monthly_rate_refi, - refinance_term_months))",
+            "dependencies": [
+              "refi_principal",
+              "monthly_rate_refi",
+              "refinance_term_months"
+            ],
+            "label": "New monthly payment (refinance)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "current_payment": {
+            "expression": "current_monthly_payment",
+            "dependencies": [
+              "current_monthly_payment"
+            ],
+            "label": "Current monthly payment (user input)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_savings": {
+            "expression": "current_payment - new_monthly_payment",
+            "dependencies": [
+              "current_payment",
+              "new_monthly_payment"
+            ],
+            "label": "Estimated monthly savings",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_current": {
+            "expression": "current_payment * current_term_remaining_months - current_balance",
+            "dependencies": [
+              "current_payment",
+              "current_term_remaining_months",
+              "current_balance"
+            ],
+            "label": "Total interest remaining on current loan (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_new": {
+            "expression": "new_monthly_payment * refinance_term_months - refi_principal",
+            "dependencies": [
+              "new_monthly_payment",
+              "refinance_term_months",
+              "refi_principal"
+            ],
+            "label": "Total interest over new loan term (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "interest_savings": {
+            "expression": "total_interest_current - total_interest_new",
+            "dependencies": [
+              "total_interest_current",
+              "total_interest_new"
+            ],
+            "label": "Estimated interest saved by refinancing",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "break_even_months": {
+            "expression": "refinance_fees / monthly_savings",
+            "dependencies": [
+              "refinance_fees",
+              "monthly_savings"
+            ],
+            "label": "Breakeven months to recover refinance fees",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "new_monthly_payment",
+            "label": "New monthly payment",
+            "variable": "new_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_savings",
+            "label": "Monthly savings",
+            "variable": "monthly_savings",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings",
+            "label": "Estimated interest savings",
+            "variable": "interest_savings",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "break_even_months",
+            "label": "Break-even (months)",
+            "variable": "break_even_months",
+            "format": "decimal"
+          }
+        ]
+      },
+      "early_payoff_with_extra": {
+        "label": "Extra payments & early payoff",
+        "description": "Estimate months to payoff and interest saved when adding extra monthly payments and/or a one-time lump-sum payment to your current loan.",
+        "variables": {
+          "monthly_rate_current": {
+            "expression": "current_rate_annual / 12 / 100",
+            "dependencies": [
+              "current_rate_annual"
+            ],
+            "label": "Current monthly interest rate",
+            "format": "percent",
+            "display": false
+          },
+          "payment_with_extra": {
+            "expression": "current_monthly_payment + extra_monthly_payment",
+            "dependencies": [
+              "current_monthly_payment",
+              "extra_monthly_payment"
+            ],
+            "label": "Total monthly payment including extra",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "n_payments_with_extra": {
+            "expression": "- ln(1 - monthly_rate_current * current_balance / payment_with_extra) / ln(1 + monthly_rate_current)",
+            "dependencies": [
+              "monthly_rate_current",
+              "current_balance",
+              "payment_with_extra"
+            ],
+            "label": "Payments to payoff with extra monthly payment",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_with_extra": {
+            "expression": "payment_with_extra * n_payments_with_extra - current_balance",
+            "dependencies": [
+              "payment_with_extra",
+              "n_payments_with_extra",
+              "current_balance"
+            ],
+            "label": "Total interest paid with extra monthly payments",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "principal_after_lump": {
+            "expression": "max(current_balance - extra_lump_sum, 0)",
+            "dependencies": [
+              "current_balance",
+              "extra_lump_sum"
+            ],
+            "label": "Principal after one-time lump-sum",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "n_payments_with_lump": {
+            "expression": "- ln(1 - monthly_rate_current * principal_after_lump / payment_with_extra) / ln(1 + monthly_rate_current)",
+            "dependencies": [
+              "monthly_rate_current",
+              "principal_after_lump",
+              "payment_with_extra"
+            ],
+            "label": "Payments to payoff after lump-sum + extra monthly",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_with_lump": {
+            "expression": "payment_with_extra * n_payments_with_lump - principal_after_lump",
+            "dependencies": [
+              "payment_with_extra",
+              "n_payments_with_lump",
+              "principal_after_lump"
+            ],
+            "label": "Total interest after lump-sum + extra monthly",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "current_total_interest_remaining": {
+            "expression": "current_monthly_payment * current_term_remaining_months - current_balance",
+            "dependencies": [
+              "current_monthly_payment",
+              "current_term_remaining_months",
+              "current_balance"
+            ],
+            "label": "Current estimated interest remaining",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "interest_savings_extra": {
+            "expression": "current_total_interest_remaining - total_interest_with_extra",
+            "dependencies": [
+              "current_total_interest_remaining",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved with extra monthly payments",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings_with_lump": {
+            "expression": "current_total_interest_remaining - total_interest_with_lump",
+            "dependencies": [
+              "current_total_interest_remaining",
+              "total_interest_with_lump"
+            ],
+            "label": "Interest saved with lump-sum + extra",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "months_saved_extra": {
+            "expression": "current_term_remaining_months - n_payments_with_extra",
+            "dependencies": [
+              "current_term_remaining_months",
+              "n_payments_with_extra"
+            ],
+            "label": "Months saved with extra monthly payments",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "months_saved_with_lump": {
+            "expression": "current_term_remaining_months - n_payments_with_lump",
+            "dependencies": [
+              "current_term_remaining_months",
+              "n_payments_with_lump"
+            ],
+            "label": "Months saved with lump-sum + extra",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "n_payments_with_extra",
+            "label": "Months to payoff (extra monthly)",
+            "variable": "n_payments_with_extra",
+            "format": "decimal"
+          },
+          {
+            "id": "months_saved_extra",
+            "label": "Months saved by paying extra monthly",
+            "variable": "months_saved_extra",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_savings_extra",
+            "label": "Interest saved (extra monthly)",
+            "variable": "interest_savings_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_payments_with_lump",
+            "label": "Months to payoff (lump-sum + extra)",
+            "variable": "n_payments_with_lump",
+            "format": "decimal"
+          },
+          {
+            "id": "months_saved_with_lump",
+            "label": "Months saved (lump-sum + extra)",
+            "variable": "months_saved_with_lump",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_savings_with_lump",
+            "label": "Interest saved (lump-sum + extra)",
+            "variable": "interest_savings_with_lump",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_balance",
+        "label": "Current loan balance",
+        "type": "number",
+        "default": 8000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_rate_annual",
+        "label": "Current loan APR (annual %)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "current_term_remaining_months",
+        "label": "Remaining term (months)",
+        "type": "integer",
+        "default": 36,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      },
+      {
+        "id": "current_monthly_payment",
+        "label": "Current monthly payment",
+        "type": "number",
+        "default": 250,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "refinance_rate_annual",
+        "label": "Refinance APR (annual %)",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "refinance_term_months",
+        "label": "Refinance term (months)",
+        "type": "integer",
+        "default": 48,
+        "min": 1,
+        "max": 360,
+        "step": 1
+      },
+      {
+        "id": "refinance_fees",
+        "label": "Refinance fees (one-time, $)",
+        "type": "number",
+        "default": 300,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_monthly_payment",
+        "label": "Extra monthly payment (optional)",
+        "type": "number",
+        "default": 50,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_lump_sum",
+        "label": "One-time lump-sum payment now (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "new_monthly_payment",
+          "label": "New monthly payment (refinance)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "monthly_savings",
+          "label": "Monthly savings (refinance)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "interest_savings",
+          "label": "Estimated interest saved (refinance)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "break_even_months",
+          "label": "Break-even (months)",
+          "format": "decimal"
+        },
+        {
+          "id": "n_payments_with_extra",
+          "label": "Months to payoff with extra monthly payments",
+          "format": "decimal"
+        },
+        {
+          "id": "months_saved_extra",
+          "label": "Months saved (extra monthly)",
+          "format": "decimal"
+        },
+        {
+          "id": "interest_savings_extra",
+          "label": "Interest saved (extra monthly)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "n_payments_with_lump",
+          "label": "Months to payoff (lump + extra)",
+          "format": "decimal"
+        },
+        {
+          "id": "months_saved_with_lump",
+          "label": "Months saved (lump + extra)",
+          "format": "decimal"
+        },
+        {
+          "id": "interest_savings_with_lump",
+          "label": "Interest saved (lump + extra)",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps motorcycle owners decide whether refinancing makes sense and how extra payments affect payoff time and total interest. Enter your current loan details and a refinance offer or extra payment plan to get side-by-side estimates.",
+      "Results are estimates based on standard amortizing loan formulas and the inputs you provide. Use the tool to explore scenarios (lower APR, longer/shorter term, one-time fees, extra monthly or lump-sum payments) before contacting lenders."
+    ],
+    "methodology": [
+      "Payment calculations use the standard fixed-rate loan amortization formula and continuous-month counting. Number of payments to payoff with extra payments uses the logarithmic form of the amortization equation.",
+      "We follow conservative assumptions: payments are applied monthly, interest compounds monthly, and no additional fees, prepayment penalties, or late charges are included unless you enter them as refinance fees. Results are rounded for display."
+    ],
+    "how_is_calculated": [
+      "Monthly rate = annual APR / 12 / 100.",
+      "Monthly payment (fixed-rate) = P * r / (1 - (1 + r)^-n), where P is principal, r is monthly rate, n is number of months.",
+      "Payments to payoff when payment differs from scheduled payment: n = -ln(1 - r * P / payment) / ln(1 + r).",
+      "Interest saved = estimated interest remaining on current loan - estimated interest under refinance or extra-pay plan."
+    ],
+    "examples": [
+      "Example 1: $8,000 balance, 6.5% APR, 36 months remaining, $250 monthly. Refinance at 4.5% for 48 months with $300 fees yields a lower monthly payment and estimated interest savings. Break-even months = fees / monthly savings.",
+      "Example 2: Same $8,000 loan with an extra $50/month reduces months to payoff and cuts total interest; adding a $1,000 lump-sum now reduces principal immediately and further shortens payoff."
+    ],
+    "faqs": [
+      {
+        "question": "Are results exact?",
+        "answer": "No. Outputs are estimates using standard amortization formulas. Actual payoff schedules may differ due to rounding, payment timing, escrow, fees, or prepayment penalties. See accuracy notes below."
+      },
+      {
+        "question": "Do you include taxes, title, or dealer fees?",
+        "answer": "No. Only the numeric fees you enter (refinance_fees) are included in the refinance principal. Include any dealer payoff or title fees manually in refinance fees to model them."
+      },
+      {
+        "question": "What if I have a prepayment penalty?",
+        "answer": "Add any prepayment penalty as refinance_fees or consider it when comparing interest savings and break-even months. This tool does not automatically detect contractual penalties."
+      },
+      {
+        "question": "Can I use this to compare different refinance offers?",
+        "answer": "Yes. Run the tool multiple times with different refinance APRs, terms, and fees to compare monthly payments, total interest, and break-even points."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Standard loan amortization formula reference (authoritative math)",
+        "url": "https://www.mathworks.com/help/finance/loan-amortization.html"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST) guidance on algorithmic accuracy and numerical stability",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO standards for financial services and accuracy controls (overview)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE guidance on numerical computation best practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) general data-quality management reference",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate: the yearly cost of borrowing expressed as a percentage, including interest and certain fees when disclosed by the lender."
+      },
+      {
+        "term": "Principal",
+        "definition": "The outstanding loan balance on which interest is charged."
+      },
+      {
+        "term": "Refinance fees",
+        "definition": "One-time costs associated with obtaining a new loan, such as origination or title fees. Include as a dollar amount in the refinance fees field."
+      },
+      {
+        "term": "Break-even months",
+        "definition": "Months required for monthly savings from a refinance to equal the one-time refinance fees."
+      }
+    ],
+    "summary": [
+      "Use the Refinance comparison to estimate a new monthly payment, monthly savings, total interest saved, and breakeven time for refinance fees.",
+      "Use Extra payments to estimate months to payoff and interest saved by adding extra monthly payments or a one-time lump-sum payment. Always confirm with your lender for precise payoff figures and check for prepayment penalties."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

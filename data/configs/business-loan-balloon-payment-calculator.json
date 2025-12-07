@@ -1,0 +1,401 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan — Balloon Payment Calculator (supports bi‑weekly and other frequencies)",
+    "description": "Estimate periodic payments and the balloon amount due using a customizable amortization and balloon schedule. Supports arbitrary payment frequency (bi‑weekly, monthly, etc.), balloon specified as dollar amount or percent of original principal, and includes accuracy caveats and references to applicable standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "balloon",
+    "methods": {
+      "balloon": {
+        "label": "Balloon payment (flexible frequency)",
+        "description": "Compute the periodic payment required so that after a specified number of payments a pre-defined balloon amount remains due. Supports balloon defined as a dollar amount or as a percent of original principal. Works with any payments-per-year (for example 26 = bi‑weekly, 12 = monthly).",
+        "variables": {
+          "r": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "n_balloon": {
+            "expression": "balloon_occurs_after_years * payments_per_year",
+            "dependencies": [
+              "balloon_occurs_after_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments until balloon",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "B": {
+            "expression": "balloon_type == 'amount' ? balloon_amount : principal * balloon_percent / 100",
+            "dependencies": [
+              "balloon_type",
+              "balloon_amount",
+              "balloon_percent",
+              "principal"
+            ],
+            "label": "Balloon amount (dollar value used in calculation)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payment": {
+            "expression": "annual_rate == 0 ? (principal - B) / n_balloon : (principal * (1 + r) ** n_balloon - B) * r / ((1 + r) ** n_balloon - 1)",
+            "dependencies": [
+              "annual_rate",
+              "principal",
+              "r",
+              "n_balloon",
+              "B"
+            ],
+            "label": "Periodic payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "balance_at_balloon": {
+            "expression": "principal * (1 + r) ** n_balloon - payment * (((1 + r) ** n_balloon - 1) / r)",
+            "dependencies": [
+              "principal",
+              "r",
+              "n_balloon",
+              "payment"
+            ],
+            "label": "Computed remaining balance at balloon",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_until_balloon": {
+            "expression": "payment * n_balloon",
+            "dependencies": [
+              "payment",
+              "n_balloon"
+            ],
+            "label": "Total paid (payments) before balloon",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "principal_reduced": {
+            "expression": "principal - balance_at_balloon",
+            "dependencies": [
+              "principal",
+              "balance_at_balloon"
+            ],
+            "label": "Principal repaid before balloon",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "interest_paid_until_balloon": {
+            "expression": "total_paid_until_balloon - principal_reduced",
+            "dependencies": [
+              "total_paid_until_balloon",
+              "principal_reduced"
+            ],
+            "label": "Interest paid before balloon",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "ear": {
+            "expression": "(1 + annual_rate/100/payments_per_year) ** payments_per_year - 1",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Effective annual rate (EAR)",
+            "unit": "",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment",
+            "label": "Periodic payment (per period)",
+            "variable": "payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_due",
+            "label": "Balloon due at end of period",
+            "variable": "B",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon",
+            "label": "Computed remaining balance at balloon",
+            "variable": "balance_at_balloon",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_until_balloon",
+            "label": "Total paid before balloon (all payments)",
+            "variable": "total_paid_until_balloon",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid_until_balloon",
+            "label": "Interest paid before balloon",
+            "variable": "interest_paid_until_balloon",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "ear",
+            "label": "Effective annual rate (EAR)",
+            "variable": "ear",
+            "unit": "",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (original amount)",
+        "type": "number",
+        "default": 250000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %) — nominal",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years) — used as informational only",
+        "type": "number",
+        "default": 30,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "balloon_occurs_after_years",
+        "label": "Years until balloon payment occurs",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (frequency, e.g., 26 = bi‑weekly, 12 = monthly)",
+        "type": "integer",
+        "default": 26,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "balloon_type",
+        "label": "How is the balloon defined?",
+        "type": "select",
+        "default": "percent",
+        "options": [
+          {
+            "label": "Percent of original principal",
+            "value": "percent"
+          },
+          {
+            "label": "Dollar amount",
+            "value": "amount"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "balloon_percent_section",
+        "label": "Balloon as percent",
+        "show_when": {
+          "field": "balloon_type",
+          "is": "percent"
+        },
+        "fields": [
+          {
+            "id": "balloon_percent",
+            "label": "Balloon as percent of original principal (%)",
+            "type": "number",
+            "default": 20,
+            "min": 0,
+            "max": 100,
+            "step": 0.1
+          }
+        ]
+      },
+      {
+        "id": "balloon_amount_section",
+        "label": "Balloon as dollar amount",
+        "show_when": {
+          "field": "balloon_type",
+          "is": "amount"
+        },
+        "fields": [
+          {
+            "id": "balloon_amount",
+            "label": "Balloon amount (dollars)",
+            "type": "number",
+            "default": 50000,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "payment",
+          "label": "Periodic payment"
+        },
+        {
+          "id": "balloon_due",
+          "label": "Balloon due at end"
+        },
+        {
+          "id": "balance_at_balloon",
+          "label": "Computed balance at balloon"
+        },
+        {
+          "id": "total_paid_until_balloon",
+          "label": "Total paid before balloon"
+        },
+        {
+          "id": "interest_paid_until_balloon",
+          "label": "Interest paid before balloon"
+        },
+        {
+          "id": "ear",
+          "label": "Effective annual rate (EAR)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This tool computes the periodic payment required so that, after a specified number of payments, a defined balloon amount remains due. It supports any payments-per-year (for example 26 for bi‑weekly or 12 for monthly).",
+      "You may specify the balloon as a dollar amount or as a percent of the original principal. The calculator solves for the payment that results in the requested remaining balance at the balloon date and reports totals and interest paid up to that date."
+    ],
+    "methodology": [
+      "We compute a periodic interest rate by dividing the nominal annual rate by the number of payments per year. The calculator supports zero-interest edge cases and uses algebraic solutions to solve for the periodic payment that yields the requested balloon balance after the specified number of payments.",
+      "Calculations follow standard financial math for amortizing loans and remaining balance. Where possible, the tool uses direct closed-form formulas rather than iterative methods to improve determinism and traceability."
+    ],
+    "how_is_calculated": [
+      "Periodic interest rate r = annual_rate / 100 / payments_per_year",
+      "Number of payments until balloon k = balloon_occurs_after_years × payments_per_year",
+      "Balloon amount B = (if balloon defined as percent) principal × balloon_percent / 100, else user-entered balloon_amount",
+      "Periodic payment P is solved from the remaining-balance formula after k payments: if annual_rate = 0 then P = (principal − B) / k; otherwise P = (principal × (1 + r)^k − B) × r / ((1 + r)^k − 1).",
+      "Computed remaining balance after k payments is principal × (1 + r)^k − P × (( (1 + r)^k − 1) / r). Total interest paid is total payments minus principal reduction."
+    ],
+    "examples": [
+      "Example: $250,000 principal, 5% APR, bi‑weekly (26/year), balloon after 5 years as 20% of principal: the calculator returns the required bi‑weekly payment, the balloon due (20% of original principal = $50,000), total paid to date, and interest paid.",
+      "Example: If the annual rate is zero, the calculator distributes principal reduction linearly so the periodic payment is the remaining principal divided by the number of payments until the balloon."
+    ],
+    "faqs": [
+      {
+        "question": "Does this assume payments are applied immediately or at period end?",
+        "answer": "This calculator assumes payments are applied at the end of each payment period (ordinary annuity). If your contract uses payments-in-advance (annuity due) the effective periodic payment will differ."
+      },
+      {
+        "question": "Can I use this for bi‑weekly loan schedules?",
+        "answer": "Yes. Set Payments per year = 26 for bi‑weekly. The calculator computes the periodic rate and uses the specified frequency consistently in all formulas."
+      },
+      {
+        "question": "What if I want the balloon to equal the outstanding balance rather than a set dollar or percent value?",
+        "answer": "If you want the balloon to equal the outstanding balance implied by an amortization schedule, set the balloon amount equal to that computed balance. The calculator also displays the computed balance at balloon so you can confirm."
+      },
+      {
+        "question": "How precise are the numbers?",
+        "answer": "Results are derived from closed-form formulas and typical floating-point arithmetic. Rounding to cents is applied for display. See accuracy caveats in the citations and note that real loan statements may include fees, day-count conventions, or compounding rules not modeled here."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A lump-sum payment due at the end of a loan term that is larger than prior periodic payments and represents the remaining principal balance."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The schedule of periodic payments that gradually reduce the principal balance of a loan."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Nominal annual interest rate divided by the number of payment periods per year."
+      },
+      {
+        "term": "Effective annual rate (EAR)",
+        "definition": "The annual interest rate taking into account compounding during the year: (1 + periodic_rate)^(payments_per_year) − 1."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST — measurement and standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO — international standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ],
+    "internal": []
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

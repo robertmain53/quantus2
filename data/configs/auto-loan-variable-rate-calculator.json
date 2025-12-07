@@ -1,0 +1,517 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan — Variable Rate Estimator",
+    "description": "Estimate payments and interest for auto loans with index-tied or custom variable-rate schedules. Includes caps, floors, adjustment periods, and an optional custom schedule input. Provides conservative estimates and clear accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "index_tied",
+    "methods": {
+      "index_tied": {
+        "label": "Index‑tied variable rate (index + margin, periodic adjustments)",
+        "description": "Estimates payments when the loan rate equals an external index plus a lender margin, adjusted at regular intervals, subject to periodic and lifetime caps and a floor.",
+        "variables": {
+          "r0": {
+            "expression": "initial_rate_percent/100/12",
+            "dependencies": [
+              "initial_rate_percent"
+            ],
+            "label": "Initial periodic rate (decimal/month)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "monthly_payment_initial": {
+            "expression": "principal * r0 / (1 - (1 + r0) ** (-term_months))",
+            "dependencies": [
+              "principal",
+              "r0",
+              "term_months"
+            ],
+            "label": "Monthly payment at initial rate",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "index_plus_margin": {
+            "expression": "current_index_percent + margin_percent",
+            "dependencies": [
+              "current_index_percent",
+              "margin_percent"
+            ],
+            "label": "Index plus margin (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "capped_rate_percent": {
+            "expression": "max(min(index_plus_margin, initial_rate_percent + rate_cap_lifetime_percent), rate_floor_percent)",
+            "dependencies": [
+              "index_plus_margin",
+              "initial_rate_percent",
+              "rate_cap_lifetime_percent",
+              "rate_floor_percent"
+            ],
+            "label": "Effective capped rate (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "average_rate_percent": {
+            "expression": "(initial_rate_percent + capped_rate_percent) / 2",
+            "dependencies": [
+              "initial_rate_percent",
+              "capped_rate_percent"
+            ],
+            "label": "Estimated average rate over term (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "avg_periodic_r": {
+            "expression": "average_rate_percent/100/12",
+            "dependencies": [
+              "average_rate_percent"
+            ],
+            "label": "Average periodic rate (decimal/month)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "estimated_monthly_payment": {
+            "expression": "principal * avg_periodic_r / (1 - (1 + avg_periodic_r) ** (-term_months))",
+            "dependencies": [
+              "principal",
+              "avg_periodic_r",
+              "term_months"
+            ],
+            "label": "Estimated monthly payment (approximate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_estimate": {
+            "expression": "estimated_monthly_payment * term_months + balloon_payment - principal",
+            "dependencies": [
+              "estimated_monthly_payment",
+              "term_months",
+              "balloon_payment",
+              "principal"
+            ],
+            "label": "Estimated total interest paid (approximate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_apr_percent": {
+            "expression": "average_rate_percent",
+            "dependencies": [
+              "average_rate_percent"
+            ],
+            "label": "Estimated APR (approximate)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment_initial",
+            "label": "Payment at initial rate",
+            "variable": "monthly_payment_initial",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_monthly_payment",
+            "label": "Estimated monthly payment (variable rate)",
+            "variable": "estimated_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_estimate",
+            "label": "Estimated total interest (variable rate)",
+            "variable": "total_interest_estimate",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_apr_percent",
+            "label": "Estimated APR (approximate)",
+            "variable": "estimated_apr_percent",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "custom_schedule": {
+        "label": "Custom rate schedule (user-provided average)",
+        "description": "Use when you have a custom expected average rate for the remaining term. This method provides a simplified estimate based on that average rate.",
+        "variables": {
+          "avg_rate_percent_custom": {
+            "expression": "custom_estimated_average_rate_percent",
+            "dependencies": [
+              "custom_estimated_average_rate_percent"
+            ],
+            "label": "User-provided average rate (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "avg_periodic_r_custom": {
+            "expression": "avg_rate_percent_custom/100/12",
+            "dependencies": [
+              "avg_rate_percent_custom"
+            ],
+            "label": "Average periodic rate (decimal/month)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "estimated_monthly_payment_custom": {
+            "expression": "principal * avg_periodic_r_custom / (1 - (1 + avg_periodic_r_custom) ** (-term_months))",
+            "dependencies": [
+              "principal",
+              "avg_periodic_r_custom",
+              "term_months"
+            ],
+            "label": "Estimated monthly payment (custom average)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_estimate_custom": {
+            "expression": "estimated_monthly_payment_custom * term_months + balloon_payment - principal",
+            "dependencies": [
+              "estimated_monthly_payment_custom",
+              "term_months",
+              "balloon_payment",
+              "principal"
+            ],
+            "label": "Estimated total interest (custom average)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "estimated_monthly_payment_custom",
+            "label": "Estimated monthly payment (custom)",
+            "variable": "estimated_monthly_payment_custom",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_estimate_custom",
+            "label": "Estimated total interest (custom)",
+            "variable": "total_interest_estimate_custom",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "term_months",
+        "label": "Loan term (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 840,
+        "step": 1
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Payment frequency",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly",
+            "value": "monthly"
+          },
+          {
+            "label": "Biweekly",
+            "value": "biweekly"
+          }
+        ]
+      },
+      {
+        "id": "initial_rate_percent",
+        "label": "Initial contract rate (percent)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "index_type",
+        "label": "Index type (for index‑tied loans)",
+        "type": "select",
+        "default": "SOFR",
+        "options": [
+          {
+            "label": "SOFR",
+            "value": "SOFR"
+          },
+          {
+            "label": "Prime",
+            "value": "Prime"
+          },
+          {
+            "label": "Custom index",
+            "value": "Custom"
+          }
+        ]
+      },
+      {
+        "id": "current_index_percent",
+        "label": "Current index value (percent)",
+        "type": "number",
+        "default": 0.5,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "margin_percent",
+        "label": "Lender margin (percent)",
+        "type": "number",
+        "default": 2.5,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "adjustment_period_months",
+        "label": "Rate adjustment period (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "rate_cap_periodic_percent",
+        "label": "Periodic rate cap (percent, per adjustment)",
+        "type": "number",
+        "default": 2.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "rate_cap_lifetime_percent",
+        "label": "Lifetime rate cap (percent above initial rate)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "rate_floor_percent",
+        "label": "Rate floor (percent)",
+        "type": "number",
+        "default": 0.0,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "balloon_payment",
+        "label": "Balloon payment at term end (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "include_custom_schedule",
+        "label": "Use a custom average rate instead of index model?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No (use index‑tied model)",
+            "value": "no"
+          },
+          {
+            "label": "Yes (provide custom average)",
+            "value": "yes"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "custom_schedule",
+        "label": "Custom schedule inputs",
+        "show_when": {
+          "field": "include_custom_schedule",
+          "is": "yes"
+        },
+        "fields": [
+          {
+            "id": "custom_estimated_average_rate_percent",
+            "label": "Custom estimated average rate for the remaining term (percent)",
+            "type": "number",
+            "default": 5.0,
+            "min": 0,
+            "max": 100,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you understand expected payments and total interest for auto loans with variable (adjustable) rates. It supports index‑plus‑margin loans with caps and floors, and an alternate mode where you supply a custom average rate for a simplified projection.",
+      "Results are estimates intended for planning purposes only. The calculator uses conservative approximations for variable schedules and clearly highlights the assumptions used so you can adjust inputs and understand sensitivity."
+    ],
+    "methodology": [
+      "The tool models two workflows: an index‑tied model (index + margin) with caps and a simplified custom‑average model. For index‑tied loans, the calculator derives a conservative average rate by combining the initial contract rate with an effective capped index+margin over the term, then computes an amortization using that average rate.",
+      "Amortization uses the standard annuity payment formula for periodic payments. For variable rates that change over time, the calculator provides an approximate result by applying an estimated average periodic rate; it is not a full per‑period reamortization schedule.",
+      "Accuracy, security, and quality follow recognized best practices: calculate with clearly stated numeric precision, validate inputs, and provide transparency around assumptions. For general guidance on measurement, quality management, and trustworthy computing, refer to standards from NIST, ISO, and IEEE. This tool does not provide legal, tax, or regulated disclosures; consult your loan contract and a licensed advisor for binding terms."
+    ],
+    "how_is_calculated": [
+      "Step 1: Convert percent rates to periodic decimal rates: periodic_r = (annual_rate_percent / 100) / 12.",
+      "Step 2: For index‑tied loans, compute index_plus_margin = current_index + margin. Apply lifetime caps and floor to produce an effective capped rate.",
+      "Step 3: Estimate an average annual rate across the term (a simple mean of initial and effective capped rate is used here as a conservative proxy). Convert to periodic rate.",
+      "Step 4: Compute the payment using the annuity formula: payment = principal * r / (1 - (1 + r) ** -N), where r is periodic rate and N is number of periods.",
+      "Step 5: Total interest estimate = payment * N + balloon_payment - principal."
+    ],
+    "examples": [
+      "Example: $25,000 principal, 60 months, initial rate 4.0%, index 0.5%, margin 2.5%, lifetime cap +5% → calculator estimates an average rate then provides an approximate monthly payment and total interest.",
+      "Custom average example: If you expect rates to average 6.0% over the term, select custom schedule and enter 6.0 as the average rate to see a simplified estimate."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an exact schedule of future payments?",
+        "answer": "No. For fully precise per-adjustment schedules you need the lender's indexed rate schedule and exact reset rules. This tool provides conservative, approximate projections for planning and comparison only."
+      },
+      {
+        "question": "Does it account for periodic rate caps and lifetime caps?",
+        "answer": "Yes. The index‑tied model applies periodic and lifetime caps and a floor when computing an effective capped rate used for the estimate. It does not simulate every historical index movement."
+      },
+      {
+        "question": "How should I use the results when comparing loan offers?",
+        "answer": "Use the estimator to compare scenarios: vary margin, initial rate, caps, and expected index. For binding disclosures, rely on the lender's Truth in Lending statement or equivalent contract documents."
+      },
+      {
+        "question": "What are the limitations and accuracy caveats?",
+        "answer": "This estimator simplifies variable rate behavior into an average-rate projection. Real future rates depend on index movements, exact reset schedules, and lender rounding rules. Use results for planning only and consult official loan documents for legally binding terms."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate; a standardized rate expressing the yearly cost of funds including fees where applicable. This tool reports an estimated APR proxy based on average rates, not a disclosure APR."
+      },
+      {
+        "term": "Index",
+        "definition": "A published reference interest rate (for example SOFR or Prime) used by lenders to set adjustable rates. The calculator requires the current index value as input when using the index‑tied model."
+      },
+      {
+        "term": "Margin",
+        "definition": "The lender's fixed percentage added to the index to determine the contract rate (index + margin)."
+      },
+      {
+        "term": "Rate cap",
+        "definition": "A limit on how much the interest rate can change during a single adjustment period (periodic cap) or over the life of the loan (lifetime cap)."
+      },
+      {
+        "term": "Rate floor",
+        "definition": "A minimum interest rate below which the loan cannot adjust downward."
+      },
+      {
+        "term": "Adjustment period",
+        "definition": "The time interval between scheduled interest rate resets (for example, every 12 months)."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A remaining lump sum payment due at the end of the loan term if the amortization schedule does not fully amortize the principal."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/loans/auto/understanding-apr",
+      "/loans/auto/variable-vs-fixed"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

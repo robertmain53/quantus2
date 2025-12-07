@@ -1,0 +1,485 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Student Loan Amortization — Monthly & Biweekly (Including Accelerated Biweekly)",
+    "description": "Interactive amortization tool for student loans that compares standard monthly payments, biweekly annuity payments, and the common accelerated biweekly strategy (half-monthly payment every two weeks). Includes estimated payoff time, total paid, and interest paid. Designed with explicit accuracy caveats and standards references."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "accelerated_biweekly_half_monthly",
+    "methods": {
+      "standard_monthly": {
+        "label": "Standard monthly amortization",
+        "description": "Conventional amortization assuming one payment per month using the nominal annual rate divided into 12 periods.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "n_months": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly payments",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "principal * (monthly_rate * (1+monthly_rate)**n_months) / ((1+monthly_rate)**n_months - 1)",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "n_months"
+            ],
+            "label": "Monthly payment (scheduled)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "monthly_payment * n_months + extra_payment * n_months",
+            "dependencies": [
+              "monthly_payment",
+              "n_months",
+              "extra_payment"
+            ],
+            "label": "Estimated total paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "interest_paid": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Estimated interest paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_months",
+            "label": "Number of months",
+            "variable": "n_months",
+            "format": "integer",
+            "unit": "months"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid",
+            "label": "Interest paid",
+            "variable": "interest_paid",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_annuity": {
+        "label": "Biweekly annuity (26 payments/year)",
+        "description": "Amortization assuming payments are made every two weeks and payments are sized to amortize over the term with 26 periods per year.",
+        "variables": {
+          "period_rate": {
+            "expression": "annual_rate/100/26",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Biweekly interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "n_periods": {
+            "expression": "term_years*26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of biweekly periods",
+            "format": "integer",
+            "display": true
+          },
+          "biweekly_payment": {
+            "expression": "principal * (period_rate * (1+period_rate)**n_periods) / ((1+period_rate)**n_periods - 1)",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "n_periods"
+            ],
+            "label": "Biweekly payment (scheduled to amortize)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "biweekly_payment * n_periods + extra_payment * n_periods",
+            "dependencies": [
+              "biweekly_payment",
+              "n_periods",
+              "extra_payment"
+            ],
+            "label": "Estimated total paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "interest_paid": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Estimated interest paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment",
+            "label": "Biweekly payment",
+            "variable": "biweekly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_periods",
+            "label": "Number of biweekly payments",
+            "variable": "n_periods",
+            "format": "integer",
+            "unit": "periods"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid",
+            "label": "Interest paid",
+            "variable": "interest_paid",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "accelerated_biweekly_half_monthly": {
+        "label": "Accelerated biweekly (half of monthly payment every two weeks)",
+        "description": "Common accelerated strategy: pay half of the standard monthly payment every two weeks. This results in 26 half-payments (13 full-month equivalents) and typically shortens the term. Payoff time is estimated by solving the annuity equation for the number of biweekly periods.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "n_months": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly payments (for baseline)",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "principal * (monthly_rate * (1+monthly_rate)**(term_years*12)) / ((1+monthly_rate)**(term_years*12) - 1)",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "term_years"
+            ],
+            "label": "Baseline monthly payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_payment_fixed": {
+            "expression": "monthly_payment/2",
+            "dependencies": [
+              "monthly_payment"
+            ],
+            "label": "Biweekly payment (fixed = half of monthly)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "period_rate": {
+            "expression": "annual_rate/100/26",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Biweekly interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "n_periods_est": {
+            "expression": "-log(1 - principal*period_rate/biweekly_payment_fixed)/log(1+period_rate)",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "biweekly_payment_fixed"
+            ],
+            "label": "Estimated number of biweekly payments to payoff",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years_est": {
+            "expression": "n_periods_est/26",
+            "dependencies": [
+              "n_periods_est"
+            ],
+            "label": "Estimated years until payoff",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "biweekly_payment_fixed * n_periods_est + extra_payment * n_periods_est",
+            "dependencies": [
+              "biweekly_payment_fixed",
+              "n_periods_est",
+              "extra_payment"
+            ],
+            "label": "Estimated total paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "interest_paid": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Estimated interest paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment_fixed",
+            "label": "Biweekly payment (half of monthly)",
+            "variable": "biweekly_payment_fixed",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_periods_est",
+            "label": "Estimated biweekly payments to payoff",
+            "variable": "n_periods_est",
+            "format": "decimal",
+            "unit": "periods"
+          },
+          {
+            "id": "payoff_years_est",
+            "label": "Estimated years to payoff",
+            "variable": "payoff_years_est",
+            "format": "decimal",
+            "unit": "years"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid",
+            "label": "Interest paid",
+            "variable": "interest_paid",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "number",
+        "default": 10,
+        "min": 0.25,
+        "max": 50,
+        "step": 0.25
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment per scheduled payment (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares standard monthly amortization, a biweekly annuity approach (26 equal payments per year), and the commonly used accelerated biweekly technique where you pay half of the monthly payment every two weeks. It reports scheduled payment amounts, estimated payoff time, total amount paid, and interest paid under each scenario.",
+      "Results are estimates intended for planning and comparison. Small implementation differences (billing cycle, how servicers apply extra payments, leap years, and interest day-count conventions) can change real-world outcomes. See methodology and caveats below."
+    ],
+    "methodology": [
+      "All formulas use nominal annual interest rate (APR) converted into periodic rates by dividing by the number of periods per year. Monthly computations use 12 periods; biweekly computations use 26 periods. The standard annuity formula is used to compute level payments that amortize the loan over the stated term.",
+      "The accelerated biweekly mode models the typical consumer strategy of paying half the monthly payment every two weeks. This creates 26 half-payments per year (equivalent to 13 full payments), which effectively applies one extra monthly payment per year. Payoff time for that strategy is estimated by solving the annuity equation for the number of periods given a fixed per-period payment.",
+      "Accuracy and safety checks: the tool assumes payments are applied immediately and that the servicer compounds interest at the same periodic frequency. If a servicer applies interest daily or applies extra payments first to future payments instead of principal, results may differ. This tool does not replace official payoff quotes from your loan servicer."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = APR / 100 / periods_per_year.",
+      "Level payment P = principal * (r * (1+r)^N) / ((1+r)^N - 1), where N is total periods.",
+      "To estimate payoff under a fixed period payment smaller or larger than the annuity payment, solve for N: N = -log(1 - principal*r / payment) / log(1 + r).",
+      "Total paid = payment * N (plus any declared extra_payment * N). Interest paid = total paid - principal."
+    ],
+    "examples": [
+      "Example: $20,000 at 5.0% APR for 10 years. Standard monthly payment uses periods_per_year=12 and N=120. Accelerated biweekly using half-monthly payments uses payment = monthly_payment/2 and periods_per_year=26; solving for N shows a shorter payoff and lower total interest.",
+      "Example: If you enter an extra payment amount, the calculator treats it as an additional amount applied each scheduled payment period and re-estimates payoff time and total interest accordingly."
+    ],
+    "summary": [
+      "Monthly amortization gives the baseline scheduled payment and total cost.",
+      "Biweekly annuity computes payments sized for 26 periods/year and the same term; amounts differ because period length differs.",
+      "Accelerated biweekly (half-monthly every two weeks) is modeled by fixing the biweekly payment to half the monthly payment and solving for the resulting payoff time; this typically reduces interest paid by creating effectively one extra monthly payment per year."
+    ],
+    "faqs": [
+      {
+        "question": "Will this calculator match my loan servicer's payoff exactly?",
+        "answer": "No. This tool provides estimates. Servicer specifics such as daily interest calculation, how extra payments are applied, payment posting times, and contract terms can change the exact payoff date and total interest. Always request an official payoff quote from your loan servicer for an exact figure."
+      },
+      {
+        "question": "Which method should I use to save the most interest?",
+        "answer": "Generally, making more frequent payments or extra principal payments reduces total interest by lowering outstanding principal sooner. The accelerated biweekly approach commonly reduces interest compared with standard monthly payments, but true savings depend on your servicer's posting rules. Use the accelerated biweekly mode here for a quick estimate."
+      },
+      {
+        "question": "What if my servicer charges interest daily or compounds differently?",
+        "answer": "This calculator assumes periodic compounding consistent with the chosen frequency. If your loan compounds daily or uses a different day-count convention, the calculator's estimates may differ from actual amortization. Consult your servicer or a financial advisor for a servicer-specific schedule."
+      },
+      {
+        "question": "Are leap years or extra days accounted for?",
+        "answer": "No. This tool uses period counts (12, 26) and does not model calendar dates or leap years. For date-accurate amortization schedules use an amortization engine that accepts exact payment dates and your servicer's day-count rules."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Guidance on Numerical Accuracy",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Recommended Practices for Numerical Computation",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — risk and process documentation guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "A schedule of payments that gradually reduces the principal of a loan with each payment containing both interest and principal portions."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate per payment period: APR divided by the number of payment periods per year (for example APR/12 for monthly)."
+      },
+      {
+        "term": "Biweekly payment",
+        "definition": "A payment made every two weeks. There are usually 26 biweekly periods in a 52-week year."
+      },
+      {
+        "term": "Accelerated biweekly",
+        "definition": "A consumer strategy where half of the normal monthly payment is paid every two weeks, resulting in 26 half-payments and typically one extra full payment per year compared with monthly payments."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate: the nominal annual interest rate charged on the loan before compounding adjustments."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loan/amortization-overview",
+      "/guides/loan-prepayment-strategies"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

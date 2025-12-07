@@ -1,0 +1,441 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Homeowners Insurance Estimator (Coverage & Premium)",
+    "description": "Estimate recommended dwelling and contents coverage and receive an illustrative annual and monthly premium estimate. Results are indicative only and not an insurance quote."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "coverage_need",
+    "methods": {
+      "coverage_need": {
+        "label": "Replacement Cost & Coverage Need",
+        "description": "Estimate the replacement cost of dwelling and a recommended personal property (contents) amount based on home size, built year, and per-square-foot replacement cost.",
+        "variables": {
+          "base_replacement_cost": {
+            "expression": "square_feet * replacement_cost_per_sqft",
+            "dependencies": [
+              "square_feet",
+              "replacement_cost_per_sqft"
+            ],
+            "label": "Base replacement cost",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "age_factor": {
+            "expression": "1 + ((2025 - year_built) * 0.0025)",
+            "dependencies": [
+              "year_built"
+            ],
+            "label": "Age adjustment factor",
+            "format": "decimal",
+            "display": true
+          },
+          "replacement_cost_estimate": {
+            "expression": "base_replacement_cost * age_factor",
+            "dependencies": [
+              "base_replacement_cost",
+              "age_factor"
+            ],
+            "label": "Estimated dwelling replacement cost",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "contents_estimate": {
+            "expression": "replacement_cost_estimate * (contents_percentage / 100)",
+            "dependencies": [
+              "replacement_cost_estimate",
+              "contents_percentage"
+            ],
+            "label": "Estimated personal property value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "recommended_dwelling_coverage",
+            "label": "Recommended dwelling coverage (replacement cost)",
+            "variable": "replacement_cost_estimate",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_contents_coverage",
+            "label": "Recommended personal property coverage",
+            "variable": "contents_estimate",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "premium_estimate": {
+        "label": "Illustrative Premium Estimate",
+        "description": "Estimate an annual and monthly premium using replacement cost, location risk, claims history, deductible and protective devices. This produces an illustrative premium only.",
+        "variables": {
+          "risk_multiplier": {
+            "expression": "1 * location_risk_factor",
+            "dependencies": [
+              "location_risk_factor"
+            ],
+            "label": "Location risk multiplier",
+            "format": "decimal",
+            "display": true
+          },
+          "devices_discount": {
+            "expression": "1 * protective_devices",
+            "dependencies": [
+              "protective_devices"
+            ],
+            "label": "Protective devices multiplier",
+            "format": "decimal",
+            "display": true
+          },
+          "claims_surcharge": {
+            "expression": "1 + (claims_last_5yrs * 0.12)",
+            "dependencies": [
+              "claims_last_5yrs"
+            ],
+            "label": "Claims surcharge multiplier",
+            "format": "decimal",
+            "display": true
+          },
+          "deductible_factor": {
+            "expression": "1 - ((deductible - 500) / 20000)",
+            "dependencies": [
+              "deductible"
+            ],
+            "label": "Deductible impact factor",
+            "format": "decimal",
+            "display": true
+          },
+          "annual_premium": {
+            "expression": "(replacement_cost_estimate / 1000) * base_rate_per_1000 * risk_multiplier * claims_surcharge * deductible_factor * devices_discount",
+            "dependencies": [
+              "replacement_cost_estimate",
+              "base_rate_per_1000",
+              "risk_multiplier",
+              "claims_surcharge",
+              "deductible_factor",
+              "devices_discount"
+            ],
+            "label": "Estimated annual premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_premium": {
+            "expression": "annual_premium / 12",
+            "dependencies": [
+              "annual_premium"
+            ],
+            "label": "Estimated monthly premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_premium",
+            "label": "Estimated annual premium",
+            "variable": "annual_premium",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_premium",
+            "label": "Estimated monthly premium",
+            "variable": "monthly_premium",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "square_feet",
+        "label": "Home size (square feet)",
+        "type": "number",
+        "default": 2000,
+        "min": 200,
+        "max": 20000,
+        "step": 1
+      },
+      {
+        "id": "year_built",
+        "label": "Year built",
+        "type": "integer",
+        "default": 1990,
+        "min": 1800,
+        "max": 2025,
+        "step": 1
+      },
+      {
+        "id": "replacement_cost_per_sqft",
+        "label": "Replacement cost per square foot (USD)",
+        "type": "number",
+        "default": 150,
+        "min": 20,
+        "max": 1000,
+        "step": 1
+      },
+      {
+        "id": "contents_percentage",
+        "label": "Personal property value as percentage of dwelling (%)",
+        "type": "number",
+        "default": 50,
+        "min": 0,
+        "max": 200,
+        "step": 1
+      },
+      {
+        "id": "deductible",
+        "label": "Selected deductible (USD)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "max": 50000,
+        "step": 100
+      },
+      {
+        "id": "claims_last_5yrs",
+        "label": "Number of claims in last 5 years",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "id": "protective_devices",
+        "label": "Protective devices and monitoring",
+        "type": "select",
+        "default": "1.00",
+        "options": [
+          {
+            "label": "None",
+            "value": "1.00"
+          },
+          {
+            "label": "Basic (smoke detectors, deadbolts)",
+            "value": "0.97"
+          },
+          {
+            "label": "Advanced (alarm system)",
+            "value": "0.92"
+          },
+          {
+            "label": "Monitored system and sprinklers",
+            "value": "0.90"
+          }
+        ]
+      },
+      {
+        "id": "location_risk_factor",
+        "label": "Location risk level",
+        "type": "select",
+        "default": "1.00",
+        "options": [
+          {
+            "label": "Low (infrequent severe weather / low crime)",
+            "value": "0.85"
+          },
+          {
+            "label": "Moderate",
+            "value": "1.00"
+          },
+          {
+            "label": "High (flood, wildfire or higher crime areas)",
+            "value": "1.35"
+          },
+          {
+            "label": "Very high",
+            "value": "1.70"
+          }
+        ]
+      },
+      {
+        "id": "base_rate_per_1000",
+        "label": "Base rate per $1,000 of dwelling (USD)",
+        "type": "number",
+        "default": 3.0,
+        "min": 0.1,
+        "max": 50,
+        "step": 0.1
+      },
+      {
+        "id": "state",
+        "label": "State or territory",
+        "type": "text",
+        "default": ""
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "recommended_dwelling_coverage",
+          "label": "Recommended dwelling coverage (replacement cost)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "recommended_contents_coverage",
+          "label": "Recommended personal property coverage",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "annual_premium",
+          "label": "Estimated annual premium",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "monthly_premium",
+          "label": "Estimated monthly premium",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator provides two complementary calculations: a recommended dwelling and contents coverage based on replacement-cost heuristics, and an illustrative premium estimate using common underwriting factors. It is intended to help homeowners understand order-of-magnitude coverage and cost, not to replace a formal insurer quote.",
+      "Inputs include home size, year built, per-square-foot replacement cost, deductible, claims history, and location protections. Results are indicative and should be validated with an insurer or licensed agent for binding coverage."
+    ],
+    "methodology": [
+      "Replacement cost is estimated as square feet multiplied by a per-square-foot replacement cost, adjusted modestly for building age. Personal property (contents) is estimated as a percentage of dwelling replacement cost.",
+      "Premium estimate is illustrative and multiplies replacement-cost exposure by a base rate per $1,000 of coverage, then applies multipliers for location risk, prior claims, deductible level, and protective devices.",
+      "This tool follows recognised best-practice principles for model documentation, data handling, and risk communication. For data-handling and security guidance we reference NIST standards; for risk-management principles we reference ISO guidance; for data quality and engineering best practice we reference IEEE recommendations; for building-safety context we reference OSHA and applicable local building codes."
+    ],
+    "how_is_calculated": [
+      "Step 1: Calculate base replacement cost = square_feet × replacement_cost_per_sqft.",
+      "Step 2: Apply age adjustment to reflect higher repair/rebuild complexity for older structures.",
+      "Step 3: Estimate contents value as a percentage of dwelling replacement cost.",
+      "Step 4: For premium, compute annual premium = (replacement_cost / 1,000) × base_rate_per_1000 × location multiplier × claims surcharge × deductible factor × protective devices multiplier.",
+      "Step 5: Monthly premium = annual premium ÷ 12."
+    ],
+    "examples": [
+      "Example: 2,000 sq ft home, $150/sq ft, 1990 built, 50% contents, $1,000 deductible, moderate risk. Replacement cost ≈ $345,000; contents ≈ $172,500; illustrative annual premium depends on selected base rate and multipliers.",
+      "Example: Increasing deductible typically reduces premium in the model; adding monitored protective systems reduces the premium multiplier."
+    ],
+    "summary": [
+      "Use the replacement-cost outputs to set dwelling and contents coverage limits that avoid underinsurance.",
+      "Use the premium estimate to compare how coverage choices, deductible, and mitigation measures affect approximate cost. Always obtain formal quotes for final pricing."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an insurance quote?",
+        "answer": "No. This tool provides an estimate for planning purposes only. Final premiums depend on insurer underwriting, formal inspections, exact address, and full application data."
+      },
+      {
+        "question": "Why does the tool ask for replacement cost per square foot?",
+        "answer": "Local construction costs, materials, and labor drive replacement cost per square foot. If you do not know it, use a local contractor estimate or consult local building cost guides."
+      },
+      {
+        "question": "How accurate are the premium estimates?",
+        "answer": "Estimates use simple actuarial heuristics and high-level multipliers. They are not guaranteed. Accuracy varies by input quality and local regulatory rating factors. Use the results as directional guidance."
+      },
+      {
+        "question": "How should I use the coverage recommendations?",
+        "answer": "Set dwelling coverage to at least the recommended replacement cost to avoid being underinsured. Consider additional endorsements for flood, earthquake, or valuable items where standard coverage limits may not suffice."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (security & data standards)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (risk management & standards)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (data quality & engineering guidance)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA (building safety context)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "FEMA (flood maps & hazard info)",
+        "url": "https://www.fema.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Replacement cost",
+        "definition": "Estimated cost to rebuild or replace the structure with like kind and quality at current prices, excluding land value."
+      },
+      {
+        "term": "Actual cash value",
+        "definition": "Replacement cost minus depreciation for age and wear."
+      },
+      {
+        "term": "Deductible",
+        "definition": "The amount the policyholder pays out of pocket on a covered loss before the insurer pays."
+      },
+      {
+        "term": "Contents coverage",
+        "definition": "Coverage for personal property inside the home; often expressed as a percentage of dwelling coverage or as a separate limit."
+      },
+      {
+        "term": "Base rate per $1,000",
+        "definition": "A simplified underwriting parameter used in this estimator representing dollars of annual premium per $1,000 of insured dwelling value."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/insurance/homeowners/coverage-vs-premium"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

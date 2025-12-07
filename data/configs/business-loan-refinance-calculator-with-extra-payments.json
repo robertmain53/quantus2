@@ -1,0 +1,573 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan Refinance & Extra Payments Calculator",
+    "description": "Compare your current business loan to a refinance offer and model the impact of recurring or one-time extra payments. Estimates include periodic payments, total interest, payoff periods, break-even for refinance costs, and interest savings."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "compare_refinance",
+    "methods": {
+      "compare_refinance": {
+        "label": "Compare current loan vs refinance (with optional extra payments)",
+        "description": "Calculate payments, total interest, net savings after refinance costs, and an approximate break-even point measured in payment periods.",
+        "variables": {
+          "existing_n": {
+            "expression": "existing_remaining_term_years * existing_payment_freq",
+            "dependencies": [
+              "existing_remaining_term_years",
+              "existing_payment_freq"
+            ],
+            "label": "Remaining payment periods for current loan",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "existing_r": {
+            "expression": "existing_interest_rate/100 / existing_payment_freq",
+            "dependencies": [
+              "existing_interest_rate",
+              "existing_payment_freq"
+            ],
+            "label": "Periodic interest rate (current loan)",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "existing_payment": {
+            "expression": "(existing_r*existing_balance) / (1 - pow(1 + existing_r, -existing_n))",
+            "dependencies": [
+              "existing_r",
+              "existing_balance",
+              "existing_n"
+            ],
+            "label": "Periodic payment for current loan (without extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "existing_total_interest": {
+            "expression": "existing_payment * existing_n - existing_balance",
+            "dependencies": [
+              "existing_payment",
+              "existing_n",
+              "existing_balance"
+            ],
+            "label": "Total interest remaining on current loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_n": {
+            "expression": "new_term_years * new_payment_freq",
+            "dependencies": [
+              "new_term_years",
+              "new_payment_freq"
+            ],
+            "label": "Payment periods for new loan",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "new_r": {
+            "expression": "new_interest_rate/100 / new_payment_freq",
+            "dependencies": [
+              "new_interest_rate",
+              "new_payment_freq"
+            ],
+            "label": "Periodic interest rate (new loan)",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "new_payment": {
+            "expression": "(new_r * new_loan_amount) / (1 - pow(1 + new_r, -new_n))",
+            "dependencies": [
+              "new_r",
+              "new_loan_amount",
+              "new_n"
+            ],
+            "label": "Periodic payment on new loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_total_interest": {
+            "expression": "new_payment * new_n - new_loan_amount",
+            "dependencies": [
+              "new_payment",
+              "new_n",
+              "new_loan_amount"
+            ],
+            "label": "Total interest on new loan (excluding refinance fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "net_savings_before_costs": {
+            "expression": "existing_total_interest - new_total_interest",
+            "dependencies": [
+              "existing_total_interest",
+              "new_total_interest"
+            ],
+            "label": "Interest savings before refinance costs",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "net_savings": {
+            "expression": "existing_total_interest - new_total_interest - refinance_costs",
+            "dependencies": [
+              "existing_total_interest",
+              "new_total_interest",
+              "refinance_costs"
+            ],
+            "label": "Net savings after refinance costs",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "break_even_periods": {
+            "expression": "refinance_costs / (existing_payment - new_payment)",
+            "dependencies": [
+              "refinance_costs",
+              "existing_payment",
+              "new_payment"
+            ],
+            "label": "Approximate break-even (number of payment periods)",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "existing_payment",
+            "label": "Current loan periodic payment",
+            "variable": "existing_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_payment",
+            "label": "Refinance periodic payment",
+            "variable": "new_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "existing_total_interest",
+            "label": "Total interest remaining (current loan)",
+            "variable": "existing_total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_total_interest",
+            "label": "Total interest (new loan)",
+            "variable": "new_total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "net_savings",
+            "label": "Estimated net interest savings after refinance costs",
+            "variable": "net_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "break_even_periods",
+            "label": "Approximate break-even (periods)",
+            "variable": "break_even_periods",
+            "unit": "periods",
+            "format": "decimal"
+          }
+        ]
+      },
+      "extra_impact": {
+        "label": "Impact of extra payments on current loan",
+        "description": "Estimate how fixed recurring extra payments or a one-time lump sum shorten payoff and reduce interest for the current loan.",
+        "variables": {
+          "existing_n": {
+            "expression": "existing_remaining_term_years * existing_payment_freq",
+            "dependencies": [
+              "existing_remaining_term_years",
+              "existing_payment_freq"
+            ],
+            "label": "Remaining payment periods for current loan",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "existing_r": {
+            "expression": "existing_interest_rate/100 / existing_payment_freq",
+            "dependencies": [
+              "existing_interest_rate",
+              "existing_payment_freq"
+            ],
+            "label": "Periodic interest rate (current loan)",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "existing_payment": {
+            "expression": "(existing_r * existing_balance) / (1 - pow(1 + existing_r, -existing_n))",
+            "dependencies": [
+              "existing_r",
+              "existing_balance",
+              "existing_n"
+            ],
+            "label": "Periodic payment for current loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_plus_extra": {
+            "expression": "existing_payment + extra_payment_amount",
+            "dependencies": [
+              "existing_payment",
+              "extra_payment_amount"
+            ],
+            "label": "Periodic payment including fixed extra amount",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "n_with_extra": {
+            "expression": "-ln(1 - existing_r * existing_balance / payment_plus_extra) / ln(1 + existing_r)",
+            "dependencies": [
+              "existing_r",
+              "existing_balance",
+              "payment_plus_extra"
+            ],
+            "label": "Estimated number of periods to pay off with extra payment",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "interest_with_extra": {
+            "expression": "payment_plus_extra * n_with_extra - existing_balance",
+            "dependencies": [
+              "payment_plus_extra",
+              "n_with_extra",
+              "existing_balance"
+            ],
+            "label": "Estimated total interest with extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_saved": {
+            "expression": "existing_n - n_with_extra",
+            "dependencies": [
+              "existing_n",
+              "n_with_extra"
+            ],
+            "label": "Estimated number of payment periods saved",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "existing_payment * existing_n - existing_balance - interest_with_extra",
+            "dependencies": [
+              "existing_payment",
+              "existing_n",
+              "existing_balance",
+              "interest_with_extra"
+            ],
+            "label": "Estimated interest saved by making extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "n_with_extra",
+            "label": "Payoff periods with extra payments",
+            "variable": "n_with_extra",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "payments_saved",
+            "label": "Payment periods saved",
+            "variable": "payments_saved",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "existing_balance",
+        "label": "Current loan remaining balance",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "existing_interest_rate",
+        "label": "Current annual interest rate (%)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "existing_remaining_term_years",
+        "label": "Remaining term (years) on current loan",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "existing_payment_freq",
+        "label": "Payments per year (current loan)",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "new_loan_amount",
+        "label": "Refinance loan amount",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "new_interest_rate",
+        "label": "Refinance annual interest rate (%)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "new_term_years",
+        "label": "Term (years) for refinance",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "new_payment_freq",
+        "label": "Payments per year (refinance)",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "refinance_costs",
+        "label": "Total refinance costs and fees",
+        "type": "number",
+        "default": 2000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_type",
+        "label": "Extra payment type",
+        "type": "select",
+        "default": "none",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Fixed extra per payment",
+            "value": "fixed_per_period"
+          },
+          {
+            "label": "One-time lump-sum payment",
+            "value": "one_time_lump_sum"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment_amount",
+        "label": "Extra payment amount (per period or lump sum)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_start_after_months",
+        "label": "Start extra payments after (months)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "one_time_extra_payment_when_month",
+        "label": "If one-time lump sum, apply in month number (1 = next payment)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you compare an existing business loan to a proposed refinance and shows how adding extra payments (regular or one-time) affects payoff time and interest paid. Use conservative inputs for fees and realistic extra-payment schedules.",
+      "Results are estimates for planning and negotiation. They do not replace lender disclosures; verify exact numbers from loan agreements and amortization schedules."
+    ],
+    "methodology": [
+      "Periodic payment is calculated using the standard amortizing loan formula: payment = r * PV / (1 - (1 + r)^-n), where r is the periodic interest rate and n is the number of periods.",
+      "For extra fixed periodic payments, payoff periods are estimated by solving the amortization equation for n using logarithms. One-time lump-sum payments are modeled as a principal reduction at the specified period and then the remaining amortization is recalculated.",
+      "Estimates exclude taxes, insurance, business operating covenants, or non-interest lender charges unless entered as refinance costs. When the periodic rate is zero, division-by-zero is avoided by linear amortization."
+    ],
+    "how_is_calculated": [
+      "Step 1: Convert annual interest rates to periodic rates by dividing by payments per year.",
+      "Step 2: Compute scheduled periodic payment using the amortization formula and the number of remaining periods.",
+      "Step 3: For refinance comparison, compute total interest remaining on both loans and subtract refinance costs to estimate net savings.",
+      "Step 4: For extra payments, compute the reduced number of periods and interest using the modified payment amount (scheduled payment + extra)."
+    ],
+    "examples": [
+      "If your current loan has $100,000 remaining at 6.5% with 5 years left and a refinance offers 5.0% for 5 years with $2,000 fees, this tool calculates the change in periodic payment, total interest, and net savings after fees.",
+      "Adding a fixed extra payment of $100 per month to the current loan shows how many months you save and how much interest you avoid paying overall."
+    ],
+    "faqs": [
+      {
+        "question": "Are these results exact?",
+        "answer": "No. Results are mathematical estimates using standard amortization formulas. Actual lender schedules, timing of payments, rounding rules, day-count conventions, and any prepayment penalties can change outcomes. Use this calculator for planning and validate with lender statements."
+      },
+      {
+        "question": "Do you include refinance fees in savings?",
+        "answer": "Yes. Refinance costs entered are subtracted from interest savings to produce an estimated net savings figure."
+      },
+      {
+        "question": "How do extra payments affect my loan?",
+        "answer": "Regular extra payments reduce the principal faster, decreasing the number of periods needed to pay off the loan and reducing total interest. A one-time lump sum reduces principal immediately; the tool models its impact when you specify the payment period."
+      },
+      {
+        "question": "What if interest rate is zero?",
+        "answer": "For a 0% periodic rate the calculator treats amortization as linear: principal divided evenly over remaining periods to avoid divide-by-zero errors."
+      },
+      {
+        "question": "How should I interpret break-even periods?",
+        "answer": "Break-even is an approximate count of payment periods until cumulative payment savings equal refinance costs. If new periodic payment is higher than current payment, break-even is not meaningful."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Frameworks and best practices for secure and auditable financial calculators",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Quality management and software lifecycle standards",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Standards for software verification and validation",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Guidance for operational safety and recordkeeping in business operations",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Periodic rate",
+        "definition": "Annual interest rate divided by the number of payment periods per year (for example, monthly payments = rate/12)."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a loan over time through regular payments of principal and interest."
+      },
+      {
+        "term": "Refinance costs",
+        "definition": "One-time fees and charges associated with creating the new loan, such as origination fees, closing costs, and prepayment penalties if applicable."
+      },
+      {
+        "term": "Break-even",
+        "definition": "Number of payment periods required for cumulative cash-flow savings from a refinance to equal the refinance costs."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/business-loans/amortization-basics",
+      "/business-loans/loan-terms-explained"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

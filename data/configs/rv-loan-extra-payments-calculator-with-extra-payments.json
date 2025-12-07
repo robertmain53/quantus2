@@ -1,0 +1,628 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan Extra Payments Calculator (one-time & recurring)",
+    "description": "Estimate how one-time or recurring extra payments change your RV loan payoff date, total interest paid, and total paid. Includes baseline (no extra), one-time extra payment at a chosen payment number, and recurring extra-per-payment scenarios."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "recurring",
+    "methods": {
+      "none": {
+        "label": "Baseline (no extra payments)",
+        "description": "Standard amortization schedule without any extra principal payments.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "N": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "regular_payment": {
+            "expression": "principal * r / (1 - pow(1 + r, -N))",
+            "dependencies": [
+              "principal",
+              "r",
+              "N"
+            ],
+            "label": "Regular payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_no_extra": {
+            "expression": "regular_payment * N",
+            "dependencies": [
+              "regular_payment",
+              "N"
+            ],
+            "label": "Total paid (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_no_extra": {
+            "expression": "total_payment_no_extra - principal",
+            "dependencies": [
+              "total_payment_no_extra",
+              "principal"
+            ],
+            "label": "Total interest (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_time_no_extra_years": {
+            "expression": "N / payments_per_year",
+            "dependencies": [
+              "N",
+              "payments_per_year"
+            ],
+            "label": "Payoff time (years) - no extra",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "regular_payment",
+            "label": "Regular payment (no extra)",
+            "variable": "regular_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_no_extra",
+            "label": "Total interest (no extra)",
+            "variable": "total_interest_no_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_time_no_extra_years",
+            "label": "Payoff time (years) - no extra",
+            "variable": "payoff_time_no_extra_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_payment_no_extra",
+            "label": "Total paid (no extra)",
+            "variable": "total_payment_no_extra",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "one_time": {
+        "label": "One-time extra payment",
+        "description": "Apply a single extra principal payment at a specified payment number, then continue making the regular payment until loan is paid off.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "N": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments (original)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "regular_payment": {
+            "expression": "principal * r / (1 - pow(1 + r, -N))",
+            "dependencies": [
+              "principal",
+              "r",
+              "N"
+            ],
+            "label": "Regular payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "k": {
+            "expression": "extra_one_time_at_payment",
+            "dependencies": [
+              "extra_one_time_at_payment"
+            ],
+            "label": "Payment number when one-time extra is applied",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "balance_after_k": {
+            "expression": "principal * pow(1 + r, k) - regular_payment * ((pow(1 + r, k) - 1) / r)",
+            "dependencies": [
+              "principal",
+              "r",
+              "k",
+              "regular_payment"
+            ],
+            "label": "Outstanding balance immediately before extra payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "balance_after_extra": {
+            "expression": "balance_after_k - extra_one_time_amount",
+            "dependencies": [
+              "balance_after_k",
+              "extra_one_time_amount"
+            ],
+            "label": "Balance after applying one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payments_remaining": {
+            "expression": "-ln(1 - r * balance_after_extra / regular_payment) / ln(1 + r)",
+            "dependencies": [
+              "r",
+              "balance_after_extra",
+              "regular_payment"
+            ],
+            "label": "Remaining payments after the one-time extra",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments_with_extra": {
+            "expression": "k + payments_remaining",
+            "dependencies": [
+              "k",
+              "payments_remaining"
+            ],
+            "label": "Total number of payments with one-time extra",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payment_with_extra": {
+            "expression": "regular_payment * k + extra_one_time_amount + regular_payment * payments_remaining",
+            "dependencies": [
+              "regular_payment",
+              "k",
+              "extra_one_time_amount",
+              "payments_remaining"
+            ],
+            "label": "Total paid including the one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_no_extra": {
+            "expression": "regular_payment * N",
+            "dependencies": [
+              "regular_payment",
+              "N"
+            ],
+            "label": "Total paid without extra (reference)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_saved": {
+            "expression": "total_payment_no_extra - total_payment_with_extra",
+            "dependencies": [
+              "total_payment_no_extra",
+              "total_payment_with_extra"
+            ],
+            "label": "Interest saved due to the one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_saved": {
+            "expression": "N - total_payments_with_extra",
+            "dependencies": [
+              "N",
+              "total_payments_with_extra"
+            ],
+            "label": "Number of payments saved",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payments_remaining",
+            "label": "Remaining payments after extra",
+            "variable": "payments_remaining",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_payment_with_extra",
+            "label": "Total paid (with one-time extra)",
+            "variable": "total_payment_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payments_saved",
+            "label": "Payments saved",
+            "variable": "payments_saved",
+            "unit": "payments",
+            "format": "decimal"
+          }
+        ]
+      },
+      "recurring": {
+        "label": "Recurring extra payment (every payment)",
+        "description": "Add a fixed extra amount to each payment (starting immediately) and compute new payoff time and interest savings.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "N": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total original number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "regular_payment": {
+            "expression": "principal * r / (1 - pow(1 + r, -N))",
+            "dependencies": [
+              "principal",
+              "r",
+              "N"
+            ],
+            "label": "Regular payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_with_extra": {
+            "expression": "regular_payment + extra_recurring_amount",
+            "dependencies": [
+              "regular_payment",
+              "extra_recurring_amount"
+            ],
+            "label": "Payment amount including recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_remaining_recurring": {
+            "expression": "-ln(1 - r * principal / payment_with_extra) / ln(1 + r)",
+            "dependencies": [
+              "r",
+              "principal",
+              "payment_with_extra"
+            ],
+            "label": "Payments required with recurring extra",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payment_with_extra": {
+            "expression": "payment_with_extra * payments_remaining_recurring",
+            "dependencies": [
+              "payment_with_extra",
+              "payments_remaining_recurring"
+            ],
+            "label": "Total paid with recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_no_extra": {
+            "expression": "regular_payment * N",
+            "dependencies": [
+              "regular_payment",
+              "N"
+            ],
+            "label": "Total paid without extra (reference)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_saved": {
+            "expression": "total_payment_no_extra - total_payment_with_extra",
+            "dependencies": [
+              "total_payment_no_extra",
+              "total_payment_with_extra"
+            ],
+            "label": "Interest saved (recurring)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_saved": {
+            "expression": "N - payments_remaining_recurring",
+            "dependencies": [
+              "N",
+              "payments_remaining_recurring"
+            ],
+            "label": "Payments saved (recurring)",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_with_extra",
+            "label": "Payment including recurring extra",
+            "variable": "payment_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payments_remaining_recurring",
+            "label": "Payments required with recurring extra",
+            "variable": "payments_remaining_recurring",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_payment_with_extra",
+            "label": "Total paid (with recurring extra)",
+            "variable": "total_payment_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 15,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "extra_type",
+        "label": "Extra payment type",
+        "type": "select",
+        "default": "recurring",
+        "options": [
+          {
+            "label": "No extra payments (baseline)",
+            "value": "none"
+          },
+          {
+            "label": "One-time extra payment",
+            "value": "one_time"
+          },
+          {
+            "label": "Recurring extra each payment",
+            "value": "recurring"
+          }
+        ]
+      },
+      {
+        "id": "extra_one_time_amount",
+        "label": "One-time extra amount",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_one_time_at_payment",
+        "label": "Apply one-time extra at payment number (1 = first payment)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "extra_recurring_amount",
+        "label": "Extra per payment (recurring)",
+        "type": "number",
+        "default": 50,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "one_time_section",
+        "label": "One-time extra settings",
+        "show_when": {
+          "field": "extra_type",
+          "is": "one_time"
+        },
+        "fields": [
+          {
+            "id": "extra_one_time_amount",
+            "label": "One-time extra amount",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "extra_one_time_at_payment",
+            "label": "Payment number to apply extra",
+            "type": "integer",
+            "default": 12,
+            "min": 1,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "recurring_section",
+        "label": "Recurring extra settings",
+        "show_when": {
+          "field": "extra_type",
+          "is": "recurring"
+        },
+        "fields": [
+          {
+            "id": "extra_recurring_amount",
+            "label": "Extra amount per payment",
+            "type": "number",
+            "default": 50,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator shows how one-time or recurring additional principal payments change the amortization of an RV loan. It compares the baseline schedule (no extra payments) to scenarios with a single extra payment applied at a chosen payment number or a fixed extra added to every payment.",
+      "Use the fields to enter the loan amount, APR, term, and the extra payment choices. Results show new payoff time, estimated interest saved, and total amount paid under each scenario. This tool is for planning and estimates; exact figures depend on your lender's posting rules and day-count conventions."
+    ],
+    "methodology": [
+      "Calculations use standard fixed-rate amortization formulas. Periodic interest rate r = APR / payments_per_year. Regular payment is computed by the closed-form annuity formula: payment = P * r / (1 - (1+r)^-N).",
+      "One-time extra: the outstanding balance just before the extra at payment k is computed from the closed-form balance formula. The extra reduces principal immediately; remaining payments are recomputed assuming the borrower continues the regular payment amount until payoff.",
+      "Recurring extra: a fixed additional principal amount is added to each payment. The new effective payment is regular_payment + extra; the remaining number of payments is calculated using the annuity payoff formula solved for n."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_rate / 100 / payments_per_year",
+      "Number of payments N = term_years * payments_per_year",
+      "Regular payment = principal * r / (1 - (1+r)^-N)",
+      "One-time extra: balance_before = principal*(1+r)^k - payment*(( (1+r)^k - 1 )/r). balance_after = balance_before - extra_one_time_amount. Remaining payments = -ln(1 - r * balance_after / payment) / ln(1 + r).",
+      "Recurring extra: payment_with_extra = payment + extra_recurring_amount. Remaining payments = -ln(1 - r * principal / payment_with_extra) / ln(1 + r).",
+      "Total paid and interest saved are computed from the number of payments and payment amounts; interest saved = total_paid_no_extra - total_paid_with_extra."
+    ],
+    "faqs": [
+      {
+        "question": "Will results match my lender's payoff exactly?",
+        "answer": "This calculator uses standard amortization math. Actual lender payoff amounts may differ due to daily interest accrual methods, rounding rules, fees, payment posting order, and whether the lender applies extra payments to principal immediately. Use results as an estimate and request an official payoff quote from your lender for exact amounts."
+      },
+      {
+        "question": "Can I enter extra payments that start later or end early?",
+        "answer": "This tool offers a one-time extra and a simple recurring-per-payment extra. For complex schedules (varying amounts or start/end ranges), please run multiple scenarios or consult an amortization schedule exported to a spreadsheet for custom schedules."
+      },
+      {
+        "question": "What input ranges and limits should I watch for?",
+        "answer": "Keep APR non-negative and realistic (typically 0–30%). Payments per year should be at least 1. Very small or zero periodic rates, zero extra amounts, or extra amounts that fully pay the loan immediately may produce edge results; the calculator includes no lender-specific fees or prepayment penalties."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a debt through regular payments that cover interest and principal over time."
+      },
+      {
+        "term": "Principal",
+        "definition": "The outstanding loan balance excluding interest."
+      },
+      {
+        "term": "Periodic interest rate",
+        "definition": "The interest rate applied each payment period: APR divided by the number of payments per year."
+      },
+      {
+        "term": "Payoff time",
+        "definition": "The time (expressed in payments or years) until the loan balance reaches zero under the specified payment plan."
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

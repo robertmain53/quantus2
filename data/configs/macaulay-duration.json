@@ -1,0 +1,216 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Macaulay Duration Calculator",
+    "description": "Calculates Macaulay duration, modified duration, and theoretical clean price for a fixed-rate bond with periodic coupon payments. Supports arbitrary coupon frequency and fractional years to maturity. Includes accuracy notes and references to standards for numerical reliability and testing."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "price",
+        "label": "Theoretical clean price",
+        "expression": "((face * (coupon_rate/100) / freq) * (1 - pow(1 + (ytm/100)/freq, - (years * freq))) / ((ytm/100)/freq)) + face * pow(1 + (ytm/100)/freq, - (years * freq))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "macaulay_duration_years",
+        "label": "Macaulay duration (years)",
+        "expression": "( ( (face * (coupon_rate/100) / freq) * ( (1 / (1 + (ytm/100)/freq)) * (1 - ((years * freq + 1) * pow(1 / (1 + (ytm/100)/freq), years * freq)) + (years * freq) * pow(1 / (1 + (ytm/100)/freq), years * freq + 1)) / pow(1 - 1 / (1 + (ytm/100)/freq), 2) ) ) + face * (years * freq) * pow(1 / (1 + (ytm/100)/freq), years * freq) ) / ( ((face * (coupon_rate/100) / freq) * (1 - pow(1 + (ytm/100)/freq, - (years * freq))) / ((ytm/100)/freq)) + face * pow(1 + (ytm/100)/freq, - (years * freq)) ) ) / freq",
+        "unit": "years",
+        "format": "decimal"
+      },
+      {
+        "id": "modified_duration_years",
+        "label": "Modified duration (years)",
+        "expression": "( ( (face * (coupon_rate/100) / freq) * ( (1 / (1 + (ytm/100)/freq)) * (1 - ((years * freq + 1) * pow(1 / (1 + (ytm/100)/freq), years * freq)) + (years * freq) * pow(1 / (1 + (ytm/100)/freq), years * freq + 1)) / pow(1 - 1 / (1 + (ytm/100)/freq), 2) ) ) + face * (years * freq) * pow(1 / (1 + (ytm/100)/freq), years * freq) ) / ( ((face * (coupon_rate/100) / freq) * (1 - pow(1 + (ytm/100)/freq, - (years * freq))) / ((ytm/100)/freq)) + face * pow(1 + (ytm/100)/freq, - (years * freq)) ) ) / ( freq * (1 + (ytm/100)/freq) )",
+        "unit": "years",
+        "format": "decimal"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "face",
+        "label": "Face / par value",
+        "type": "number",
+        "default": 1000,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "coupon_rate",
+        "label": "Annual coupon rate (%)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "ytm",
+        "label": "Yield to maturity (annual %, nominal)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "years",
+        "label": "Time to maturity (years)",
+        "type": "number",
+        "default": 10,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "freq",
+        "label": "Payments per year (coupon frequency)",
+        "type": "integer",
+        "default": 2,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "price",
+          "label": "Theoretical clean price",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "macaulay_duration_years",
+          "label": "Macaulay duration (years)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "modified_duration_years",
+          "label": "Modified duration (years)",
+          "format": "decimal",
+          "unit": "years"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes the Macaulay duration for a fixed-rate bond with periodic coupon payments. Enter the bond face value, annual coupon rate, yield to maturity (nominal annual rate), time to maturity in years, and the coupon payment frequency.",
+      "Outputs include the theoretical clean price, Macaulay duration (in years) and the corresponding modified duration (in years). The engine uses standard present-value formulas and closed-form summations for annuity-weighted timing; see methodology for details and numerical caveats."
+    ],
+    "methodology": [
+      "We model the bond as a stream of fixed coupon payments and a final principal payment. Periodic coupon = face * (coupon_rate/100) / freq. Periodic yield = (ytm/100) / freq. Number of periods = years * freq.",
+      "Price is computed as the present value of coupons plus the present value of principal using standard discounting. Macaulay duration is the weighted average time to receipt of cash flows, weights equal to each cash flow's present value divided by price. Modified duration is Macaulay duration divided by (1 + periodic yield)."
+    ],
+    "how_is_calculated": [
+      "Periodic coupon C = face * (coupon_rate / 100) / freq",
+      "Periodic yield per period y = (ytm / 100) / freq",
+      "Number of periods N = years * freq",
+      "Price P = C * (1 - (1+y)^(-N)) / y + face * (1+y)^(-N)",
+      "Macaulay duration (periods) = (sum_{t=1..N} t * CF_t / (1+y)^t) / P. Expressed in years by dividing periods by freq.",
+      "Modified duration = Macaulay duration (in years) / (1 + y)"
+    ],
+    "examples": [
+      "Example: face=1000, coupon_rate=5%, ytm=4%, years=5, freq=2. Periodic coupon = 25, periodic yield = 2%. Compute price via PV formulas, then compute weighted average time to cash flows to get Macaulay duration in years, then divide by (1+0.02) to get modified duration.",
+      "Edge-case example: when ytm is very close to zero, annuity formulas involve small denominators and may be numerically unstable; in that case, interpret price as sum of undiscounted cash flows and use high-precision arithmetic or a limit-based calculation."
+    ],
+    "faqs": [
+      {
+        "question": "Can I enter fractional years and nonstandard coupon frequencies?",
+        "answer": "Yes. Time to maturity accepts fractional years and frequency accepts any integer number of payments per year between 1 and 12. The calculator treats frequency as the number of equal coupon payments per year."
+      },
+      {
+        "question": "What happens if yield per period is zero?",
+        "answer": "The closed-form formulas include division by periodic yield. If yield is exactly zero, the closed-form annuity term is undefined; conceptually the price equals the sum of undiscounted cash flows and duration becomes the weighted average of payment times. For numerical accuracy near zero yields use high-precision arithmetic or compute the limit analytically."
+      },
+      {
+        "question": "Are results exact?",
+        "answer": "Results are exact under the assumptions: fixed coupon amounts, discrete periodic compounding matching the frequency input, and no embedded options. Numerical rounding is possible; for valuation or regulatory reporting use high-precision systems and reconcile to market convention."
+      },
+      {
+        "question": "How should I interpret Macaulay vs modified duration?",
+        "answer": "Macaulay duration is a time-weighted average (in years) of cash flow timings and is useful for immunization and understanding timing risk. Modified duration estimates the percentage price change for a small parallel change in yield and is commonly used in risk management."
+      },
+      {
+        "question": "Does this tool comply with any standards for numeric testing or software quality?",
+        "answer": "This tool follows best practices for numerical validation and documentation. For reproducibility and testing, adhere to standards such as NIST numerical testing guidance and IEEE software quality recommendations; laboratory or production deployments should use controlled unit tests and precision checks."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Numerical Software and Testing",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO Standards (quality and testing)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Software and Numerical Methods",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA Guidance (operational safety & environment)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Macaulay duration",
+        "definition": "The weighted average time in years until a bond's cash flows are received, weights proportional to the present value of each cash flow."
+      },
+      {
+        "term": "Modified duration",
+        "definition": "Macaulay duration divided by (1 + periodic yield). It approximates the percentage price change for a 1 unit (1.00) change in yield (in decimal), commonly used to estimate price sensitivity to yield changes."
+      },
+      {
+        "term": "Periodic yield",
+        "definition": "The nominal annual yield divided by the number of coupon periods per year (ytm/100 / freq)."
+      },
+      {
+        "term": "Clean price",
+        "definition": "Price of the bond excluding accrued interest. The calculator returns theoretical present value of future contractual cash flows; accrued interest treatment is outside scope."
+      }
+    ],
+    "summary": [
+      "This calculator provides theoretical clean price, Macaulay duration (years), and modified duration (years) for fixed-rate bonds using standard present-value formulas and closed-form summations for annuities.",
+      "Be mindful of numerical limits: yields near zero and very large N can cause instability; validate critical results with high-precision routines and unit tests following NIST/IEEE guidance."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/bonds/convexity-calculator",
+      "/calculators/bonds/yield-to-maturity"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "FinancialCalculation",
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,477 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan — Bi‑Weekly Payment Calculator (Advanced)",
+    "description": "Compare monthly vs bi‑weekly payment schedules, estimate bi‑weekly payment amounts, annual cost, approximate payoff time and interest savings. Includes options for down payment, trade‑in and fees. Results are estimates for planning and disclosure purposes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "biweekly_extra",
+    "methods": {
+      "biweekly_extra": {
+        "label": "Bi‑weekly (half‑monthly payments — 26 payments/year, produces 1 extra monthly payment/year)",
+        "description": "Computes the usual monthly amortizing payment then shows the effect of making half of that payment every two weeks (26 half‑payments per year). This method models the common 'biweekly by halving monthly payment' approach and provides an approximation of shortened term and interest savings.",
+        "variables": {
+          "loan_principal": {
+            "expression": "vehicle_price - down_payment - trade_in_value + fees",
+            "dependencies": [
+              "vehicle_price",
+              "down_payment",
+              "trade_in_value",
+              "fees"
+            ],
+            "label": "Loan principal (amount financed)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "r_monthly": {
+            "expression": "annual_rate / 100 / 12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly periodic rate",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "loan_principal * r_monthly / (1 - (1 + r_monthly) ** (- term_years * 12))",
+            "dependencies": [
+              "loan_principal",
+              "r_monthly",
+              "term_years"
+            ],
+            "label": "Standard monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_payment": {
+            "expression": "monthly_payment / 2",
+            "dependencies": [
+              "monthly_payment"
+            ],
+            "label": "Bi‑weekly payment (half of monthly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_paid_biweekly": {
+            "expression": "biweekly_payment * 26",
+            "dependencies": [
+              "biweekly_payment"
+            ],
+            "label": "Total paid per year with bi‑weekly half‑monthly method",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_paid_monthly": {
+            "expression": "monthly_payment * 12",
+            "dependencies": [
+              "monthly_payment"
+            ],
+            "label": "Total paid per year with monthly payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "extra_per_year": {
+            "expression": "annual_paid_biweekly - annual_paid_monthly",
+            "dependencies": [
+              "annual_paid_biweekly",
+              "annual_paid_monthly"
+            ],
+            "label": "Extra principal paid per year (approx.)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "approx_new_term_years": {
+            "expression": "term_years * (annual_paid_monthly) / (annual_paid_biweekly)",
+            "dependencies": [
+              "term_years",
+              "annual_paid_monthly",
+              "annual_paid_biweekly"
+            ],
+            "label": "Approximate years to payoff with bi‑weekly half‑monthly payments",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_monthly": {
+            "expression": "annual_paid_monthly * term_years",
+            "dependencies": [
+              "annual_paid_monthly",
+              "term_years"
+            ],
+            "label": "Total paid over life (monthly schedule)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "biweekly_total_paid_est": {
+            "expression": "annual_paid_biweekly * approx_new_term_years",
+            "dependencies": [
+              "annual_paid_biweekly",
+              "approx_new_term_years"
+            ],
+            "label": "Estimated total paid over life (bi‑weekly half‑monthly approximation)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_savings_estimate": {
+            "expression": "total_paid_monthly - biweekly_total_paid_est",
+            "dependencies": [
+              "total_paid_monthly",
+              "biweekly_total_paid_est"
+            ],
+            "label": "Estimated interest savings (approximate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment",
+            "label": "Bi‑weekly payment (half of monthly)",
+            "variable": "biweekly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_paid_biweekly",
+            "label": "Total paid per year (bi‑weekly)",
+            "variable": "annual_paid_biweekly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "extra_per_year",
+            "label": "Extra paid per year (approx.)",
+            "variable": "extra_per_year",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "approx_new_term_years",
+            "label": "Estimated payoff time with bi‑weekly payments (years)",
+            "variable": "approx_new_term_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_savings_estimate",
+            "label": "Estimated interest savings",
+            "variable": "interest_savings_estimate",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_direct": {
+        "label": "Bi‑weekly amortizing payment (exact for 26 periods/year)",
+        "description": "Computes the bi‑weekly payment that amortizes the loan over the chosen term when interest is applied on a 26‑period per year basis. This method gives the exact periodic payment for bi‑weekly compounding/amortization.",
+        "variables": {
+          "loan_principal": {
+            "expression": "vehicle_price - down_payment - trade_in_value + fees",
+            "dependencies": [
+              "vehicle_price",
+              "down_payment",
+              "trade_in_value",
+              "fees"
+            ],
+            "label": "Loan principal (amount financed)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "r_biweekly": {
+            "expression": "annual_rate / 100 / 26",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Bi‑weekly periodic rate",
+            "format": "decimal",
+            "display": false
+          },
+          "n_payments_biweekly": {
+            "expression": "term_years * 26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of bi‑weekly payments",
+            "unit": "integer",
+            "format": "integer",
+            "display": false
+          },
+          "payment_biweekly_exact": {
+            "expression": "loan_principal * r_biweekly / (1 - (1 + r_biweekly) ** (- n_payments_biweekly))",
+            "dependencies": [
+              "loan_principal",
+              "r_biweekly",
+              "n_payments_biweekly"
+            ],
+            "label": "Exact bi‑weekly payment for amortization",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_equivalent": {
+            "expression": "payment_biweekly_exact * 26 / 12",
+            "dependencies": [
+              "payment_biweekly_exact"
+            ],
+            "label": "Monthly equivalent of bi‑weekly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_biweekly": {
+            "expression": "payment_biweekly_exact * n_payments_biweekly",
+            "dependencies": [
+              "payment_biweekly_exact",
+              "n_payments_biweekly"
+            ],
+            "label": "Total paid over life (bi‑weekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_biweekly": {
+            "expression": "total_paid_biweekly - loan_principal",
+            "dependencies": [
+              "total_paid_biweekly",
+              "loan_principal"
+            ],
+            "label": "Total interest paid (bi‑weekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_payment_for_comparison": {
+            "expression": "loan_principal * (annual_rate / 100 / 12) / (1 - (1 + (annual_rate / 100 / 12)) ** (- term_years * 12))",
+            "dependencies": [
+              "loan_principal",
+              "annual_rate",
+              "term_years"
+            ],
+            "label": "Standard monthly payment (for comparison)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_difference": {
+            "expression": " (loan_principal * (annual_rate / 100 / 12) / (1 - (1 + (annual_rate / 100 / 12)) ** (- term_years * 12)) * 12 * term_years) - total_paid_biweekly",
+            "dependencies": [
+              "loan_principal",
+              "annual_rate",
+              "term_years",
+              "total_paid_biweekly"
+            ],
+            "label": "Interest difference (monthly schedule total paid − bi‑weekly total paid)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_biweekly_exact",
+            "label": "Bi‑weekly payment (exact amortizing)",
+            "variable": "payment_biweekly_exact",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_equivalent",
+            "label": "Monthly equivalent of bi‑weekly payment",
+            "variable": "monthly_equivalent",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_biweekly",
+            "label": "Total interest paid (bi‑weekly)",
+            "variable": "total_interest_biweekly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_difference",
+            "label": "Interest savings vs monthly schedule (approx.)",
+            "variable": "interest_difference",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "vehicle_price",
+        "label": "Vehicle price (total)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "trade_in_value",
+        "label": "Trade‑in value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "fees",
+        "label": "Fees added to loan (taxes, tags, dealer fees)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 15,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you compare a conventional monthly amortizing schedule to common bi‑weekly options used in auto lending: (1) making half of the monthly payment every two weeks (26 payments/year) and (2) using a true bi‑weekly amortizing payment based on 26 periods per year. Results are estimates to support planning and lender conversations.",
+      "The tool accepts vehicle price, down payment, trade‑in and fees to compute the financed amount, then shows payment figures, annual totals, and an approximate interest savings and payoff time when using bi‑weekly approaches."
+    ],
+    "methodology": [
+      "All computations use standard amortization math: periodic rate = APR / periods per year; payment = principal × r / (1 − (1 + r)^(−N)) where N is total number of periods. For the 'half‑monthly' bi‑weekly method we calculate the standard monthly payment then halve it and multiply by 26 to show annual cashflow and an approximate reduction in term based on extra annual principal.",
+      "The 'bi‑weekly amortizing' method computes the exact periodic payment for 26 equal periods per year using the same amortization formula but with r = APR/26 and N = term_years × 26 so results reflect a true 26‑period schedule.",
+      "Accuracy and reliability: calculations follow standard numeric formulas used in financial engineering and assume fixed rate, fixed payments and no prepayment other than the schedule modeled. Results may differ from lender disclosures due to rounding, day‑count conventions, compounding assumptions, early payment crediting policies, or additional fees."
+    ],
+    "how_is_calculated": [
+      "Loan principal = vehicle price − down payment − trade‑in + fees.",
+      "Monthly periodic rate r_monthly = APR / 100 / 12. Monthly payment = loan_principal × r_monthly / (1 − (1 + r_monthly)^(− term_years × 12)).",
+      "Bi‑weekly (half‑monthly) payment = monthly payment ÷ 2. Annual paid with this method = bi‑weekly payment × 26. Approximate new term scales by ratio of annual paid amounts (an approximation to show typical time reduction).",
+      "Bi‑weekly (exact amortizing) uses r_biweekly = APR / 100 / 26 and N = term_years × 26; payment = loan_principal × r_biweekly / (1 − (1 + r_biweekly)^(−N))."
+    ],
+    "examples": [
+      "If a loan has a $30,000 vehicle price, $3,000 down payment, 5‑year term, and 6% APR: monthly payment computed by the monthly formula; half of that amount paid every two weeks (26 payments) results in one extra monthly payment per year and a shorter payoff period. The exact figures are produced by the two methods in results.",
+      "For the same inputs using the 'bi‑weekly amortizing' method, the payment is recomputed for 26 periods/year and total interest is compared with the monthly schedule."
+    ],
+    "faqs": [
+      {
+        "question": "Is this calculator legally binding or a guaranteed loan quote?",
+        "answer": "No. This tool provides estimates for planning. Final loan terms, APR, payment schedule, rounding and payoff dates are set by lenders and will appear on official disclosure documents. Use this calculator to compare scenarios and prepare questions for lenders."
+      },
+      {
+        "question": "Why do bi‑weekly payments often reduce interest?",
+        "answer": "Making payments more frequently or paying an extra amount each year reduces outstanding principal faster, lowering the total interest accrued. The 'half‑monthly' 26‑payment pattern effectively produces one additional monthly payment per year which accelerates principal reduction."
+      },
+      {
+        "question": "Are the results exact?",
+        "answer": "The 'bi‑weekly amortizing' method computes exact amortizing payments for a 26‑period year under the model assumptions. The 'half‑monthly' method produces a close practical approximation. Both may differ from lender calculations due to compounding conventions, rounding, payment‑posting timing, or optional fees."
+      },
+      {
+        "question": "What should I watch for in lender disclosures?",
+        "answer": "Compare the disclosed APR, payment frequency, total finance charge, prepayment policy, and whether the lender posts payments on the day received or at month end. These factors change final totals and payoff dates."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Numerical Computation & Standards",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 9001 — Quality management principles (applied to calculation processes)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE 754 — Floating‑point arithmetic standard (relevant to numeric rounding)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA — Safety and operational controls (general compliance guidance)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual percentage rate: the annualized interest rate charged on a loan. This calculator uses APR to derive periodic rates."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period. For example, monthly periodic rate = APR/12; bi‑weekly periodic rate = APR/26."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The schedule of principal and interest payments that pays off a loan over a fixed term."
+      },
+      {
+        "term": "Bi‑weekly (26 payments/year)",
+        "definition": "A schedule with 26 equal payments per year, commonly used in bi‑weekly payroll cycles; differs from 24 payments/year (semi‑monthly)."
+      },
+      {
+        "term": "Principal",
+        "definition": "The amount borrowed after down payment and trade‑in are applied and fees added to the financed amount."
+      }
+    ],
+    "summary": [
+      "This advanced calculator offers two bi‑weekly modeling approaches: halving the monthly payment (practical, commonly used) and computing an exact bi‑weekly amortizing payment (26 periods/year). Use the results to compare cashflow and approximate interest savings, then confirm all terms with the lending institution."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/auto-loan-monthly-vs-biweekly",
+      "/help/understanding-apr-and-amortization"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO — Quality Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

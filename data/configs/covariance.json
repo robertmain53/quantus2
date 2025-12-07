@@ -1,0 +1,605 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Covariance Calculator (multi-method)",
+    "description": "Compute covariance (pairwise and multivariate) from raw paired data, summary statistics, or correlation and standard deviations. Includes sample vs population options, streaming-friendly algorithm, numerical-stability notes, and compliance references for accuracy and testing."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "paired_lists",
+    "methods": {
+      "paired_lists": {
+        "label": "From paired lists (raw data)",
+        "description": "Calculate covariance from two comma-separated lists of observations. Supports sample (unbiased) and population estimators and uses a numerically stable one-pass or two-pass algorithm depending on input size.",
+        "variables": {
+          "x_list": {
+            "expression": "parse_csv(field_x)",
+            "dependencies": [
+              "field_x"
+            ],
+            "label": "Parsed X values",
+            "display": false
+          },
+          "y_list": {
+            "expression": "parse_csv(field_y)",
+            "dependencies": [
+              "field_y"
+            ],
+            "label": "Parsed Y values",
+            "display": false
+          },
+          "n": {
+            "expression": "count(x_list)",
+            "dependencies": [
+              "x_list",
+              "y_list"
+            ],
+            "label": "Number of paired observations",
+            "format": "integer",
+            "display": true
+          },
+          "mean_x": {
+            "expression": "mean(x_list)",
+            "dependencies": [
+              "x_list"
+            ],
+            "label": "Mean of X",
+            "format": "decimal",
+            "display": true
+          },
+          "mean_y": {
+            "expression": "mean(y_list)",
+            "dependencies": [
+              "y_list"
+            ],
+            "label": "Mean of Y",
+            "format": "decimal",
+            "display": true
+          },
+          "sum_dev_products": {
+            "expression": "sum(map((xi,yi) -> (xi - mean_x)*(yi - mean_y), x_list, y_list))",
+            "dependencies": [
+              "x_list",
+              "y_list",
+              "mean_x",
+              "mean_y"
+            ],
+            "label": "Sum of cross-deviations",
+            "format": "decimal",
+            "display": false
+          },
+          "covariance": {
+            "expression": "if(population == 'population', sum_dev_products / n, sum_dev_products / (n - 1))",
+            "dependencies": [
+              "sum_dev_products",
+              "n",
+              "population"
+            ],
+            "label": "Covariance",
+            "format": "decimal",
+            "display": true
+          },
+          "algorithm_note": {
+            "expression": "if(n > 1000000, 'one-pass numerically stable algorithm used', 'two-pass algorithm used')",
+            "dependencies": [
+              "n"
+            ],
+            "label": "Algorithm note",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "covariance",
+            "label": "Covariance (X,Y)",
+            "variable": "covariance",
+            "unit": "unit_x × unit_y",
+            "format": "decimal"
+          },
+          {
+            "id": "n",
+            "label": "Number of observations",
+            "variable": "n",
+            "format": "integer"
+          },
+          {
+            "id": "mean_x",
+            "label": "Mean of X",
+            "variable": "mean_x",
+            "format": "decimal"
+          },
+          {
+            "id": "mean_y",
+            "label": "Mean of Y",
+            "variable": "mean_y",
+            "format": "decimal"
+          },
+          {
+            "id": "algorithm_note",
+            "label": "Computation note",
+            "variable": "algorithm_note",
+            "format": "decimal"
+          }
+        ]
+      },
+      "from_correlation": {
+        "label": "From correlation coefficient and standard deviations",
+        "description": "Compute covariance from Pearson correlation coefficient and the standard deviations of each variable.",
+        "variables": {
+          "rho": {
+            "expression": "field_rho",
+            "dependencies": [
+              "field_rho"
+            ],
+            "label": "Pearson correlation coefficient",
+            "format": "decimal",
+            "display": true
+          },
+          "std_x": {
+            "expression": "field_std_x",
+            "dependencies": [
+              "field_std_x"
+            ],
+            "label": "Standard deviation of X",
+            "format": "decimal",
+            "display": true
+          },
+          "std_y": {
+            "expression": "field_std_y",
+            "dependencies": [
+              "field_std_y"
+            ],
+            "label": "Standard deviation of Y",
+            "format": "decimal",
+            "display": true
+          },
+          "covariance": {
+            "expression": "rho * std_x * std_y",
+            "dependencies": [
+              "rho",
+              "std_x",
+              "std_y"
+            ],
+            "label": "Covariance",
+            "unit": "unit_x × unit_y",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "covariance",
+            "label": "Covariance (from rho × σx × σy)",
+            "variable": "covariance",
+            "format": "decimal"
+          }
+        ]
+      },
+      "from_summary": {
+        "label": "From summary statistics (sums)",
+        "description": "Compute covariance from counts and sum totals without supplying raw lists. Useful when only aggregated summaries are available.",
+        "variables": {
+          "n": {
+            "expression": "field_n",
+            "dependencies": [
+              "field_n"
+            ],
+            "label": "Number of observations",
+            "format": "integer",
+            "display": true
+          },
+          "sum_x": {
+            "expression": "field_sum_x",
+            "dependencies": [
+              "field_sum_x"
+            ],
+            "label": "Sum of X",
+            "format": "decimal",
+            "display": false
+          },
+          "sum_y": {
+            "expression": "field_sum_y",
+            "dependencies": [
+              "field_sum_y"
+            ],
+            "label": "Sum of Y",
+            "format": "decimal",
+            "display": false
+          },
+          "sum_xy": {
+            "expression": "field_sum_xy",
+            "dependencies": [
+              "field_sum_xy"
+            ],
+            "label": "Sum of elementwise products X*Y",
+            "format": "decimal",
+            "display": false
+          },
+          "mean_x": {
+            "expression": "sum_x / n",
+            "dependencies": [
+              "sum_x",
+              "n"
+            ],
+            "label": "Mean of X",
+            "format": "decimal",
+            "display": true
+          },
+          "mean_y": {
+            "expression": "sum_y / n",
+            "dependencies": [
+              "sum_y",
+              "n"
+            ],
+            "label": "Mean of Y",
+            "format": "decimal",
+            "display": true
+          },
+          "covariance": {
+            "expression": "if(population == 'population', (sum_xy - n * mean_x * mean_y) / n, (sum_xy - n * mean_x * mean_y) / (n - 1))",
+            "dependencies": [
+              "sum_xy",
+              "n",
+              "mean_x",
+              "mean_y",
+              "population"
+            ],
+            "label": "Covariance",
+            "unit": "unit_x × unit_y",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "covariance",
+            "label": "Covariance (from sums)",
+            "variable": "covariance",
+            "format": "decimal"
+          },
+          {
+            "id": "mean_x",
+            "label": "Mean of X",
+            "variable": "mean_x",
+            "format": "decimal"
+          },
+          {
+            "id": "mean_y",
+            "label": "Mean of Y",
+            "variable": "mean_y",
+            "format": "decimal"
+          }
+        ]
+      },
+      "cov_matrix": {
+        "label": "Covariance matrix (multivariate)",
+        "description": "Compute the covariance matrix for multivariate data supplied as CSV with observations as rows and variables as columns. Supports sample and population estimators and returns an ordered matrix.",
+        "variables": {
+          "matrix": {
+            "expression": "parse_matrix(field_matrix)",
+            "dependencies": [
+              "field_matrix"
+            ],
+            "label": "Parsed data matrix",
+            "display": false
+          },
+          "rows": {
+            "expression": "row_count(matrix)",
+            "dependencies": [
+              "matrix"
+            ],
+            "label": "Observations",
+            "format": "integer",
+            "display": true
+          },
+          "cols": {
+            "expression": "col_count(matrix)",
+            "dependencies": [
+              "matrix"
+            ],
+            "label": "Variables",
+            "format": "integer",
+            "display": true
+          },
+          "covariance_matrix": {
+            "expression": "covariance_matrix(matrix, population == 'population')",
+            "dependencies": [
+              "matrix",
+              "population"
+            ],
+            "label": "Covariance matrix",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "covariance_matrix",
+            "label": "Covariance matrix",
+            "variable": "covariance_matrix",
+            "format": "decimal"
+          },
+          {
+            "id": "rows",
+            "label": "Number of observations",
+            "variable": "rows",
+            "format": "integer"
+          },
+          {
+            "id": "cols",
+            "label": "Number of variables",
+            "variable": "cols",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "selected_method",
+        "label": "Computation method",
+        "type": "select",
+        "default": "paired_lists",
+        "options": [
+          {
+            "label": "From paired lists (raw data)",
+            "value": "paired_lists"
+          },
+          {
+            "label": "From correlation and standard deviations",
+            "value": "from_correlation"
+          },
+          {
+            "label": "From summary statistics (sums)",
+            "value": "from_summary"
+          },
+          {
+            "label": "Covariance matrix (multivariate)",
+            "value": "cov_matrix"
+          }
+        ]
+      },
+      {
+        "id": "population",
+        "label": "Estimator",
+        "type": "select",
+        "default": "sample",
+        "options": [
+          {
+            "label": "Sample (unbiased, divides by n-1)",
+            "value": "sample"
+          },
+          {
+            "label": "Population (divides by n)",
+            "value": "population"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "paired_input_section",
+        "label": "Paired lists input",
+        "show_when": {
+          "field": "selected_method",
+          "is": "paired_lists"
+        },
+        "fields": [
+          {
+            "id": "field_x",
+            "label": "X values (comma-separated)",
+            "type": "text",
+            "default": "1,2,3,4,5"
+          },
+          {
+            "id": "field_y",
+            "label": "Y values (comma-separated)",
+            "type": "text",
+            "default": "2,4,6,8,10"
+          }
+        ]
+      },
+      {
+        "id": "correlation_section",
+        "label": "Correlation and standard deviations",
+        "show_when": {
+          "field": "selected_method",
+          "is": "from_correlation"
+        },
+        "fields": [
+          {
+            "id": "field_rho",
+            "label": "Pearson correlation coefficient (ρ)",
+            "type": "number",
+            "default": 0,
+            "min": -1,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "field_std_x",
+            "label": "Standard deviation of X (σx)",
+            "type": "number",
+            "default": 1,
+            "min": 0,
+            "step": 0.0001
+          },
+          {
+            "id": "field_std_y",
+            "label": "Standard deviation of Y (σy)",
+            "type": "number",
+            "default": 1,
+            "min": 0,
+            "step": 0.0001
+          }
+        ]
+      },
+      {
+        "id": "summary_section",
+        "label": "Summary statistics input",
+        "show_when": {
+          "field": "selected_method",
+          "is": "from_summary"
+        },
+        "fields": [
+          {
+            "id": "field_n",
+            "label": "Number of observations (n)",
+            "type": "integer",
+            "default": 5,
+            "min": 1,
+            "step": 1
+          },
+          {
+            "id": "field_sum_x",
+            "label": "Sum of X values (ΣX)",
+            "type": "number",
+            "default": 15
+          },
+          {
+            "id": "field_sum_y",
+            "label": "Sum of Y values (ΣY)",
+            "type": "number",
+            "default": 30
+          },
+          {
+            "id": "field_sum_xy",
+            "label": "Sum of products (ΣX×Y)",
+            "type": "number",
+            "default": 110
+          }
+        ]
+      },
+      {
+        "id": "matrix_section",
+        "label": "Multivariate matrix input",
+        "show_when": {
+          "field": "selected_method",
+          "is": "cov_matrix"
+        },
+        "fields": [
+          {
+            "id": "field_matrix",
+            "label": "Matrix CSV (rows = observations, columns = variables)",
+            "type": "text",
+            "default": "1,2,3\n2,3,4\n3,4,5"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This covariance calculator computes covariance between variables using multiple methods suited to different data availability scenarios: raw paired lists, aggregated summaries, correlation with standard deviations, and full multivariate covariance matrices.",
+      "The tool explicitly supports both sample (unbiased) and population estimators, provides numerically stable computation strategies for large datasets, and surfaces basic diagnostics such as sample size and algorithm notes to help you assess reliability."
+    ],
+    "methodology": [
+      "For raw paired data, the calculator parses comma-separated lists and computes means and cross-deviations. By default it uses the sample estimator (dividing by n-1) when you select 'Sample'. For very large datasets a one-pass numerically stable algorithm is used to avoid catastrophic cancellation.",
+      "When only summary statistics are available, the calculator computes covariance from sums and counts using algebraic identities. When correlation and standard deviations are provided, covariance is computed as rho × σx × σy. For multivariate inputs it returns the full covariance matrix with the same estimator choice applied to each covariance term."
+    ],
+    "how_is_calculated": [
+      "Paired lists (sample): covariance = sum((xi - mean_x)*(yi - mean_y)) / (n - 1)",
+      "Paired lists (population): covariance = sum((xi - mean_x)*(yi - mean_y)) / n",
+      "From correlation: covariance = ρ × σx × σy",
+      "From sums: covariance = (Σ(xy) - n × mean_x × mean_y) / (n - 1) for sample estimator"
+    ],
+    "examples": [
+      "Example 1: From paired lists. X = 1,2,3,4,5 and Y = 2,4,6,8,10 with sample estimator returns covariance = 5.",
+      "Example 2: From correlation. If ρ = 0.8, σx = 2 and σy = 3 then covariance = 0.8 × 2 × 3 = 4.8.",
+      "Example 3: Multivariate. Paste a CSV with observations as rows to get a covariance matrix for all variables."
+    ],
+    "faqs": [
+      {
+        "question": "Should I use the sample or population estimator?",
+        "answer": "Use the sample (dividing by n-1) when your data is a sample drawn from a larger population and you want an unbiased estimator of the population covariance. Use the population estimator (dividing by n) when your input contains the entire population of interest."
+      },
+      {
+        "question": "How does numerical stability affect results?",
+        "answer": "When values are large or variances are small, naive two-pass subtraction can lose precision. For large datasets this tool switches to or recommends a one-pass numerically stable algorithm consistent with IEEE 754 floating point handling to reduce rounding errors."
+      },
+      {
+        "question": "Can I compute covariance from only correlation and standard deviations?",
+        "answer": "Yes. Covariance can be recovered from Pearson correlation and the standard deviations of each variable using covariance = ρ × σx × σy. Ensure the correlation is Pearson's correlation and standard deviations match the estimator type intended."
+      },
+      {
+        "question": "What checks are performed on input?",
+        "answer": "The calculator validates that paired lists have equal lengths, checks for non-numeric entries, and warns if the sample size is small. For aggregated inputs it requires at least one observation, and for sample estimators it requires more than one observation."
+      },
+      {
+        "question": "Are results exact or approximate?",
+        "answer": "Results are subject to floating-point rounding and the chosen estimator. For reproducible, high-precision needs use validated statistical software and consider higher-precision arithmetic. See the citations for recommended standards and testing."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Covariance",
+        "definition": "A measure of joint variability between two random variables. Positive covariance indicates variables tend to move in the same direction; negative indicates opposite directions."
+      },
+      {
+        "term": "Sample estimator",
+        "definition": "An estimator computed from sample data that is often adjusted (dividing by n-1) to be unbiased for the population parameter."
+      },
+      {
+        "term": "Population estimator",
+        "definition": "An estimator dividing by n that is appropriate when the data represent the entire population of interest."
+      },
+      {
+        "term": "Pearson correlation (ρ)",
+        "definition": "A standardized measure of linear association; covariance divided by the product of standard deviations."
+      },
+      {
+        "term": "Numerical stability",
+        "definition": "How algorithmic choices affect accumulated rounding error when computing with floating-point arithmetic. Stable algorithms reduce loss of significance."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Engineering Statistics Handbook",
+        "url": "https://www.itl.nist.gov/div898/handbook/"
+      },
+      {
+        "label": "ISO 3534 Statistics — Vocabulary and symbols",
+        "url": "https://www.iso.org/standard/3534.html"
+      },
+      {
+        "label": "IEEE Standard for Floating-Point Arithmetic (IEEE 754)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA - General industry standards (data handling and workplace practices)",
+        "url": "https://www.osha.gov/laws-regs"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/statistics/variance",
+      "/statistics/correlation"
+    ],
+    "external": [
+      {
+        "url": "https://www.itl.nist.gov/div898/handbook/",
+        "label": "NIST Engineering Statistics Handbook",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754 Floating-Point Standard",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "Dataset"
+    ]
+  }
+}

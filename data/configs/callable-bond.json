@@ -1,0 +1,468 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Callable Bond Calculator (Yield to Call / Price / Yield to Worst)",
+    "description": "Advanced callable bond tool to compute Yield to Call (YTC), bond price given a target yield to call, and Yield to Worst (YTW). Includes numeric-method notes, input validation boundaries, and accuracy caveats referencing engineering and information-security standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "yield_to_call",
+    "methods": {
+      "yield_to_call": {
+        "label": "Yield to Call (solve YTC)",
+        "description": "Solve for the internal rate of return (yield per annum) that equates the market price to the present value of remaining coupon payments until the call date plus the call redemption amount.",
+        "variables": {
+          "coupon": {
+            "expression": "face_value * coupon_rate / coupon_freq",
+            "dependencies": [
+              "face_value",
+              "coupon_rate",
+              "coupon_freq"
+            ],
+            "label": "Periodic coupon payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "N": {
+            "expression": "years_to_call * coupon_freq",
+            "dependencies": [
+              "years_to_call",
+              "coupon_freq"
+            ],
+            "label": "Number of remaining coupon periods until call",
+            "unit": "integer",
+            "format": "integer",
+            "display": true
+          },
+          "price_equation": {
+            "expression": "market_price - (coupon*(1-(1+yt/coupon_freq)^(-N))/(yt/coupon_freq) + call_price/(1+yt/coupon_freq)^N)",
+            "dependencies": [
+              "market_price",
+              "coupon",
+              "yt",
+              "coupon_freq",
+              "N",
+              "call_price"
+            ],
+            "label": "Price equation as function of yt (symbolic)",
+            "display": false
+          },
+          "ytc": {
+            "expression": "root_solve(price_equation, variable=yt, initial_guess=0.05)",
+            "dependencies": [
+              "price_equation"
+            ],
+            "label": "Yield to Call (annualized)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ytc_percent",
+            "label": "Yield to Call (%)",
+            "variable": "ytc",
+            "format": "percent",
+            "unit": "%"
+          },
+          {
+            "id": "periodic_coupon",
+            "label": "Periodic coupon (currency)",
+            "variable": "coupon",
+            "format": "currency",
+            "unit": "currency"
+          },
+          {
+            "id": "periods_to_call",
+            "label": "Periods to Call",
+            "variable": "N",
+            "format": "integer",
+            "unit": "periods"
+          }
+        ]
+      },
+      "price_given_yield_call": {
+        "label": "Price given Yield to Call",
+        "description": "Compute the bond price (market price) implied by an annualized yield to call input using standard present-value sum of coupon annuity and redemption at the call date.",
+        "variables": {
+          "coupon": {
+            "expression": "face_value * coupon_rate / coupon_freq",
+            "dependencies": [
+              "face_value",
+              "coupon_rate",
+              "coupon_freq"
+            ],
+            "label": "Periodic coupon payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "N": {
+            "expression": "years_to_call * coupon_freq",
+            "dependencies": [
+              "years_to_call",
+              "coupon_freq"
+            ],
+            "label": "Number of coupon periods until call",
+            "unit": "integer",
+            "format": "integer",
+            "display": true
+          },
+          "price": {
+            "expression": "coupon*(1-(1+yield_to_use/coupon_freq)^(-N))/(yield_to_use/coupon_freq) + call_price/(1+yield_to_use/coupon_freq)^N",
+            "dependencies": [
+              "coupon",
+              "yield_to_use",
+              "coupon_freq",
+              "N",
+              "call_price"
+            ],
+            "label": "Present value (price) given yield_to_use",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "implied_price",
+            "label": "Price (implied by input yield)",
+            "variable": "price",
+            "format": "currency",
+            "unit": "currency"
+          },
+          {
+            "id": "periodic_coupon_price",
+            "label": "Periodic coupon (currency)",
+            "variable": "coupon",
+            "format": "currency",
+            "unit": "currency"
+          }
+        ]
+      },
+      "yield_to_worst": {
+        "label": "Yield to Worst (YTW)",
+        "description": "Compute the lowest yield among all economically relevant redemption scenarios (example: call date and maturity). For a single-call example this returns the minimum of YTC and YTM. Uses numeric root-finding for each scenario.",
+        "variables": {
+          "coupon": {
+            "expression": "face_value * coupon_rate / coupon_freq",
+            "dependencies": [
+              "face_value",
+              "coupon_rate",
+              "coupon_freq"
+            ],
+            "label": "Periodic coupon payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "Nmat": {
+            "expression": "years_to_maturity * coupon_freq",
+            "dependencies": [
+              "years_to_maturity",
+              "coupon_freq"
+            ],
+            "label": "Number of periods to maturity",
+            "unit": "integer",
+            "format": "integer",
+            "display": true
+          },
+          "ytc": {
+            "expression": "root_solve(market_price - (coupon*(1-(1+yt/coupon_freq)^(-N))/(yt/coupon_freq) + call_price/(1+yt/coupon_freq)^N), variable=yt, initial_guess=0.05)",
+            "dependencies": [
+              "market_price",
+              "coupon",
+              "N",
+              "call_price",
+              "coupon_freq"
+            ],
+            "label": "Yield to Call (annualized, solved)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "ytm": {
+            "expression": "root_solve(market_price - (coupon*(1-(1+ytm/coupon_freq)^(-Nmat))/(ytm/coupon_freq) + face_value/(1+ytm/coupon_freq)^Nmat), variable=ytm, initial_guess=0.05)",
+            "dependencies": [
+              "market_price",
+              "coupon",
+              "Nmat",
+              "face_value",
+              "coupon_freq"
+            ],
+            "label": "Yield to Maturity (annualized, solved)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "ytw": {
+            "expression": "min(ytc, ytm)",
+            "dependencies": [
+              "ytc",
+              "ytm"
+            ],
+            "label": "Yield to Worst (annualized)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "yield_to_worst_percent",
+            "label": "Yield to Worst (%)",
+            "variable": "ytw",
+            "format": "percent",
+            "unit": "%"
+          },
+          {
+            "id": "ytc_display",
+            "label": "Yield to Call (%)",
+            "variable": "ytc",
+            "format": "percent",
+            "unit": "%"
+          },
+          {
+            "id": "ytm_display",
+            "label": "Yield to Maturity (%)",
+            "variable": "ytm",
+            "format": "percent",
+            "unit": "%"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "face_value",
+        "label": "Face (par) value",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "coupon_rate",
+        "label": "Coupon rate (annual, decimal)",
+        "type": "number",
+        "default": 0.05,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "coupon_freq",
+        "label": "Coupons per year",
+        "type": "select",
+        "default": 2,
+        "options": [
+          {
+            "label": "Annual (1)",
+            "value": "1"
+          },
+          {
+            "label": "Semi-annual (2)",
+            "value": "2"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          }
+        ]
+      },
+      {
+        "id": "market_price",
+        "label": "Current market price",
+        "type": "number",
+        "default": 950,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "call_price",
+        "label": "Call redemption price",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "years_to_call",
+        "label": "Years until call date",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "years_to_maturity",
+        "label": "Years until maturity",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "yield_to_use",
+        "label": "Yield to use (annual, decimal) — for price given yield",
+        "type": "number",
+        "default": 0.05,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "day_count_basis",
+        "label": "Day count convention (informational)",
+        "type": "select",
+        "default": "30/360",
+        "options": [
+          {
+            "label": "30/360",
+            "value": "30/360"
+          },
+          {
+            "label": "Actual/365",
+            "value": "ACT/365"
+          },
+          {
+            "label": "Actual/Actual",
+            "value": "ACT/ACT"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator supports common operations for callable fixed-income instruments: solving for Yield to Call (YTC), computing the bond price implied by a target yield to call, and computing Yield to Worst (YTW) across typical redemption scenarios.",
+      "The tool uses standard present-value formulas for coupon annuities and redemption amounts and applies numeric root-finding where yields must be solved. It provides clear input limits and explains numerical stability and accuracy expectations."
+    ],
+    "methodology": [
+      "Price model: the market price is the present value of future coupon payments through the relevant redemption date plus the redemption amount at that date. Coupons are treated as level periodic payments based on the coupon frequency.",
+      "Yield solving: when solving for yields (YTC or YTM) the calculator applies a numeric root-finding routine (iterative IRR-like solver) to the price equation. Convergence and precision depend on input ranges, initial guesses, and the presence of extreme cash-flow schedules.",
+      "Validation and safety: numerical methods, floating-point handling, and result reporting adhere to engineering and information assurance best practices. Users should review results near boundaries (very short maturities, near-zero coupons, or deep discount/premium prices)."
+    ],
+    "how_is_calculated": [
+      "Periodic coupon = face_value * coupon_rate / coupon_freq",
+      "Number of periods to redemption (N) = years_to_redemption * coupon_freq",
+      "Price = sum_{t=1..N} coupon / (1 + y/coupon_freq)^t + redemption / (1 + y/coupon_freq)^N",
+      "Yield is solved by finding y such that computed Price equals market_price using numeric root-finding (iterative solver). Yield outputs are annualized and expressed as percentages."
+    ],
+    "examples": [
+      "Example 1: A 5% semiannual coupon bond, face value 1,000, callable in 5 years at 1,000, current price 950. Use Yield to Call method to solve for the annualized YTC.",
+      "Example 2: To find the price implied by a 4% annual yield to call, enter yield_to_use = 0.04 and use the Price given Yield to Call method to compute the present value at the call date."
+    ],
+    "faqs": [
+      {
+        "question": "What is the difference between Yield to Call and Yield to Maturity?",
+        "answer": "Yield to Call assumes the bond will be redeemed at the first specified call date (at the call price). Yield to Maturity assumes the bond will be held to final maturity and redeemed at par (or the stated redemption). Yield to Worst is the more conservative (lowest) yield among applicable scenarios."
+      },
+      {
+        "question": "How accurate are the solved yields?",
+        "answer": "Solved yields use iterative numeric methods. For ordinary cases accuracy is within 1 basis point when inputs are well-scaled. In edge cases (very low coupon, extremely short periods, or large price deviations) numerical convergence can be slower or require stronger solver tolerances; check the calculator's warnings and try slight changes to initial guess if needed."
+      },
+      {
+        "question": "Which day count convention is used?",
+        "answer": "This calculator reports results assuming periodic coupon arithmetic based on coupon frequency. Day-count adjustments (Accrued interest and settlement conventions) are informational here; for settlement-accrued calculations use a dedicated bond accrual calculator that supports actual settlement dates and day-count conventions."
+      },
+      {
+        "question": "Does this calculator consider embedded options other than the call?",
+        "answer": "No. This tool models the callable feature as a deterministic redemption at a specified call date and call price. It does not model optionality valuation (holder/issuer option value using option-pricing or interest-rate models). For option-adjusted valuations use a specialized fixed-income analytics platform."
+      },
+      {
+        "question": "What are the input limits and safeguards?",
+        "answer": "Inputs must be non-negative. Coupon rate is entered as a decimal (for example 0.05 for 5%). Coupon frequency options are 1, 2, or 4. Years to call and years to maturity should be non-negative and reflect the same time units (years). The solver may fail to converge for extreme or inconsistent inputs; the UI will report errors and suggest adjusting the initial yield guess."
+      },
+      {
+        "question": "What precision and standards guide this tool?",
+        "answer": "Numeric accuracy and software quality guidance reference industry standards. For numerical stability and floating-point considerations we follow IEEE recommendations for binary floating-point arithmetic; for software development lifecycle and data integrity we reference ISO management standards and NIST guidance on secure, auditable computation."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration (general compliance reference)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Yield to Call (YTC)",
+        "definition": "Annualized internal rate of return assuming the bond is called at the specified call date and call price."
+      },
+      {
+        "term": "Yield to Maturity (YTM)",
+        "definition": "Annualized internal rate of return assuming the bond is held to final maturity and redeemed at stated maturity value."
+      },
+      {
+        "term": "Yield to Worst (YTW)",
+        "definition": "The lowest yield among all considered redemption scenarios (e.g., call dates and maturity)."
+      },
+      {
+        "term": "Coupon frequency",
+        "definition": "Number of coupon payments per year (commonly 1, 2, or 4)."
+      },
+      {
+        "term": "Periodic coupon",
+        "definition": "Coupon payment per period calculated as face value times coupon rate divided by coupon frequency."
+      },
+      {
+        "term": "Root-finding / solver",
+        "definition": "Numerical method that iteratively finds a yield such that the present-value equation equals the market price. Convergence depends on input conditioning and solver settings."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/fixed-income/bonds/overview",
+      "/fixed-income/bonds/ytw-explained"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/publications",
+        "label": "NIST publications (general guidance)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standards.html",
+        "label": "ISO standards overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/publications/index.html",
+        "label": "IEEE publications",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

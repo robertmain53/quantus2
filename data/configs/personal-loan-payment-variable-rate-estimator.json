@@ -1,0 +1,461 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Personal Loan Payment — Variable Rate Estimator",
+    "description": "Estimate initial and post-adjustment payments, and a conservative interest estimate for personal loans with variable/adjustable rates. Supports index+margin ARM-style assumptions or a user-assumed future rate. Includes configurable caps, floors, payment frequency and extra payments."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "index_arm",
+    "methods": {
+      "index_arm": {
+        "label": "Index-based variable rate (ARM-style)",
+        "description": "Estimate payment behavior when the rate resets based on an external index plus a margin, subject to periodic and lifetime caps. Future index movements are assumed constant at the current index unless you provide a different assumed future rate.",
+        "variables": {
+          "monthly_initial_rate": {
+            "expression": "initial_rate_pct / 100 / payments_per_year",
+            "dependencies": [
+              "initial_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Initial periodic rate",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": null,
+            "format": "integer",
+            "display": false
+          },
+          "initial_payment": {
+            "expression": "loan_amount * monthly_initial_rate / (1 - (1+monthly_initial_rate)^(-n))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_initial_rate",
+              "n"
+            ],
+            "label": "Initial periodic payment (assuming level amortization)",
+            "unit": null,
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_rate_pct": {
+            "expression": "index_rate_pct + margin_pct",
+            "dependencies": [
+              "index_rate_pct",
+              "margin_pct"
+            ],
+            "label": "Calculated adjusted annual rate (index + margin)",
+            "unit": "percent",
+            "format": "percent",
+            "display": false
+          },
+          "capped_adjusted_rate_pct": {
+            "expression": "min( max(adjusted_rate_pct, rate_floor_pct), initial_rate_pct + rate_cap_per_adjustment_pct, initial_rate_pct + lifetime_cap_pct )",
+            "dependencies": [
+              "adjusted_rate_pct",
+              "rate_floor_pct",
+              "initial_rate_pct",
+              "rate_cap_per_adjustment_pct",
+              "lifetime_cap_pct"
+            ],
+            "label": "Adjusted annual rate after applying floor and caps",
+            "unit": "percent",
+            "format": "percent",
+            "display": true
+          },
+          "monthly_adjusted_rate": {
+            "expression": "capped_adjusted_rate_pct / 100 / payments_per_year",
+            "dependencies": [
+              "capped_adjusted_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Periodic adjusted rate",
+            "unit": null,
+            "format": "decimal",
+            "display": false
+          },
+          "n_remaining": {
+            "expression": "n - adjustment_period_months",
+            "dependencies": [
+              "n",
+              "adjustment_period_months"
+            ],
+            "label": "Remaining number of payments after first adjustment (approx.)",
+            "unit": null,
+            "format": "integer",
+            "display": false
+          },
+          "projected_payment": {
+            "expression": "loan_amount * monthly_adjusted_rate / (1 - (1+monthly_adjusted_rate)^(-n_remaining))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_adjusted_rate",
+              "n_remaining"
+            ],
+            "label": "Projected periodic payment after first adjustment (approximate)",
+            "unit": null,
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_interest": {
+            "expression": "(initial_payment * n) - loan_amount",
+            "dependencies": [
+              "initial_payment",
+              "n",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest (simple baseline — does not fully model future adjustments)",
+            "unit": null,
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "initial_monthly_payment",
+            "label": "Initial payment",
+            "variable": "initial_payment",
+            "unit": null,
+            "format": "currency"
+          },
+          {
+            "id": "projected_monthly_payment_after_adjustment",
+            "label": "Projected payment (after first adjustment)",
+            "variable": "projected_payment",
+            "unit": null,
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_rate_annual_pct",
+            "label": "Adjusted annual rate (capped/floored)",
+            "variable": "capped_adjusted_rate_pct",
+            "unit": "percent",
+            "format": "percent"
+          },
+          {
+            "id": "estimated_total_interest",
+            "label": "Estimated total interest (baseline)",
+            "variable": "estimated_total_interest",
+            "unit": null,
+            "format": "currency"
+          }
+        ]
+      },
+      "assumed_constant_future_rate": {
+        "label": "User-assumed constant future rate",
+        "description": "Estimate payments if you assume a fixed future annual rate for the remainder of the loan term.",
+        "variables": {
+          "monthly_assumed_rate": {
+            "expression": "assumed_future_rate_pct / 100 / payments_per_year",
+            "dependencies": [
+              "assumed_future_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Assumed periodic rate",
+            "unit": null,
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": null,
+            "format": "integer",
+            "display": false
+          },
+          "assumed_payment": {
+            "expression": "loan_amount * monthly_assumed_rate / (1 - (1+monthly_assumed_rate)^(-n))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_assumed_rate",
+              "n"
+            ],
+            "label": "Periodic payment under the assumed constant rate",
+            "unit": null,
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_interest_assumed": {
+            "expression": "(assumed_payment * n) - loan_amount",
+            "dependencies": [
+              "assumed_payment",
+              "n",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest under assumption",
+            "unit": null,
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "assumed_periodic_payment",
+            "label": "Periodic payment (assumed rate)",
+            "variable": "assumed_payment",
+            "unit": null,
+            "format": "currency"
+          },
+          {
+            "id": "estimated_total_interest_assumed",
+            "label": "Estimated total interest (assumed)",
+            "variable": "estimated_total_interest_assumed",
+            "unit": null,
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "initial_rate_pct",
+        "label": "Initial annual interest rate (%)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "index_rate_pct",
+        "label": "Current index rate (%)",
+        "type": "number",
+        "default": 4,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "margin_pct",
+        "label": "Margin (%) (index + margin = contract rate)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "adjustment_period_months",
+        "label": "Adjustment period (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 360,
+        "step": 1
+      },
+      {
+        "id": "rate_cap_per_adjustment_pct",
+        "label": "Periodic rate cap (%) (max change per adjustment)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "lifetime_cap_pct",
+        "label": "Lifetime cap above initial rate (%)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "rate_floor_pct",
+        "label": "Rate floor (%) (minimum allowed rate)",
+        "type": "number",
+        "default": 0,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "assumption_mode",
+        "label": "Future-rate assumption",
+        "type": "select",
+        "default": "index_based",
+        "options": [
+          {
+            "label": "Use index + margin (default)",
+            "value": "index_based"
+          },
+          {
+            "label": "Assume a constant future rate I provide",
+            "value": "assumed"
+          }
+        ]
+      },
+      {
+        "id": "assumed_future_rate_pct",
+        "label": "Assumed future annual rate (%)",
+        "type": "number",
+        "default": 6,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "extra_payment_amount",
+        "label": "Extra payment amount (each occurrence)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_frequency",
+        "label": "Extra payment frequency",
+        "type": "select",
+        "default": "none",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Monthly",
+            "value": "monthly"
+          },
+          {
+            "label": "Yearly",
+            "value": "yearly"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you understand likely payment outcomes for personal loans with variable or adjustable interest rates. It calculates the initial payment, and provides conservative estimates of payment after the first scheduled rate adjustment under configurable caps, floors, and an index+margin model or a user-specified future rate.",
+      "The tool uses standard amortization formulas for periodic payment calculation and applies contractual constraints (periodic caps, lifetime caps, floors). It does not predict index movements; instead it offers a reproducible baseline by assuming the current index remains constant unless you provide an alternate assumption.",
+      "Use the settings to match your loan document: enter the contractual index, margin, adjustment frequency and any caps or floors shown in your agreement. For regulatory or financial planning decisions, consult your loan contract and a licensed advisor."
+    ],
+    "methodology": [
+      "Initial payment is computed with the standard amortization formula: payment = P * r / (1 - (1+r)^-n) where P is principal, r is periodic rate, n is number of periods.",
+      "For index-based scenarios the calculation obtains an adjusted rate = index + margin, then applies contractual floor and caps. The estimator computes an approximate payment using that adjusted rate and the remaining number of payments. This is a simplification that provides a transparent, reproducible scenario rather than a full balance-by-balance projection.",
+      "When you choose a user-assumed future rate, the tool re-calculates payments using that constant rate for the entire remaining term."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = annual_rate_percent / 100 / payments_per_year.",
+      "Total payments n = term_years * payments_per_year.",
+      "Level amortizing payment = loan_amount * periodic_rate / (1 - (1+periodic_rate)^(-n)).",
+      "Adjusted annual rate = index_rate + margin, then apply floor and caps: capped_rate = min(max(adjusted_rate, floor), initial_rate + periodic_cap, initial_rate + lifetime_cap).",
+      "Projected payment after adjustment uses capped_rate converted to periodic rate and the remaining number of payments as an input to the same amortization formula (approximate)."
+    ],
+    "examples": [
+      "Example 1: $10,000 loan, 5-year term, 12 monthly payments/year, initial rate 6%. With index 4% and margin 2%, and a periodic cap of 2% and lifetime cap of 5%, the tool shows the initial payment and an approximate projected payment if the index stays at 4%.",
+      "Example 2: Same loan but you assume the future rate will be 8% permanently. Select 'Assume a constant future rate' and enter 8% to see the resulting periodic payment and total interest under that assumption."
+    ],
+    "summary": [
+      "This estimator provides quick, reproducible scenarios to compare initial vs. post-adjustment payments under configurable contract terms or user assumptions.",
+      "It is not a substitute for a full, period-by-period amortization with changing balances when index behavior or partial amortization is material; use the conservative assumption options or consult a lender/financial advisor for precise payoff schedules."
+    ],
+    "faqs": [
+      {
+        "question": "Does this tool predict future index movements?",
+        "answer": "No. The tool offers two reproducible scenarios: (1) index-based (assumes current index stays constant unless you change it) and (2) a user-assumed constant future rate. It does not forecast index rates."
+      },
+      {
+        "question": "Are projected payments exact after a rate reset?",
+        "answer": "Projections are approximate. The tool recalculates a level payment using the full remaining term and the capped/floored adjusted rate. It does not simulate the exact contractual balance path between adjustments or partial amortization events and therefore may differ from lender-provided schedules."
+      },
+      {
+        "question": "How should I use caps and floors?",
+        "answer": "Enter the periodic cap, lifetime cap and any floor exactly as shown in your loan contract. The estimator applies those constraints when calculating the adjusted rate used for projections."
+      },
+      {
+        "question": "Can I model extra payments?",
+        "answer": "You can enter a recurring extra payment amount and frequency to get a qualitative view, but this estimator does not perform full iterative balance reduction per period. For precise payoff dates and interest savings, use a full amortization schedule calculator or exportable schedule."
+      },
+      {
+        "question": "How accurate is the output and what should I verify?",
+        "answer": "Outputs are best-effort estimates based on standard formulas and the assumptions you provide. Verify with your loan contract and lender for exact post-adjustment payments and recast rules. See the accuracy and standards notes below."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Index",
+        "definition": "A published reference rate (for example, a treasury rate or commercial index) used by lenders to determine variable interest rate adjustments."
+      },
+      {
+        "term": "Margin",
+        "definition": "A fixed percentage added to the index to form the contract interest rate (index + margin)."
+      },
+      {
+        "term": "Periodic cap",
+        "definition": "Maximum increase or decrease in the interest rate allowed at a single adjustment interval."
+      },
+      {
+        "term": "Lifetime cap",
+        "definition": "Maximum total increase allowed over the initial contract rate for the life of the loan."
+      },
+      {
+        "term": "Floor",
+        "definition": "Minimum allowable interest rate under the loan contract."
+      },
+      {
+        "term": "Amortizing payment",
+        "definition": "A payment that covers interest and reduces principal so the loan balance reaches zero at the end of the term."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Software and systems testing and assurance principles",
+        "url": "https://www.nist.gov/topics/software-quality"
+      },
+      {
+        "label": "ISO — Quality management standards (ISO 9001)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE — Standards for software reliability and engineering ethics",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA — General workplace safety and operational controls (tool reliability governance)",
+        "url": "https://www.osha.gov/"
+      }
+    ]
+  }
+}

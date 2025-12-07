@@ -1,0 +1,400 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Working Capital Calculator",
+    "description": "Interactive tool to compute working capital, current ratio, and working capital needs. Supports balance-sheet and days-based methods with clear assumptions, limits, and accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "basic",
+    "methods": {
+      "basic": {
+        "label": "Basic working capital",
+        "description": "Simple balance-sheet working capital calculated as Current Assets minus Current Liabilities.",
+        "variables": {
+          "wc_balance": {
+            "expression": "current_assets - current_liabilities",
+            "dependencies": [
+              "current_assets",
+              "current_liabilities"
+            ],
+            "label": "Working Capital (Current Assets − Current Liabilities)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "working_capital",
+            "label": "Working capital",
+            "variable": "wc_balance",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "ratio": {
+        "label": "Current ratio (working capital ratio)",
+        "description": "Liquidity ratio showing Current Assets divided by Current Liabilities. Use with care where liabilities may be zero or close to zero.",
+        "variables": {
+          "current_ratio": {
+            "expression": "current_assets / current_liabilities",
+            "dependencies": [
+              "current_assets",
+              "current_liabilities"
+            ],
+            "label": "Current Ratio (Current Assets ÷ Current Liabilities)",
+            "format": "decimal",
+            "display": true
+          },
+          "wc_balance": {
+            "expression": "current_assets - current_liabilities",
+            "dependencies": [
+              "current_assets",
+              "current_liabilities"
+            ],
+            "label": "Working Capital (for reference)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_ratio",
+            "label": "Current ratio",
+            "variable": "current_ratio",
+            "format": "decimal"
+          },
+          {
+            "id": "working_capital",
+            "label": "Working capital (for reference)",
+            "variable": "wc_balance",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "needs": {
+        "label": "Working capital needs (balance-sheet and days-based)",
+        "description": "Estimates working capital requirement using either balance-sheet components or a days-based turnover approach. Presents both metrics to support decision-making.",
+        "variables": {
+          "required_wc_balance": {
+            "expression": "accounts_receivable + inventory - accounts_payable",
+            "dependencies": [
+              "accounts_receivable",
+              "inventory",
+              "accounts_payable"
+            ],
+            "label": "Required working capital (AR + Inventory − AP)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "daily_sales": {
+            "expression": "annual_sales / period_days",
+            "dependencies": [
+              "annual_sales",
+              "period_days"
+            ],
+            "label": "Average daily sales",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "working_capital_by_days": {
+            "expression": "daily_sales * (days_sales_outstanding + days_inventory_outstanding - days_payables_outstanding)",
+            "dependencies": [
+              "daily_sales",
+              "days_sales_outstanding",
+              "days_inventory_outstanding",
+              "days_payables_outstanding"
+            ],
+            "label": "Working capital by days (days-based need)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_wc_balance",
+            "label": "Working capital (balance-sheet estimate)",
+            "variable": "required_wc_balance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "working_capital_by_days",
+            "label": "Working capital (days-based estimate)",
+            "variable": "working_capital_by_days",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "basic",
+        "options": [
+          {
+            "label": "Basic working capital (balance sheet)",
+            "value": "basic"
+          },
+          {
+            "label": "Current ratio (working capital ratio)",
+            "value": "ratio"
+          },
+          {
+            "label": "Working capital needs (AR/Inventory/AP and days-based)",
+            "value": "needs"
+          }
+        ]
+      },
+      {
+        "id": "current_assets",
+        "label": "Current assets (total)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_liabilities",
+        "label": "Current liabilities (total)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "target_current_ratio",
+        "label": "Target current ratio (for benchmarking)",
+        "type": "number",
+        "default": 1.5,
+        "min": 0,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "needs_inputs",
+        "label": "Inputs for working capital needs",
+        "show_when": {
+          "field": "method",
+          "is": "needs"
+        },
+        "fields": [
+          {
+            "id": "accounts_receivable",
+            "label": "Accounts receivable (trade receivables)",
+            "type": "number",
+            "default": 30000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "inventory",
+            "label": "Inventory (total)",
+            "type": "number",
+            "default": 20000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "accounts_payable",
+            "label": "Accounts payable (trade payables)",
+            "type": "number",
+            "default": 15000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "annual_sales",
+            "label": "Annual sales (net revenue)",
+            "type": "number",
+            "default": 1200000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "annual_cogs",
+            "label": "Annual cost of goods sold (COGS)",
+            "type": "number",
+            "default": 800000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "days_sales_outstanding",
+            "label": "Days Sales Outstanding (DSO)",
+            "type": "integer",
+            "default": 45,
+            "min": 0,
+            "max": 365,
+            "step": 1
+          },
+          {
+            "id": "days_inventory_outstanding",
+            "label": "Days Inventory Outstanding (DIO)",
+            "type": "integer",
+            "default": 60,
+            "min": 0,
+            "max": 365,
+            "step": 1
+          },
+          {
+            "id": "days_payables_outstanding",
+            "label": "Days Payables Outstanding (DPO)",
+            "type": "integer",
+            "default": 30,
+            "min": 0,
+            "max": 365,
+            "step": 1
+          },
+          {
+            "id": "period_days",
+            "label": "Days per period (used for daily averages)",
+            "type": "integer",
+            "default": 365,
+            "min": 1,
+            "max": 366,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps finance and operations teams estimate working capital, liquidity ratios, and working capital needs using both balance-sheet and days-based approaches. It is intended for budgeting, cash-flow planning, and sensitivity checks.",
+      "Choose the method that matches your use case: 'Basic' for a snapshot from the balance sheet, 'Current ratio' to assess liquidity, or 'Working capital needs' to project cash tied up in operations using receivables, inventory and payables."
+    ],
+    "methodology": [
+      "Basic method: working capital = Current Assets − Current Liabilities. Use this for an immediate balance-sheet snapshot.",
+      "Current ratio: Current Assets ÷ Current Liabilities. Presents liquidity as a unitless ratio; values close to or below 1 indicate potential short-term liquidity pressure.",
+      "Needs method: two complementary estimates are presented. A balance-sheet-based estimate (AR + Inventory − AP) and a days-based estimate using daily sales multiplied by net operating days (DSO + DIO − DPO). Both metrics provide perspective; use the higher value for conservative planning."
+    ],
+    "how_is_calculated": [
+      "Working capital = current_assets - current_liabilities",
+      "Current ratio = current_assets / current_liabilities",
+      "Balance-sheet need = accounts_receivable + inventory - accounts_payable",
+      "Days-based need = (annual_sales / period_days) × (DSO + DIO − DPO)",
+      "All currency outputs are shown as nominal units; ensure inputs use consistent currency and time-period conventions."
+    ],
+    "examples": [
+      "Example 1 (basic): Current assets 150,000 and current liabilities 90,000 → Working capital = 60,000.",
+      "Example 2 (days-based): Annual sales 1,200,000, DSO 45, DIO 60, DPO 30, period 365 → daily sales = 3,287.67; days-based need ≈ 3,287.67 × (45 + 60 − 30) = 3,287.67 × 75 ≈ 246,575."
+    ],
+    "faqs": [
+      {
+        "question": "Which method should I use?",
+        "answer": "Use the basic method for a snapshot from your balance sheet. Use the current ratio to benchmark liquidity. Use the needs method when forecasting cash tied to operations; review both the balance-sheet and days-based estimates and reconcile differences with accounting."
+      },
+      {
+        "question": "What if current liabilities are zero?",
+        "answer": "Division by zero will make the current ratio undefined. The tool shows the calculation but users must avoid interpreting ratios when liabilities are zero or near-zero. Refer to your accounting team for context."
+      },
+      {
+        "question": "How accurate are results?",
+        "answer": "Outputs are estimates based on user inputs and standard arithmetic formulas. They do not replace audited financial statements, professional accounting advice, or institution-specific regulatory calculations. Validate inputs and document assumptions before making decisions."
+      },
+      {
+        "question": "What controls and standards support this tool?",
+        "answer": "This tool follows data handling and documentation best practices aligned with general technical frameworks. For security and process controls, consult NIST guidelines. For management systems and quality controls, consult ISO standards. For professional & technical engineering practices, see IEEE resources. For workplace safety and operational compliance, consult applicable OSHA guidance. The tool itself is an estimation aid and not a standards certification."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Working capital",
+        "definition": "Current Assets minus Current Liabilities; a measure of short-term liquidity."
+      },
+      {
+        "term": "Current ratio",
+        "definition": "Current Assets divided by Current Liabilities; a liquidity ratio indicating the ability to meet short-term obligations."
+      },
+      {
+        "term": "Days Sales Outstanding (DSO)",
+        "definition": "Average number of days to collect payment after a sale."
+      },
+      {
+        "term": "Days Inventory Outstanding (DIO)",
+        "definition": "Average number of days inventory is held before sale."
+      },
+      {
+        "term": "Days Payables Outstanding (DPO)",
+        "definition": "Average number of days the company takes to pay its suppliers."
+      },
+      {
+        "term": "COGS",
+        "definition": "Cost of Goods Sold; the direct costs attributable to the production of the goods sold by a company."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

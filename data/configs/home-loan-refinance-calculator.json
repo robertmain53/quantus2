@@ -1,0 +1,609 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Refinance & Bi‑Weekly Payment Calculator (Advanced)",
+    "description": "Compare keeping your existing loan vs refinancing and optionally switching to bi‑weekly payments. Estimates monthly and bi‑weekly payments, total interest, net savings after refinance costs, and an approximate break‑even period. Includes accuracy notes and links to relevant standards for data handling and testing."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "refinance_with_choice",
+    "methods": {
+      "refinance_with_choice": {
+        "label": "Refinance comparison (monthly vs optional bi‑weekly)",
+        "description": "Estimate outcomes if you refinance at a new rate and term, and optionally make bi‑weekly payments. Compares remaining interest on the current loan to interest on the proposed loan and reports estimated net savings and break‑even.",
+        "variables": {
+          "curr_monthly_rate": {
+            "expression": "current_annual_rate/100/12",
+            "dependencies": [
+              "current_annual_rate"
+            ],
+            "label": "Current monthly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "curr_remaining_months": {
+            "expression": "remaining_term_years*12",
+            "dependencies": [
+              "remaining_term_years"
+            ],
+            "label": "Remaining months on current loan",
+            "format": "integer",
+            "display": false
+          },
+          "curr_monthly_payment": {
+            "expression": "current_balance*(curr_monthly_rate)/(1-pow(1+curr_monthly_rate,-curr_remaining_months))",
+            "dependencies": [
+              "current_balance",
+              "curr_monthly_rate",
+              "curr_remaining_months"
+            ],
+            "label": "Estimated current monthly payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "curr_total_payments_left": {
+            "expression": "curr_monthly_payment*curr_remaining_months",
+            "dependencies": [
+              "curr_monthly_payment",
+              "curr_remaining_months"
+            ],
+            "label": "Estimated total remaining payments (current loan)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "curr_total_interest_left": {
+            "expression": "curr_total_payments_left-current_balance",
+            "dependencies": [
+              "curr_total_payments_left",
+              "current_balance"
+            ],
+            "label": "Estimated interest remaining (current loan)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "new_monthly_rate": {
+            "expression": "new_annual_rate/100/12",
+            "dependencies": [
+              "new_annual_rate"
+            ],
+            "label": "Proposed monthly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "new_term_months": {
+            "expression": "new_term_years*12",
+            "dependencies": [
+              "new_term_years"
+            ],
+            "label": "Proposed loan term in months",
+            "format": "integer",
+            "display": false
+          },
+          "new_monthly_payment": {
+            "expression": "current_balance*(new_monthly_rate)/(1-pow(1+new_monthly_rate,-new_term_months))",
+            "dependencies": [
+              "current_balance",
+              "new_monthly_rate",
+              "new_term_months"
+            ],
+            "label": "Estimated monthly payment on refinanced loan",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "new_total_paid_monthly": {
+            "expression": "new_monthly_payment*new_term_months+refinance_costs",
+            "dependencies": [
+              "new_monthly_payment",
+              "new_term_months",
+              "refinance_costs"
+            ],
+            "label": "Total cash paid over life of new loan (monthly payments + costs)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "new_total_interest_monthly": {
+            "expression": "new_total_paid_monthly-current_balance",
+            "dependencies": [
+              "new_total_paid_monthly",
+              "current_balance"
+            ],
+            "label": "Estimated interest over life of new loan (monthly)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_rate": {
+            "expression": "new_annual_rate/100/26",
+            "dependencies": [
+              "new_annual_rate"
+            ],
+            "label": "Proposed bi‑weekly interest rate (per period)",
+            "format": "decimal",
+            "display": false
+          },
+          "new_biweekly_n": {
+            "expression": "new_term_years*26",
+            "dependencies": [
+              "new_term_years"
+            ],
+            "label": "Number of bi‑weekly payments",
+            "format": "integer",
+            "display": false
+          },
+          "new_biweekly_payment": {
+            "expression": "current_balance*(biweekly_rate)/(1-pow(1+biweekly_rate,-new_biweekly_n))",
+            "dependencies": [
+              "current_balance",
+              "biweekly_rate",
+              "new_biweekly_n"
+            ],
+            "label": "Estimated bi‑weekly payment (if switching to bi‑weekly)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "new_total_paid_biweekly": {
+            "expression": "new_biweekly_payment*new_biweekly_n+refinance_costs",
+            "dependencies": [
+              "new_biweekly_payment",
+              "new_biweekly_n",
+              "refinance_costs"
+            ],
+            "label": "Total cash paid over life of new loan (bi‑weekly payments + costs)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "new_total_interest_biweekly": {
+            "expression": "new_total_paid_biweekly-current_balance",
+            "dependencies": [
+              "new_total_paid_biweekly",
+              "current_balance"
+            ],
+            "label": "Estimated interest over life of new loan (bi‑weekly)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_savings_monthly": {
+            "expression": "curr_total_interest_left-new_total_interest_monthly",
+            "dependencies": [
+              "curr_total_interest_left",
+              "new_total_interest_monthly"
+            ],
+            "label": "Estimated interest savings if refinancing and staying monthly",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_savings_biweekly": {
+            "expression": "curr_total_interest_left-new_total_interest_biweekly",
+            "dependencies": [
+              "curr_total_interest_left",
+              "new_total_interest_biweekly"
+            ],
+            "label": "Estimated interest savings if refinancing and switching to bi‑weekly",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_payment_reduction": {
+            "expression": "curr_monthly_payment-new_monthly_payment",
+            "dependencies": [
+              "curr_monthly_payment",
+              "new_monthly_payment"
+            ],
+            "label": "Estimated monthly payment reduction",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "approx_break_even_months": {
+            "expression": "refinance_costs/(monthly_payment_reduction)",
+            "dependencies": [
+              "refinance_costs",
+              "monthly_payment_reduction"
+            ],
+            "label": "Approximate break‑even months (costs divided by monthly savings)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "curr_monthly_payment",
+            "label": "Current monthly payment",
+            "variable": "curr_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "curr_total_interest_left",
+            "label": "Interest remaining on current loan",
+            "variable": "curr_total_interest_left",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "new_monthly_payment",
+            "label": "New monthly payment (refinance)",
+            "variable": "new_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "new_biweekly_payment",
+            "label": "New bi‑weekly payment (refinance)",
+            "variable": "new_biweekly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "new_total_interest_monthly",
+            "label": "Total interest if refinanced (monthly payments)",
+            "variable": "new_total_interest_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "new_total_interest_biweekly",
+            "label": "Total interest if refinanced (bi‑weekly payments)",
+            "variable": "new_total_interest_biweekly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_savings_monthly",
+            "label": "Estimated interest savings (monthly)",
+            "variable": "estimated_savings_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_savings_biweekly",
+            "label": "Estimated interest savings (bi‑weekly)",
+            "variable": "estimated_savings_biweekly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "approx_break_even_months",
+            "label": "Approximate break‑even time (months)",
+            "variable": "approx_break_even_months",
+            "unit": "months",
+            "format": "decimal"
+          }
+        ]
+      },
+      "convert_existing_to_biweekly": {
+        "label": "Convert existing loan to bi‑weekly schedule (no refinance)",
+        "description": "Estimate the effect of switching to bi‑weekly payments on your current loan without refinancing. Uses the current balance, current annual rate and remaining term to estimate reduced interest and earlier payoff when paying bi‑weekly.",
+        "variables": {
+          "curr_monthly_rate": {
+            "expression": "current_annual_rate/100/12",
+            "dependencies": [
+              "current_annual_rate"
+            ],
+            "label": "Current monthly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "curr_remaining_months": {
+            "expression": "remaining_term_years*12",
+            "dependencies": [
+              "remaining_term_years"
+            ],
+            "label": "Remaining months on current loan",
+            "format": "integer",
+            "display": false
+          },
+          "curr_monthly_payment": {
+            "expression": "current_balance*(curr_monthly_rate)/(1-pow(1+curr_monthly_rate,-curr_remaining_months))",
+            "dependencies": [
+              "current_balance",
+              "curr_monthly_rate",
+              "curr_remaining_months"
+            ],
+            "label": "Current monthly payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equiv_biweekly_payment": {
+            "expression": "curr_monthly_payment/2",
+            "dependencies": [
+              "curr_monthly_payment"
+            ],
+            "label": "Simple equivalent bi‑weekly payment (half monthly)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_rate": {
+            "expression": "current_annual_rate/100/26",
+            "dependencies": [
+              "current_annual_rate"
+            ],
+            "label": "Bi‑weekly interest rate (per period)",
+            "format": "decimal",
+            "display": false
+          },
+          "n_biweekly_if_equiv": {
+            "expression": "remaining_term_years*26",
+            "dependencies": [
+              "remaining_term_years"
+            ],
+            "label": "Bi‑weekly periods remaining (if same years)",
+            "format": "integer",
+            "display": false
+          },
+          "estimated_total_interest_if_equiv": {
+            "expression": "equiv_biweekly_payment*n_biweekly_if_equiv-current_balance",
+            "dependencies": [
+              "equiv_biweekly_payment",
+              "n_biweekly_if_equiv",
+              "current_balance"
+            ],
+            "label": "Estimated total interest if making equivalent bi‑weekly payments",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved_by_biweekly": {
+            "expression": "curr_monthly_payment*curr_remaining_months-current_balance-estimated_total_interest_if_equiv",
+            "dependencies": [
+              "curr_monthly_payment",
+              "curr_remaining_months",
+              "current_balance",
+              "estimated_total_interest_if_equiv"
+            ],
+            "label": "Rough estimate of interest saved by switching to bi‑weekly",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "curr_monthly_payment",
+            "label": "Current monthly payment",
+            "variable": "curr_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equiv_biweekly_payment",
+            "label": "Equivalent bi‑weekly payment (half of monthly)",
+            "variable": "equiv_biweekly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_total_interest_if_equiv",
+            "label": "Estimated total interest with bi‑weekly payments",
+            "variable": "estimated_total_interest_if_equiv",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved_by_biweekly",
+            "label": "Estimated interest saved by switching to bi‑weekly",
+            "variable": "interest_saved_by_biweekly",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_balance",
+        "label": "Current loan balance",
+        "type": "number",
+        "default": 250000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "current_annual_rate",
+        "label": "Current annual interest rate (%)",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "remaining_term_years",
+        "label": "Remaining term (years)",
+        "type": "number",
+        "default": 25,
+        "min": 0.1,
+        "max": 40,
+        "step": 0.25
+      },
+      {
+        "id": "new_annual_rate",
+        "label": "Proposed refinance annual rate (%)",
+        "type": "number",
+        "default": 3.75,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "new_term_years",
+        "label": "Refinance term (years)",
+        "type": "number",
+        "default": 30,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "refinance_costs",
+        "label": "Estimated refinance costs (closing, fees) paid up front",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "make_biweekly",
+        "label": "Would you switch to bi‑weekly payments after refinancing?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No — stay monthly",
+            "value": "no"
+          },
+          {
+            "label": "Yes — switch to bi‑weekly",
+            "value": "yes"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "biweekly_only",
+        "label": "Bi‑weekly settings",
+        "show_when": {
+          "field": "make_biweekly",
+          "is": "yes"
+        },
+        "fields": [
+          {
+            "id": "biweekly_note",
+            "label": "Note: Bi‑weekly calculation assumes standard 26 payments per year",
+            "type": "text",
+            "default": "26"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you compare the financial impact of refinancing your home loan and optionally switching to bi‑weekly payments. It estimates monthly and bi‑weekly payment amounts, total interest over the loan life, approximate net savings after refinance costs, and a simple break‑even period.",
+      "Results are estimates based on amortization formulas and the inputs you provide. Use the outputs to inform discussions with lenders; get exact figures from loan documents before deciding."
+    ],
+    "methodology": [
+      "We use standard amortization formulas to compute periodic payment amounts: for a period rate r and n periods, payment = P * r / (1 - (1+r)^-n). For bi‑weekly scenarios we convert the annual rate to a per‑period rate by dividing by 26. For monthly scenarios we divide by 12.",
+      "The tool compares estimated remaining interest on your current loan to interest under the proposed loan. Refinance costs are treated as upfront cash costs added to the total cash paid when computing net savings and approximate break‑even.",
+      "Data handling and security practices for this tool should follow NIST SP 800‑63 and NIST cybersecurity recommendations for web services. Testing and validation of numeric logic follows ISO/IEC and IEEE best practices for numerical software verification. This tool provides estimates only and should not be considered loan advice."
+    ],
+    "how_is_calculated": [
+      "Convert annual rate to periodic rate: monthly r = annual_rate / 100 / 12, bi‑weekly r = annual_rate / 100 / 26.",
+      "Compute number of periods: months = years * 12, bi‑weekly periods = years * 26.",
+      "Periodic payment formula: payment = P * r / (1 - (1+r)^-n).",
+      "Total interest = (sum of periodic payments over n) + upfront costs (if any) - principal.",
+      "Approximate break‑even months = refinance costs / (monthly payment reduction). This is a simple heuristic and can be unstable if monthly savings are near zero."
+    ],
+    "examples": [
+      "Example 1: Current balance $250,000, current rate 4.5%, 25 years remaining. Refinance to 3.75% for 30 years with $3,000 costs. The tool shows new monthly payment, total interest over the new term, and estimated interest savings compared to keeping the current loan.",
+      "Example 2: Same balance and rate, choose to make bi‑weekly payments (26 per year). The tool computes the bi‑weekly payment and estimates interest reduction vs monthly payments from extra effective payments."
+    ],
+    "faqs": [
+      {
+        "question": "Are the numbers exact loan quotes?",
+        "answer": "No. This calculator uses standard amortization formulas to provide estimates. Actual lender quotes may differ due to rounding, how fees are financed, prepayment penalties, escrow changes, or different day‑count conventions."
+      },
+      {
+        "question": "How does bi‑weekly payment reduce interest?",
+        "answer": "Making 26 bi‑weekly payments of half your monthly payment results in 13 full monthly equivalents per year instead of 12, which accelerates principal reduction and lowers total interest. Exact savings vary by schedule and whether your lender applies payments immediately to principal."
+      },
+      {
+        "question": "What are the main accuracy caveats?",
+        "answer": "This tool assumes fixed rates and regular payments, no prepayment penalties, no changes to escrow, and that refinance costs are paid up front. Rounding, lender processing times, and how extra payments are applied can change results. Validate with lender figures."
+      },
+      {
+        "question": "What standards and practices inform this tool?",
+        "answer": "Numeric methods and software validation follow ISO/IEC and IEEE guidance for numerical computation testing. Data handling guidance cites NIST recommendations. For workplace safety of operations, OSHA standards apply to staff procedures but do not affect calculations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Digital Identity Guidelines and cybersecurity recommendations",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards for software quality and numerical computing best practices",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Recommendations for verification and validation of numerical software",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — General workplace safety guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period. For monthly payments this is annual rate / 12, for bi‑weekly it is annual rate / 26."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a mortgage through regular payments that cover interest and principal according to a schedule."
+      },
+      {
+        "term": "Refinance costs",
+        "definition": "Upfront fees paid to obtain a new loan, including closing costs, points, and lender fees. In this tool they are modeled as an upfront cash outlay."
+      },
+      {
+        "term": "Break‑even",
+        "definition": "The period required for monthly payment savings to equal refinance costs. Calculated here as a simple ratio and provided as an approximation."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/mortgages/loan/refinance-basics",
+      "/payments/biweekly-vs-monthly"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

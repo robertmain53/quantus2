@@ -1,0 +1,556 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan Payment Calculator with Extra Payments",
+    "description": "An advanced business-loan amortization tool that compares standard payment schedules to recurring extra payments and one-time lump-sum prepayments. Shows payment, payoff time, interest paid, and estimated savings. Includes accuracy notes and references to technical standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "recurring_extra",
+    "methods": {
+      "standard": {
+        "label": "Standard Amortization",
+        "description": "Calculate the scheduled payment, total interest, and payoff time for the loan using a fixed periodic payment and no extra payments.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "payment": {
+            "expression": "principal * r / (1 - pow(1 + r, -n))",
+            "dependencies": [
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Periodic payment (scheduled)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment * n",
+            "dependencies": [
+              "payment",
+              "n"
+            ],
+            "label": "Total amount paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Total interest paid (scheduled)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_time_years": {
+            "expression": "n / payments_per_year",
+            "dependencies": [
+              "n",
+              "payments_per_year"
+            ],
+            "label": "Time to pay off (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment",
+            "label": "Scheduled payment",
+            "variable": "payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest (no extras)",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Payoff time",
+            "variable": "payoff_time_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "recurring_extra": {
+        "label": "Recurring Extra Payments",
+        "description": "Model the effect of making a fixed extra amount each period in addition to the scheduled payment. Estimates new payoff time and interest with the extra payment applied starting immediately.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Scheduled total payments",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "payment_regular": {
+            "expression": "principal * r / (1 - pow(1 + r, -n))",
+            "dependencies": [
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Scheduled periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_with_extra": {
+            "expression": "payment_regular + extra_payment",
+            "dependencies": [
+              "payment_regular",
+              "extra_payment"
+            ],
+            "label": "Periodic payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_with_extra": {
+            "expression": "-log(1 - r * principal / payment_with_extra) / log(1 + r)",
+            "dependencies": [
+              "r",
+              "principal",
+              "payment_with_extra"
+            ],
+            "label": "Number of payments until payoff with extra",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_with_extra": {
+            "expression": "payment_with_extra * n_with_extra",
+            "dependencies": [
+              "payment_with_extra",
+              "n_with_extra"
+            ],
+            "label": "Total paid with extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_with_extra": {
+            "expression": "total_paid_with_extra - principal",
+            "dependencies": [
+              "total_paid_with_extra",
+              "principal"
+            ],
+            "label": "Total interest paid with extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_standard": {
+            "expression": "payment_regular * n - principal",
+            "dependencies": [
+              "payment_regular",
+              "n",
+              "principal"
+            ],
+            "label": "Total interest scheduled (for comparison)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "time_saved_years": {
+            "expression": "(n - n_with_extra) / payments_per_year",
+            "dependencies": [
+              "n",
+              "n_with_extra",
+              "payments_per_year"
+            ],
+            "label": "Time saved (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_standard - total_interest_with_extra",
+            "dependencies": [
+              "total_interest_standard",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_with_extra",
+            "label": "Payment with extra",
+            "variable": "payment_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_with_extra",
+            "label": "Payments until paid off (with extra)",
+            "variable": "n_with_extra",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest (with extra)",
+            "variable": "total_interest_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "time_saved_years",
+            "label": "Estimated time saved (years)",
+            "variable": "time_saved_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "one_time_lump": {
+        "label": "One-time Lump Sum Prepayment",
+        "description": "Estimate payoff time and interest impact if you apply a single lump-sum prepayment immediately (modeled at loan start). For lump sums applied later, results are approximate; see accuracy notes.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Scheduled total payments",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "payment_regular": {
+            "expression": "principal * r / (1 - pow(1 + r, -n))",
+            "dependencies": [
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Scheduled periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_principal": {
+            "expression": "principal - lump_sum",
+            "dependencies": [
+              "principal",
+              "lump_sum"
+            ],
+            "label": "Principal after lump sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_with_lump": {
+            "expression": "-log(1 - r * new_principal / payment_regular) / log(1 + r)",
+            "dependencies": [
+              "r",
+              "new_principal",
+              "payment_regular"
+            ],
+            "label": "Payments until payoff after lump",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_with_lump": {
+            "expression": "payment_regular * n_with_lump + lump_sum",
+            "dependencies": [
+              "payment_regular",
+              "n_with_lump",
+              "lump_sum"
+            ],
+            "label": "Total paid after lump (includes lump amount)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_with_lump": {
+            "expression": "total_paid_with_lump - principal",
+            "dependencies": [
+              "total_paid_with_lump",
+              "principal"
+            ],
+            "label": "Total interest paid after lump",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_standard": {
+            "expression": "payment_regular * n - principal",
+            "dependencies": [
+              "payment_regular",
+              "n",
+              "principal"
+            ],
+            "label": "Total interest scheduled (for comparison)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "time_saved_years": {
+            "expression": "(n - n_with_lump) / payments_per_year",
+            "dependencies": [
+              "n",
+              "n_with_lump",
+              "payments_per_year"
+            ],
+            "label": "Estimated time saved (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_standard - total_interest_with_lump",
+            "dependencies": [
+              "total_interest_standard",
+              "total_interest_with_lump"
+            ],
+            "label": "Interest saved by lump",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "new_principal",
+            "label": "Principal after lump",
+            "variable": "new_principal",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_with_lump",
+            "label": "Payments until paid off (after lump)",
+            "variable": "n_with_lump",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_lump",
+            "label": "Total interest (after lump)",
+            "variable": "total_interest_with_lump",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "time_saved_years",
+            "label": "Estimated time saved (years)",
+            "variable": "time_saved_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment each period (recurring)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "lump_sum",
+        "label": "One-time lump sum prepayment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models business loan amortization and shows how recurring extra payments or a one-time lump-sum prepayment affect payoff time and total interest. It is intended for planning and comparison, not a legally binding payoff statement.",
+      "Enter your loan amount, interest rate, term, payment frequency, and any extra payments to see estimated impact. Results assume fixed interest rate and fixed scheduled payment; actual loans may include fees, variable rates, or prepayment rules."
+    ],
+    "methodology": [
+      "The tool computes periodic interest rate as APR divided by payments per year and standard amortizing payment using the annuity formula. For recurring extra payments we use the closed-form formula for the number of payments required when a larger fixed payment is applied.",
+      "One-time lump-sum results are modeled by reducing principal immediately by the lump amount and recomputing the number of periods required to amortize the reduced principal using the same scheduled payment. If a lender applies a lump sum at a later payment date or recalculates payment amounts, results will differ."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = APR / 100 / payments_per_year.",
+      "Scheduled payment = principal * r / (1 - (1 + r)^(-n)) where n = term_years * payments_per_year.",
+      "Number of payments with a higher fixed periodic payment (payment_with_extra) is n_extra = -log(1 - r * principal / payment_with_extra) / log(1 + r).",
+      "For a lump sum applied at start: new principal = principal - lump_sum; new number of payments computed from same annuity relations. Total interest = total paid - principal."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these results?",
+        "answer": "This calculator provides estimates under the assumptions stated (fixed interest rate, no fees, interest compounding aligned with payments). Results may differ from lender statements due to daily interest accrual, fees, escrow, rounding rules, or prepayment penalties. Use lender payoff statements for final figures."
+      },
+      {
+        "question": "Can I model extra payments that start later or change over time?",
+        "answer": "This tool models recurring extras starting immediately and a single lump-sum applied at modeled time. For changing schedules or later-start extras, results are approximate. Use a full amortization schedule or consult a financial advisor for custom schedules."
+      },
+      {
+        "question": "Do prepayment penalties or fees affect savings?",
+        "answer": "Yes. If your loan has prepayment penalties, fees, or the lender recalculates scheduled payments after prepayment, actual savings can be reduced or eliminated. Check loan documents or ask the lender."
+      },
+      {
+        "question": "What standards and practices support the calculator's accuracy and security?",
+        "answer": "Development and handling of sensitive financial input should follow best practices such as NIST cybersecurity guidance for data protection, ISO risk management (ISO 31000) for model governance, and IEEE recommendations for numerical methods where applicable. This tool includes accuracy caveats and recommends verification against official lender numbers."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO 31000 Risk Management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (data handling guidance)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The nominal yearly interest rate before compounding adjustments."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate applied each payment period, calculated as APR divided by the number of payment periods per year."
+      },
+      {
+        "term": "Annuity formula",
+        "definition": "Mathematical formula used to calculate fixed periodic payments for a loan that will amortize the principal over a set number of periods."
+      },
+      {
+        "term": "Lump-sum prepayment",
+        "definition": "A single additional payment applied toward principal to reduce outstanding balance, which may shorten the loan term or reduce future payments depending on lender policy."
+      }
+    ],
+    "summary": [
+      "Use this calculator to compare scheduled payments against scenarios with recurring extras or a one-time prepayment. It provides payment amounts, estimated payoff durations, and interest savings under standard amortization assumptions.",
+      "Verify results with lender payoff quotes when making decisions that depend on exact payoff figures. Follow recommended data security standards when entering sensitive information."
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

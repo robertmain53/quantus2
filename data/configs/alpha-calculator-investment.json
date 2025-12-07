@@ -1,0 +1,373 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Advanced Alpha Calculator (Investment)",
+    "description": "Multi-method alpha calculator for investments: single-period CAPM alpha, Jensen-style estimated alpha from regression outputs, and annualized excess return alpha. Includes data entry guidance, accuracy caveats, and references to industry standards for validation and controls."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "capm_single_period",
+    "methods": {
+      "capm_single_period": {
+        "label": "CAPM Alpha (Single-period excess return)",
+        "description": "Calculates alpha as actual asset return minus the CAPM-expected return using a supplied beta. Enter percentage values (e.g., 8 for 8%).",
+        "variables": {
+          "expected_return": {
+            "expression": "(risk_free/100) + beta * ((market_return - risk_free)/100)",
+            "dependencies": [
+              "risk_free",
+              "beta",
+              "market_return"
+            ],
+            "label": "CAPM expected return (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "alpha_decimal": {
+            "expression": "(asset_return/100) - expected_return",
+            "dependencies": [
+              "asset_return",
+              "expected_return"
+            ],
+            "label": "Alpha (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "alpha_percent",
+            "label": "Alpha (CAPM) (%)",
+            "variable": "alpha_decimal",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "jensen_estimated": {
+        "label": "Jensen-style Alpha (from regression summary)",
+        "description": "Uses mean returns and an estimated beta (from time-series regression) to compute alpha. This mode is for situations where you supply summary regression outputs rather than raw time-series data. Enter percentage values (e.g., 8 for 8%).",
+        "variables": {
+          "expected_mean": {
+            "expression": "(risk_free/100) + beta_estimated * ((mean_market_return - risk_free)/100)",
+            "dependencies": [
+              "risk_free",
+              "beta_estimated",
+              "mean_market_return"
+            ],
+            "label": "Expected mean return (decimal) using estimated beta",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "alpha_decimal_jensen": {
+            "expression": "(mean_asset_return/100) - expected_mean",
+            "dependencies": [
+              "mean_asset_return",
+              "expected_mean"
+            ],
+            "label": "Alpha (decimal) from estimated beta",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "alpha_jensen_percent",
+            "label": "Alpha (Jensen-style) (%)",
+            "variable": "alpha_decimal_jensen",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "annualized_excess": {
+        "label": "Annualized Excess Alpha (from cumulative returns)",
+        "description": "Computes annualized returns from cumulative total returns and reports the difference between asset and benchmark as annualized alpha. For cumulative inputs, enter decimals (e.g., 0.35 for 35%).",
+        "variables": {
+          "annual_asset": {
+            "expression": "pow(1 + asset_cum, 1/years) - 1",
+            "dependencies": [
+              "asset_cum",
+              "years"
+            ],
+            "label": "Asset annualized return (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "annual_benchmark": {
+            "expression": "pow(1 + benchmark_cum, 1/years) - 1",
+            "dependencies": [
+              "benchmark_cum",
+              "years"
+            ],
+            "label": "Benchmark annualized return (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "alpha_decimal_annual": {
+            "expression": "annual_asset - annual_benchmark",
+            "dependencies": [
+              "annual_asset",
+              "annual_benchmark"
+            ],
+            "label": "Annualized alpha (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "alpha_annual_percent",
+            "label": "Annualized Alpha (%)",
+            "variable": "alpha_decimal_annual",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "annual_asset_percent",
+            "label": "Asset annualized return (%)",
+            "variable": "annual_asset",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "annual_benchmark_percent",
+            "label": "Benchmark annualized return (%)",
+            "variable": "annual_benchmark",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "asset_return",
+        "label": "Asset return (%) — single-period (enter as percent, e.g., 8 for 8%)",
+        "type": "number",
+        "default": 8,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "market_return",
+        "label": "Market return (%) — single-period (enter as percent, e.g., 6 for 6%)",
+        "type": "number",
+        "default": 6,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "risk_free",
+        "label": "Risk-free rate (%) (enter as percent, e.g., 1.5 for 1.5%)",
+        "type": "number",
+        "default": 1.5,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "beta",
+        "label": "Beta (β) — use 1 for market-level sensitivity",
+        "type": "number",
+        "default": 1,
+        "min": -10,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "mean_asset_return",
+        "label": "Mean asset return (%) — e.g., average periodic return (enter as percent, e.g., 0.8 for 0.8% if using monthly)",
+        "type": "number",
+        "default": 1,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "mean_market_return",
+        "label": "Mean market return (%) — same periodicity as mean asset return",
+        "type": "number",
+        "default": 0.8,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "beta_estimated",
+        "label": "Estimated beta from regression (β̂) — supply regression output if available",
+        "type": "number",
+        "default": 0.95,
+        "min": -10,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "asset_cum",
+        "label": "Cumulative asset total return (decimal, e.g., 0.35 for 35%)",
+        "type": "number",
+        "default": 0.35,
+        "min": -0.999,
+        "max": 100,
+        "step": 0.0001
+      },
+      {
+        "id": "benchmark_cum",
+        "label": "Cumulative benchmark total return (decimal, e.g., 0.28 for 28%)",
+        "type": "number",
+        "default": 0.28,
+        "min": -0.999,
+        "max": 100,
+        "step": 0.0001
+      },
+      {
+        "id": "years",
+        "label": "Number of years (for annualization)",
+        "type": "integer",
+        "default": 3,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "Alpha measures the portion of a portfolio or asset return that is not explained by market movements or a benchmark model. Different alpha calculations exist for single-period comparisons, regression-based estimates, and multi-period annualized excess returns.",
+      "This tool supports multiple validated methods so you can choose the calculation that matches your data: single-period CAPM comparison, Jensen-style calculations using regression summary statistics, or annualized excess from cumulative returns. It includes guidance on input formats and accuracy considerations."
+    ],
+    "methodology": [
+      "CAPM single-period alpha is the observed return minus the CAPM-expected return: Alpha = R_p - [R_f + β (R_m - R_f)]. Use this when you have a single observed asset return, a market return, a risk-free rate, and a beta.",
+      "Jensen-style alpha here uses supplied summary regression outputs (estimated beta and mean periodic returns). For rigorous regression-based inference, perform a time-series regression of asset excess returns on market excess returns and supply the estimated beta and mean returns from that analysis.",
+      "Annualized excess alpha converts cumulative total returns to annualized returns using geometric annualization and reports the difference. This is appropriate when comparing multi-period total returns across different horizons."
+    ],
+    "how_is_calculated": [
+      "CAPM alpha formula (single-period): Alpha = R_p - [R_f + β × (R_m - R_f)]. All percent inputs are entered as percentage numbers and converted to decimals internally.",
+      "Jensen-style alpha (summary): Alpha = mean(R_p) - [R_f + β̂ × (mean(R_m) - R_f)]. Provide estimated beta from a regression and mean periodic returns in the same periodicity.",
+      "Annualized alpha (from cumulative returns): Annualized = (1 + cumulative)^(1/years) - 1. Alpha = annualized_asset - annualized_benchmark."
+    ],
+    "examples": [
+      "Example 1 (CAPM single-period): Asset return = 12%, Market = 7%, Risk-free = 1.5%, Beta = 1.2. Expected CAPM return = 1.5% + 1.2*(7% - 1.5%) = 8.7%. Alpha = 12% - 8.7% = 3.3%.",
+      "Example 2 (Annualized): Asset cumulative return = 0.50 (50%) over 4 years, Benchmark cumulative = 0.30 (30%). Annualized asset = (1.50)^(1/4)-1 = 10.67%. Annualized benchmark = (1.30)^(1/4)-1 = 6.78%. Annualized alpha = 3.89%."
+    ],
+    "faqs": [
+      {
+        "question": "What input formats should I use?",
+        "answer": "For single-period and mean returns, enter percentage numbers (e.g., 8 for 8%). For cumulative multi-period returns used in annualized mode, enter decimal fractions (e.g., 0.35 for 35%). Beta and estimated regression coefficients are plain numeric values (e.g., 1.05)."
+      },
+      {
+        "question": "When should I use the Jensen-style method?",
+        "answer": "Use Jensen-style when you have regression outputs (estimated beta and mean periodic returns) from a time-series regression of asset excess returns on market excess returns. That preserves statistical estimation steps and standard error reporting in your source regression."
+      },
+      {
+        "question": "Does this tool run regressions on raw time-series data?",
+        "answer": "No. This tool accepts summary statistics and single-period figures. For full regression analysis, use a statistical package, export the estimated beta and summary statistics, then input the estimates here. Methodology guidance in this page explains required steps."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Calculations are deterministic given your inputs, but accuracy depends on data quality, correct periodicity alignment, and appropriate model choice. See the accuracy and validation section and consult time-series regression diagnostics for inference."
+      },
+      {
+        "question": "Are there regulatory or standards considerations?",
+        "answer": "Use documented procedures for data handling, model validation, and controls. Follow applicable standards for data integrity and process controls cited below for traceability and reproducibility."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Alpha",
+        "definition": "The portion of an asset or portfolio return not explained by the chosen benchmark model; a measure of excess return relative to expectation."
+      },
+      {
+        "term": "Beta (β)",
+        "definition": "Sensitivity of the asset's returns to movements in the benchmark or market; used in the CAPM expected return calculation."
+      },
+      {
+        "term": "CAPM expected return",
+        "definition": "The return predicted by the Capital Asset Pricing Model: R_f + β (R_m - R_f)."
+      },
+      {
+        "term": "Annualized return",
+        "definition": "Geometric average return per year computed as (1 + cumulative)^(1/years) - 1."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Frameworks and best practices for data integrity and controls",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards overview (quality and information security controls)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Best practices for measurements and reporting",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Operational risk controls and workplace safety guidance (for operational alpha contexts)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "summary": [
+      "Choose the method that matches your data: single-period CAPM for point-in-time comparisons, Jensen-style for regression-derived estimates, and annualized excess for multi-period cumulative returns.",
+      "Ensure periodicity alignment and data provenance. For formal reporting and trading or advisory decisions, retain regression diagnostics and data lineage, and follow organizational validation and control processes."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/finance/returns",
+      "/guides/finance/model-validation"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "FinancialCalculation",
+      "HowTo"
+    ]
+  }
+}

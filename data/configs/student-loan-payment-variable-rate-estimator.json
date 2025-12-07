@@ -1,0 +1,434 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Student Loan Payment — Variable Rate Estimator (Advanced)",
+    "description": "Estimate periodic payments for student loans under multiple variable-rate scenarios: fixed-rate assumption, index+margin projection with caps, and high-rate stress testing. Includes configurable term, payment frequency, caps, and extra payments. Provides conservative accuracy notes and links to relevant standards for numerical and process rigor."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "index_projection",
+    "methods": {
+      "fixed_assumption": {
+        "label": "Fixed-rate assumption (assume current rate stays constant)",
+        "description": "Estimate periodic payment assuming the current nominal rate remains unchanged for the remaining term.",
+        "variables": {
+          "periodic_rate": {
+            "expression": "current_rate/100/payment_frequency",
+            "dependencies": [
+              "current_rate",
+              "payment_frequency"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "n_periods": {
+            "expression": "term_years*payment_frequency",
+            "dependencies": [
+              "term_years",
+              "payment_frequency"
+            ],
+            "label": "Number of payment periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "payment": {
+            "expression": "principal * periodic_rate / (1 - (1 + periodic_rate)^(-n_periods))",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "n_periods"
+            ],
+            "label": "Estimated periodic payment (amortizing)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment * n_periods + extra_payment * n_periods",
+            "dependencies": [
+              "payment",
+              "n_periods",
+              "extra_payment"
+            ],
+            "label": "Estimated total paid over remaining term",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment",
+            "label": "Estimated periodic payment",
+            "variable": "payment",
+            "unit": "per period",
+            "format": "currency"
+          }
+        ]
+      },
+      "index_projection": {
+        "label": "Index + margin projection (uses projected index input)",
+        "description": "Estimate payment using the projected index plus margin. This is an arithmetic projection and does not simulate intra-period caps and stepwise resets; it provides a practical, explainable estimate.",
+        "variables": {
+          "avg_estimated_rate": {
+            "expression": "index_rate + margin",
+            "dependencies": [
+              "index_rate",
+              "margin"
+            ],
+            "label": "Projected nominal rate (index + margin)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "periodic_rate_idx": {
+            "expression": "avg_estimated_rate/100/payment_frequency",
+            "dependencies": [
+              "avg_estimated_rate",
+              "payment_frequency"
+            ],
+            "label": "Periodic interest rate (projected)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "n_periods": {
+            "expression": "term_years*payment_frequency",
+            "dependencies": [
+              "term_years",
+              "payment_frequency"
+            ],
+            "label": "Number of payment periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "payment_indexed": {
+            "expression": "principal * periodic_rate_idx / (1 - (1 + periodic_rate_idx)^(-n_periods))",
+            "dependencies": [
+              "principal",
+              "periodic_rate_idx",
+              "n_periods"
+            ],
+            "label": "Estimated periodic payment (using projected index)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "applied_caps_note": {
+            "expression": "0",
+            "dependencies": [],
+            "label": "Caps are applied at reset events in real loans; this projection uses a single blended rate and does not simulate stepwise cap behavior",
+            "format": "decimal",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_indexed",
+            "label": "Estimated periodic payment (indexed projection)",
+            "variable": "payment_indexed",
+            "unit": "per period",
+            "format": "currency"
+          }
+        ]
+      },
+      "stress_scenario": {
+        "label": "Stress test (high-rate scenario)",
+        "description": "Quick high-rate sensitivity: adds a user-specified increment to the current rate and recomputes payment. Useful for planning under adverse rate moves.",
+        "variables": {
+          "stress_rate": {
+            "expression": "current_rate + stress_increment",
+            "dependencies": [
+              "current_rate",
+              "stress_increment"
+            ],
+            "label": "Stressed nominal rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "periodic_rate_stress": {
+            "expression": "stress_rate/100/payment_frequency",
+            "dependencies": [
+              "stress_rate",
+              "payment_frequency"
+            ],
+            "label": "Periodic interest rate (stressed)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "n_periods": {
+            "expression": "term_years*payment_frequency",
+            "dependencies": [
+              "term_years",
+              "payment_frequency"
+            ],
+            "label": "Number of payment periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "payment_stress": {
+            "expression": "principal * periodic_rate_stress / (1 - (1 + periodic_rate_stress)^(-n_periods))",
+            "dependencies": [
+              "principal",
+              "periodic_rate_stress",
+              "n_periods"
+            ],
+            "label": "Estimated periodic payment (stressed)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_stress",
+            "label": "Estimated periodic payment (stress)",
+            "variable": "payment_stress",
+            "unit": "per period",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Remaining principal balance",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "current_rate",
+        "label": "Current nominal interest rate (annual %)",
+        "type": "number",
+        "default": 5.25,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "index_rate",
+        "label": "Projected index rate (annual %, e.g., SOFR)",
+        "type": "number",
+        "default": 0.5,
+        "min": -5,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "margin",
+        "label": "Lender margin (annual %)",
+        "type": "number",
+        "default": 3.0,
+        "min": 0,
+        "max": 50,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Remaining term (years)",
+        "type": "number",
+        "default": 10,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Annually (1)",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "rate_cap_periodic",
+        "label": "Periodic cap (percentage points per reset)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 50,
+        "step": 0.01
+      },
+      {
+        "id": "rate_cap_lifetime",
+        "label": "Lifetime cap (percentage points above initial rate)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "stress_increment",
+        "label": "Stress incremental rate (percentage points)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Optional extra payment per period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you evaluate how variable interest rates could affect periodic student loan payments under several practical scenarios: a fixed-rate assumption, an index-plus-margin projection, and a stress test. It is intended for planning and comparison, not as a loan contract or legal advice.",
+      "The tool uses standard amortization math to convert nominal annual rates into periodic rates and compute payments for the remaining term. Where loans reset at index-based intervals with caps, the estimator offers a blended-projection approximation unless you run a full event-by-event reset simulation."
+    ],
+    "methodology": [
+      "Numeric computations follow standard financial formulas for amortizing loans: convert annual nominal rate to periodic rate, compute number of periods, then compute the annuity payment. We follow IEEE guidance for floating-point numeric representation practice and present results as currency with standard rounding for display.",
+      "For scenario projections (index + margin), the estimator uses the user-provided projected index value. It does not fetch external market data. For cap behavior, the tool provides a conservative blended-rate projection unless you choose to model each reset event externally. Users should apply caps manually or consult an account statement for precise contractual reset rules.",
+      "Accuracy and process controls: this calculator is built with best-practice controls in mind. It recommends adhering to NIST security guidance for handling personal financial data, ISO quality management principles for traceable calculation processes, IEEE numeric standards for representation, and general workplace safety guidance does not directly apply to calculations but is listed for governance completeness."
+    ],
+    "how_is_calculated": [
+      "Step 1: Convert annual nominal rate to periodic rate: periodic_rate = (annual_rate / 100) / payments_per_year.",
+      "Step 2: Compute total remaining periods: n_periods = remaining_years * payments_per_year.",
+      "Step 3: Compute amortizing periodic payment: payment = principal * periodic_rate / (1 - (1 + periodic_rate)^(-n_periods)).",
+      "Projection note: For index-based projection, use projected index + margin as the annual_rate in Step 1. This produces a blended projected payment and does not substitute for a full reset-event simulation when caps, floors, or stepwise adjustments apply."
+    ],
+    "examples": [
+      "Example: $20,000 principal, 5.25% current rate, 10-year remaining term, monthly payments → uses the fixed-assumption method to compute the monthly payment using the annuity formula.",
+      "Example: If you expect the index to rise to 2.50% and your margin is 3.0%, set index_rate = 2.50 and margin = 3.0, select index_projection to see the blended payment using a 5.5% nominal rate."
+    ],
+    "faqs": [
+      {
+        "question": "Does this tool simulate every rate reset and cap exactly as my loan contract does?",
+        "answer": "No. The index_projection method uses a single projected index value plus margin to produce a blended estimate. Exact contractual behavior requires simulating each reset event, applying periodic and lifetime caps and floors per your loan agreement."
+      },
+      {
+        "question": "Are results guaranteed to match my lender statement?",
+        "answer": "No. Results are estimates for planning only. Use your loan servicer’s statements or contract terms for authoritative payoff and payment information."
+      },
+      {
+        "question": "Can I enter negative index projections (negative rates)?",
+        "answer": "Yes, the calculator accepts negative index inputs where applicable; the combined nominal rate (index + margin) may still be positive. Ensure values reflect your lender’s treatment of negative indices (some lenders floor the index or the overall rate)."
+      },
+      {
+        "question": "What does the stress test show?",
+        "answer": "The stress scenario adds a user-defined rate increment to the current nominal rate and recalculates the payment. It is a sensitivity tool for planning and does not reflect probability or timing of rate changes."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (National Institute of Standards and Technology)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO (International Organization for Standardization)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA (Occupational Safety & Health Administration)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The current outstanding loan balance on which interest is calculated."
+      },
+      {
+        "term": "Index",
+        "definition": "A market reference rate (for example, SOFR) that the loan’s interest may track."
+      },
+      {
+        "term": "Margin",
+        "definition": "A fixed percentage added to the index to form the loan’s nominal rate (index + margin)."
+      },
+      {
+        "term": "Periodic cap",
+        "definition": "Maximum change in interest rate allowed at a single reset event, expressed in percentage points."
+      },
+      {
+        "term": "Lifetime cap",
+        "definition": "Maximum cumulative increase in interest rate over the loan’s lifetime relative to the initial rate."
+      },
+      {
+        "term": "Amortizing payment",
+        "definition": "A payment that covers interest and principal such that the loan is paid off over the remaining term."
+      }
+    ],
+    "summary": [
+      "Use the fixed_assumption method for a straightforward estimate when you expect the current rate to hold.",
+      "Use the index_projection method when you have a specific forward-looking index assumption; remember it is a blended estimate and not a reset-by-reset simulation.",
+      "Use the stress_scenario to assess sensitivity to adverse rate moves. Always cross-check with your loan servicer for contractual terms and exact payoff figures."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,293 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Zero Coupon Bond Calculator (multi-method)",
+    "description": "Calculate price, yield (nominal and effective) and related values for zero-coupon bonds. Supports selectable compounding frequencies and both price→yield and yield→price workflows. Includes accuracy and calibration guidance referencing standards for numerical and information security controls."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "price_from_yield",
+    "methods": {
+      "price_from_yield": {
+        "label": "Price from Annual Yield",
+        "description": "Compute the present value (market price) of a zero-coupon bond given face value, annual nominal yield and compounding frequency.",
+        "variables": {
+          "yield_decimal": {
+            "expression": "annual_yield_percent / 100",
+            "dependencies": [
+              "annual_yield_percent"
+            ],
+            "label": "Annual yield (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "discount_factor": {
+            "expression": "pow(1 + yield_decimal / compounding_frequency, years_to_maturity * compounding_frequency)",
+            "dependencies": [
+              "yield_decimal",
+              "compounding_frequency",
+              "years_to_maturity"
+            ],
+            "label": "Discount factor",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "price": {
+            "expression": "face_value / discount_factor",
+            "dependencies": [
+              "face_value",
+              "discount_factor"
+            ],
+            "label": "Price (present value)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "price",
+            "label": "Purchase price",
+            "variable": "price",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "yield_from_price": {
+        "label": "Yield from Price (Yield to Maturity)",
+        "description": "Compute the nominal annual yield (YTM) implied by a market price for a zero-coupon bond, using selected compounding frequency.",
+        "variables": {
+          "n": {
+            "expression": "years_to_maturity * compounding_frequency",
+            "dependencies": [
+              "years_to_maturity",
+              "compounding_frequency"
+            ],
+            "label": "Total compounding periods",
+            "unit": "periods",
+            "format": "decimal",
+            "display": false
+          },
+          "periodic_y": {
+            "expression": "pow(face_value / purchase_price, 1 / n) - 1",
+            "dependencies": [
+              "face_value",
+              "purchase_price",
+              "n"
+            ],
+            "label": "Periodic yield",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "annual_nominal_y": {
+            "expression": "periodic_y * compounding_frequency",
+            "dependencies": [
+              "periodic_y",
+              "compounding_frequency"
+            ],
+            "label": "Nominal annual yield",
+            "unit": "",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_nominal_y",
+            "label": "Annual nominal yield (YTM)",
+            "variable": "annual_nominal_y",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "effective_yield": {
+        "label": "Effective Annual Yield",
+        "description": "Convert nominal annual yield (with specified compounding) to effective annual yield.",
+        "variables": {
+          "nominal_y": {
+            "expression": "annual_yield_percent / 100",
+            "dependencies": [
+              "annual_yield_percent"
+            ],
+            "label": "Nominal annual yield (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "effective": {
+            "expression": "pow(1 + nominal_y / compounding_frequency, compounding_frequency) - 1",
+            "dependencies": [
+              "nominal_y",
+              "compounding_frequency"
+            ],
+            "label": "Effective annual yield",
+            "unit": "",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "effective",
+            "label": "Effective annual yield",
+            "variable": "effective",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "face_value",
+        "label": "Face value (maturity amount)",
+        "type": "number",
+        "default": 1000,
+        "min": 0.01,
+        "max": 100000000000,
+        "step": 0.01
+      },
+      {
+        "id": "purchase_price",
+        "label": "Purchase price (current market price)",
+        "type": "number",
+        "default": 800,
+        "min": 0.001,
+        "max": 100000000000,
+        "step": 0.01
+      },
+      {
+        "id": "annual_yield_percent",
+        "label": "Annual yield (nominal, %)",
+        "type": "number",
+        "default": 5,
+        "min": -99,
+        "max": 1000,
+        "step": 0.0001
+      },
+      {
+        "id": "years_to_maturity",
+        "label": "Years to maturity",
+        "type": "number",
+        "default": 3,
+        "min": 0.0001,
+        "max": 100,
+        "step": 0.0001
+      },
+      {
+        "id": "compounding_frequency",
+        "label": "Compounding frequency (periods per year)",
+        "type": "select",
+        "default": "1",
+        "options": [
+          {
+            "label": "Annual",
+            "value": "1"
+          },
+          {
+            "label": "Semiannual",
+            "value": "2"
+          },
+          {
+            "label": "Quarterly",
+            "value": "4"
+          },
+          {
+            "label": "Monthly",
+            "value": "12"
+          },
+          {
+            "label": "Daily (365)",
+            "value": "365"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides multiple workflows for zero-coupon bonds: compute price from an annual nominal yield, infer yield from a given price, and convert nominal yield to effective annual yield. It supports variable compounding frequencies so results match commonly used market conventions.",
+      "Use the 'Price from Annual Yield' method when you know the bond's face value, years to maturity and the required nominal annual yield. Use 'Yield from Price' when you have a market price and need the implied yield. Use 'Effective Annual Yield' to compare yields with different compounding conventions."
+    ],
+    "methodology": [
+      "All formulas use present-value mathematics for a single future cash flow: price = face_value / (1 + periodic_y)^(periods). Periodic yield and total periods are determined by the selected compounding frequency.",
+      "When inferring yield from a price, the calculator solves for the periodic rate by taking the nth root: periodic_y = (face_value / price)^(1/n) - 1, then annualizes by multiplying by the compounding frequency to provide a nominal annual rate.",
+      "Effective annual yield is calculated from the nominal rate using standard compounding conversion: effective = (1 + nominal/periods)^(periods) - 1."
+    ],
+    "how_is_calculated": [
+      "Price from nominal annual yield: Price = FaceValue / (1 + y/ m)^(m * t), where y is annual nominal yield (decimal), m is compounding frequency, t is years to maturity.",
+      "Yield from price (nominal annual): periodic_y = (FaceValue / Price)^(1 / (m * t)) - 1; annual nominal y = periodic_y * m.",
+      "Effective annual yield: Effective = (1 + nominal_y / m)^m - 1."
+    ],
+    "examples": [
+      "Example 1 — Price from yield: Face value 1,000; annual yield 5%; annual compounding; 3 years → Price = 1000 / (1.05)^3 = 863.84 (approx).",
+      "Example 2 — Yield from price: Face value 1,000; price 800; annual compounding; 5 years → periodic_y = (1000/800)^(1/5)-1 = 0.0443; annual nominal ≈ 4.43%.",
+      "Example 3 — Effective yield: Nominal 6% with semiannual compounding → Effective = (1 + 0.06/2)^2 - 1 = 6.0900% (approx)."
+    ],
+    "faqs": [
+      {
+        "question": "Which compounding frequency should I use?",
+        "answer": "Choose the frequency that matches market conventions or the bond documentation. If the bond is quoted on a semiannual basis, select semiannual. Use effective yield to compare different conventions on a like-for-like basis."
+      },
+      {
+        "question": "Why do results differ between nominal and effective yields?",
+        "answer": "Nominal yield is expressed without accounting for intra-year compounding; effective yield includes the effect of compounding and therefore is higher when compounding occurs more than once per year."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results use floating-point arithmetic and standard mathematical functions. Expect small rounding differences due to IEEE 754 floating-point behavior. For regulatory or large-scale financial computations, validate against high-precision libraries or audited systems and document tolerance thresholds."
+      },
+      {
+        "question": "Can I use this for bonds with multiple cash flows?",
+        "answer": "No. This tool is specifically for zero-coupon bonds that deliver a single known cash flow at maturity. For coupon-paying bonds, use a multi-cash-flow bond valuation tool."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Computer Security and Software Engineering guidance",
+        "url": "https://csrc.nist.gov/publications"
+      },
+      {
+        "label": "ISO — Quality management (ISO 9001 overview)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE 754 — Standard for Floating-Point Arithmetic",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA — Laws and Regulations",
+        "url": "https://www.osha.gov/laws-regs"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Zero-coupon bond",
+        "definition": "A bond that does not pay periodic interest (coupons) and is issued at a discount to its face (maturity) value; the return is the difference between purchase price and face value."
+      },
+      {
+        "term": "Nominal annual yield (YTM)",
+        "definition": "The annualized yield quoted without converting to an effective annual rate; when compounding is periodic, the nominal rate equals periodic rate times compounding periods per year."
+      },
+      {
+        "term": "Effective annual yield",
+        "definition": "The annual yield that accounts for intra-year compounding; used to compare yields with different compounding frequencies."
+      },
+      {
+        "term": "Compounding frequency",
+        "definition": "The number of times per year that interest is compounded (e.g., 1 = annual, 2 = semiannual, 12 = monthly)."
+      },
+      {
+        "term": "Present value",
+        "definition": "The current value of a future cash flow discounted at an appropriate rate."
+      }
+    ]
+  }
+}

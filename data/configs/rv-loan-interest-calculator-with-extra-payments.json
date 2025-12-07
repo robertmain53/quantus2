@@ -1,0 +1,252 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan Interest Calculator with Extra Payments",
+    "description": "Calculate scheduled payments, payoff time, total interest, and interest savings when making recurring extra payments on an RV loan. Includes both standard amortization and accelerated payoff estimates."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "scheduled_payment",
+        "label": "Scheduled payment per period",
+        "expression": "(annual_rate_percent==0) ? principal/(term_years*payments_per_year) : principal*(annual_rate_percent/100/payments_per_year)/(1 - pow(1 + annual_rate_percent/100/payments_per_year, -term_years*payments_per_year))",
+        "unit": "",
+        "format": "currency"
+      },
+      {
+        "id": "payment_with_extra",
+        "label": "Payment per period with recurring extra",
+        "expression": "scheduled_payment + extra_per_payment",
+        "unit": "",
+        "format": "currency"
+      },
+      {
+        "id": "scheduled_number_of_payments",
+        "label": "Scheduled number of payments (no extra)",
+        "expression": "term_years * payments_per_year",
+        "unit": "",
+        "format": "integer"
+      },
+      {
+        "id": "payoff_payments_with_extra",
+        "label": "Estimated number of payments with recurring extra",
+        "expression": "(extra_per_payment==0) ? (term_years*payments_per_year) : ( log((scheduled_payment + extra_per_payment) / ((scheduled_payment + extra_per_payment) - principal*(annual_rate_percent/100/payments_per_year))) / log(1 + annual_rate_percent/100/payments_per_year) )",
+        "unit": "",
+        "format": "decimal"
+      },
+      {
+        "id": "payoff_years_with_extra",
+        "label": "Estimated years to payoff with recurring extra",
+        "expression": "payoff_payments_with_extra / payments_per_year",
+        "unit": "years",
+        "format": "decimal"
+      },
+      {
+        "id": "total_interest_no_extra",
+        "label": "Total interest paid (no extra)",
+        "expression": "(scheduled_payment * term_years * payments_per_year) - principal",
+        "unit": "",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_with_extra",
+        "label": "Estimated total interest paid (with recurring extra)",
+        "expression": "(payment_with_extra * payoff_payments_with_extra) - principal",
+        "unit": "",
+        "format": "currency"
+      },
+      {
+        "id": "interest_saved",
+        "label": "Estimated interest saved (approx.)",
+        "expression": "total_interest_no_extra - total_interest_with_extra",
+        "unit": "",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "max": 1000000,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_percent",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 15,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_per_payment",
+        "label": "Recurring extra payment per period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "scheduled_payment",
+          "label": "Scheduled payment per period",
+          "format": "currency"
+        },
+        {
+          "id": "payment_with_extra",
+          "label": "Payment per period with recurring extra",
+          "format": "currency"
+        },
+        {
+          "id": "scheduled_number_of_payments",
+          "label": "Scheduled number of payments (no extra)",
+          "format": "integer"
+        },
+        {
+          "id": "payoff_payments_with_extra",
+          "label": "Estimated number of payments with recurring extra",
+          "format": "decimal"
+        },
+        {
+          "id": "payoff_years_with_extra",
+          "label": "Estimated years to payoff with recurring extra",
+          "unit": "years",
+          "format": "decimal"
+        },
+        {
+          "id": "total_interest_no_extra",
+          "label": "Total interest paid (no extra)",
+          "format": "currency"
+        },
+        {
+          "id": "total_interest_with_extra",
+          "label": "Estimated total interest paid (with recurring extra)",
+          "format": "currency"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Estimated interest saved (approx.)",
+          "format": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates scheduled payments, the effect of recurring extra payments, the estimated payoff time, and approximate interest saved when repaying an RV loan. Enter the loan principal, annual interest rate, term, payment frequency, and any recurring extra payment per period.",
+      "Results are estimates for planning and comparison. They assume fixed interest rate, fixed payment schedule, and that extra payments are applied directly toward principal at each payment."
+    ],
+    "methodology": [
+      "The tool uses standard amortization mathematics to compute the scheduled periodic payment and total interest for the nominal term.",
+      "If a recurring extra payment is supplied, the calculator treats the combined amount (scheduled payment plus recurring extra) as the periodic payment and solves for the number of periods required to amortize the loan using logarithmic inversion of the annuity formula.",
+      "Calculations are performed with typical floating-point arithmetic; minor rounding differences may occur compared with lender statements."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_interest_rate / 100 / payments_per_year",
+      "Scheduled payment M = P * r / (1 - (1 + r)^(-n)), where n = term_years * payments_per_year. If r = 0 then M = P / n.",
+      "If recurring extra E is applied, total periodic payment A = M + E and estimated number of payments N' = ln(A / (A - P * r)) / ln(1 + r).",
+      "Total interest = (periodic payment * number of payments) - principal. Interest saved = interest_no_extra - interest_with_extra."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these results?",
+        "answer": "Outputs are mathematical estimates based on the inputs and the formulas shown. They depend on numerical precision of the environment; small rounding differences may exist compared to lender amortization tables. Consult your loan contract for exact amounts."
+      },
+      {
+        "question": "Does this calculator include fees, taxes, or insurance?",
+        "answer": "No. This tool only models principal and interest with fixed rate amortization. It does not include origination fees, late fees, taxes, insurance, gap products, or other charges that may be included by a lender."
+      },
+      {
+        "question": "What if interest rate changes or payments are not perfectly regular?",
+        "answer": "This model assumes a fixed interest rate and regular payments. Variable rates, skipped payments, one-time lumpsum prepayments, or changes in payment amount require a different calculation or a detailed amortization schedule."
+      },
+      {
+        "question": "Are the calculations compliant with any standards?",
+        "answer": "The numerical approach follows standard financial mathematics for annuities and amortization. Numerical rounding and floating-point behavior follow general computing standards; see IEEE 754 for floating-point arithmetic considerations. For quality management and traceability of calculations, ISO 9001 practices are recommended. Measurement and computational accuracy guidance can be found at NIST."
+      },
+      {
+        "question": "Is this financial or legal advice?",
+        "answer": "No. This tool provides estimates for planning only and is not financial, tax, or legal advice. Consult a licensed financial professional or your loan servicer for binding figures and personalized guidance."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IEEE floating-point standard (IEEE 754)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The original amount of money borrowed, excluding interest and fees."
+      },
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "Annual nominal interest rate expressed as a percentage. This calculator treats the APR as the periodic interest source for amortization."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of repaying a loan over time through periodic payments that cover interest and principal."
+      },
+      {
+        "term": "Recurring extra payment",
+        "definition": "An additional amount paid together with each scheduled payment and applied directly to principal, which accelerates payoff and reduces total interest."
+      },
+      {
+        "term": "Number of payments",
+        "definition": "The total count of periodic payments required to fully repay the loan under the modeled payment amount."
+      }
+    ]
+  }
+}

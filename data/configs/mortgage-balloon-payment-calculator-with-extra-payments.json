@@ -1,0 +1,620 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Balloon Payment Calculator with Extra Payments",
+    "description": "Estimate the balloon payment and impact of recurring or one-time extra payments for common balloon mortgage structures. Supports amortizing schedules, interest-only balloons, and biweekly-style schedules with recurring extras. Includes accuracy caveats and references to measurement and calculation standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_balloon",
+    "methods": {
+      "standard_balloon": {
+        "label": "Standard amortizing schedule with balloon",
+        "description": "Calculates the scheduled payment using the chosen amortization period, then projects the remaining principal at the balloon date while applying recurring and one-time extra payments converted to monthly equivalents.",
+        "variables": {
+          "monthlyRate": {
+            "expression": "annual_interest_rate / 12 / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "nAmort": {
+            "expression": "amortization_years * 12",
+            "dependencies": [
+              "amortization_years"
+            ],
+            "label": "Amortization months",
+            "format": "integer",
+            "display": false
+          },
+          "regularPayment": {
+            "expression": "principal * monthlyRate / (1 - (1 + monthlyRate)^(-nAmort))",
+            "dependencies": [
+              "principal",
+              "monthlyRate",
+              "nAmort"
+            ],
+            "label": "Scheduled monthly payment (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "nBalloon": {
+            "expression": "balloon_months",
+            "dependencies": [
+              "balloon_months"
+            ],
+            "label": "Months until balloon",
+            "format": "integer",
+            "display": true
+          },
+          "extraRecurringMonthly": {
+            "expression": "extra_recurring_frequency == 'monthly' ? extra_recurring_amount : (extra_recurring_frequency == 'biweekly' ? extra_recurring_amount * 26 / 12 : extra_recurring_amount / 12)",
+            "dependencies": [
+              "extra_recurring_amount",
+              "extra_recurring_frequency"
+            ],
+            "label": "Extra recurring payment converted to monthly equivalent",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "adjustedPayment": {
+            "expression": "regularPayment + extraRecurringMonthly",
+            "dependencies": [
+              "regularPayment",
+              "extraRecurringMonthly"
+            ],
+            "label": "Adjusted monthly payment (including recurring extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "approxBalanceFromStandardFormula": {
+            "expression": "principal*(1+monthlyRate)^nBalloon - adjustedPayment * (((1+monthlyRate)^nBalloon - 1) / monthlyRate)",
+            "dependencies": [
+              "principal",
+              "monthlyRate",
+              "nBalloon",
+              "adjustedPayment"
+            ],
+            "label": "Approximate remaining balance using closed-form formula",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "balanceAtBalloon": {
+            "expression": "extra_one_time_amount > 0 ? approxBalanceFromStandardFormula - extra_one_time_amount * (1+monthlyRate)^(nBalloon - extra_one_time_month) : approxBalanceFromStandardFormula",
+            "dependencies": [
+              "approxBalanceFromStandardFormula",
+              "extra_one_time_amount",
+              "extra_one_time_month",
+              "monthlyRate",
+              "nBalloon"
+            ],
+            "label": "Estimated balance at balloon date (approximate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloonPayment": {
+            "expression": "balanceAtBalloon",
+            "dependencies": [
+              "balanceAtBalloon"
+            ],
+            "label": "Balloon payment due at end of balloon period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "totalPaymentsApplied": {
+            "expression": "adjustedPayment * nBalloon + extra_one_time_amount",
+            "dependencies": [
+              "adjustedPayment",
+              "nBalloon",
+              "extra_one_time_amount"
+            ],
+            "label": "Total payments applied before balloon (scheduled + recurring + one-time)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "principalReduction": {
+            "expression": "principal - balanceAtBalloon",
+            "dependencies": [
+              "principal",
+              "balanceAtBalloon"
+            ],
+            "label": "Principal reduction before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "totalInterestPaid": {
+            "expression": "totalPaymentsApplied - principalReduction",
+            "dependencies": [
+              "totalPaymentsApplied",
+              "principalReduction"
+            ],
+            "label": "Approximate interest paid before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balloon_payment",
+            "label": "Balloon payment due",
+            "variable": "balloonPayment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_monthly_payment",
+            "label": "Adjusted monthly payment (incl. recurring extras)",
+            "variable": "adjustedPayment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon",
+            "label": "Estimated balance at balloon",
+            "variable": "balanceAtBalloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_paid",
+            "label": "Approximate total interest paid before balloon",
+            "variable": "totalInterestPaid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "months_until_balloon",
+            "label": "Months until balloon",
+            "variable": "nBalloon",
+            "format": "integer"
+          }
+        ]
+      },
+      "interest_only_balloon": {
+        "label": "Interest-only payments until balloon",
+        "description": "Calculates interest-only periodic payments and adjusts principal for recurring and one-time extra payments applied to principal when provided. Returns approximate remaining principal at balloon date.",
+        "variables": {
+          "monthlyRate": {
+            "expression": "annual_interest_rate / 12 / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "nBalloon": {
+            "expression": "balloon_months",
+            "dependencies": [
+              "balloon_months"
+            ],
+            "label": "Months until balloon",
+            "format": "integer",
+            "display": false
+          },
+          "interestOnlyPayment": {
+            "expression": "principal * monthlyRate",
+            "dependencies": [
+              "principal",
+              "monthlyRate"
+            ],
+            "label": "Interest-only monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "extraRecurringMonthly": {
+            "expression": "extra_recurring_frequency == 'monthly' ? extra_recurring_amount : (extra_recurring_frequency == 'biweekly' ? extra_recurring_amount * 26 / 12 : extra_recurring_amount / 12)",
+            "dependencies": [
+              "extra_recurring_amount",
+              "extra_recurring_frequency"
+            ],
+            "label": "Extra recurring payment (monthly equivalent applied to principal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "approxPrincipalReductionFromExtras": {
+            "expression": "extraRecurringMonthly * nBalloon + extra_one_time_amount",
+            "dependencies": [
+              "extraRecurringMonthly",
+              "nBalloon",
+              "extra_one_time_amount"
+            ],
+            "label": "Approximate principal reduction from extras before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "balanceAtBalloon": {
+            "expression": "principal - approxPrincipalReductionFromExtras",
+            "dependencies": [
+              "principal",
+              "approxPrincipalReductionFromExtras"
+            ],
+            "label": "Estimated balance at balloon (approximate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloonPayment": {
+            "expression": "balanceAtBalloon",
+            "dependencies": [
+              "balanceAtBalloon"
+            ],
+            "label": "Balloon payment due",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balloon_payment_interest_only",
+            "label": "Balloon payment (interest-only scenario)",
+            "variable": "balloonPayment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_only_monthly",
+            "label": "Interest-only monthly payment",
+            "variable": "interestOnlyPayment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon_interest_only",
+            "label": "Estimated balance at balloon (interest-only)",
+            "variable": "balanceAtBalloon",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_with_extra": {
+        "label": "Biweekly-style schedule (approximate) with extras",
+        "description": "Models a biweekly payment rhythm by converting to equivalent periodic rate and counts. Uses approximate conversion to project remaining principal at the balloon date while applying biweekly and other extra payments.",
+        "variables": {
+          "biweeklyRate": {
+            "expression": "annual_interest_rate / 26 / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Biweekly interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "nBiweeklyBalloon": {
+            "expression": "floor(balloon_months * 26 / 12)",
+            "dependencies": [
+              "balloon_months"
+            ],
+            "label": "Biweekly periods until balloon (approx.)",
+            "format": "integer",
+            "display": false
+          },
+          "nBiweeklyAmort": {
+            "expression": "amortization_years * 26",
+            "dependencies": [
+              "amortization_years"
+            ],
+            "label": "Total biweekly amortization periods (approx.)",
+            "format": "integer",
+            "display": false
+          },
+          "regularBiweeklyPayment": {
+            "expression": "principal * biweeklyRate / (1 - (1 + biweeklyRate)^(-nBiweeklyAmort))",
+            "dependencies": [
+              "principal",
+              "biweeklyRate",
+              "nBiweeklyAmort"
+            ],
+            "label": "Scheduled biweekly payment (no extras, approx.)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "extraRecurringBiweeklyEquivalent": {
+            "expression": "extra_recurring_frequency == 'biweekly' ? extra_recurring_amount : (extra_recurring_frequency == 'monthly' ? extra_recurring_amount * 12 / 26 : extra_recurring_amount / 26)",
+            "dependencies": [
+              "extra_recurring_amount",
+              "extra_recurring_frequency"
+            ],
+            "label": "Extra recurring payment converted to biweekly equivalent",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "adjustedBiweeklyPayment": {
+            "expression": "regularBiweeklyPayment + extraRecurringBiweeklyEquivalent",
+            "dependencies": [
+              "regularBiweeklyPayment",
+              "extraRecurringBiweeklyEquivalent"
+            ],
+            "label": "Adjusted biweekly payment including extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "approxBalanceAtBalloon": {
+            "expression": "principal*(1+biweeklyRate)^nBiweeklyBalloon - adjustedBiweeklyPayment * (((1+biweeklyRate)^nBiweeklyBalloon - 1)/biweeklyRate) - extra_one_time_amount * (1+biweeklyRate)^(nBiweeklyBalloon - floor(extra_one_time_month * 26 / 12))",
+            "dependencies": [
+              "principal",
+              "biweeklyRate",
+              "nBiweeklyBalloon",
+              "adjustedBiweeklyPayment",
+              "extra_one_time_amount",
+              "extra_one_time_month"
+            ],
+            "label": "Estimated balance at balloon in biweekly model (approx.)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloonPayment": {
+            "expression": "approxBalanceAtBalloon",
+            "dependencies": [
+              "approxBalanceAtBalloon"
+            ],
+            "label": "Balloon payment due (biweekly model)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balloon_payment_biweekly",
+            "label": "Balloon payment (biweekly estimate)",
+            "variable": "balloonPayment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_biweekly_payment",
+            "label": "Adjusted biweekly payment (incl. extras)",
+            "variable": "adjustedBiweeklyPayment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon_biweekly",
+            "label": "Estimated balance at balloon (biweekly)",
+            "variable": "approxBalanceAtBalloon",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR) %",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "balloon_months",
+        "label": "Months until balloon payment is due",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Primary payment rhythm",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly",
+            "value": "monthly"
+          },
+          {
+            "label": "Biweekly (approximate model)",
+            "value": "biweekly"
+          }
+        ]
+      },
+      {
+        "id": "extra_recurring_amount",
+        "label": "Extra recurring payment amount",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_recurring_frequency",
+        "label": "Extra recurring frequency",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly",
+            "value": "monthly"
+          },
+          {
+            "label": "Biweekly",
+            "value": "biweekly"
+          },
+          {
+            "label": "Annual",
+            "value": "annual"
+          }
+        ]
+      },
+      {
+        "id": "extra_one_time_amount",
+        "label": "One-time extra payment amount (applied on a month index)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_one_time_month",
+        "label": "Month index when one-time extra payment is applied (0 = immediate)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 600,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator projects the balloon payment due at the end of a specified period and shows how recurring or one-time extra payments reduce that balance. It supports standard amortizing loans, interest-only arrangements, and an approximate biweekly model.",
+      "Results are approximations intended for planning. Exact figures depend on contract terms, rounding, lender posting rules, escrow and fees, and are not a substitute for lender-provided payoff statements."
+    ],
+    "methodology": [
+      "For amortizing loans we compute the scheduled periodic payment from the amortization term and interest rate, then project the remaining principal at the balloon date using standard time-value-of-money formulas for remaining balance.",
+      "Extra recurring payments are converted to the periodic equivalent (monthly or biweekly) and added to the scheduled payment. One-time extras are applied on the specified month and reduce principal from that point forward. Interest-only mode treats the scheduled payment as interest-only and applies extras directly to principal.",
+      "Where a biweekly option is chosen the calculator converts rates and frequencies to an approximate equivalent periodic model. This is a commonly used approximation and may differ from exact lender amortization that posts payments on calendar dates."
+    ],
+    "how_is_calculated": [
+      "Monthly interest rate = annual_interest_rate / 12 / 100",
+      "Scheduled payment (amortizing) = principal * r / (1 - (1+r)^-N), where r is periodic rate and N is amortization periods",
+      "Remaining balance after n payments = principal*(1+r)^n - payment * ((1+r)^n - 1)/r",
+      "Adjusted payment = scheduled payment + recurring extras (converted to periodic equivalent). One-time extras reduce balance in the period specified."
+    ],
+    "examples": [
+      "Example 1: $300,000 principal, 4.5% APR, 30-year amortization, 60-month balloon, $200 monthly extra reduces the balloon substantially compared with scheduled payments alone.",
+      "Example 2: Interest-only for 5 years on $300,000 at 4% APR with a $5,000 one-time principal payment in month 12 reduces the final balloon by approximately $5,000 plus interest savings thereafter."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these results compared to a lender payoff?",
+        "answer": "This tool provides mathematical projections based on inputs. Actual lender payoffs can differ due to rounding policies, day-count conventions, escrow demands, prepayment penalties, fees, and how the lender posts extra payments. Use this as a planning aid and request an official payoff from your lender for an exact figure."
+      },
+      {
+        "question": "Do extra payments always reduce the balloon by the same amount?",
+        "answer": "A one-time extra payment applied to principal typically reduces the balance dollar-for-dollar at the time it posts. Recurring extras reduce interest accrual over time and therefore reduce the remaining balance more than their nominal sum due to interest saved; the exact impact depends on timing and frequency."
+      },
+      {
+        "question": "Why is the biweekly model labeled approximate?",
+        "answer": "Biweekly schedules converted to periodic equivalents approximate how 26 payments per year interact with monthly rate conventions. Lenders may use different posting schedules and day-count methods; for exact results use your lender's schedule or statement."
+      },
+      {
+        "question": "Does this account for prepayment penalties or fees?",
+        "answer": "No. Prepayment penalties, fees, escrow shortages, and other contractual charges are not modeled. If your loan has prepayment penalties consult your loan documents or lender before making extra payments."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Guidelines on Reference Algorithms and Numerical Practices",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO standards on Financial Services and Calculation Precision",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE recommendations for numerical stability and rounding",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA: not directly applicable to financial calculations but referenced for risk-control mindset",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer finance guidance and sample disclosures",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The schedule of principal and interest payments that fully repays a loan over a stated period."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at the end of a loan term when the regular payments did not fully amortize the principal."
+      },
+      {
+        "term": "Extra recurring payment",
+        "definition": "A regularly scheduled additional payment above the required payment intended to reduce principal and interest."
+      },
+      {
+        "term": "One-time extra payment",
+        "definition": "A single principal payment applied at a specific period to reduce the outstanding balance."
+      },
+      {
+        "term": "Biweekly equivalent",
+        "definition": "An approximate conversion between biweekly and monthly payment amounts and rates used for modeling."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/mortgage/amortization",
+      "/guides/mortgage-extra-payments"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "Finance"
+    ]
+  }
+}

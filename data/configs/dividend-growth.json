@@ -1,0 +1,683 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Dividend Growth Calculator (multi-scenario, reinvest vs payout)",
+    "description": "Project future dividend income, total dividends received, and estimated portfolio value under multiple scenarios. Supports fixed-growth with optional reinvestment (DRIP) and three-point scenario comparison. Includes tax adjustment and annual contributions. Provides clear assumptions, calibration limits, and standards-based accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "fixed_growth_reinvest",
+    "methods": {
+      "fixed_growth_no_reinvest": {
+        "label": "Fixed dividend growth — Payout (no reinvestment)",
+        "description": "Assumes dividends are paid out each year (not reinvested). Dividend per share grows at a constant annual rate.",
+        "variables": {
+          "g": {
+            "expression": "dividend_growth_percent / 100",
+            "dependencies": [
+              "dividend_growth_percent"
+            ],
+            "label": "Dividend growth rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "D0": {
+            "expression": "shares_owned * starting_dividend_per_share",
+            "dependencies": [
+              "shares_owned",
+              "starting_dividend_per_share"
+            ],
+            "label": "Starting annual dividend (total)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "future_annual_dividend": {
+            "expression": "D0 * pow(1 + g, years)",
+            "dependencies": [
+              "D0",
+              "g",
+              "years"
+            ],
+            "label": "Projected annual dividend after period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_dividends_received": {
+            "expression": "g == 0 ? D0 * years : D0 * (pow(1 + g, years) - 1) / g",
+            "dependencies": [
+              "g",
+              "D0",
+              "years"
+            ],
+            "label": "Sum of dividends paid over period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "after_tax_total_dividends": {
+            "expression": "total_dividends_received * (1 - tax_rate_percent / 100)",
+            "dependencies": [
+              "total_dividends_received",
+              "tax_rate_percent"
+            ],
+            "label": "Total dividends after tax",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "future_annual_dividend",
+            "label": "Projected annual dividend (end of term)",
+            "variable": "future_annual_dividend",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_dividends_received",
+            "label": "Total dividends paid (gross)",
+            "variable": "total_dividends_received",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "after_tax_total_dividends",
+            "label": "Total dividends received (after tax)",
+            "variable": "after_tax_total_dividends",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "fixed_growth_reinvest": {
+        "label": "Fixed dividend growth — Reinvest (DRIP approximation)",
+        "description": "Assumes dividends are reinvested immediately to buy additional shares at the provided share price. Dividend per share grows at the indicated annual rate. Annual contributions (if any) are invested at the same share price each year for simplicity.",
+        "variables": {
+          "g": {
+            "expression": "dividend_growth_percent / 100",
+            "dependencies": [
+              "dividend_growth_percent"
+            ],
+            "label": "Dividend growth rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "D0": {
+            "expression": "shares_owned * starting_dividend_per_share",
+            "dependencies": [
+              "shares_owned",
+              "starting_dividend_per_share"
+            ],
+            "label": "Starting annual dividend (total)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_dividends_received": {
+            "expression": "g == 0 ? D0 * years : D0 * (pow(1 + g, years) - 1) / g",
+            "dependencies": [
+              "g",
+              "D0",
+              "years"
+            ],
+            "label": "Sum of dividends generated (gross) over period",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "reinvested_shares_from_dividends": {
+            "expression": "g == 0 ? (D0 / share_price) * years : (D0 / share_price) * (pow(1 + g, years) - 1) / g",
+            "dependencies": [
+              "D0",
+              "share_price",
+              "g",
+              "years"
+            ],
+            "label": "Estimated shares purchased by reinvesting dividends",
+            "format": "decimal",
+            "display": true
+          },
+          "shares_from_contributions": {
+            "expression": "(annual_contribution / share_price) * years",
+            "dependencies": [
+              "annual_contribution",
+              "share_price",
+              "years"
+            ],
+            "label": "Shares purchased from annual contributions (approx.)",
+            "format": "decimal",
+            "display": false
+          },
+          "total_shares": {
+            "expression": "shares_owned + reinvested_shares_from_dividends + shares_from_contributions",
+            "dependencies": [
+              "shares_owned",
+              "reinvested_shares_from_dividends",
+              "shares_from_contributions"
+            ],
+            "label": "Estimated total shares at end of period",
+            "format": "decimal",
+            "display": true
+          },
+          "future_annual_dividend": {
+            "expression": "total_shares * starting_dividend_per_share * pow(1 + g, years)",
+            "dependencies": [
+              "total_shares",
+              "starting_dividend_per_share",
+              "g",
+              "years"
+            ],
+            "label": "Projected annual dividend after reinvestment (approx.)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_portfolio_value": {
+            "expression": "total_shares * share_price",
+            "dependencies": [
+              "total_shares",
+              "share_price"
+            ],
+            "label": "Estimated portfolio value (shares × current share price, no price growth)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "after_tax_total_dividends": {
+            "expression": "total_dividends_received * (1 - tax_rate_percent / 100)",
+            "dependencies": [
+              "total_dividends_received",
+              "tax_rate_percent"
+            ],
+            "label": "Total dividends generated (after tax)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "future_annual_dividend",
+            "label": "Projected annual dividend (end of term, reinvested)",
+            "variable": "future_annual_dividend",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_shares",
+            "label": "Estimated total shares",
+            "variable": "total_shares",
+            "format": "decimal"
+          },
+          {
+            "id": "estimated_portfolio_value",
+            "label": "Estimated portfolio value (no price appreciation)",
+            "variable": "estimated_portfolio_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "after_tax_total_dividends",
+            "label": "Total dividends generated (after tax)",
+            "variable": "after_tax_total_dividends",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "scenario_comparison": {
+        "label": "Three-point scenario comparison (conservative / base / aggressive)",
+        "description": "Compare projected annual dividend and total dividends across three user-specified growth rates. Uses the same formulas as the fixed-growth payout method for clarity.",
+        "variables": {
+          "g_cons": {
+            "expression": "growth_conservative_percent / 100",
+            "dependencies": [
+              "growth_conservative_percent"
+            ],
+            "label": "Conservative growth (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "g_base": {
+            "expression": "growth_base_percent / 100",
+            "dependencies": [
+              "growth_base_percent"
+            ],
+            "label": "Base growth (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "g_agg": {
+            "expression": "growth_aggressive_percent / 100",
+            "dependencies": [
+              "growth_aggressive_percent"
+            ],
+            "label": "Aggressive growth (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "D0": {
+            "expression": "shares_owned * starting_dividend_per_share",
+            "dependencies": [
+              "shares_owned",
+              "starting_dividend_per_share"
+            ],
+            "label": "Starting annual dividend (total)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "future_annual_dividend_conservative": {
+            "expression": "D0 * pow(1 + g_cons, years)",
+            "dependencies": [
+              "D0",
+              "g_cons",
+              "years"
+            ],
+            "label": "Projected annual dividend (conservative)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_dividends_conservative": {
+            "expression": "g_cons == 0 ? D0 * years : D0 * (pow(1 + g_cons, years) - 1) / g_cons",
+            "dependencies": [
+              "g_cons",
+              "D0",
+              "years"
+            ],
+            "label": "Total dividends (conservative, gross)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "future_annual_dividend_base": {
+            "expression": "D0 * pow(1 + g_base, years)",
+            "dependencies": [
+              "D0",
+              "g_base",
+              "years"
+            ],
+            "label": "Projected annual dividend (base)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_dividends_base": {
+            "expression": "g_base == 0 ? D0 * years : D0 * (pow(1 + g_base, years) - 1) / g_base",
+            "dependencies": [
+              "g_base",
+              "D0",
+              "years"
+            ],
+            "label": "Total dividends (base, gross)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "future_annual_dividend_aggressive": {
+            "expression": "D0 * pow(1 + g_agg, years)",
+            "dependencies": [
+              "D0",
+              "g_agg",
+              "years"
+            ],
+            "label": "Projected annual dividend (aggressive)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_dividends_aggressive": {
+            "expression": "g_agg == 0 ? D0 * years : D0 * (pow(1 + g_agg, years) - 1) / g_agg",
+            "dependencies": [
+              "g_agg",
+              "D0",
+              "years"
+            ],
+            "label": "Total dividends (aggressive, gross)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "future_annual_dividend_conservative",
+            "label": "Projected annual dividend — conservative",
+            "variable": "future_annual_dividend_conservative",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_dividends_conservative",
+            "label": "Total dividends — conservative (gross)",
+            "variable": "total_dividends_conservative",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "future_annual_dividend_base",
+            "label": "Projected annual dividend — base",
+            "variable": "future_annual_dividend_base",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_dividends_base",
+            "label": "Total dividends — base (gross)",
+            "variable": "total_dividends_base",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "future_annual_dividend_aggressive",
+            "label": "Projected annual dividend — aggressive",
+            "variable": "future_annual_dividend_aggressive",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_dividends_aggressive",
+            "label": "Total dividends — aggressive (gross)",
+            "variable": "total_dividends_aggressive",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "initial_investment",
+        "label": "Initial investment amount",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "share_price",
+        "label": "Current share price (used for reinvestment estimates)",
+        "type": "number",
+        "default": 50,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "shares_owned",
+        "label": "Shares currently owned",
+        "type": "number",
+        "default": 200,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "starting_dividend_per_share",
+        "label": "Current dividend per share (annual)",
+        "type": "number",
+        "default": 1,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "dividend_growth_percent",
+        "label": "Expected annual dividend growth rate (%)",
+        "type": "number",
+        "default": 5,
+        "min": -100,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual cash contributions (added each year)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "years",
+        "label": "Projection period (years)",
+        "type": "integer",
+        "default": 20,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "tax_rate_percent",
+        "label": "Effective tax rate on dividends (%)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "reinvest",
+        "label": "Dividend handling",
+        "type": "select",
+        "default": "reinvest",
+        "options": [
+          {
+            "label": "Reinvest dividends (DRIP)",
+            "value": "reinvest"
+          },
+          {
+            "label": "Receive dividends (no reinvestment)",
+            "value": "no_reinvest"
+          }
+        ]
+      },
+      {
+        "id": "growth_conservative_percent",
+        "label": "Conservative growth rate (%)",
+        "type": "number",
+        "default": 3,
+        "min": -100,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "growth_base_percent",
+        "label": "Base growth rate (%)",
+        "type": "number",
+        "default": 5,
+        "min": -100,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "growth_aggressive_percent",
+        "label": "Aggressive growth rate (%)",
+        "type": "number",
+        "default": 7,
+        "min": -100,
+        "max": 100,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "reinvestment_options",
+        "label": "Reinvestment options",
+        "show_when": {
+          "field": "reinvest",
+          "is": "reinvest"
+        },
+        "fields": [
+          {
+            "id": "share_price",
+            "label": "Share price used for reinvestment estimates",
+            "type": "number",
+            "default": 50,
+            "min": 0.01,
+            "step": 0.01
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "future_annual_dividend",
+          "label": "Projected annual dividend (end of term)"
+        },
+        {
+          "id": "total_dividends_received",
+          "label": "Total dividends (gross over period)"
+        },
+        {
+          "id": "after_tax_total_dividends",
+          "label": "Total dividends (after tax)"
+        },
+        {
+          "id": "total_shares",
+          "label": "Estimated total shares (if reinvesting)"
+        },
+        {
+          "id": "estimated_portfolio_value",
+          "label": "Estimated portfolio value (shares × current price)"
+        },
+        {
+          "id": "future_annual_dividend_conservative",
+          "label": "Projected annual dividend (conservative scenario)"
+        },
+        {
+          "id": "future_annual_dividend_base",
+          "label": "Projected annual dividend (base scenario)"
+        },
+        {
+          "id": "future_annual_dividend_aggressive",
+          "label": "Projected annual dividend (aggressive scenario)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This Dividend Growth Calculator projects future dividend income, total dividends paid over a projection period, and an estimated portfolio size when dividends are reinvested. It supports a fixed-growth model with optional reinvestment and a three-point scenario comparison (conservative / base / aggressive).",
+      "Results are estimates based on the inputs and the model assumptions stated below. Use the scenario comparison to understand sensitivity to different dividend growth rates and the reinvestment toggle to see the effect of DRIP-style compounding."
+    ],
+    "methodology": [
+      "The calculator uses standard growing-annuity and sum-of-growth formulas to estimate dividend streams under a constant annual dividend growth rate. When reinvestment is selected, dividends are approximated as immediately purchasing additional shares at the supplied share price; newly purchased shares are then assumed to receive future dividends that also grow at the same rate.",
+      "The scenario comparison applies the same math with three user-specified growth rates to highlight outcome ranges. Annual contributions are modeled as added once per year at the given share price for simplicity."
+    ],
+    "how_is_calculated": [
+      "Projected annual dividend after N years = starting total dividend × (1 + g)^N, where g = dividend growth rate.",
+      "Total dividends over N years (gross) = starting total dividend × ( (1 + g)^N − 1 ) / g, with the g = 0 case using a linear sum (starting dividend × N).",
+      "When reinvesting: estimated additional shares from reinvested dividends = (sum of yearly dividends) / share price (closed-form used). Total shares = existing shares + reinvested shares + shares from annual contributions. Portfolio value = total shares × share price (assumes no share price appreciation)."
+    ],
+    "faqs": [
+      {
+        "question": "Does this model include share price appreciation?",
+        "answer": "No. Unless you manually adjust the share price or model price growth via scenario inputs, the estimated portfolio value uses the provided share price and does not assume capital appreciation."
+      },
+      {
+        "question": "How are reinvested dividends modeled?",
+        "answer": "Reinvested dividends are approximated as immediately buying additional shares at the provided share price. This is an approximation that does not model intra-year price changes or fractional timing effects."
+      },
+      {
+        "question": "Are taxes included?",
+        "answer": "You can apply an effective tax rate on dividends which will reduce the reported after-tax total dividends. This does not model tax lot rules, qualified vs ordinary income distinctions, or jurisdictional differences."
+      },
+      {
+        "question": "Why do results differ between reinvest and payout modes?",
+        "answer": "When dividends are reinvested they compound by purchasing additional shares that themselves produce dividends in later years; payout mode assumes dividends are taken as cash and do not compound within the portfolio."
+      },
+      {
+        "question": "How accurate are these projections?",
+        "answer": "Projections are deterministic outputs of the formulas described and depend entirely on input assumptions (growth rates, share price, tax rate). Real-world returns vary due to market price movement, dividend cuts, taxation changes, and other events."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Risk Management and Measurement Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Management and financial standards information",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Guidelines for quantitative model reporting",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Good practice for workplace accuracy and testing (general engineering standards)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Dividend per share",
+        "definition": "The cash dividend paid each year for one share of stock, expressed on an annual basis."
+      },
+      {
+        "term": "Dividend growth rate",
+        "definition": "The annual percentage increase (or decrease) expected in the dividend per share."
+      },
+      {
+        "term": "DRIP (Dividend Reinvestment Plan)",
+        "definition": "A plan or practice where dividend payouts are used to automatically purchase additional shares, compounding future dividend income."
+      },
+      {
+        "term": "Growing annuity formula",
+        "definition": "A closed-form mathematical formula used to sum a geometric series of cash flows that grow at a constant rate."
+      },
+      {
+        "term": "After-tax dividends",
+        "definition": "Gross dividends reduced by an effective tax rate provided by the user; not a substitute for professional tax advice."
+      }
+    ],
+    "summary": [
+      "Use payout mode to see gross and after-tax cash flows when dividends are taken as income.",
+      "Use reinvest mode to estimate compounding effects from automatic reinvestment; results are approximate and assume a static share price for reinvestment calculations.",
+      "Run multiple scenarios with different growth rates to understand sensitivity; treat results as illustrative projections, not guarantees."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/financial-tools/compound-interest",
+      "/guides/dividend-investing"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

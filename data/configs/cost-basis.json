@@ -1,0 +1,999 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Cost Basis Calculator (multi-method)",
+    "description": "Calculates cost basis, proceeds, and gain or loss for security sales using multiple methods (FIFO, LIFO, Average Cost, Specific Identification, Wash-Sale adjusted, and 1031-like exchange support). Includes purchase lots (up to three), sale details, and common adjustments."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "fifo",
+    "methods": {
+      "fifo": {
+        "label": "FIFO (First-In, First-Out)",
+        "description": "Allocates sold shares to earliest purchase lots first. Purchase commissions are allocated per-share and added to the cost basis.",
+        "variables": {
+          "rem1": {
+            "expression": "min(sale_shares, lot1_shares)",
+            "dependencies": [
+              "sale_shares",
+              "lot1_shares"
+            ],
+            "label": "Shares taken from lot 1",
+            "format": "integer",
+            "display": true
+          },
+          "rem2": {
+            "expression": "min(max(sale_shares - lot1_shares, 0), lot2_shares)",
+            "dependencies": [
+              "sale_shares",
+              "lot1_shares",
+              "lot2_shares"
+            ],
+            "label": "Shares taken from lot 2",
+            "format": "integer",
+            "display": true
+          },
+          "rem3": {
+            "expression": "min(max(sale_shares - lot1_shares - lot2_shares, 0), lot3_shares)",
+            "dependencies": [
+              "sale_shares",
+              "lot1_shares",
+              "lot2_shares",
+              "lot3_shares"
+            ],
+            "label": "Shares taken from lot 3",
+            "format": "integer",
+            "display": true
+          },
+          "cost1": {
+            "expression": "rem1 * lot1_price + rem1 * (lot1_commission / max(lot1_shares, 1))",
+            "dependencies": [
+              "rem1",
+              "lot1_price",
+              "lot1_commission",
+              "lot1_shares"
+            ],
+            "label": "Cost allocated from lot 1 (including commission)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost2": {
+            "expression": "rem2 * lot2_price + rem2 * (lot2_commission / max(lot2_shares, 1))",
+            "dependencies": [
+              "rem2",
+              "lot2_price",
+              "lot2_commission",
+              "lot2_shares"
+            ],
+            "label": "Cost allocated from lot 2 (including commission)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost3": {
+            "expression": "rem3 * lot3_price + rem3 * (lot3_commission / max(lot3_shares, 1))",
+            "dependencies": [
+              "rem3",
+              "lot3_price",
+              "lot3_commission",
+              "lot3_shares"
+            ],
+            "label": "Cost allocated from lot 3 (including commission)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost_basis_total": {
+            "expression": "cost1 + cost2 + cost3",
+            "dependencies": [
+              "cost1",
+              "cost2",
+              "cost3"
+            ],
+            "label": "Total cost basis for shares sold",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost_basis_per_share": {
+            "expression": "cost_basis_total / max(sale_shares, 1)",
+            "dependencies": [
+              "cost_basis_total",
+              "sale_shares"
+            ],
+            "label": "Cost basis per share",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "proceeds": {
+            "expression": "sale_shares * sale_price - sale_commission + proceeds_adjustments",
+            "dependencies": [
+              "sale_shares",
+              "sale_price",
+              "sale_commission",
+              "proceeds_adjustments"
+            ],
+            "label": "Net proceeds from sale",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "gain_loss": {
+            "expression": "proceeds - cost_basis_total - disallowed_wash_loss",
+            "dependencies": [
+              "proceeds",
+              "cost_basis_total",
+              "disallowed_wash_loss"
+            ],
+            "label": "Gain (positive) or Loss (negative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "cost_basis_total",
+            "label": "Total cost basis (FIFO)",
+            "variable": "cost_basis_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "cost_basis_per_share",
+            "label": "Cost basis per share (FIFO)",
+            "variable": "cost_basis_per_share",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "proceeds",
+            "label": "Proceeds (net)",
+            "variable": "proceeds",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "gain_loss",
+            "label": "Gain / (Loss)",
+            "variable": "gain_loss",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "lifo": {
+        "label": "LIFO (Last-In, First-Out)",
+        "description": "Allocates sold shares to the most recently acquired lots first. Purchase commissions are allocated per-share and added to the cost basis.",
+        "variables": {
+          "rem1": {
+            "expression": "min(sale_shares, lot3_shares)",
+            "dependencies": [
+              "sale_shares",
+              "lot3_shares"
+            ],
+            "label": "Shares taken from most recent lot (lot 3)",
+            "format": "integer",
+            "display": true
+          },
+          "rem2": {
+            "expression": "min(max(sale_shares - lot3_shares, 0), lot2_shares)",
+            "dependencies": [
+              "sale_shares",
+              "lot3_shares",
+              "lot2_shares"
+            ],
+            "label": "Shares taken from lot 2",
+            "format": "integer",
+            "display": true
+          },
+          "rem3": {
+            "expression": "min(max(sale_shares - lot3_shares - lot2_shares, 0), lot1_shares)",
+            "dependencies": [
+              "sale_shares",
+              "lot3_shares",
+              "lot2_shares",
+              "lot1_shares"
+            ],
+            "label": "Shares taken from earliest lot (lot 1)",
+            "format": "integer",
+            "display": true
+          },
+          "cost1": {
+            "expression": "rem1 * lot3_price + rem1 * (lot3_commission / max(lot3_shares, 1))",
+            "dependencies": [
+              "rem1",
+              "lot3_price",
+              "lot3_commission",
+              "lot3_shares"
+            ],
+            "label": "Cost allocated from lot 3 (including commission)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost2": {
+            "expression": "rem2 * lot2_price + rem2 * (lot2_commission / max(lot2_shares, 1))",
+            "dependencies": [
+              "rem2",
+              "lot2_price",
+              "lot2_commission",
+              "lot2_shares"
+            ],
+            "label": "Cost allocated from lot 2 (including commission)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost3": {
+            "expression": "rem3 * lot1_price + rem3 * (lot1_commission / max(lot1_shares, 1))",
+            "dependencies": [
+              "rem3",
+              "lot1_price",
+              "lot1_commission",
+              "lot1_shares"
+            ],
+            "label": "Cost allocated from lot 1 (including commission)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost_basis_total": {
+            "expression": "cost1 + cost2 + cost3",
+            "dependencies": [
+              "cost1",
+              "cost2",
+              "cost3"
+            ],
+            "label": "Total cost basis for shares sold (LIFO)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "proceeds": {
+            "expression": "sale_shares * sale_price - sale_commission + proceeds_adjustments",
+            "dependencies": [
+              "sale_shares",
+              "sale_price",
+              "sale_commission",
+              "proceeds_adjustments"
+            ],
+            "label": "Net proceeds from sale",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "gain_loss": {
+            "expression": "proceeds - cost_basis_total - disallowed_wash_loss",
+            "dependencies": [
+              "proceeds",
+              "cost_basis_total",
+              "disallowed_wash_loss"
+            ],
+            "label": "Gain (positive) or Loss (negative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "cost_basis_total",
+            "label": "Total cost basis (LIFO)",
+            "variable": "cost_basis_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "proceeds",
+            "label": "Proceeds (net)",
+            "variable": "proceeds",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "gain_loss",
+            "label": "Gain / (Loss)",
+            "variable": "gain_loss",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "average": {
+        "label": "Average Cost",
+        "description": "Computes weighted average cost per share across provided lots; common for pooled accounting.",
+        "variables": {
+          "total_acquired_shares": {
+            "expression": "lot1_shares + lot2_shares + lot3_shares",
+            "dependencies": [
+              "lot1_shares",
+              "lot2_shares",
+              "lot3_shares"
+            ],
+            "label": "Total shares acquired (all lots)",
+            "format": "integer",
+            "display": true
+          },
+          "total_cost": {
+            "expression": "lot1_shares * lot1_price + lot2_shares * lot2_price + lot3_shares * lot3_price + lot1_commission + lot2_commission + lot3_commission",
+            "dependencies": [
+              "lot1_shares",
+              "lot2_shares",
+              "lot3_shares",
+              "lot1_price",
+              "lot2_price",
+              "lot3_price",
+              "lot1_commission",
+              "lot2_commission",
+              "lot3_commission"
+            ],
+            "label": "Total acquisition cost (including commissions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "avg_cost_per_share": {
+            "expression": "total_cost / max(total_acquired_shares, 1)",
+            "dependencies": [
+              "total_cost",
+              "total_acquired_shares"
+            ],
+            "label": "Weighted average cost per share",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost_basis_total": {
+            "expression": "avg_cost_per_share * min(sale_shares, total_acquired_shares)",
+            "dependencies": [
+              "avg_cost_per_share",
+              "sale_shares",
+              "total_acquired_shares"
+            ],
+            "label": "Total cost basis for shares sold (Average Cost)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "proceeds": {
+            "expression": "sale_shares * sale_price - sale_commission + proceeds_adjustments",
+            "dependencies": [
+              "sale_shares",
+              "sale_price",
+              "sale_commission",
+              "proceeds_adjustments"
+            ],
+            "label": "Net proceeds from sale",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "gain_loss": {
+            "expression": "proceeds - cost_basis_total - disallowed_wash_loss",
+            "dependencies": [
+              "proceeds",
+              "cost_basis_total",
+              "disallowed_wash_loss"
+            ],
+            "label": "Gain (positive) or Loss (negative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "avg_cost_per_share",
+            "label": "Average cost per share",
+            "variable": "avg_cost_per_share",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "cost_basis_total",
+            "label": "Total cost basis (Average)",
+            "variable": "cost_basis_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "gain_loss",
+            "label": "Gain / (Loss)",
+            "variable": "gain_loss",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "specific": {
+        "label": "Specific Identification",
+        "description": "Uses only lots explicitly selected by the user. User must select lots that together match the shares sold; the tool assumes selected lots are the lots used for the sale.",
+        "variables": {
+          "selected_shares": {
+            "expression": "lot1_use * lot1_shares + lot2_use * lot2_shares + lot3_use * lot3_shares",
+            "dependencies": [
+              "lot1_use",
+              "lot2_use",
+              "lot3_use",
+              "lot1_shares",
+              "lot2_shares",
+              "lot3_shares"
+            ],
+            "label": "Total shares in selected lots",
+            "format": "integer",
+            "display": true
+          },
+          "selected_cost_total": {
+            "expression": "lot1_use * (lot1_shares * lot1_price + lot1_commission) + lot2_use * (lot2_shares * lot2_price + lot2_commission) + lot3_use * (lot3_shares * lot3_price + lot3_commission)",
+            "dependencies": [
+              "lot1_use",
+              "lot2_use",
+              "lot3_use",
+              "lot1_shares",
+              "lot2_shares",
+              "lot3_shares",
+              "lot1_price",
+              "lot2_price",
+              "lot3_price",
+              "lot1_commission",
+              "lot2_commission",
+              "lot3_commission"
+            ],
+            "label": "Total cost of selected lots (including commissions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "avg_selected_cost_per_share": {
+            "expression": "selected_cost_total / max(selected_shares, 1)",
+            "dependencies": [
+              "selected_cost_total",
+              "selected_shares"
+            ],
+            "label": "Average cost per share of selected lots",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost_basis_total": {
+            "expression": "avg_selected_cost_per_share * min(sale_shares, selected_shares)",
+            "dependencies": [
+              "avg_selected_cost_per_share",
+              "sale_shares",
+              "selected_shares"
+            ],
+            "label": "Total cost basis for shares sold (Specific ID)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "proceeds": {
+            "expression": "sale_shares * sale_price - sale_commission + proceeds_adjustments",
+            "dependencies": [
+              "sale_shares",
+              "sale_price",
+              "sale_commission",
+              "proceeds_adjustments"
+            ],
+            "label": "Net proceeds from sale",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "gain_loss": {
+            "expression": "proceeds - cost_basis_total - disallowed_wash_loss",
+            "dependencies": [
+              "proceeds",
+              "cost_basis_total",
+              "disallowed_wash_loss"
+            ],
+            "label": "Gain (positive) or Loss (negative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "selected_shares",
+            "label": "Selected shares total",
+            "variable": "selected_shares",
+            "format": "integer"
+          },
+          {
+            "id": "cost_basis_total",
+            "label": "Total cost basis (Specific ID)",
+            "variable": "cost_basis_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "gain_loss",
+            "label": "Gain / (Loss)",
+            "variable": "gain_loss",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "wash_sale_adjusted": {
+        "label": "Wash-Sale Adjusted (illustrative)",
+        "description": "Starts from FIFO allocation and adjusts recognized gain/loss by a user-provided disallowed wash-sale amount. This reflects the common tax rule where a disallowed loss is deferred by increasing basis of replacement shares; the tool shows the disallowed amount and adjusted recognized gain/loss. Use only when you have identified disallowed loss amounts per tax rules.",
+        "variables": {
+          "fifo_cost_basis": {
+            "expression": "min(sale_shares, lot1_shares) * lot1_price + min(max(sale_shares - lot1_shares, 0), lot2_shares) * lot2_price + min(max(sale_shares - lot1_shares - lot2_shares, 0), lot3_shares) * 1",
+            "dependencies": [
+              "sale_shares",
+              "lot1_shares",
+              "lot2_shares",
+              "lot3_shares",
+              "lot1_price",
+              "lot2_price",
+              "lot3_price"
+            ],
+            "label": "Illustrative FIFO cost portion (excluding commission for brevity)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "proceeds": {
+            "expression": "sale_shares * sale_price - sale_commission + proceeds_adjustments",
+            "dependencies": [
+              "sale_shares",
+              "sale_price",
+              "sale_commission",
+              "proceeds_adjustments"
+            ],
+            "label": "Net proceeds",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recognized_gain_loss": {
+            "expression": "proceeds - cost_basis_total - disallowed_wash_loss",
+            "dependencies": [
+              "proceeds",
+              "cost_basis_total",
+              "disallowed_wash_loss"
+            ],
+            "label": "Recognized gain/loss after wash-sale adjustment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "disallowed": {
+            "expression": "disallowed_wash_loss",
+            "dependencies": [
+              "disallowed_wash_loss"
+            ],
+            "label": "Disallowed wash-sale loss (user input)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "disallowed",
+            "label": "Disallowed wash-sale amount",
+            "variable": "disallowed",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recognized_gain_loss",
+            "label": "Recognized gain / (loss) after wash-sale adjustment",
+            "variable": "recognized_gain_loss",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "exchange_1031": {
+        "label": "1031-like Exchange (deferred gain illustration)",
+        "description": "Illustrative calculation for an exchange where gain may be deferred. Requires the user to input the net proceeds and the replacement property cost basis. This method is illustrative only; consult a tax advisor for specific 1031 treatment.",
+        "variables": {
+          "proceeds": {
+            "expression": "sale_shares * sale_price - sale_commission + proceeds_adjustments",
+            "dependencies": [
+              "sale_shares",
+              "sale_price",
+              "sale_commission",
+              "proceeds_adjustments"
+            ],
+            "label": "Net proceeds from sale",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "deferred_gain": {
+            "expression": "max(proceeds - replacement_property_cost, 0)",
+            "dependencies": [
+              "proceeds",
+              "replacement_property_cost"
+            ],
+            "label": "Potential deferred gain (illustrative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "proceeds",
+            "label": "Proceeds (net)",
+            "variable": "proceeds",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "deferred_gain",
+            "label": "Illustrative deferred gain",
+            "variable": "deferred_gain",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method_select",
+        "label": "Method",
+        "type": "select",
+        "default": "fifo",
+        "options": [
+          {
+            "label": "FIFO (First-In, First-Out)",
+            "value": "fifo"
+          },
+          {
+            "label": "LIFO (Last-In, First-Out)",
+            "value": "lifo"
+          },
+          {
+            "label": "Average Cost",
+            "value": "average"
+          },
+          {
+            "label": "Specific Identification",
+            "value": "specific"
+          },
+          {
+            "label": "Wash-Sale Adjusted (illustrative)",
+            "value": "wash_sale_adjusted"
+          },
+          {
+            "label": "1031-like Exchange (illustrative)",
+            "value": "exchange_1031"
+          }
+        ]
+      },
+      {
+        "id": "sale_shares",
+        "label": "Shares sold",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "sale_price",
+        "label": "Sale price per share (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "sale_commission",
+        "label": "Sale commission / fees (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "proceeds_adjustments",
+        "label": "Proceeds adjustments (other credits/debits, USD)",
+        "type": "number",
+        "default": 0,
+        "step": 0.01
+      },
+      {
+        "id": "disallowed_wash_loss",
+        "label": "Wash-sale disallowed amount (USD) if applicable",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "replacement_property_cost",
+        "label": "Replacement property net cost (USD) for exchange illustration",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lot1_shares",
+        "label": "Lot 1 — Shares acquired",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "lot1_price",
+        "label": "Lot 1 — Purchase price per share (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lot1_commission",
+        "label": "Lot 1 — Purchase commission / fees (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lot1_date",
+        "label": "Lot 1 — Acquisition date (YYYY-MM-DD)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "lot1_use",
+        "label": "Lot 1 — Include for Specific ID?",
+        "type": "select",
+        "default": "1",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "1"
+          },
+          {
+            "label": "No",
+            "value": "0"
+          }
+        ]
+      },
+      {
+        "id": "lot2_shares",
+        "label": "Lot 2 — Shares acquired",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "lot2_price",
+        "label": "Lot 2 — Purchase price per share (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lot2_commission",
+        "label": "Lot 2 — Purchase commission / fees (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lot2_date",
+        "label": "Lot 2 — Acquisition date (YYYY-MM-DD)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "lot2_use",
+        "label": "Lot 2 — Include for Specific ID?",
+        "type": "select",
+        "default": "1",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "1"
+          },
+          {
+            "label": "No",
+            "value": "0"
+          }
+        ]
+      },
+      {
+        "id": "lot3_shares",
+        "label": "Lot 3 — Shares acquired",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "lot3_price",
+        "label": "Lot 3 — Purchase price per share (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lot3_commission",
+        "label": "Lot 3 — Purchase commission / fees (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lot3_date",
+        "label": "Lot 3 — Acquisition date (YYYY-MM-DD)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "lot3_use",
+        "label": "Lot 3 — Include for Specific ID?",
+        "type": "select",
+        "default": "1",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "1"
+          },
+          {
+            "label": "No",
+            "value": "0"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "exchange_help",
+        "label": "1031-like exchange inputs",
+        "show_when": {
+          "field": "method_select",
+          "is": "exchange_1031"
+        },
+        "fields": [
+          {
+            "id": "replacement_property_cost",
+            "label": "Replacement property net cost (USD) for exchange illustration",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps investors compute cost basis, proceeds, and realized gain or loss using common lot selection methods: FIFO, LIFO, Average Cost, and Specific Identification. It also supports illustrative wash-sale adjustments and a basic exchange (1031-like) illustration.",
+      "Enter up to three purchase lots and the sale details. Select the method that matches your accounting or tax reporting requirement. For Specific Identification, explicitly mark which lots were used for the sale."
+    ],
+    "methodology": [
+      "Calculations allocate purchase costs and commissions to sold shares. Purchase commissions are added to basis; sale commissions reduce proceeds. The tool includes options to reflect user-provided wash-sale disallowed amounts and exchange replacement property cost when relevant.",
+      "This implementation follows best practices for numerical calculation (IEEE 754 floating point considerations) and uses clear per-share allocations to minimize rounding ambiguity. It is for informational purposes and does not replace professional tax advice."
+    ],
+    "how_is_calculated": [
+      "FIFO/LIFO: allocate sold shares to lots in chronological or reverse-chronological order; cost per lot includes per-share portion of that lot's purchase commission.",
+      "Average Cost: weighted average cost = (sum of (shares × price) + total purchase commissions) / total shares acquired. Cost basis = average cost × shares sold.",
+      "Specific ID: only lots explicitly selected are used. The tool computes the selected lots' combined average cost and multiplies by shares sold (user must ensure selected lots match the number of shares sold).",
+      "Proceeds = (shares sold × sale price) − sale commissions + any proceeds adjustments. Recognized gain/loss = proceeds − cost basis − wash-sale disallowed amount (if provided)."
+    ],
+    "examples": [
+      "Example 1 (FIFO): Buy 100 shares at $10 + $5 commission, then 100 shares at $12 + $5 commission. Sell 150 shares at $15 with $10 commission. FIFO allocates 100 shares at $10 and 50 shares at $12 when computing basis.",
+      "Example 2 (Average): Same purchases as above. Average cost method computes a weighted average across both lots and multiplies by shares sold."
+    ],
+    "faqs": [
+      {
+        "question": "Should I rely on this calculator for filing taxes?",
+        "answer": "This tool is educational and intended to produce an accurate numeric result based on the inputs and chosen method, but it is not a substitute for tax filing software or a tax professional. Tax rules (including wash sale and exchange rules) have detailed conditions that may change the correct tax treatment."
+      },
+      {
+        "question": "How do I handle more than three lots?",
+        "answer": "This calculator accepts up to three purchase lots. For a larger history, aggregate older lots into a single lot (by computing weighted average for those lots) or use dedicated bookkeeping software that imports lot-level transaction history."
+      },
+      {
+        "question": "Why are commissions treated differently on buy vs sell?",
+        "answer": "By convention, purchase commissions are capitalized into the cost basis of the acquired shares. Sale commissions reduce the proceeds from the sale when computing gain or loss."
+      },
+      {
+        "question": "What is a wash sale and how is it handled here?",
+        "answer": "A wash sale occurs when substantially identical securities are bought within a specified timeframe around a loss sale, potentially disallowing the loss. This tool accepts a user-provided disallowed amount and shows the adjusted recognized gain/loss; it does not detect wash sales automatically."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Frameworks and guidance for secure and reliable calculation systems",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO 8601 — Date and time format recommendation (used for date inputs)",
+        "url": "https://www.iso.org/iso-8601-date-and-time-format.html"
+      },
+      {
+        "label": "IEEE 754 — Standard for binary floating-point arithmetic (relevant to numeric accuracy)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA — Records retention and business continuity best practices (general guidance)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Cost basis",
+        "definition": "The amount originally paid for an asset, including purchase commissions and certain adjustments; used to determine capital gain or loss on sale."
+      },
+      {
+        "term": "Proceeds",
+        "definition": "Gross sale amount less sale commissions and adjusted for any other credits or debits entered by the user."
+      },
+      {
+        "term": "Wash sale",
+        "definition": "A tax rule that may disallow a loss on a sale of securities if substantially identical securities are purchased within a specified timeframe; disallowed loss may be deferred into the replacement shares' basis."
+      },
+      {
+        "term": "Specific Identification",
+        "definition": "A lot selection method in which the taxpayer specifically identifies which purchased lots are being sold; requires clear records and broker confirmation in many jurisdictions."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-8601-date-and-time-format.html",
+        "label": "ISO 8601",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,721 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Extra Payments Calculator — Bi‑Weekly & Monthly Scenarios",
+    "description": "Interactive mortgage payoff modeller that compares standard monthly amortization, true bi‑weekly schedules (26 payments/year) and the common half‑monthly/bi‑weekly shortcut. Calculates payoff time, total interest, interest saved and periods saved when adding recurring extra payments or a one‑time principal reduction."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "biweekly_true",
+    "methods": {
+      "monthly_standard": {
+        "label": "Monthly (standard amortization)",
+        "description": "Standard monthly amortization using a periodic monthly interest rate and optional recurring extra payment applied to each monthly payment. A one‑time principal reduction (applied at t=0) is included as an immediate principal reduction.",
+        "variables": {
+          "r_period": {
+            "expression": "annual_rate_percent/100/12",
+            "dependencies": [
+              "annual_rate_percent"
+            ],
+            "label": "Monthly periodic rate",
+            "format": "decimal",
+            "display": false
+          },
+          "n_periods": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly periods",
+            "format": "integer",
+            "display": false
+          },
+          "principal_effective": {
+            "expression": "principal - one_time_amount",
+            "dependencies": [
+              "principal",
+              "one_time_amount"
+            ],
+            "label": "Principal after immediate one‑time reduction",
+            "format": "currency",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "principal * r_period / (1 - pow(1 + r_period, -n_periods))",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "n_periods"
+            ],
+            "label": "Scheduled monthly payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "scheduled_payment + extra_per_payment",
+            "dependencies": [
+              "scheduled_payment",
+              "extra_per_payment"
+            ],
+            "label": "Monthly payment with recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_new": {
+            "expression": "-ln(1 - principal_effective * r_period / payment_with_extra) / ln(1 + r_period)",
+            "dependencies": [
+              "principal_effective",
+              "r_period",
+              "payment_with_extra"
+            ],
+            "label": "Estimated number of months to payoff with extra",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_years": {
+            "expression": "n_new / 12",
+            "dependencies": [
+              "n_new"
+            ],
+            "label": "Estimated years to payoff with extra",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "scheduled_total_interest": {
+            "expression": "scheduled_payment * n_periods - principal",
+            "dependencies": [
+              "scheduled_payment",
+              "n_periods",
+              "principal"
+            ],
+            "label": "Total interest if paid on original schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_with_extra": {
+            "expression": "payment_with_extra * n_new - principal_effective",
+            "dependencies": [
+              "payment_with_extra",
+              "n_new",
+              "principal_effective"
+            ],
+            "label": "Total interest paid with recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "scheduled_total_interest - total_interest_with_extra",
+            "dependencies": [
+              "scheduled_total_interest",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved vs original schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periods_saved": {
+            "expression": "n_periods - n_new",
+            "dependencies": [
+              "n_periods",
+              "n_new"
+            ],
+            "label": "Number of monthly payments saved",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled monthly payment",
+            "variable": "scheduled_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Payment with extra (monthly)",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Estimated payoff (years)",
+            "variable": "payoff_years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest with extra",
+            "variable": "total_interest_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periods_saved",
+            "label": "Payments saved",
+            "variable": "periods_saved",
+            "format": "decimal"
+          }
+        ]
+      },
+      "biweekly_true": {
+        "label": "True Bi‑Weekly (26 payments / year)",
+        "description": "Exact bi‑weekly schedule using 26 equal payments per year and the corresponding periodic rate. Recurring extra is applied each bi‑weekly payment. One‑time immediate reduction is supported.",
+        "variables": {
+          "r_period": {
+            "expression": "annual_rate_percent/100/26",
+            "dependencies": [
+              "annual_rate_percent"
+            ],
+            "label": "Bi‑weekly periodic rate (26 periods/year)",
+            "format": "decimal",
+            "display": false
+          },
+          "n_periods": {
+            "expression": "term_years*26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of bi‑weekly periods",
+            "format": "integer",
+            "display": false
+          },
+          "principal_effective": {
+            "expression": "principal - one_time_amount",
+            "dependencies": [
+              "principal",
+              "one_time_amount"
+            ],
+            "label": "Principal after immediate one‑time reduction",
+            "format": "currency",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "principal * r_period / (1 - pow(1 + r_period, -n_periods))",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "n_periods"
+            ],
+            "label": "Scheduled bi‑weekly payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "scheduled_payment + extra_per_payment",
+            "dependencies": [
+              "scheduled_payment",
+              "extra_per_payment"
+            ],
+            "label": "Bi‑weekly payment with recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_new": {
+            "expression": "-ln(1 - principal_effective * r_period / payment_with_extra) / ln(1 + r_period)",
+            "dependencies": [
+              "principal_effective",
+              "r_period",
+              "payment_with_extra"
+            ],
+            "label": "Estimated number of bi‑weekly payments to payoff with extra",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_years": {
+            "expression": "n_new / 26",
+            "dependencies": [
+              "n_new"
+            ],
+            "label": "Estimated years to payoff with extra",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "scheduled_total_interest": {
+            "expression": "scheduled_payment * n_periods - principal",
+            "dependencies": [
+              "scheduled_payment",
+              "n_periods",
+              "principal"
+            ],
+            "label": "Total interest if paid on original bi‑weekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_with_extra": {
+            "expression": "payment_with_extra * n_new - principal_effective",
+            "dependencies": [
+              "payment_with_extra",
+              "n_new",
+              "principal_effective"
+            ],
+            "label": "Total interest paid with recurring extra (bi‑weekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "scheduled_total_interest - total_interest_with_extra",
+            "dependencies": [
+              "scheduled_total_interest",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved vs original bi‑weekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periods_saved": {
+            "expression": "n_periods - n_new",
+            "dependencies": [
+              "n_periods",
+              "n_new"
+            ],
+            "label": "Number of bi‑weekly payments saved",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled bi‑weekly payment",
+            "variable": "scheduled_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Payment with extra (bi‑weekly)",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Estimated payoff (years)",
+            "variable": "payoff_years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest with extra",
+            "variable": "total_interest_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periods_saved",
+            "label": "Payments saved (bi‑weekly)",
+            "variable": "periods_saved",
+            "format": "decimal"
+          }
+        ]
+      },
+      "biweekly_halfmonthly": {
+        "label": "Bi‑Weekly (monthly/2 shortcut — 26 payments formed from monthly/2)",
+        "description": "Estimate based on splitting the standard monthly payment in half and applying it bi‑weekly (common shortcut). This produces 26 payments/year (equivalent to 13 full monthly payments/year), which accelerates payoff compared with monthly schedule. Uses monthly scheduled payment / 2 as the bi‑weekly scheduled amount.",
+        "variables": {
+          "monthly_r": {
+            "expression": "annual_rate_percent/100/12",
+            "dependencies": [
+              "annual_rate_percent"
+            ],
+            "label": "Monthly periodic rate",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_n": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Monthly period count",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_scheduled": {
+            "expression": "principal * monthly_r / (1 - pow(1 + monthly_r, -monthly_n))",
+            "dependencies": [
+              "principal",
+              "monthly_r",
+              "monthly_n"
+            ],
+            "label": "Scheduled monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "monthly_scheduled / 2",
+            "dependencies": [
+              "monthly_scheduled"
+            ],
+            "label": "Bi‑weekly payment (monthly/2 shortcut)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "r_period": {
+            "expression": "annual_rate_percent/100/26",
+            "dependencies": [
+              "annual_rate_percent"
+            ],
+            "label": "Bi‑weekly periodic rate",
+            "format": "decimal",
+            "display": false
+          },
+          "n_periods": {
+            "expression": "term_years*26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of bi‑weekly periods",
+            "format": "integer",
+            "display": false
+          },
+          "principal_effective": {
+            "expression": "principal - one_time_amount",
+            "dependencies": [
+              "principal",
+              "one_time_amount"
+            ],
+            "label": "Principal after immediate one‑time reduction",
+            "format": "currency",
+            "display": false
+          },
+          "payment_with_extra": {
+            "expression": "scheduled_payment + extra_per_payment",
+            "dependencies": [
+              "scheduled_payment",
+              "extra_per_payment"
+            ],
+            "label": "Bi‑weekly payment with recurring extra (shortcut method)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_new": {
+            "expression": "-ln(1 - principal_effective * r_period / payment_with_extra) / ln(1 + r_period)",
+            "dependencies": [
+              "principal_effective",
+              "r_period",
+              "payment_with_extra"
+            ],
+            "label": "Estimated number of bi‑weekly payments to payoff with extra",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_years": {
+            "expression": "n_new / 26",
+            "dependencies": [
+              "n_new"
+            ],
+            "label": "Estimated years to payoff with extra",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "scheduled_total_interest": {
+            "expression": "scheduled_payment * n_periods - principal",
+            "dependencies": [
+              "scheduled_payment",
+              "n_periods",
+              "principal"
+            ],
+            "label": "Total interest if paid on shortcut bi‑weekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_with_extra": {
+            "expression": "payment_with_extra * n_new - principal_effective",
+            "dependencies": [
+              "payment_with_extra",
+              "n_new",
+              "principal_effective"
+            ],
+            "label": "Total interest paid with recurring extra (shortcut)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "scheduled_total_interest - total_interest_with_extra",
+            "dependencies": [
+              "scheduled_total_interest",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved vs shortcut schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periods_saved": {
+            "expression": "n_periods - n_new",
+            "dependencies": [
+              "n_periods",
+              "n_new"
+            ],
+            "label": "Number of bi‑weekly payments saved (shortcut)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled bi‑weekly payment (monthly/2)",
+            "variable": "scheduled_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Payment with extra (bi‑weekly shortcut)",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Estimated payoff (years)",
+            "variable": "payoff_years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest with extra",
+            "variable": "total_interest_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periods_saved",
+            "label": "Payments saved (bi‑weekly shortcut)",
+            "variable": "periods_saved",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 300000,
+        "min": 0.01,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_percent",
+        "label": "Interest rate (annual % APR)",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Compare schedule",
+        "type": "select",
+        "default": "biweekly_true",
+        "options": [
+          {
+            "label": "Monthly",
+            "value": "monthly_standard"
+          },
+          {
+            "label": "Bi‑weekly (true, 26/year)",
+            "value": "biweekly_true"
+          },
+          {
+            "label": "Bi‑weekly (monthly/2 shortcut)",
+            "value": "biweekly_halfmonthly"
+          }
+        ]
+      },
+      {
+        "id": "extra_per_payment",
+        "label": "Recurring extra applied to each scheduled payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "one_time_amount",
+        "label": "One‑time immediate principal reduction (applied at start)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares standard monthly amortization and two common bi‑weekly approaches (a true 26‑payment schedule and the monthly/2 shortcut) to show how recurring extra payments or an immediate one‑time principal reduction affect payoff time and total interest.",
+      "Results assume the extra payment is applied to principal at each scheduled payment. A one‑time reduction field models an immediate principal payment at time zero. Use the payment frequency selector to compare scenarios side‑by‑side."
+    ],
+    "methodology": [
+      "Calculations use discrete periodic amortization formulas: periodic rate = APR / periods_per_year; scheduled payment solves the standard annuity equation and the number of remaining periods with extra recurring payment is solved algebraically when payment exceeds the interest portion. For true bi‑weekly we use 26 periods per year; for the shortcut we split the monthly scheduled payment in half and treat that as the bi‑weekly scheduled amount.",
+      "The tool is intended for estimation and education. It applies a one‑time reduction immediately (t=0) for simplicity. Lender processing, interest compounding conventions, escrow, prepayment penalties, daily interest accrual, and rounding rules can alter real‑world results. See accuracy and compliance notes below."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_rate_percent / 100 / periods_per_year (periods_per_year = 12 for monthly, 26 for bi‑weekly).",
+      "Scheduled payment (no extra): payment = P * r / (1 - (1 + r)^-n), where n = term_years * periods_per_year.",
+      "When a recurring extra is added (E), effective payment = payment + E. Solve for new number of periods n_new by n_new = -ln(1 - P_effective * r / (payment + E)) / ln(1 + r).",
+      "Total interest = (payment + E) * n_new - P_effective. Interest saved = original_total_interest - total_interest_with_extra."
+    ],
+    "examples": [
+      "Example: $300,000 at 3.5% for 30 years. The true bi‑weekly schedule (26/year) with zero extras shortens the schedule slightly versus monthly; adding a $100 extra to each bi‑weekly payment reduces payoff time and saves interest. Use the form to view numeric outputs.",
+      "If you instead split the monthly payment in half and pay that bi‑weekly (monthly/2 shortcut), you effectively make one extra monthly payment per year (13 months of payment), which accelerates payoff compared with strict monthly payments but is not identical to lender bi‑weekly processing."
+    ],
+    "faqs": [
+      {
+        "question": "Does making bi‑weekly payments always save interest?",
+        "answer": "If the lender posts payments in the bi‑weekly schedule (26 payments/year) or you end up making the equivalent of 13 monthly payments per year, you will pay principal faster and save interest compared to 12 monthly payments. The exact savings depend on how the lender applies interest and whether they accept partial principal reductions without fees."
+      },
+      {
+        "question": "Is the calculator exact for every lender?",
+        "answer": "No. This model uses standard discrete amortization mathematics and assumes payments reduce principal immediately. Lender rules (daily interest accrual, payment posting time, escrow handling, rounding, and prepayment penalties) can change real results. Use generated numbers as an accurate mathematical estimate, not a lender payoff statement."
+      },
+      {
+        "question": "How should I interpret the one‑time reduction field?",
+        "answer": "One‑time reduction is modelled as an immediate principal payment at time zero. If your one‑time payment happens later, the impact will be smaller; modelling later one‑time payments requires stepwise amortization and is not covered by the closed‑form single‑period equations used here."
+      },
+      {
+        "question": "Are there regulatory or security standards behind this tool?",
+        "answer": "This tool follows software quality and security best practices guidance. For privacy and secure handling of inputs, see the NIST Cybersecurity and data handling guidance linked below. For software quality and verification guidance, see cited ISO and IEEE standards. This calculator is informational and not financial, legal, or tax advice."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Cybersecurity Framework and guidance",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO/IEC 25010 — Systems and software quality models",
+        "url": "https://www.iso.org/standard/35733.html"
+      },
+      {
+        "label": "IEEE standards collection (software lifecycle & quality)",
+        "url": "https://www.ieee.org/standards/index.html"
+      },
+      {
+        "label": "OSHA — general guidance on organizational safety and compliance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "Allocation of loan payments over time between interest and principal according to a schedule."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate per payment period, calculated as APR divided by periods per year."
+      },
+      {
+        "term": "True bi‑weekly",
+        "definition": "A payment schedule with 26 equal payments per year (every two weeks)."
+      },
+      {
+        "term": "Monthly/2 shortcut",
+        "definition": "A common approach where the monthly scheduled payment is split in half and paid every two weeks, resulting in 26 payments/year and 13 monthly payments equivalent."
+      },
+      {
+        "term": "One‑time reduction",
+        "definition": "A single additional principal payment applied immediately to reduce outstanding principal."
+      }
+    ],
+    "summary": [
+      "Choose the payment frequency scenario to compare how recurring extras or a one‑time principal payment reduce interest and shorten the loan.",
+      "Numbers are estimates based on standard amortization formulas. Verify final payoff figures with your lender."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/mortgage/basic-payment",
+      "/guides/mortgage/bi-weekly-vs-monthly"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standard/35733.html",
+        "label": "ISO/IEC 25010 - Software quality model",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/standards/index.html",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

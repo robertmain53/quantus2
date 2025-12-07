@@ -1,0 +1,469 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Boat Loan — Balloon Payment with Bi-Weekly Payments (Advanced Calculator)",
+    "description": "Calculate bi-weekly (or other frequency) loan payments for a boat loan that includes a balloon payment. Options to compute the periodic payment given a balloon amount or to compute the required balloon given a target periodic payment. Includes totals and interest estimates and clear accuracy/caveat notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "payment_from_balloon",
+    "methods": {
+      "payment_from_balloon": {
+        "label": "Compute periodic payment given a balloon",
+        "description": "Calculate the level periodic payment (bi-weekly by default) that amortizes the loan to a specified remaining balloon (future value) at the end of the term.",
+        "variables": {
+          "payments_per_year": {
+            "expression": "payment_frequency",
+            "dependencies": [
+              "payment_frequency"
+            ],
+            "label": "Payments per year",
+            "unit": "payments/year",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_rate/100 / payment_frequency",
+            "dependencies": [
+              "annual_rate",
+              "payment_frequency"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments": {
+            "expression": "term_years * payment_frequency",
+            "dependencies": [
+              "term_years",
+              "payment_frequency"
+            ],
+            "label": "Number of payments (N)",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "balloon_amount": {
+            "expression": "(balloon_type == 'percent') ? loan_amount * balloon_percent/100 : balloon_amount_dollar",
+            "dependencies": [
+              "balloon_type",
+              "balloon_percent",
+              "balloon_amount_dollar",
+              "loan_amount"
+            ],
+            "label": "Balloon amount (future value at end of term)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "discount_factor": {
+            "expression": "1 - (1+periodic_rate)^(-total_payments)",
+            "dependencies": [
+              "periodic_rate",
+              "total_payments"
+            ],
+            "label": "Annuity factor numerator",
+            "format": "decimal",
+            "display": false
+          },
+          "periodic_payment": {
+            "expression": "(periodic_rate * (loan_amount - balloon_amount * (1+periodic_rate)^(-total_payments))) / (1 - (1+periodic_rate)^(-total_payments))",
+            "dependencies": [
+              "periodic_rate",
+              "loan_amount",
+              "balloon_amount",
+              "total_payments"
+            ],
+            "label": "Periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "periodic_payment * total_payments + balloon_amount",
+            "dependencies": [
+              "periodic_payment",
+              "total_payments",
+              "balloon_amount"
+            ],
+            "label": "Total paid over life (payments + balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - loan_amount",
+            "dependencies": [
+              "total_paid",
+              "loan_amount"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Periodic payment",
+            "variable": "periodic_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_amount",
+            "label": "Balloon amount at term end",
+            "variable": "balloon_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (payments + balloon)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments",
+            "label": "Number of payments",
+            "variable": "total_payments",
+            "format": "integer"
+          }
+        ]
+      },
+      "balloon_from_payment": {
+        "label": "Compute required balloon given desired periodic payment",
+        "description": "If you want a specific bi-weekly payment, compute the balloon size that results from that payment schedule and term.",
+        "variables": {
+          "payments_per_year": {
+            "expression": "payment_frequency",
+            "dependencies": [
+              "payment_frequency"
+            ],
+            "label": "Payments per year",
+            "unit": "payments/year",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate": {
+            "expression": "annual_rate/100 / payment_frequency",
+            "dependencies": [
+              "annual_rate",
+              "payment_frequency"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "total_payments": {
+            "expression": "term_years * payment_frequency",
+            "dependencies": [
+              "term_years",
+              "payment_frequency"
+            ],
+            "label": "Number of payments (N)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_payment_input": {
+            "expression": "target_payment",
+            "dependencies": [
+              "target_payment"
+            ],
+            "label": "Desired periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "balloon_required": {
+            "expression": "(loan_amount - periodic_payment_input * (1 - (1+periodic_rate)^(-total_payments)) / periodic_rate) * (1+periodic_rate)^(total_payments)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_payment_input",
+              "periodic_rate",
+              "total_payments"
+            ],
+            "label": "Required balloon (future value) to support the desired payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "periodic_payment_input * total_payments + balloon_required",
+            "dependencies": [
+              "periodic_payment_input",
+              "total_payments",
+              "balloon_required"
+            ],
+            "label": "Total paid over life (payments + balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - loan_amount",
+            "dependencies": [
+              "total_paid",
+              "loan_amount"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balloon_required",
+            "label": "Required balloon amount at term end",
+            "variable": "balloon_required",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (payments + balloon)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.25,
+        "max": 30,
+        "step": 0.25
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Payment frequency (payments per year)",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Bi-weekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          },
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Semi-monthly (24)",
+            "value": "24"
+          }
+        ]
+      },
+      {
+        "id": "balloon_type",
+        "label": "Balloon input type",
+        "type": "select",
+        "default": "percent",
+        "options": [
+          {
+            "label": "Percent of loan (e.g., 20%)",
+            "value": "percent"
+          },
+          {
+            "label": "Dollar amount",
+            "value": "dollar"
+          }
+        ]
+      },
+      {
+        "id": "balloon_percent",
+        "label": "Balloon as percent of loan (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "balloon_amount_dollar",
+        "label": "Balloon amount (dollars)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "target_payment",
+        "label": "Desired periodic payment (use when computing balloon from payment)",
+        "type": "number",
+        "default": 300,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments for a boat loan that includes a balloon payment at the end of the loan term. It supports bi-weekly payments (26/year) by default and also allows other frequencies. Use the two modes to either compute the periodic payment for a given balloon or compute the balloon required for a desired periodic payment.",
+      "The tool provides totals and estimated interest to help you compare alternatives and plan refinancing or payoff strategies. Results are mathematical estimates and do not replace lender quotes or signed loan documents."
+    ],
+    "methodology": [
+      "Calculations use standard loan mathematics for level (constant) periodic payments with a specified future value (balloon). The formulas derive from time-value-of-money relationships for annuities and future values.",
+      "We follow safe numeric practices for financial calculations, including using periodic interest rates (APR divided by payments per year) and counting the total number of periodic payments as term years times payments per year. Rounding follows IEEE floating-point convention; implementation should use a stable numeric library and validate results against known examples during QA consistent with ISO 9001 processes. For integrity and reproducibility, follow NIST guidelines for computational reproducibility and IEEE 754 for numeric behavior."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = APR / 100 / payments_per_year.",
+      "Number of payments N = term_years * payments_per_year.",
+      "Payment given balloon (A) is computed from: A = [r * (PV - FV * (1+r)^(-N))] / [1 - (1+r)^(-N)] where PV is loan principal, FV is the balloon (future value), r is periodic_rate, and N is total_payments.",
+      "Balloon required for a target payment is computed by rearranging the present-value equation: FV = (PV - A * (1 - (1+r)^(-N)) / r) * (1+r)^N.",
+      "Total paid = periodic_payment * N + balloon_amount. Total interest = total paid - principal."
+    ],
+    "examples": [
+      "Example 1: $50,000 loan, 6.5% APR, 5 years, bi-weekly (26). With a 20% balloon ($10,000), the calculator returns the bi-weekly payment and totals.",
+      "Example 2: Same loan and term but you want to limit bi-weekly payments to $300; use the 'compute balloon from payment' mode to see the balloon required to achieve that payment."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include fees, taxes, or insurance?",
+        "answer": "No. This tool calculates interest and payments based on principal, APR, term, and balloon. Add any fees, taxes, or insurance to the financed amount before using the calculator if you want them included."
+      },
+      {
+        "question": "Why might the lender's quote differ from this calculator?",
+        "answer": "Lenders may use different APR definitions, include fees rolled into finance charges, use daily-interest accrual, or round payments differently. Always compare to the lender's amortization schedule and disclosure documents."
+      },
+      {
+        "question": "Why is bi-weekly shown as 26 payments per year?",
+        "answer": "Bi-weekly payments are every two weeks, typically resulting in 26 payments per calendar year. Some lenders use semi-monthly schedules (24 payments); choose the frequency that matches your loan contract."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are mathematically accurate to standard floating-point precision, but are estimates. For regulatory or contract decisions, rely on lender-provided disclosures. See accuracy notes and citations for recommended numeric and QA standards."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Reproducible Research and Computational Practices",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "IEEE Standards Association (floating-point arithmetic guidance)",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "ISO - Quality management (ISO 9001)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "OSHA - General guidance (organizational compliance reference)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A lump-sum payment due at the end of the loan term representing the remaining principal (future value) if the loan is not fully amortized by periodic payments."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The nominal annual interest rate used to compute periodic interest; this calculator expects APR as a percentage (e.g., 6.5 for 6.5%)."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period, computed as APR divided by the number of payments per year."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down loan principal over time through periodic payments that include interest and principal components."
+      },
+      {
+        "term": "Bi-weekly",
+        "definition": "A payment schedule where payments occur every two weeks, commonly resulting in 26 payments per year."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 (Quality management)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

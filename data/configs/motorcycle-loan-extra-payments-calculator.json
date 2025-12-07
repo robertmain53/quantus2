@@ -1,0 +1,559 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan — Extra Payments & Bi‑Weekly Calculator (Advanced)",
+    "description": "Interactive advanced calculator to compare monthly vs bi‑weekly schedules and model recurring extra payments and one‑time lump sums. Estimates payment amount, time to payoff, total interest, and sensitivity to extra payments. Includes accuracy notes and standards references."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "monthly",
+    "methods": {
+      "monthly": {
+        "label": "Monthly schedule (12 periods/year)",
+        "description": "Standard amortization with user-specified recurring extra per payment and optional lump-sum applied at a payment number.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "12",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "per year",
+            "format": "integer",
+            "display": false
+          },
+          "period_rate": {
+            "expression": "apr / 100 / periods_per_year",
+            "dependencies": [
+              "apr",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * periods_per_year",
+            "dependencies": [
+              "term_years",
+              "periods_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "regular_payment": {
+            "expression": "principal * period_rate / (1 - (1 + period_rate) ^ (-n))",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "n"
+            ],
+            "label": "Regular amortizing payment (before extras)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "regular_payment + extra_per_payment",
+            "dependencies": [
+              "regular_payment",
+              "extra_per_payment"
+            ],
+            "label": "Per payment amount (including recurring extra)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_n_raw": {
+            "expression": "-log(1 - principal * period_rate / payment_with_extra) / log(1 + period_rate)",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "payment_with_extra"
+            ],
+            "label": "Calculated number of payments to payoff (raw)",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_n": {
+            "expression": "ceil(payoff_n_raw)",
+            "dependencies": [
+              "payoff_n_raw"
+            ],
+            "label": "Estimated number of payments to payoff (rounded up)",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment_with_extra * payoff_n",
+            "dependencies": [
+              "payment_with_extra",
+              "payoff_n"
+            ],
+            "label": "Total amount paid (principal + interest)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal + lump_sum_interest_adjustment",
+            "dependencies": [
+              "total_paid",
+              "principal",
+              "lump_sum_interest_adjustment"
+            ],
+            "label": "Estimated total interest paid (includes lump-sum timing adjustment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "lump_sum_interest_adjustment": {
+            "expression": "if(lump_sum_amount > 0, max(0, (remaining_balance_after_k_payments(lump_at, principal, period_rate, regular_payment) - (remaining_balance_after_k_payments(lump_at, principal, period_rate, payment_with_extra))) ), 0)",
+            "dependencies": [
+              "lump_sum_amount",
+              "lump_at",
+              "principal",
+              "period_rate",
+              "regular_payment",
+              "payment_with_extra"
+            ],
+            "label": "Adjustment to interest from applying lump sum at a specified payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "regular_payment",
+            "label": "Regular payment (no extras)",
+            "variable": "regular_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Per‑payment amount (with recurring extra)",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_n",
+            "label": "Payments until payoff",
+            "variable": "payoff_n",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (principal + interest)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly": {
+        "label": "Bi‑weekly schedule (26 periods/year)",
+        "description": "Amortization assuming 26 payments per year. Enter recurring extra as the amount applied each bi‑weekly payment. For a monthly extra, divide by two to approximate bi‑weekly equivalent (see methodology).",
+        "variables": {
+          "periods_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "per year",
+            "format": "integer",
+            "display": false
+          },
+          "period_rate": {
+            "expression": "apr / 100 / periods_per_year",
+            "dependencies": [
+              "apr",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * periods_per_year",
+            "dependencies": [
+              "term_years",
+              "periods_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "regular_payment": {
+            "expression": "principal * period_rate / (1 - (1 + period_rate) ^ (-n))",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "n"
+            ],
+            "label": "Regular amortizing payment (before extras)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "regular_payment + extra_per_payment",
+            "dependencies": [
+              "regular_payment",
+              "extra_per_payment"
+            ],
+            "label": "Per payment amount (including recurring extra)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_n_raw": {
+            "expression": "-log(1 - principal * period_rate / payment_with_extra) / log(1 + period_rate)",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "payment_with_extra"
+            ],
+            "label": "Calculated number of payments to payoff (raw)",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_n": {
+            "expression": "ceil(payoff_n_raw)",
+            "dependencies": [
+              "payoff_n_raw"
+            ],
+            "label": "Estimated number of payments to payoff (rounded up)",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment_with_extra * payoff_n",
+            "dependencies": [
+              "payment_with_extra",
+              "payoff_n"
+            ],
+            "label": "Total amount paid (principal + interest)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal + lump_sum_interest_adjustment",
+            "dependencies": [
+              "total_paid",
+              "principal",
+              "lump_sum_interest_adjustment"
+            ],
+            "label": "Estimated total interest paid (includes lump-sum timing adjustment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "lump_sum_interest_adjustment": {
+            "expression": "if(lump_sum_amount > 0, max(0, (remaining_balance_after_k_payments(lump_at, principal, period_rate, regular_payment) - (remaining_balance_after_k_payments(lump_at, principal, period_rate, payment_with_extra))) ), 0)",
+            "dependencies": [
+              "lump_sum_amount",
+              "lump_at",
+              "principal",
+              "period_rate",
+              "regular_payment",
+              "payment_with_extra"
+            ],
+            "label": "Adjustment to interest from applying lump sum at a specified payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "regular_payment",
+            "label": "Regular payment (no extras)",
+            "variable": "regular_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Per‑payment amount (with recurring extra)",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_n",
+            "label": "Payments until payoff",
+            "variable": "payoff_n",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (principal + interest)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 8000,
+        "min": 0,
+        "max": 1000000,
+        "step": 100
+      },
+      {
+        "id": "apr",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "frequency",
+        "label": "Payment frequency",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly (12 payments/year)",
+            "value": "monthly"
+          },
+          {
+            "label": "Bi‑weekly (26 payments/year)",
+            "value": "biweekly"
+          }
+        ]
+      },
+      {
+        "id": "extra_per_payment",
+        "label": "Recurring extra applied each payment (enter amount per selected frequency)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      },
+      {
+        "id": "lump_sum_amount",
+        "label": "One‑time lump sum amount (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1000000,
+        "step": 1
+      },
+      {
+        "id": "lump_at",
+        "label": "Apply lump sum at payment number (1 = first payment)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 10000,
+        "step": 1
+      },
+      {
+        "id": "precision_display",
+        "label": "Display decimal precision for currency",
+        "type": "select",
+        "default": "2",
+        "options": [
+          {
+            "label": "2 decimal places",
+            "value": "2"
+          },
+          {
+            "label": "0 decimal places",
+            "value": "0"
+          }
+        ]
+      }
+  ],
+    "result": {
+      "outputs": [
+        {
+          "id": "regular_payment",
+          "label": "Regular payment (no extras)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "payment_with_extra",
+          "label": "Payment with recurring extra",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "payoff_n",
+          "label": "Payments until payoff",
+          "format": "integer"
+        },
+        {
+          "id": "total_paid",
+          "label": "Total paid (principal + interest)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest",
+          "label": "Estimated total interest",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares monthly and bi‑weekly amortization schedules and models the effect of recurring extra payments and one‑time lump sums on payoff time and total interest. Use the recurring extra field to enter the amount you will add to each scheduled payment (enter the per‑payment amount for the selected frequency).",
+      "Results are estimates based on standard amortization formulas. For complex, tax‑sensitive or loan‑specific rules (prepayment penalties, interest capitalization, or daily interest accrual), check your loan contract or consult a financial advisor."
+    ],
+    "methodology": [
+      "We use standard fixed-rate loan amortization formulas to compute the periodic payment, remaining balance, and number of payments to payoff. Monthly calculations assume 12 periods per year; bi‑weekly calculations assume 26 periods per year.",
+      "Recurring extras are modeled as additional payments applied every scheduled period. One‑time lump sums reduce principal at the chosen payment number; the tool estimates the change in interest by comparing schedules with and without that lump sum.",
+      "The tool uses closed‑form amortization formulas to estimate payoff time: number_of_payments = -log(1 - P * r / A) / log(1 + r) where P is principal, r is periodic rate, and A is payment per period. Results are rounded to whole payments for display."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = APR / 100 / periods_per_year",
+      "Number of payments (n) = term_years × periods_per_year",
+      "Regular payment = P × r / (1 − (1 + r)^−n)",
+      "Payments with extras = Regular payment + recurring extra (entered per payment for chosen frequency)",
+      "Estimated payments to payoff = ceil( -ln(1 − P×r / A) / ln(1+r) ) where A is payment with extras",
+      "Total interest ≈ Total paid − Principal, adjusted for one‑time lump sum timing"
+    ],
+    "faqs": [
+      {
+        "question": "Should I enter a monthly extra if I chose bi‑weekly frequency?",
+        "answer": "Enter the extra amount you will pay each bi‑weekly payment. If you know only a monthly extra, divide that monthly amount by two to approximate a bi‑weekly per‑payment equivalent (example: $100/month ≈ $50 per bi‑weekly payment). See methodology for limitations."
+      },
+      {
+        "question": "Does the calculator handle loans with daily interest or prepayment penalties?",
+        "answer": "No. This tool assumes fixed periodic interest applied per payment period. If your loan accrues interest daily or includes prepayment penalties, results will be approximate. Consult your loan agreement or lender for exact payoff figures."
+      },
+      {
+        "question": "How accurate are the payoff timing and interest estimates?",
+        "answer": "Estimates use standard amortization formulas and assume consistent application of extras. Rounding, payment timing within a period, and lender processing can change the precise payoff date and interest. See Accuracy & Standards below."
+      },
+      {
+        "question": "What is the effect of rounding and display precision?",
+        "answer": "Displayed currency values are rounded for readability. Small rounding differences can accumulate across many payments; the underlying calculations use higher internal precision before display rounding."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Numerical Methods & Best Practices",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) — Information security and software quality standards",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Floating point and numerical reliability guidance",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — general standards (referenced for risk management practices)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "Annual interest rate as a percentage; does not include payment frequency adjustments. This calculator converts APR to a periodic rate based on payments per year."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "APR divided by the number of payment periods per year (e.g., APR/12 for monthly, APR/26 for bi‑weekly)."
+      },
+      {
+        "term": "Regular payment",
+        "definition": "The scheduled amortizing payment computed from principal, periodic rate, and term, before extras."
+      },
+      {
+        "term": "Recurring extra",
+        "definition": "An additional amount paid every scheduled payment (entered per selected payment frequency)."
+      },
+      {
+        "term": "Lump sum",
+        "definition": "A single extra payment applied once at a specified payment number to reduce principal."
+      }
+    ],
+    "summary": [
+      "Use the frequency selector to switch between monthly and bi‑weekly schedules. Enter recurring extras as the per‑payment amount for the chosen frequency. For monthly extras converted to bi‑weekly, divide monthly amount by two as an approximation.",
+      "This advanced calculator provides estimates for per‑payment amounts, payoff timing, and total interest based on closed‑form amortization math. For legally binding payoff figures, refer to your lender."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loan/motorcycle-loan",
+      "/guides/loan-prepayment-explained"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

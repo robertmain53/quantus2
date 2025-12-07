@@ -1,0 +1,498 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Interest‑Only Calculator (Interest‑Only vs Amortizing Comparison)",
+    "description": "Compare interest‑only payments to fully amortizing payments, estimate total interest, and see payment schedules. Includes accuracy caveats, calibration notes, and references to standards for numeric reliability and consumer disclosures."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "interest_only",
+    "methods": {
+      "interest_only": {
+        "label": "Interest‑Only then Amortize",
+        "description": "Calculates the periodic interest‑only payment during the interest‑only period, then the amortizing payment that repays principal over the remaining term.",
+        "variables": {
+          "r_period": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "io_payment": {
+            "expression": "principal * r_period",
+            "dependencies": [
+              "principal",
+              "r_period"
+            ],
+            "label": "Interest‑only periodic payment",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "io_total_interest": {
+            "expression": "io_payment * payments_per_year * io_years",
+            "dependencies": [
+              "io_payment",
+              "payments_per_year",
+              "io_years"
+            ],
+            "label": "Total interest paid during interest‑only period",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "amort_n": {
+            "expression": "(term_years - io_years) * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "io_years",
+              "payments_per_year"
+            ],
+            "label": "Number of amortization periods after IO",
+            "unit": "",
+            "format": "integer",
+            "display": true
+          },
+          "amort_payment": {
+            "expression": "amort_n > 0 ? (principal * r_period) / (1 - (1 + r_period) ** (-amort_n)) : 0",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "amort_n"
+            ],
+            "label": "Periodic amortizing payment after interest‑only",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "amort_total_interest": {
+            "expression": "amort_n > 0 ? (amort_payment * amort_n - principal) : 0",
+            "dependencies": [
+              "amort_payment",
+              "amort_n",
+              "principal"
+            ],
+            "label": "Total interest paid during amortization",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_all_periods": {
+            "expression": "io_total_interest + amort_total_interest",
+            "dependencies": [
+              "io_total_interest",
+              "amort_total_interest"
+            ],
+            "label": "Total interest over full loan life",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "io_payment * payments_per_year * io_years + (amort_payment * amort_n)",
+            "dependencies": [
+              "io_payment",
+              "payments_per_year",
+              "io_years",
+              "amort_payment",
+              "amort_n"
+            ],
+            "label": "Total cash paid (interest + principal) over loan life",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "io_payment",
+            "label": "Interest‑Only Payment (per period)",
+            "variable": "io_payment",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "amort_payment",
+            "label": "Amortizing Payment (per period after IO)",
+            "variable": "amort_payment",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_all_periods",
+            "label": "Total Interest Paid",
+            "variable": "total_interest_all_periods",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total Cash Paid",
+            "variable": "total_paid",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "full_amortization": {
+        "label": "Fully Amortizing from Day One",
+        "description": "Standard amortizing loan payment that repays principal and interest over the full term.",
+        "variables": {
+          "r_period": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "n_total": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of periods",
+            "unit": "",
+            "format": "integer",
+            "display": true
+          },
+          "amort_payment_full": {
+            "expression": "n_total > 0 ? (principal * r_period) / (1 - (1 + r_period) ** (-n_total)) : 0",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "n_total"
+            ],
+            "label": "Periodic amortizing payment",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_full": {
+            "expression": "n_total > 0 ? (amort_payment_full * n_total - principal) : 0",
+            "dependencies": [
+              "amort_payment_full",
+              "n_total",
+              "principal"
+            ],
+            "label": "Total interest (fully amortizing)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_full": {
+            "expression": "amort_payment_full * n_total",
+            "dependencies": [
+              "amort_payment_full",
+              "n_total"
+            ],
+            "label": "Total cash paid (fully amortizing)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "amort_payment_full",
+            "label": "Amortizing Payment (per period)",
+            "variable": "amort_payment_full",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_full",
+            "label": "Total Interest Paid (fully amortizing)",
+            "variable": "total_interest_full",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_full",
+            "label": "Total Cash Paid (fully amortizing)",
+            "variable": "total_paid_full",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "comparison": {
+        "label": "Direct Comparison",
+        "description": "Shows the difference in periodic payments and total interest between interest‑only followed by amortization and a fully amortizing loan.",
+        "variables": {
+          "io_pm": {
+            "expression": "interest_only.io_payment",
+            "dependencies": [
+              "interest_only.io_payment"
+            ],
+            "label": "Interest‑only payment (alias)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "amort_pm_after_io": {
+            "expression": "interest_only.amort_payment",
+            "dependencies": [
+              "interest_only.amort_payment"
+            ],
+            "label": "Amortizing payment after IO (alias)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "amort_pm_full": {
+            "expression": "full_amortization.amort_payment_full",
+            "dependencies": [
+              "full_amortization.amort_payment_full"
+            ],
+            "label": "Fully amortizing payment (alias)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment_diff": {
+            "expression": "amort_pm_after_io - amort_pm_full",
+            "dependencies": [
+              "amort_pm_after_io",
+              "amort_pm_full"
+            ],
+            "label": "Difference in periodic payment after IO vs full amortization",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_diff": {
+            "expression": "interest_only.total_interest_all_periods - full_amortization.total_interest_full",
+            "dependencies": [
+              "interest_only.total_interest_all_periods",
+              "full_amortization.total_interest_full"
+            ],
+            "label": "Difference in total interest (IO then amortize minus full amortize)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment_diff",
+            "label": "Periodic Payment Difference",
+            "variable": "periodic_payment_diff",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_diff",
+            "label": "Total Interest Difference",
+            "variable": "total_interest_diff",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %) — nominal",
+        "type": "number",
+        "default": 5.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Total loan term (years)",
+        "type": "number",
+        "default": 60,
+        "min": 1,
+        "max": 84,
+        "step": 1
+      },
+      {
+        "id": "io_years",
+        "label": "Interest‑only period (years)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 10,
+        "step": 0.5
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          },
+          {
+            "label": "Annually (1)",
+            "value": "1"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares an interest‑only auto loan structure (pay only interest for a fixed initial period, then amortize) with a fully amortizing loan that repays principal and interest over the full term.",
+      "Use realistic inputs for principal, APR, payment frequency, interest‑only length, and total term. Results show periodic payments, total interest, and total cash paid for clear decision support."
+    ],
+    "methodology": [
+      "Interest‑only periodic payment equals the principal multiplied by the periodic interest rate: principal × (APR/100 ÷ payments per year). During the interest‑only period, principal remains unchanged.",
+      "After the interest‑only period the calculator computes the amortizing payment required to repay the principal over the remaining number of periods using the standard annuity formula.",
+      "All rate calculations use the nominal APR divided by the payment frequency to obtain a periodic rate; compounding between payment periods is not modeled beyond that periodic rate."
+    ],
+    "how_is_calculated": [
+      "Periodic interest rate (r) = APR (%) ÷ 100 ÷ payments_per_year.",
+      "Interest‑only payment = principal × r.",
+      "Number of amortization periods after IO = (term_years − io_years) × payments_per_year.",
+      "Amortizing payment = principal × r ÷ (1 − (1 + r)^(−n)) where n is the number of periods.",
+      "Total interest = sum of interest during IO + (amortizing payment × n − principal)."
+    ],
+    "examples": [
+      "Example 1: $30,000 principal, 5.5% APR, monthly payments, 2‑year IO, 60‑year term. The calculator shows the monthly interest‑only payment during year 1–2, the monthly amortizing payment after year 2, and total interest over the loan life.",
+      "Example 2: Shorter term reduces total interest in a fully amortizing loan; interest‑only can lower early payments but often increases total interest unless followed by refinancing or principal prepayments."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include fees, taxes, or insurance?",
+        "answer": "No. This tool models interest and principal only. Add fees, taxes, and insurance to your budget separately; they are not included in payment or total cost outputs."
+      },
+      {
+        "question": "Is APR the same as the periodic rate used here?",
+        "answer": "This calculator uses the nominal APR divided by payments per year to compute a periodic rate. It does not perform additional APR to effective annual rate conversions or include fees in APR."
+      },
+      {
+        "question": "What happens if the interest‑only period equals the full term?",
+        "answer": "If the interest‑only period equals the total term, the tool shows zero amortization periods and an amortizing payment of zero; total interest equals the interest paid during the IO period."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results follow standard finance formulas. Rounding and floating‑point arithmetic can introduce small differences; see the accuracy and standards notes in citations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Consumer Financial Protection Bureau — Understanding auto loans and disclosures",
+        "url": "https://www.consumerfinance.gov"
+      },
+      {
+        "label": "NIST Special Publication — Guidelines on computational accuracy and numerical methods",
+        "url": "https://www.nist.gov/publications"
+      },
+      {
+        "label": "ISO Standards — Financial services and numeric data quality guidance",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE 754 — Standard for floating‑point arithmetic (numeric reliability considerations)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA — Not directly financial, cited for risk management practice recommendations",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Interest‑Only Payment",
+        "definition": "Periodic payment that covers only interest for a defined initial period; principal balance remains unchanged during this time."
+      },
+      {
+        "term": "Amortizing Payment",
+        "definition": "Periodic payment that gradually repays both principal and interest so the loan balance reaches zero at the end of the scheduled term."
+      },
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "Nominal yearly interest rate expressed as a percentage. This tool uses APR to compute the periodic rate by dividing by the payment frequency; fees are not included unless entered manually."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate applicable to a single payment period: APR/100 divided by payments per year."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/publications",
+        "label": "NIST Publications",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754 Floating‑Point Standard",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA Guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

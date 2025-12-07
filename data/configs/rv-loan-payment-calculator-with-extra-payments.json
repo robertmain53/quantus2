@@ -1,0 +1,606 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan Payment Calculator — Extra Payments",
+    "description": "Estimate RV loan payments, amortization impact, payoff time and interest saved when you add recurring or one-time extra principal payments. Includes safeguards, limits and accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "with_extra_payments",
+    "methods": {
+      "standard_amortization": {
+        "label": "Standard amortization (no extra payments)",
+        "description": "Calculates scheduled payment, total interest and payoff time using standard amortization.",
+        "variables": {
+          "r": {
+            "expression": "annual_interest_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_interest_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "percent",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "scheduled_payment": {
+            "expression": "(r * principal) / (1 - (1 + r) ** (-n))",
+            "dependencies": [
+              "r",
+              "principal",
+              "n"
+            ],
+            "label": "Scheduled payment per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "original_total_interest": {
+            "expression": "scheduled_payment * n - principal",
+            "dependencies": [
+              "scheduled_payment",
+              "n",
+              "principal"
+            ],
+            "label": "Total interest (no extra payments)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_time_years": {
+            "expression": "n / payments_per_year",
+            "dependencies": [
+              "n",
+              "payments_per_year"
+            ],
+            "label": "Payoff time (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled payment per period",
+            "variable": "scheduled_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "original_total_interest",
+            "label": "Total interest (no extra payments)",
+            "variable": "original_total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Payoff time (years)",
+            "variable": "payoff_time_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "with_extra_payments": {
+        "label": "With extra payments (recurring and/or one-time)",
+        "description": "Estimates effect of recurring extra principal payments and a single one-time extra principal payment applied at a chosen payment number. Returns adjusted payoff time, total interest and interest saved compared to standard amortization.",
+        "variables": {
+          "r": {
+            "expression": "annual_interest_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_interest_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "percent",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Original total payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "(r * principal) / (1 - (1 + r) ** (-n))",
+            "dependencies": [
+              "r",
+              "principal",
+              "n"
+            ],
+            "label": "Scheduled payment per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_before_one_time": {
+            "expression": "principal * (1 + r) ** (one_time_payment_number - 1) - scheduled_payment * (((1 + r) ** (one_time_payment_number - 1) - 1) / r)",
+            "dependencies": [
+              "principal",
+              "r",
+              "scheduled_payment",
+              "one_time_payment_number"
+            ],
+            "label": "Estimated remaining balance immediately before one-time extra payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "principal_after_one_time": {
+            "expression": "max(balance_before_one_time - one_time_extra_amount, 0)",
+            "dependencies": [
+              "balance_before_one_time",
+              "one_time_extra_amount"
+            ],
+            "label": "Principal after applying one-time extra payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "scheduled_payment + recurring_extra_amount",
+            "dependencies": [
+              "scheduled_payment",
+              "recurring_extra_amount"
+            ],
+            "label": "Payment per period including recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_after": {
+            "expression": "- ln(1 - r * principal_after_one_time / payment_with_extra) / ln(1 + r)",
+            "dependencies": [
+              "r",
+              "principal_after_one_time",
+              "payment_with_extra"
+            ],
+            "label": "Remaining number of payments after applying one-time extra",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "estimated_payoff_payments": {
+            "expression": "(one_time_payment_number - 1) + n_after",
+            "dependencies": [
+              "one_time_payment_number",
+              "n_after"
+            ],
+            "label": "Estimated total number of payments until payoff",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_time_years": {
+            "expression": "estimated_payoff_payments / payments_per_year",
+            "dependencies": [
+              "estimated_payoff_payments",
+              "payments_per_year"
+            ],
+            "label": "Estimated payoff time",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "interest_before_one_time": {
+            "expression": "scheduled_payment * (one_time_payment_number - 1) - (principal - balance_before_one_time)",
+            "dependencies": [
+              "scheduled_payment",
+              "one_time_payment_number",
+              "principal",
+              "balance_before_one_time"
+            ],
+            "label": "Interest paid before one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_after_one_time": {
+            "expression": "payment_with_extra * n_after - principal_after_one_time",
+            "dependencies": [
+              "payment_with_extra",
+              "n_after",
+              "principal_after_one_time"
+            ],
+            "label": "Interest from after one-time extra until payoff",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest": {
+            "expression": "interest_before_one_time + total_interest_after_one_time",
+            "dependencies": [
+              "interest_before_one_time",
+              "total_interest_after_one_time"
+            ],
+            "label": "Estimated total interest with extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "original_total_interest": {
+            "expression": "scheduled_payment * n - principal",
+            "dependencies": [
+              "scheduled_payment",
+              "n",
+              "principal"
+            ],
+            "label": "Total interest without extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_saved": {
+            "expression": "original_total_interest - total_interest",
+            "dependencies": [
+              "original_total_interest",
+              "total_interest"
+            ],
+            "label": "Estimated interest saved",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled payment per period (no extra)",
+            "variable": "scheduled_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Payment per period including recurring extra",
+            "variable": "payment_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_payoff_payments",
+            "label": "Estimated number of payments until payoff",
+            "variable": "estimated_payoff_payments",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Estimated payoff time (years)",
+            "variable": "payoff_time_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest (with extra payments)",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved vs no extra",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 15,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payment frequency",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment_type",
+        "label": "Extra payment option",
+        "type": "select",
+        "default": "none",
+        "options": [
+          {
+            "label": "No extra payments",
+            "value": "none"
+          },
+          {
+            "label": "Recurring extra payment each period",
+            "value": "recurring"
+          },
+          {
+            "label": "Single one-time extra payment",
+            "value": "one_time"
+          },
+          {
+            "label": "Both recurring and one-time",
+            "value": "both"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "recurring_extra_section",
+        "label": "Recurring extra payment",
+        "show_when": {
+          "field": "extra_payment_type",
+          "is": "recurring"
+        },
+        "fields": [
+          {
+            "id": "recurring_extra_amount",
+            "label": "Recurring extra amount per payment",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "recurring_extra_section_both",
+        "label": "Recurring extra payment (when both selected)",
+        "show_when": {
+          "field": "extra_payment_type",
+          "is": "both"
+        },
+        "fields": [
+          {
+            "id": "recurring_extra_amount",
+            "label": "Recurring extra amount per payment",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "one_time_extra_section",
+        "label": "One-time extra payment",
+        "show_when": {
+          "field": "extra_payment_type",
+          "is": "one_time"
+        },
+        "fields": [
+          {
+            "id": "one_time_extra_amount",
+            "label": "One-time extra principal amount",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "one_time_payment_number",
+            "label": "Apply one-time extra at which payment number?",
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "one_time_extra_section_both",
+        "label": "One-time extra payment (when both selected)",
+        "show_when": {
+          "field": "extra_payment_type",
+          "is": "both"
+        },
+        "fields": [
+          {
+            "id": "one_time_extra_amount",
+            "label": "One-time extra principal amount",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "one_time_payment_number",
+            "label": "Apply one-time extra at which payment number?",
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "step": 1
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "scheduled_payment",
+          "label": "Scheduled payment per period"
+        },
+        {
+          "id": "payment_with_extra",
+          "label": "Payment per period including recurring extra"
+        },
+        {
+          "id": "estimated_payoff_payments",
+          "label": "Estimated number of payments until payoff"
+        },
+        {
+          "id": "payoff_time_years",
+          "label": "Estimated payoff time (years)"
+        },
+        {
+          "id": "total_interest",
+          "label": "Estimated total interest (with extra payments)"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Estimated interest saved vs no extra"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This RV loan calculator estimates scheduled payments, the impact of recurring extra payments and/or a single one-time extra principal payment on payoff time and interest paid. Use it to compare the 'no extra' case to adding extra principal each period or a one-time lump-sum payment.",
+      "Results are estimates based on standard amortization math and assume fixed interest rate, equal payment periods and that extra amounts are applied directly to principal. See methodology and accuracy notes below."
+    ],
+    "methodology": [
+      "Calculations use a periodic-rate amortization model: periodic rate = APR / payments per year. The scheduled payment is computed from the closed-form amortization formula. When a one-time extra is specified, the tool computes the remaining balance immediately before that payment, subtracts the extra amount, then recomputes remaining payments assuming the same per-period payment plus any recurring extra.",
+      "For recurring extra payments the tool treats the combined per-period payment (scheduled payment + recurring extra) as the new per-period payment and computes the number of periods until payoff using the logarithmic closed-form solution. Interest saved is the difference between total interest in the baseline schedule and the adjusted schedule."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = APR / 100 / payments_per_year",
+      "Scheduled payment A = (r * P) / (1 - (1 + r)^(-n)), where P = principal and n = term_years * payments_per_year",
+      "Remaining payments after extra = -ln(1 - r * P_remaining / A_combined) / ln(1 + r)",
+      "Estimated total interest = total_paid - principal (total_paid = per_period_payment * number_of_payments)"
+    ],
+    "examples": [
+      "Example 1: $50,000 principal, 6.5% APR, 15 years, monthly payments. Adding $100 recurring to each payment reduces payoff time and total interest; the tool shows estimated years saved and interest saved.",
+      "Example 2: Same loan but applying a one-time $5,000 principal payment at payment 12 reduces the remaining balance immediately; the tool recomputes remaining number of payments and updated interest."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator account for fees, insurance or taxes?",
+        "answer": "No. This tool models principal and interest only. Fees, taxes, insurance and other escrow items are excluded unless entered as part of the loan amount."
+      },
+      {
+        "question": "Are results exact for every schedule?",
+        "answer": "Results are mathematically consistent with standard amortization formulas for fixed-rate loans and the assumptions stated. However, small differences can occur versus lender statements due to rounding conventions, daily interest accrual, payment timing variations, or different application order for extra payments."
+      },
+      {
+        "question": "Can I use this with biweekly or weekly payments?",
+        "answer": "Yes. Choose the payment frequency (monthly, biweekly, weekly). The tool converts APR to the corresponding periodic rate and applies the same formulas."
+      },
+      {
+        "question": "What happens if a one-time extra is larger than the remaining balance?",
+        "answer": "The calculator caps the remaining principal at zero. If a one-time extra equals or exceeds the remaining balance, payoff is immediate and the estimated remaining payments will be zero."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The initial amount of the loan on which interest is calculated."
+      },
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The nominal annual interest rate. This calculator treats APR as the stated interest rate for amortization purposes."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate per payment period: APR divided by the number of payments per year."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of spreading loan payments over time so that each payment covers interest and reduces principal."
+      },
+      {
+        "term": "Recurring extra payment",
+        "definition": "An additional amount added to every scheduled payment and applied to principal, reducing payoff time and interest."
+      },
+      {
+        "term": "One-time extra payment",
+        "definition": "A single principal payment applied at a chosen payment number to reduce remaining balance."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/loans/rv/guide/extra-payments"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

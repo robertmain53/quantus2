@@ -1,0 +1,398 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Free Cash Flow (FCF) Calculator — Multi‑method",
+    "description": "Calculate Free Cash Flow using multiple industry methods (OCF − CapEx, Net Income reconciliation, Free Cash Flow to Firm, Free Cash Flow to Equity). Includes inputs, intermediate variables, sensitivity guidance, and accuracy caveats aligned with software quality and security best practices."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "ocf_minus_capex",
+    "methods": {
+      "ocf_minus_capex": {
+        "label": "Operating Cash Flow minus Capital Expenditures",
+        "description": "Simple, cash-based FCF: cash from operations less capital expenditures. Best when you have a reliable reported operating cash flow.",
+        "variables": {
+          "fcf_ocf": {
+            "expression": "operating_cash_flow - capital_expenditures",
+            "dependencies": [
+              "operating_cash_flow",
+              "capital_expenditures"
+            ],
+            "label": "Free Cash Flow (OCF − CapEx)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "fcf_ocf",
+            "label": "Free Cash Flow (OCF − CapEx)",
+            "variable": "fcf_ocf",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "income_reconciliation": {
+        "label": "Net Income Reconciliation to FCF",
+        "description": "Reconcile net income to FCF by adding back non‑cash charges and subtracting working capital and CapEx. Use when only accrual accounting figures are available.",
+        "variables": {
+          "after_tax_interest": {
+            "expression": "interest_expense * (1 - tax_rate / 100)",
+            "dependencies": [
+              "interest_expense",
+              "tax_rate"
+            ],
+            "label": "After‑tax interest",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "fcf_from_income": {
+            "expression": "net_income + depreciation_amortization - change_working_capital - capital_expenditures + net_borrowings - dividends_paid",
+            "dependencies": [
+              "net_income",
+              "depreciation_amortization",
+              "change_working_capital",
+              "capital_expenditures",
+              "net_borrowings",
+              "dividends_paid"
+            ],
+            "label": "Free Cash Flow (reconciled from Net Income)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "fcf_from_income",
+            "label": "Free Cash Flow (reconciled from Net Income)",
+            "variable": "fcf_from_income",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "fcff": {
+        "label": "Free Cash Flow to Firm (FCFF)",
+        "description": "FCFF measures cash available to all providers of capital. Uses NOPAT (EBIT after tax) plus non‑cash charges less working capital and CapEx.",
+        "variables": {
+          "nopat": {
+            "expression": "ebit * (1 - tax_rate / 100)",
+            "dependencies": [
+              "ebit",
+              "tax_rate"
+            ],
+            "label": "NOPAT (EBIT × (1 − tax rate))",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "fcff_calc": {
+            "expression": "nopat + depreciation_amortization - change_working_capital - capital_expenditures",
+            "dependencies": [
+              "nopat",
+              "depreciation_amortization",
+              "change_working_capital",
+              "capital_expenditures"
+            ],
+            "label": "Free Cash Flow to Firm (FCFF)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "fcff_calc",
+            "label": "Free Cash Flow to Firm (FCFF)",
+            "variable": "fcff_calc",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "fcfe": {
+        "label": "Free Cash Flow to Equity (FCFE)",
+        "description": "FCFE is cash available to equity holders after debt servicing and borrowings. Derived from FCFF adjusted for net interest and net debt flows.",
+        "variables": {
+          "fcff_calc": {
+            "expression": "ebit * (1 - tax_rate / 100) + depreciation_amortization - change_working_capital - capital_expenditures",
+            "dependencies": [
+              "ebit",
+              "tax_rate",
+              "depreciation_amortization",
+              "change_working_capital",
+              "capital_expenditures"
+            ],
+            "label": "FCFF (internal calculation)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "after_tax_interest": {
+            "expression": "interest_expense * (1 - tax_rate / 100)",
+            "dependencies": [
+              "interest_expense",
+              "tax_rate"
+            ],
+            "label": "After‑tax interest",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "fcfe_calc": {
+            "expression": "fcff_calc - after_tax_interest + net_borrowings - debt_repayments - dividends_paid",
+            "dependencies": [
+              "fcff_calc",
+              "after_tax_interest",
+              "net_borrowings",
+              "debt_repayments",
+              "dividends_paid"
+            ],
+            "label": "Free Cash Flow to Equity (FCFE)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "fcfe_calc",
+            "label": "Free Cash Flow to Equity (FCFE)",
+            "variable": "fcfe_calc",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "operating_cash_flow",
+        "label": "Operating cash flow (cash from operations)",
+        "type": "number",
+        "default": 100000,
+        "step": 1,
+        "min": -999999999
+      },
+      {
+        "id": "capital_expenditures",
+        "label": "Capital expenditures (CapEx) — cash outflow",
+        "type": "number",
+        "default": 20000,
+        "step": 1,
+        "min": 0
+      },
+      {
+        "id": "net_income",
+        "label": "Net income (profit after tax)",
+        "type": "number",
+        "default": 80000,
+        "step": 1,
+        "min": -999999999
+      },
+      {
+        "id": "depreciation_amortization",
+        "label": "Depreciation & amortization (non‑cash charges)",
+        "type": "number",
+        "default": 10000,
+        "step": 1,
+        "min": 0
+      },
+      {
+        "id": "change_working_capital",
+        "label": "Change in working capital (increase = use of cash)",
+        "type": "number",
+        "default": 5000,
+        "step": 1,
+        "min": -999999999
+      },
+      {
+        "id": "interest_expense",
+        "label": "Interest expense (cash interest)",
+        "type": "number",
+        "default": 2000,
+        "step": 1,
+        "min": 0
+      },
+      {
+        "id": "tax_rate",
+        "label": "Tax rate (percent, enter 25 for 25%)",
+        "type": "number",
+        "default": 25,
+        "step": 0.1,
+        "min": 0,
+        "max": 100
+      },
+      {
+        "id": "net_borrowings",
+        "label": "Net borrowings (new debt − repayments; positive = net borrowings)",
+        "type": "number",
+        "default": 0,
+        "step": 1,
+        "min": -999999999
+      },
+      {
+        "id": "debt_repayments",
+        "label": "Debt repayments (cash outflow for principal)",
+        "type": "number",
+        "default": 0,
+        "step": 1,
+        "min": 0
+      },
+      {
+        "id": "dividends_paid",
+        "label": "Dividends paid",
+        "type": "number",
+        "default": 0,
+        "step": 1,
+        "min": 0
+      },
+      {
+        "id": "ebit",
+        "label": "EBIT (Earnings Before Interest & Taxes)",
+        "type": "number",
+        "default": 120000,
+        "step": 1,
+        "min": -999999999
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes Free Cash Flow using multiple commonly used methods so you can compare cash‑based and accrual‑based measures. Use the method that matches your data sources: operating cash flow if you have a cash flow statement, or the net income reconciliation if you only have an income statement.",
+      "Results are intended for analysis and planning only. The tool provides intermediate variables (NOPAT, after‑tax interest, FCFF, FCFE) so you can see how reconciliations and adjustments affect the final FCF figure."
+    ],
+    "methodology": [
+      "Available methods: (1) Operating cash flow minus capital expenditures, (2) Net income reconciliation (add non‑cash charges, subtract Δ working capital and CapEx), (3) Free Cash Flow to Firm (NOPAT + non‑cash charges − Δ working capital − CapEx), (4) Free Cash Flow to Equity (FCFF adjusted for after‑tax interest and net debt flows).",
+      "Calculation and implementation practices follow general software quality and security guidance. Adopted controls and recommendations reference NIST cybersecurity frameworks for data integrity and confidentiality, ISO quality management principles for input validation and change control, and IEEE software lifecycle best practices for traceability of formulas and tests. These references support dependable numeric results but do not replace professional audit or regulatory reporting requirements."
+    ],
+    "how_is_calculated": [
+      "OCF method: Free Cash Flow = Operating cash flow − Capital expenditures.",
+      "Net income reconciliation: Free Cash Flow = Net income + Depreciation & amortization − Δ Working capital − CapEx + Net borrowings − Dividends.",
+      "FCFF: NOPAT = EBIT × (1 − tax rate). FCFF = NOPAT + Depreciation & amortization − Δ Working capital − CapEx.",
+      "FCFE: FCFE = FCFF − After‑tax interest + Net borrowings − Debt repayments − Dividends, where After‑tax interest = Interest expense × (1 − tax rate)."
+    ],
+    "examples": [
+      "Example 1: If operating cash flow is 120,000 and CapEx is 30,000, OCF method yields FCF = 90,000.",
+      "Example 2: If net income 80,000 + D&A 10,000 − ΔWC 5,000 − CapEx 20,000 yields reconciled FCF = 65,000 (assuming no borrowings or dividends)."
+    ],
+    "faqs": [
+      {
+        "question": "Should CapEx be entered as a positive or negative number?",
+        "answer": "Enter CapEx as a positive number representing cash outflow. The calculator subtracts CapEx from cash or accrual measures."
+      },
+      {
+        "question": "How should I enter the tax rate?",
+        "answer": "Enter the tax rate as a percentage (for example, 25 for 25%). After‑tax adjustments use tax_rate / 100 in formulas."
+      },
+      {
+        "question": "Which method is most accurate?",
+        "answer": "Accuracy depends on data quality. Use OCF − CapEx when reported cash flow is reliable. Use reconciliation methods when only accrual accounts are available. Compare methods as part of sensitivity analysis."
+      },
+      {
+        "question": "Does this tool replace audited financial statements or regulatory filings?",
+        "answer": "No. This calculator is for analysis and planning. For regulatory compliance and audited reporting, follow applicable accounting standards and engage qualified professionals."
+      },
+      {
+        "question": "What are the known limitations and accuracy caveats?",
+        "answer": "Inputs may be estimates, rounding or classification differences across accounting standards can change results, and one‑time or non‑recurring items may require manual adjustments. Perform sensitivity checks and document assumptions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE - Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov/"
+      },
+      {
+        "label": "Financial Accounting Standards Board (FASB)",
+        "url": "https://www.fasb.org/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Free Cash Flow (FCF)",
+        "definition": "Cash available to be distributed to the firm's capital providers after capital expenditures and working capital needs are met."
+      },
+      {
+        "term": "Free Cash Flow to Firm (FCFF)",
+        "definition": "Cash available to all capital providers (debt and equity). Calculated as NOPAT + non‑cash charges − Δ working capital − CapEx."
+      },
+      {
+        "term": "Free Cash Flow to Equity (FCFE)",
+        "definition": "Cash available to equity holders after debt servicing and net borrowing effects."
+      },
+      {
+        "term": "Operating cash flow (OCF)",
+        "definition": "Cash generated from operating activities as reported on the cash flow statement."
+      },
+      {
+        "term": "CapEx (Capital expenditures)",
+        "definition": "Cash spent on acquiring or maintaining fixed assets; treated as an outflow in FCF calculations."
+      },
+      {
+        "term": "NOPAT",
+        "definition": "Net operating profit after tax; typically EBIT × (1 − tax rate)."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.fasb.org/",
+        "label": "FASB (accounting standards)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculation"
+    ]
+  }
+}

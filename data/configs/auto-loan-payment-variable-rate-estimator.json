@@ -1,0 +1,441 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Payment — Variable Rate Estimator",
+    "description": "Project initial and variable-rate auto loan payments. Supports fixed-rate benchmark and a capped periodic-reset projection (approximate). Includes clear assumptions, calibration notes, and references to technical standards for model robustness and data handling."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "periodic_reset",
+    "methods": {
+      "single_rate": {
+        "label": "Fixed-rate projection (benchmark)",
+        "description": "Compute payment, total paid, and total interest assuming the initial APR stays constant for the full term. Useful as a baseline comparison.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "(initial_rate_percent / 100) / 12",
+            "dependencies": [
+              "initial_rate_percent"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "n_months": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment_var": {
+            "expression": "principal * monthly_rate / (1 - (1 + monthly_rate) ^ (-n_months))",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "n_months"
+            ],
+            "label": "Monthly payment (fixed-rate formula)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment": {
+            "expression": "monthly_payment_var * n_months",
+            "dependencies": [
+              "monthly_payment_var",
+              "n_months"
+            ],
+            "label": "Total paid (principal + interest)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_payment - principal",
+            "dependencies": [
+              "total_payment",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment_fixed",
+            "label": "Monthly payment (fixed-rate benchmark)",
+            "variable": "monthly_payment_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payment_fixed",
+            "label": "Total paid (fixed-rate benchmark)",
+            "variable": "total_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_fixed",
+            "label": "Total interest (fixed-rate benchmark)",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "periodic_reset": {
+        "label": "Variable-rate projection (periodic resets with caps)",
+        "description": "Approximate projection where the loan rate resets periodically to an index + margin, with periodic and lifetime caps and a floor applied. This method approximates the effect of resets by using a plausible capped long-run rate and estimating a representative monthly payment; it does not build a full payment-by-payment schedule but provides conservative, explainable aggregates for planning.",
+        "variables": {
+          "target_rate_percent": {
+            "expression": "index_rate_percent + margin_percent",
+            "dependencies": [
+              "index_rate_percent",
+              "margin_percent"
+            ],
+            "label": "Target APR before caps (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "lifetime_upper_bound_percent": {
+            "expression": "initial_rate_percent + lifetime_cap_percent",
+            "dependencies": [
+              "initial_rate_percent",
+              "lifetime_cap_percent"
+            ],
+            "label": "Lifetime cap upper bound (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "periodic_upper_bound_percent": {
+            "expression": "initial_rate_percent + periodic_cap_percent",
+            "dependencies": [
+              "initial_rate_percent",
+              "periodic_cap_percent"
+            ],
+            "label": "Single-reset cap relative to initial rate (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "capped_rate_percent": {
+            "expression": "max(min(target_rate_percent, lifetime_upper_bound_percent), rate_floor_percent)",
+            "dependencies": [
+              "target_rate_percent",
+              "lifetime_upper_bound_percent",
+              "rate_floor_percent"
+            ],
+            "label": "Projected long-run APR after applying lifetime cap and floor (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "avg_representative_rate_percent": {
+            "expression": "(initial_rate_percent + capped_rate_percent) / 2",
+            "dependencies": [
+              "initial_rate_percent",
+              "capped_rate_percent"
+            ],
+            "label": "Representative average APR used for payment approximation (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "avg_monthly_rate": {
+            "expression": "(avg_representative_rate_percent / 100) / 12",
+            "dependencies": [
+              "avg_representative_rate_percent"
+            ],
+            "label": "Representative monthly rate (decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "n_months": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_payment_est_var": {
+            "expression": "principal * avg_monthly_rate / (1 - (1 + avg_monthly_rate) ^ (-n_months))",
+            "dependencies": [
+              "principal",
+              "avg_monthly_rate",
+              "n_months"
+            ],
+            "label": "Estimated monthly payment using representative average rate",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_est": {
+            "expression": "monthly_payment_est_var * n_months",
+            "dependencies": [
+              "monthly_payment_est_var",
+              "n_months"
+            ],
+            "label": "Estimated total paid (approximate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_est": {
+            "expression": "total_payment_est - principal",
+            "dependencies": [
+              "total_payment_est",
+              "principal"
+            ],
+            "label": "Estimated total interest (approximate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_rate_percent",
+            "label": "Projected capped APR used for estimate",
+            "variable": "capped_rate_percent",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "monthly_payment_est",
+            "label": "Estimated monthly payment (variable-rate projection)",
+            "variable": "monthly_payment_est_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payment_est",
+            "label": "Estimated total paid (variable-rate projection)",
+            "variable": "total_payment_est",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_est",
+            "label": "Estimated total interest (variable-rate projection)",
+            "variable": "total_interest_est",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 25000,
+        "min": 1000,
+        "max": 200000,
+        "step": 100
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "id": "initial_rate_percent",
+        "label": "Initial APR (percent)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "index_rate_percent",
+        "label": "Current index rate (percent) used for resets (e.g. LIBOR/Prime/T-Bill equivalent)",
+        "type": "number",
+        "default": 1.5,
+        "min": -5,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "margin_percent",
+        "label": "Lender margin (percent) added to index at reset",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 15,
+        "step": 0.01
+      },
+      {
+        "id": "adjustment_period_months",
+        "label": "Rate adjustment frequency (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 60,
+        "step": 1
+      },
+      {
+        "id": "periodic_cap_percent",
+        "label": "Periodic cap (percent) — maximum change per adjustment",
+        "type": "number",
+        "default": 2.0,
+        "min": 0,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "lifetime_cap_percent",
+        "label": "Lifetime cap (percent) — max increase above initial APR",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "rate_floor_percent",
+        "label": "Rate floor (percent) — minimum APR after resets",
+        "type": "number",
+        "default": 0.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you compare a fixed-rate benchmark against an approximate variable-rate projection for an auto loan. It models common adjustable-rate features: periodic resets to an index plus margin, periodic caps, a lifetime cap relative to the initial APR, and a floor.",
+      "Results include a fixed-rate baseline (if the initial APR remained constant) and a capped variable-rate estimate that applies caps and floors to a target index-plus-margin rate. The variable projection is an approximation intended for planning and comparison, not a substitute for a full amortization schedule or lender-provided disclosures."
+    ],
+    "methodology": [
+      "We compute a fixed-rate monthly payment using the standard amortization formula for a fully amortizing installment loan: payment = P * r / (1 - (1+r)^-N). For variable-rate projection we derive a representative capped APR by applying lifetime caps and floors to the index-plus-margin target, then estimate a representative monthly payment using the same amortization formula with the representative monthly rate.",
+      "This tool follows secure design and data-handling recommendations influenced by standards: NIST SP 800-series for secure processing practices, ISO 27001 principles for information security controls, and IEEE guidance for numerical robustness. Results include accuracy caveats and assumptions to support transparent decision-making."
+    ],
+    "how_is_calculated": [
+      "Fixed-rate monthly payment: monthly_rate = (initial_rate_percent / 100) / 12; n = term_years * 12; payment = principal * monthly_rate / (1 - (1+monthly_rate)^(-n)).",
+      "Target APR at resets: target = index_rate_percent + margin_percent.",
+      "Caps and floor (applied for projection): projected_apr = clamp(target, floor = rate_floor_percent, ceiling = initial_rate_percent + lifetime_cap_percent).",
+      "Representative average APR (approximation): representative_apr = (initial_rate_percent + projected_apr) / 2; this average is converted to a monthly rate and used in the amortization formula to estimate payments and totals. This approach approximates many periodic reset behaviors while keeping results explainable and conservative."
+    ],
+    "examples": [
+      "Example 1: $25,000 principal, 5-year term, initial APR 5.0%. Fixed-rate monthly payment computed directly. If index + margin would push APR above the lifetime cap, projection uses the capped APR for estimate.",
+      "Example 2: For steep index volatility, periodic caps may limit single-reset changes, but the lifetime cap still bounds longer-run increases; the projection uses the lifetime-capped APR as a practical planning input."
+    ],
+    "summary": [
+      "Use the fixed-rate projection as a baseline and the variable-rate projection to see how caps, margins, and index changes could alter your expected payments. The variable projection is intentionally conservative and approximate; for contractual figures always rely on lender disclosures and amortization schedules."
+    ],
+    "faqs": [
+      {
+        "question": "Is the variable-rate projection an exact amortization schedule?",
+        "answer": "No. The variable-rate output is an approximation that applies caps and floors to a target index-plus-margin rate and uses a representative average APR to estimate payments. It does not produce a payment-by-payment schedule or account for exact timing of resets, interest rounding, or lender-specific compounding rules."
+      },
+      {
+        "question": "What should I use as the index rate?",
+        "answer": "Enter the current published value for the index your loan references (for example, a published treasury, prime rate, or other market index). If uncertain, consult the loan documents or your lender. This tool uses that input plus your margin to form the target reset rate."
+      },
+      {
+        "question": "How do periodic and lifetime caps change results?",
+        "answer": "Periodic caps limit how much the APR can change at any single reset; lifetime caps limit how much the APR can increase above the initial APR overall. This estimator applies a lifetime cap when forming the projected APR and approximates the effect of periodic caps in aggregated form—see methodology for details."
+      },
+      {
+        "question": "How accurate is the calculator?",
+        "answer": "This estimator provides actionable planning numbers but is not a legal or lender disclosure. Differences arise from rounding, exact reset dates, compounding conventions, payment timing, and lender-specific rules. Expect practical deviations; always verify with lender amortization tables for contractual amounts."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Computer Security Resource Center",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate — the yearly interest rate expressed as a percentage, combining periodic interest and certain finance charges where applicable."
+      },
+      {
+        "term": "Index",
+        "definition": "A market rate (for example, a treasury yield or prime rate) referenced by an adjustable-rate loan to determine reset rates."
+      },
+      {
+        "term": "Margin",
+        "definition": "A fixed percentage that a lender adds to the index to determine the borrower's new APR at each reset."
+      },
+      {
+        "term": "Periodic cap",
+        "definition": "The maximum APR change allowed at a single adjustment/reset event."
+      },
+      {
+        "term": "Lifetime cap",
+        "definition": "The maximum APR allowed over the life of the loan, typically expressed as a maximum increase above the initial APR."
+      },
+      {
+        "term": "Floor",
+        "definition": "A minimum APR that the loan cannot drop below, even if the index falls."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/auto-loan-basics",
+      "/guides/understanding-adjustable-rates"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

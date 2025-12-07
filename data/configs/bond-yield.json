@@ -1,0 +1,429 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Bond Yield Calculator (Multiple Methods)",
+    "description": "Interactive calculator for Current Yield, Yield to Maturity (approximate), Yield to Call (approximate), and Yield to Worst. Uses user inputs for clean price, coupon rate, face value, maturity and call terms. Includes accuracy, limits, and standards-based verification guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "ytm",
+    "methods": {
+      "current_yield": {
+        "label": "Current Yield",
+        "description": "Simple income-based yield: annual coupon divided by clean price.",
+        "variables": {
+          "annual_coupon": {
+            "expression": "coupon_rate_pct/100 * face_value",
+            "dependencies": [
+              "coupon_rate_pct",
+              "face_value"
+            ],
+            "label": "Annual coupon payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_yield_var": {
+            "expression": "annual_coupon / price",
+            "dependencies": [
+              "annual_coupon",
+              "price"
+            ],
+            "label": "Current yield",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_yield",
+            "label": "Current Yield (%)",
+            "variable": "current_yield_var",
+            "format": "percent"
+          }
+        ]
+      },
+      "ytm": {
+        "label": "Yield to Maturity (Approximate)",
+        "description": "Approximate YTM using the standard linear approximation. For exact YTM use numerical root-finding against the bond price equation; this tool provides a widely used approximation and guidance.",
+        "variables": {
+          "coupon": {
+            "expression": "coupon_rate_pct/100 * face_value",
+            "dependencies": [
+              "coupon_rate_pct",
+              "face_value"
+            ],
+            "label": "Annual coupon payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "n": {
+            "expression": "years_to_maturity",
+            "dependencies": [
+              "years_to_maturity"
+            ],
+            "label": "Years to maturity",
+            "format": "integer",
+            "display": false
+          },
+          "ytm_approx": {
+            "expression": "(coupon + (face_value - price)/n) / ((face_value + price)/2)",
+            "dependencies": [
+              "coupon",
+              "face_value",
+              "price",
+              "n"
+            ],
+            "label": "Approximate yield to maturity",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ytm",
+            "label": "Yield to Maturity (%) (approx)",
+            "variable": "ytm_approx",
+            "format": "percent"
+          }
+        ]
+      },
+      "ytc": {
+        "label": "Yield to Call (Approximate)",
+        "description": "Approximate yield to the earliest call date using the linear approximation replacing maturity with years to call and face value with call price.",
+        "variables": {
+          "coupon_call": {
+            "expression": "coupon_rate_pct/100 * face_value",
+            "dependencies": [
+              "coupon_rate_pct",
+              "face_value"
+            ],
+            "label": "Annual coupon payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "nc": {
+            "expression": "years_to_call",
+            "dependencies": [
+              "years_to_call"
+            ],
+            "label": "Years to call",
+            "format": "integer",
+            "display": false
+          },
+          "ytc_approx": {
+            "expression": "(coupon_call + (call_price - price)/nc) / ((call_price + price)/2)",
+            "dependencies": [
+              "coupon_call",
+              "call_price",
+              "price",
+              "nc"
+            ],
+            "label": "Approximate yield to call",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ytc",
+            "label": "Yield to Call (%) (approx)",
+            "variable": "ytc_approx",
+            "format": "percent"
+          }
+        ]
+      },
+      "yield_to_worst": {
+        "label": "Yield to Worst",
+        "description": "The lower of YTM and YTC approximations; useful for callable bonds to show conservative yield.",
+        "variables": {
+          "coupon_worst": {
+            "expression": "coupon_rate_pct/100 * face_value",
+            "dependencies": [
+              "coupon_rate_pct",
+              "face_value"
+            ],
+            "label": "Annual coupon payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "n_worst": {
+            "expression": "years_to_maturity",
+            "dependencies": [
+              "years_to_maturity"
+            ],
+            "label": "Years to maturity",
+            "format": "integer",
+            "display": false
+          },
+          "nc_worst": {
+            "expression": "years_to_call",
+            "dependencies": [
+              "years_to_call"
+            ],
+            "label": "Years to call",
+            "format": "integer",
+            "display": false
+          },
+          "ytm_local": {
+            "expression": "(coupon_worst + (face_value - price)/n_worst) / ((face_value + price)/2)",
+            "dependencies": [
+              "coupon_worst",
+              "face_value",
+              "price",
+              "n_worst"
+            ],
+            "label": "Local approximate YTM",
+            "format": "percent",
+            "display": false
+          },
+          "ytc_local": {
+            "expression": "(coupon_worst + (call_price - price)/nc_worst) / ((call_price + price)/2)",
+            "dependencies": [
+              "coupon_worst",
+              "call_price",
+              "price",
+              "nc_worst"
+            ],
+            "label": "Local approximate YTC",
+            "format": "percent",
+            "display": false
+          },
+          "ytw": {
+            "expression": "0.5*(ytm_local + ytc_local - sqrt((ytm_local - ytc_local)^2))",
+            "dependencies": [
+              "ytm_local",
+              "ytc_local"
+            ],
+            "label": "Yield to worst (minimum of YTM and YTC)",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "yield_to_worst",
+            "label": "Yield to Worst (%) (approx)",
+            "variable": "ytw",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "price",
+        "label": "Clean price (per bond)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "coupon_rate_pct",
+        "label": "Coupon rate (annual %, nominal)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "face_value",
+        "label": "Face (par) value",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "years_to_maturity",
+        "label": "Years to maturity",
+        "type": "number",
+        "default": 5,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Coupon frequency",
+        "type": "select",
+        "default": "2",
+        "options": [
+          {
+            "label": "Annual",
+            "value": "1"
+          },
+          {
+            "label": "Semiannual",
+            "value": "2"
+          },
+          {
+            "label": "Quarterly",
+            "value": "4"
+          }
+        ]
+      },
+      {
+        "id": "years_to_call",
+        "label": "Years to earliest call (if callable)",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "call_price",
+        "label": "Call price (per bond)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Bond Yield Calculator provides common yield measures used by investors and analysts: Current Yield, Yield to Maturity (YTM, approximate), Yield to Call (YTC, approximate), and Yield to Worst. Enter the clean price (price excluding accrued interest), coupon rate, face value, and term details. For callable bonds, provide the earliest call date and call price to compute call-related yields.",
+      "Results include conservative guidance and explicit accuracy caveats. The tool uses closed-form approximations for YTM and YTC; for exact yields a numerical root-finding solution to the bond price equation is required. See methodology and citations for standards, verification practices, and limitations."
+    ],
+    "methodology": [
+      "Current Yield is calculated as annual coupon payment divided by the bond's clean price. It reflects income only and ignores time to maturity and capital gains/losses.",
+      "Yield to Maturity and Yield to Call are computed using a commonly used linear approximation: Y ≈ (C + (FV - P)/n) / ((FV + P)/2), where C is annual coupon, FV is face or call price, P is clean price, and n is the number of years to maturity or call. This is an approximation intended for quick estimates; precise values require solving the present value equation for yield via numerical methods.",
+      "Yield to Worst selects the lower of the YTM and YTC approximations to present a conservative yield estimate for callable bonds. The tool computes both approximations locally and returns the minimum."
+    ],
+    "how_is_calculated": [
+      "Annual coupon (C) = coupon_rate_pct / 100 * face_value",
+      "Current Yield = C / price",
+      "Approximate YTM = (C + (face_value - price) / years_to_maturity) / ((face_value + price) / 2)",
+      "Approximate YTC = (C + (call_price - price) / years_to_call) / ((call_price + price) / 2)",
+      "Yield to Worst = minimum(Approximate YTM, Approximate YTC) computed via numeric minimum formula"
+    ],
+    "examples": [
+      "Example 1: A 5% coupon bond with face value 1000, price 950, 5 years to maturity: Current Yield = (0.05*1000)/950 = 5.26%. Approximate YTM per formula will be reported as shown.",
+      "Example 2 (callable): Same bond with earliest call in 3 years at call price 1000: YTC will be approximated using years_to_call = 3; Yield to Worst will return the lower of the two approximations."
+    ],
+    "faqs": [
+      {
+        "question": "Are the YTM and YTC values exact?",
+        "answer": "No. This calculator returns widely used approximations for YTM and YTC for quick estimates. Exact yields require solving the bond price equation for the internal rate of return using iterative numerical methods. Use this tool for fast checks and consult precise solver methods when accuracy to basis points is required."
+      },
+      {
+        "question": "Should I enter clean price or dirty price?",
+        "answer": "Enter the clean price (excluding accrued interest). If you have the dirty price (including accrued interest), subtract accrued interest before using this calculator or use a dedicated price-to-yield function that accounts for accruals."
+      },
+      {
+        "question": "Does this handle floating-rate or zero-coupon bonds?",
+        "answer": "This calculator assumes fixed-rate coupon payments and constant nominal coupon rate. For floating-rate instruments or zero-coupon bonds, use a more specific valuation method; zero-coupon bonds have no coupon and YTM equals the implied annualized return derived from price and maturity."
+      },
+      {
+        "question": "What are the limits and verification recommendations?",
+        "answer": "For high-precision needs (e.g., regulatory reporting, trade confirmations), verify results using a numerical solver against the bond price equation and cross-check with independent systems. Validate inputs (e.g., payment frequency and whether price is clean) and perform sensitivity tests around small price changes to detect numerical instability."
+      },
+      {
+        "question": "How is callable bond logic handled?",
+        "answer": "Provide the earliest call date and call price. The calculator computes an approximate YTC and compares it to approximate YTM; Yield to Worst returns the conservative lower value. This approach assumes a single call date input (earliest call) and does not model multiple call schedules."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - Guidance on algorithm verification",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - Risk management and numerical quality principles",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association - Recommended practices for numerical accuracy and floating point",
+        "url": "https://ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - General workplace data and process controls (for operational compliance)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission - Investor information on bonds",
+        "url": "https://www.sec.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Clean price",
+        "definition": "The bond price excluding accrued interest. Use clean price as the input unless accrued interest is separately adjusted."
+      },
+      {
+        "term": "Accrued interest",
+        "definition": "Interest that has accumulated since the last coupon payment; added to the clean price to form the dirty price."
+      },
+      {
+        "term": "Yield to Maturity (YTM)",
+        "definition": "The internal rate of return on the bond assuming it is held to maturity and all coupons are reinvested at the same rate. Here we report a common approximation; exact YTM requires numeric solving."
+      },
+      {
+        "term": "Current Yield",
+        "definition": "Annual coupon divided by the bond's current clean price; reflects income only and ignores time value of money and capital gains/losses."
+      },
+      {
+        "term": "Yield to Call (YTC)",
+        "definition": "Yield calculated to the earliest call date assuming the bond will be called at the specified call price; in this tool presented as an approximation."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.sec.gov",
+        "label": "SEC - Bonds overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

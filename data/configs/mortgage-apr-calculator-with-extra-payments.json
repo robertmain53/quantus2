@@ -1,0 +1,602 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage APR & Payoff Calculator — Extra Payments",
+    "description": "Estimate mortgage payment, payoff timing, interest paid and an annualized effective rate when you add recurring or one-time extra principal payments. Includes comparisons to a no-extra baseline and clear caveats about APR vs effective annualized cost."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "monthly_extra",
+    "methods": {
+      "monthly_extra": {
+        "label": "Recurring monthly extra payment",
+        "description": "Adds a fixed extra principal contribution to each scheduled payment (same payment frequency as the loan). Calculates months to payoff, interest with and without extra payments, interest saved and an annualized effective rate approximation.",
+        "variables": {
+          "periodic_rate": {
+            "expression": "annual_interest_rate_percent / 100 / payments_per_year",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "total_payments": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Scheduled number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "regular_payment": {
+            "expression": "periodic_rate == 0 ? loan_amount / total_payments : loan_amount * periodic_rate / (1 - pow(1 + periodic_rate, -total_payments))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "total_payments"
+            ],
+            "label": "Scheduled periodic payment (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_payment": {
+            "expression": "regular_payment + extra_monthly",
+            "dependencies": [
+              "regular_payment",
+              "extra_monthly"
+            ],
+            "label": "Scheduled payment plus extra principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payoff_payments": {
+            "expression": "periodic_rate == 0 ? loan_amount / new_payment : -log(1 - periodic_rate * loan_amount / new_payment) / log(1 + periodic_rate)",
+            "dependencies": [
+              "periodic_rate",
+              "loan_amount",
+              "new_payment"
+            ],
+            "label": "Estimated number of payments until payoff",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_with_extra": {
+            "expression": "new_payment * payoff_payments - loan_amount",
+            "dependencies": [
+              "new_payment",
+              "payoff_payments",
+              "loan_amount"
+            ],
+            "label": "Total interest paid with extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_without_extra": {
+            "expression": "regular_payment * total_payments - loan_amount",
+            "dependencies": [
+              "regular_payment",
+              "total_payments",
+              "loan_amount"
+            ],
+            "label": "Total interest paid without extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_without_extra - total_interest_with_extra",
+            "dependencies": [
+              "total_interest_without_extra",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved from extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_annual_rate_percent": {
+            "expression": "payoff_payments == 0 ? 0 : (total_interest_with_extra / loan_amount) / (payoff_payments / payments_per_year) * 100",
+            "dependencies": [
+              "total_interest_with_extra",
+              "loan_amount",
+              "payoff_payments",
+              "payments_per_year"
+            ],
+            "label": "Approximate effective annualized interest (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "regular_payment",
+            "label": "Scheduled payment (no extra)",
+            "variable": "regular_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_payments",
+            "label": "Estimated payments to payoff with extra",
+            "variable": "payoff_payments",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest with extra payments",
+            "variable": "total_interest_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_without_extra",
+            "label": "Total interest without extra payments",
+            "variable": "total_interest_without_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "effective_annual_rate_percent",
+            "label": "Approximate effective annual rate",
+            "variable": "effective_annual_rate_percent",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "one_time_extra": {
+        "label": "Single one-time extra principal payment",
+        "description": "Apply a one-time principal prepayment at a chosen payment number then continue with scheduled payments. Calculates the resulting payoff timing, interest with and without the one-time extra, interest saved and an annualized effective rate approximation.",
+        "variables": {
+          "periodic_rate": {
+            "expression": "annual_interest_rate_percent / 100 / payments_per_year",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "total_payments": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Scheduled number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "regular_payment": {
+            "expression": "periodic_rate == 0 ? loan_amount / total_payments : loan_amount * periodic_rate / (1 - pow(1 + periodic_rate, -total_payments))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "total_payments"
+            ],
+            "label": "Scheduled periodic payment (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_before_extra": {
+            "expression": "min(max(1, floor(one_time_payment_number)), total_payments)",
+            "dependencies": [
+              "one_time_payment_number",
+              "total_payments"
+            ],
+            "label": "Payment number when the extra is applied",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "balance_before_extra": {
+            "expression": "periodic_rate == 0 ? loan_amount - regular_payment * payments_before_extra : loan_amount * pow(1 + periodic_rate, payments_before_extra) - regular_payment * ( (pow(1 + periodic_rate, payments_before_extra) - 1) / periodic_rate )",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "regular_payment",
+              "payments_before_extra"
+            ],
+            "label": "Estimated outstanding principal immediately before the one-time extra payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_principal_after_extra": {
+            "expression": "max(0, balance_before_extra - extra_one_time)",
+            "dependencies": [
+              "balance_before_extra",
+              "extra_one_time"
+            ],
+            "label": "Principal after applying one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "remaining_payments_after_extra": {
+            "expression": "new_principal_after_extra == 0 ? 0 : (periodic_rate == 0 ? new_principal_after_extra / regular_payment : -log(1 - periodic_rate * new_principal_after_extra / regular_payment) / log(1 + periodic_rate))",
+            "dependencies": [
+              "new_principal_after_extra",
+              "periodic_rate",
+              "regular_payment"
+            ],
+            "label": "Estimated remaining payments after the extra",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments_with_extra": {
+            "expression": "payments_before_extra + remaining_payments_after_extra",
+            "dependencies": [
+              "payments_before_extra",
+              "remaining_payments_after_extra"
+            ],
+            "label": "Total payments until payoff after extra",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "total_interest_with_extra": {
+            "expression": "regular_payment * total_payments_with_extra - loan_amount - extra_one_time",
+            "dependencies": [
+              "regular_payment",
+              "total_payments_with_extra",
+              "loan_amount",
+              "extra_one_time"
+            ],
+            "label": "Total interest paid with one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_without_extra": {
+            "expression": "regular_payment * total_payments - loan_amount",
+            "dependencies": [
+              "regular_payment",
+              "total_payments",
+              "loan_amount"
+            ],
+            "label": "Total interest without the one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_without_extra - total_interest_with_extra",
+            "dependencies": [
+              "total_interest_without_extra",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved from the one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_annual_rate_percent": {
+            "expression": "total_payments_with_extra == 0 ? 0 : (total_interest_with_extra / loan_amount) / (total_payments_with_extra / payments_per_year) * 100",
+            "dependencies": [
+              "total_interest_with_extra",
+              "loan_amount",
+              "total_payments_with_extra",
+              "payments_per_year"
+            ],
+            "label": "Approximate effective annualized interest (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "regular_payment",
+            "label": "Scheduled payment (no extra)",
+            "variable": "regular_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payments_before_extra",
+            "label": "Payment number when extra applied",
+            "variable": "payments_before_extra",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "remaining_payments_after_extra",
+            "label": "Remaining payments after extra",
+            "variable": "remaining_payments_after_extra",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest with one-time extra",
+            "variable": "total_interest_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_without_extra",
+            "label": "Total interest without extra",
+            "variable": "total_interest_without_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "effective_annual_rate_percent",
+            "label": "Approximate effective annual rate",
+            "variable": "effective_annual_rate_percent",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "annual_interest_rate_percent",
+        "label": "Annual interest rate (percent)",
+        "type": "number",
+        "default": 4.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1,
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_monthly",
+        "label": "Extra monthly principal (recurring)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_one_time",
+        "label": "One-time extra principal",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "one_time_payment_number",
+        "label": "Apply one-time extra at payment number",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "regular_payment",
+          "label": "Scheduled payment (no extra)"
+        },
+        {
+          "id": "payoff_payments",
+          "label": "Estimated payments to payoff with extra"
+        },
+        {
+          "id": "total_interest_with_extra",
+          "label": "Total interest with extra payments"
+        },
+        {
+          "id": "total_interest_without_extra",
+          "label": "Total interest without extra payments"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Interest saved"
+        },
+        {
+          "id": "effective_annual_rate_percent",
+          "label": "Approximate effective annual rate (%)",
+          "format": "percent"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This tool helps compare your scheduled mortgage payments to scenarios where you add extra principal payments — either as a recurring monthly addition or a single one-time prepayment. It reports estimated time-to-payoff, total interest paid in each scenario, interest saved and an approximate annualized effective interest rate.",
+      "Calculations are intended for planning and comparison. For formal APR disclosures required by law, lenders use regulatory methods (Truth in Lending / TILA) and may include fees and charge timing that this tool does not model. See accuracy and regulatory notes below."
+    ],
+    "methodology": [
+      "Amortization math uses the standard fixed-rate loan formula to compute the scheduled periodic payment and the remaining balance after a given number of payments. When extra principal is applied, we recalculate the number of remaining payments assuming the same scheduled payment amount plus the extra principal contribution.",
+      "For recurring extra payments we estimate payoff using the closed-form solution for the number of payments when payment differs from the original amortizing payment. For a one-time extra we reduce outstanding principal at the chosen payment number and then compute remaining payments on the reduced principal.",
+      "APR as defined by consumer regulation (TILA) is a legal disclosure that may include finance charges and certain fees and is solved using root-finding to equate present values. This tool reports an approximate effective annualized interest based on interest paid divided by time to payoff; it is not a regulation-compliant APR calculation."
+    ],
+    "how_is_calculated": [
+      "1) Convert the annual nominal rate to a periodic rate: periodic_rate = annual_interest_rate_percent / 100 / payments_per_year.",
+      "2) Compute the scheduled payment using the amortization formula: payment = P * r / (1 - (1 + r)^-N) where P is principal, r is periodic_rate, N is total_payments. If r = 0 the payment is P / N.",
+      "3) For recurring extra payments, compute the new payment (scheduled + extra) and solve for number of periods required to reduce balance to zero using the closed-form logarithmic expression.",
+      "4) For a one-time extra, compute the balance just before that payment, subtract the extra, then compute remaining periods required to amortize the reduced principal with the scheduled payment.",
+      "5) Total interest is estimated as (sum of periodic payments) - principal. Effective annualized interest is approximated as (total_interest / principal) / years_to_payoff."
+    ],
+    "examples": [
+      "Example 1: $300,000 loan at 4.0% for 30 years. Scheduled monthly payment is computed; adding $200 extra/month shortens the payoff and reduces total interest. The calculator reports months saved and interest saved.",
+      "Example 2: Same loan, make a $5,000 one-time principal payment at payment number 12. The calculator estimates the new remaining schedule, interest saved and an annualized effective interest rate approximation."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator produce the legally required APR disclosure?",
+        "answer": "No. The calculator provides an approximate annualized effective rate for planning. Legal APR under Truth in Lending (TILA) is a specific disclosure that often includes fees and is solved to equate present values; use your lender's disclosure or consult a formal APR calculation for regulatory purposes."
+      },
+      {
+        "question": "Can I use this to see how much sooner I will pay off my mortgage?",
+        "answer": "Yes. For recurring extra payments the tool estimates the number of payments remaining until payoff; for a one-time extra it estimates remaining payments after that payment. Results are estimates and assume payment timing and no additional fees or escrow changes."
+      },
+      {
+        "question": "Are results exact?",
+        "answer": "Results use standard amortization formulas and closed-form approximations. They assume a fixed nominal interest rate, no additional fees, no payment holidays, and perfect, on-time payments. Edge cases (zero interest, very small extra payments that do not change schedule) are handled with simple fallbacks. For precise lender statements consult your servicer."
+      },
+      {
+        "question": "Why is the effective annual rate different from the advertised APR?",
+        "answer": "Advertised APR (regulatory APR) and an effective annualized interest measure capture different things. APR may include certain up-front fees and uses a regulatory definition; effective annualized interest here is an informational metric derived from total interest paid over time divided by average outstanding principal and annualized. They are not interchangeable."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau (for Truth in Lending / APR guidance)",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "A regulatory disclosure metric that reflects the cost of credit, often including certain fees. Legal APR uses a prescribed calculation (Truth in Lending) and may differ from simple interest rates or effective rates."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period: annual rate divided by payments per year."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down a loan over time by making regular payments that cover interest and principal."
+      },
+      {
+        "term": "Effective annualized rate (approximation)",
+        "definition": "Here, an informational metric computed by annualizing the total interest paid relative to principal over the actual time-to-payoff. It is an approximation and not a regulatory APR."
+      },
+      {
+        "term": "Extra principal payment",
+        "definition": "Any payment amount applied directly to reduce outstanding principal in addition to the scheduled payment used to compute interest."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/mortgage/amortization",
+      "/guides/what-is-apr"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

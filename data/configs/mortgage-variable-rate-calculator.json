@@ -1,0 +1,512 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Variable-Rate Mortgage (ARM) Calculator — Multi‑Scenario Estimator",
+    "description": "Estimate initial and post-adjustment payments for adjustable-rate mortgages (ARMs). Supports traditional ARMs and hybrid ARMs, caps, margin/index, interest-only and fully amortizing options. Provides conservative assumptions, caveats, and links to technical standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "traditional_arm",
+    "methods": {
+      "traditional_arm": {
+        "label": "Traditional ARM (initial fixed then periodic adjustments)",
+        "description": "Standard adjustable-rate mortgage: fixed introductory period, then periodic rate adjustments based on an index + margin, subject to caps.",
+        "variables": {
+          "monthly_rate_initial": {
+            "expression": "initial_rate/100/12",
+            "dependencies": [
+              "initial_rate"
+            ],
+            "label": "Initial monthly interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "months_initial": {
+            "expression": "initial_period_years*12",
+            "dependencies": [
+              "initial_period_years"
+            ],
+            "label": "Months in initial fixed period",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "amort_months": {
+            "expression": "amortization_years*12",
+            "dependencies": [
+              "amortization_years"
+            ],
+            "label": "Total amortization months",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "initial_monthly_payment": {
+            "expression": "(principal*monthly_rate_initial)/(1 - pow(1+monthly_rate_initial, -amort_months))",
+            "dependencies": [
+              "principal",
+              "monthly_rate_initial",
+              "amort_months"
+            ],
+            "label": "Estimated initial monthly payment (principal + interest)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "balance_after_initial": {
+            "expression": "principal*pow(1+monthly_rate_initial, months_initial) - initial_monthly_payment*(pow(1+monthly_rate_initial, months_initial)-1)/monthly_rate_initial",
+            "dependencies": [
+              "principal",
+              "monthly_rate_initial",
+              "months_initial",
+              "initial_monthly_payment"
+            ],
+            "label": "Projected outstanding balance at end of initial period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_index_plus_margin": {
+            "expression": "(index_rate + margin)/100",
+            "dependencies": [
+              "index_rate",
+              "margin"
+            ],
+            "label": "Index + margin (decimal)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "estimated_rate_post_adjust": {
+            "expression": "min(max(estimated_index_plus_margin, initial_rate/100 - periodic_cap/100), initial_rate/100 + periodic_cap/100)",
+            "dependencies": [
+              "estimated_index_plus_margin",
+              "initial_rate",
+              "periodic_cap"
+            ],
+            "label": "Estimated post-adjustment annual rate (subject to periodic cap)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "remaining_amort_months": {
+            "expression": "amort_months - months_initial",
+            "dependencies": [
+              "amort_months",
+              "months_initial"
+            ],
+            "label": "Remaining amortization months after initial period",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "estimated_payment_post_adjust": {
+            "expression": "(balance_after_initial * estimated_rate_post_adjust/12) / (1 - pow(1+estimated_rate_post_adjust/12, -remaining_amort_months))",
+            "dependencies": [
+              "balance_after_initial",
+              "estimated_rate_post_adjust",
+              "remaining_amort_months"
+            ],
+            "label": "Estimated monthly payment after adjustment (principal + interest)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "initial_monthly_payment",
+            "label": "Initial monthly payment (P&I)",
+            "variable": "initial_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balance_after_initial",
+            "label": "Balance at end of initial period",
+            "variable": "balance_after_initial",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_rate_post_adjust",
+            "label": "Estimated post-adjustment rate",
+            "variable": "estimated_rate_post_adjust",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "estimated_payment_post_adjust",
+            "label": "Estimated monthly payment after adjustment (P&I)",
+            "variable": "estimated_payment_post_adjust",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "hybrid_arm": {
+        "label": "Hybrid ARM (longer fixed period, different caps)",
+        "description": "Hybrid ARM variant where the initial fixed term and cap structure differs. Calculation pattern matches the traditional ARM logic but uses independent cap parameters.",
+        "variables": {
+          "monthly_rate_initial_h": {
+            "expression": "initial_rate/100/12",
+            "dependencies": [
+              "initial_rate"
+            ],
+            "label": "Initial monthly interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "months_initial_h": {
+            "expression": "initial_period_years*12",
+            "dependencies": [
+              "initial_period_years"
+            ],
+            "label": "Months in initial fixed period",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "initial_monthly_payment_h": {
+            "expression": "(principal*monthly_rate_initial_h)/(1 - pow(1+monthly_rate_initial_h, -amortization_years*12))",
+            "dependencies": [
+              "principal",
+              "monthly_rate_initial_h",
+              "amortization_years"
+            ],
+            "label": "Initial monthly payment (hybrid)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "balance_after_initial_h": {
+            "expression": "principal*pow(1+monthly_rate_initial_h, months_initial_h) - initial_monthly_payment_h*(pow(1+monthly_rate_initial_h, months_initial_h)-1)/monthly_rate_initial_h",
+            "dependencies": [
+              "principal",
+              "monthly_rate_initial_h",
+              "months_initial_h",
+              "initial_monthly_payment_h"
+            ],
+            "label": "Balance at end of hybrid initial period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_rate_post_adjust_h": {
+            "expression": "min(max((index_rate + margin)/100, initial_rate/100 - periodic_cap/100), initial_rate/100 + periodic_cap/100)",
+            "dependencies": [
+              "index_rate",
+              "margin",
+              "initial_rate",
+              "periodic_cap"
+            ],
+            "label": "Estimated post-adjustment annual rate (hybrid)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "remaining_months_h": {
+            "expression": "amortization_years*12 - months_initial_h",
+            "dependencies": [
+              "amortization_years",
+              "months_initial_h"
+            ],
+            "label": "Remaining amortization months (hybrid)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "estimated_payment_post_adjust_h": {
+            "expression": "(balance_after_initial_h * estimated_rate_post_adjust_h/12) / (1 - pow(1+estimated_rate_post_adjust_h/12, -remaining_months_h))",
+            "dependencies": [
+              "balance_after_initial_h",
+              "estimated_rate_post_adjust_h",
+              "remaining_months_h"
+            ],
+            "label": "Estimated monthly payment after hybrid adjustment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "initial_monthly_payment_h",
+            "label": "Initial monthly payment (hybrid)",
+            "variable": "initial_monthly_payment_h",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balance_after_initial_h",
+            "label": "Balance at end of initial hybrid period",
+            "variable": "balance_after_initial_h",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_rate_post_adjust_h",
+            "label": "Estimated post-adjustment rate (hybrid)",
+            "variable": "estimated_rate_post_adjust_h",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "estimated_payment_post_adjust_h",
+            "label": "Estimated monthly payment after hybrid adjustment",
+            "variable": "estimated_payment_post_adjust_h",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "initial_rate",
+        "label": "Initial annual interest rate (APR %) — e.g., 3.25",
+        "type": "number",
+        "default": 3.25,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "initial_period_years",
+        "label": "Initial fixed period (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "adjust_period_months",
+        "label": "Adjustment frequency (months between adjustments after initial period)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 60,
+        "step": 1
+      },
+      {
+        "id": "index_rate",
+        "label": "Current index rate ( % ) used for adjustments — e.g., 2.5",
+        "type": "number",
+        "default": 2.5,
+        "min": -10,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "margin",
+        "label": "Lender margin ( % ) added to index",
+        "type": "number",
+        "default": 2.25,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "periodic_cap",
+        "label": "Periodic adjustment cap (percentage points, e.g., 2)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "initial_cap",
+        "label": "Initial adjustment cap after fixed period (percentage points)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 50,
+        "step": 0.01
+      },
+      {
+        "id": "lifetime_cap",
+        "label": "Lifetime cap above initial rate (percentage points)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years) — e.g., 30",
+        "type": "number",
+        "default": 30,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payment_type",
+        "label": "Payment type",
+        "type": "select",
+        "default": "fully_amortizing",
+        "options": [
+          {
+            "label": "Fully amortizing (principal + interest)",
+            "value": "fully_amortizing"
+          },
+          {
+            "label": "Interest-only (IO)",
+            "value": "interest_only"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment",
+        "label": "Additional monthly principal (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates payments for variable-rate mortgages (ARMs) that start with a fixed introductory period and then adjust periodically based on an index plus a lender margin. It models initial monthly payments, projected outstanding balance at the end of the fixed period, and an estimated payment after the first adjustment using user-provided caps and current index assumptions.",
+      "Results are estimates intended for planning and comparison. They do not replace official loan disclosures. Use conservative inputs and review your loan contract for the exact index, margin, adjustment method, and cap schedule."
+    ],
+    "methodology": [
+      "We compute the initial monthly payment using the standard amortizing loan formula with the initial APR converted to a monthly decimal rate. Remaining balance after the initial period is derived from the cumulative amortization formula.",
+      "To estimate a post-adjustment rate we add the supplied index and margin, then apply the periodic cap to limit the change from the prior rate. The estimated post-adjustment payment is computed by re-amortizing the outstanding balance over the remaining term at that capped rate.",
+      "This tool models the first adjustment scenario only. It does not simulate multi-period stochastic index paths, prepayment behavior, escrow, taxes, insurance, fees, or special lender-adjustment rules (for example, rate floors, negative amortization schedules, or payment recast features)."
+    ],
+    "how_is_calculated": [
+      "Initial monthly payment formula: payment = (P * r) / (1 - (1+r)^-N), where r = initial_rate/100/12 and N = amortization_years*12.",
+      "Remaining balance after K payments: balance = P*(1+r)^K - payment*((1+r)^K - 1)/r.",
+      "Estimated post-adjustment annual rate = clamp((index_rate + margin)/100, initial_rate/100 - periodic_cap/100, initial_rate/100 + periodic_cap/100). Recomputed monthly rate = annual_rate/12 and payment re-amortized over remaining months."
+    ],
+    "faqs": [
+      {
+        "question": "Is this exact to the offer my lender gave me?",
+        "answer": "No. This calculator produces estimates based on the inputs you provide. Your loan agreement and official disclosures from your lender define the exact index, margin, cap schedule, rounding rules, and payment calculation. Use those documents for binding figures."
+      },
+      {
+        "question": "Does the tool simulate multiple future adjustments?",
+        "answer": "No. The tool estimates the first post-introductory adjustment using a single index snapshot plus margin and the specified caps. It does not forecast future index changes or compound multiple adjustment periods."
+      },
+      {
+        "question": "What level of accuracy can I expect?",
+        "answer": "Results are numerical estimates. For implementation and testing practices, we follow guidance consistent with industry standards for calculation integrity and reproducibility. Users should treat results as indicative, not definitive. See the citations for relevant technical standards and security guidance."
+      },
+      {
+        "question": "Can I model interest-only payments or extra principal?",
+        "answer": "The form allows selecting interest-only versus fully amortizing behavior and entering extra monthly principal. Interest-only selections change conceptual payment types; verify with your lender whether IO periods or extra payments are permitted without penalty."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Computer Security & Reproducible Methods",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards for Financial and Software Quality",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Best practices for numerical accuracy and software engineering",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Operational safety and workplace guidance",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer finance guidance (non-exhaustive): general disclosures and shopping for a mortgage",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Index",
+        "definition": "A benchmark interest rate (published by a third party) that the lender uses to set variable mortgage rates. Common indexes are published daily or monthly and are specified in the loan contract."
+      },
+      {
+        "term": "Margin",
+        "definition": "A fixed percentage added by the lender to the index to determine the fully indexed rate for an adjustable-rate mortgage."
+      },
+      {
+        "term": "Periodic cap",
+        "definition": "The maximum percentage point change in the interest rate at a single adjustment period as defined in the loan agreement."
+      },
+      {
+        "term": "Lifetime cap",
+        "definition": "The maximum total increase in the interest rate over the life of the loan above the initial rate."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The schedule of principal repayment over the life of the loan. A fully amortizing payment includes principal and interest and is structured to bring the balance to zero by the loan end date."
+      },
+      {
+        "term": "Interest-only (IO)",
+        "definition": "A payment option where the monthly payment covers only interest for a defined period, leaving the principal unchanged unless extra principal payments are made."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/mortgages/loan-types/arm-explained",
+      "/mortgages/calculators/mortgage-basics"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

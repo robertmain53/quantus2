@@ -1,0 +1,384 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Credit Card Payoff Calculator (multi‑method)",
+    "description": "Estimate time-to-payoff, estimated interest, and recommended payments for a single credit card balance using multiple payoff methods (fixed monthly payment, fixed term, approximate minimum‑payment projection). Includes clear accuracy notes and calibration guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "fixed_payment",
+    "methods": {
+      "fixed_payment": {
+        "label": "Pay with a fixed monthly payment",
+        "description": "Estimate how long it will take to pay off the balance if you make a constant monthly payment (includes optional extra payment).",
+        "variables": {
+          "monthly_rate": {
+            "expression": "apr/100/12",
+            "dependencies": [
+              "apr"
+            ],
+            "label": "Monthly interest rate",
+            "format": "percent",
+            "display": true
+          },
+          "months": {
+            "expression": "ceil( log(monthly_payment/(monthly_payment - balance * monthly_rate)) / log(1 + monthly_rate) )",
+            "dependencies": [
+              "monthly_payment",
+              "balance",
+              "monthly_rate"
+            ],
+            "label": "Months to pay off",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "months * monthly_payment - balance",
+            "dependencies": [
+              "months",
+              "monthly_payment",
+              "balance"
+            ],
+            "label": "Estimated total interest paid",
+            "format": "currency",
+            "display": true
+          },
+          "last_payment": {
+            "expression": "balance * pow(1 + monthly_rate, months) - monthly_payment * ( ( pow(1 + monthly_rate, months) - 1 ) / monthly_rate )",
+            "dependencies": [
+              "balance",
+              "monthly_rate",
+              "months",
+              "monthly_payment"
+            ],
+            "label": "Final (last) payment amount (approx)",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff",
+            "label": "Months to payoff",
+            "variable": "months",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "estimated_total_interest",
+            "label": "Estimated total interest",
+            "variable": "total_interest",
+            "format": "currency"
+          },
+          {
+            "id": "final_payment_amount",
+            "label": "Final (last) payment amount (approx)",
+            "variable": "last_payment",
+            "format": "currency"
+          }
+        ]
+      },
+      "fixed_term": {
+        "label": "Target a fixed payoff term (you choose months)",
+        "description": "Calculate the monthly payment required to pay off the balance in a target number of months.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "apr/100/12",
+            "dependencies": [
+              "apr"
+            ],
+            "label": "Monthly interest rate",
+            "format": "percent",
+            "display": true
+          },
+          "monthly_payment_calc": {
+            "expression": "balance * monthly_rate / (1 - pow(1 + monthly_rate, - target_months))",
+            "dependencies": [
+              "balance",
+              "monthly_rate",
+              "target_months"
+            ],
+            "label": "Required monthly payment",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "target_months * monthly_payment_calc - balance",
+            "dependencies": [
+              "target_months",
+              "monthly_payment_calc",
+              "balance"
+            ],
+            "label": "Estimated total interest",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_monthly_payment",
+            "label": "Required monthly payment",
+            "variable": "monthly_payment_calc",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_total_interest_term",
+            "label": "Estimated total interest",
+            "variable": "total_interest",
+            "format": "currency"
+          },
+          {
+            "id": "months_to_payoff_term",
+            "label": "Months to payoff (target)",
+            "variable": "target_months",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      },
+      "minimum_percent": {
+        "label": "Approximate payoff when paying minimum percentage",
+        "description": "Approximate projection using the initial minimum payment computed as max(min payment percentage of balance, floor amount). This is an approximation because real minimum payments typically decline as balance declines.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "apr/100/12",
+            "dependencies": [
+              "apr"
+            ],
+            "label": "Monthly interest rate",
+            "format": "percent",
+            "display": true
+          },
+          "first_payment": {
+            "expression": "max(balance * min_payment_pct/100, min_payment_floor)",
+            "dependencies": [
+              "balance",
+              "min_payment_pct",
+              "min_payment_floor"
+            ],
+            "label": "Initial monthly payment (approx)",
+            "format": "currency",
+            "display": true
+          },
+          "months_approx": {
+            "expression": "ceil( log(first_payment/(first_payment - balance * monthly_rate)) / log(1 + monthly_rate) )",
+            "dependencies": [
+              "first_payment",
+              "balance",
+              "monthly_rate"
+            ],
+            "label": "Approximate months to pay off (approx)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_interest_approx": {
+            "expression": "months_approx * first_payment - balance",
+            "dependencies": [
+              "months_approx",
+              "first_payment",
+              "balance"
+            ],
+            "label": "Estimated total interest (approx)",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "approx_months_to_payoff",
+            "label": "Approximate months to payoff",
+            "variable": "months_approx",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "approx_total_interest",
+            "label": "Estimated total interest (approx)",
+            "variable": "total_interest_approx",
+            "format": "currency"
+          },
+          {
+            "id": "initial_minimum_payment",
+            "label": "Initial minimum payment (approx)",
+            "variable": "first_payment",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "balance",
+        "label": "Current card balance",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "apr",
+        "label": "APR (annual percentage rate)",
+        "type": "number",
+        "default": 19.99,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "monthly_payment",
+        "label": "Planned monthly payment (enter 0 to use minimum‑percent method)",
+        "type": "number",
+        "default": 200,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "target_months",
+        "label": "Target payoff term (months)",
+        "type": "integer",
+        "default": 24,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "min_payment_pct",
+        "label": "Minimum payment percentage (e.g., 2 for 2%)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "min_payment_floor",
+        "label": "Minimum payment floor (dollars)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra monthly payment (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "start_date",
+        "label": "Planned start date (YYYY-MM-DD)",
+        "type": "text",
+        "default": "2025-01-01"
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool helps you estimate how long it will take to pay off a single credit card balance and how much interest you will pay under several common approaches: a fixed monthly payment, targeting a fixed term, or an approximate projection using minimum payments.",
+      "Results are numerical estimates intended to assist planning. They rely on standard amortization mathematics and simplifying assumptions; actual card statements, minimum payment rules, billing cycles, and interest compounding policies can change results."
+    ],
+    "methodology": [
+      "Calculations use standard amortization formulas: convert APR to a monthly rate and apply closed‑form algebra to estimate number of payments or required payment for a specified term.",
+      "When projecting minimum‑payment behavior, the tool uses an initial minimum payment as an approximation. Real minimum payments typically change as the balance drops; therefore minimum‑payment mode gives an approximate, conservative indication rather than an exact schedule.",
+      "For development, we follow engineering and data‑integrity best practices (NIST guidance on calculation integrity), standards awareness from ISO, and testing approaches consistent with IEEE software testing recommendations. Operational safety and user warnings follow general workplace safety communication principles referenced by OSHA."
+    ],
+    "how_is_calculated": [
+      "Convert APR to monthly rate: monthly_rate = APR / 100 / 12.",
+      "If monthly payment P > balance * monthly_rate, months n = ceil( ln(P / (P - balance * monthly_rate)) / ln(1 + monthly_rate) ).",
+      "To compute required payment for a fixed term of N months: P = balance * r / (1 - (1 + r)^(-N)), where r is monthly_rate.",
+      "Estimated total interest ≈ (number_of_payments * payment) - starting_balance. For minimum payment mode this is an approximation using the initial minimum payment."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates use standard amortization formulas and are accurate under the calculator's assumptions (fixed payment amount, fixed APR, monthly compounding). Accuracy decreases when minimum payment rules, fees, late charges, promotional rates, or variable APRs apply. See methodology for limitations."
+      },
+      {
+        "question": "What should I enter for APR?",
+        "answer": "Enter the annual percentage rate shown on your card statement. If you have a promotional or tiered rate, run separate scenarios for each APR to see the range of outcomes."
+      },
+      {
+        "question": "Why does the minimum‑payment method say 'approximate'?",
+        "answer": "Minimum payments typically change as the balance declines (often a percent of balance or a floor amount). This tool approximates payoff by treating the first computed minimum as a constant; that gives a conservative, easy‑to‑compare result but is not an exact amortization under real minimum‑payment rules."
+      },
+      {
+        "question": "What happens if my planned payment is less than the monthly interest?",
+        "answer": "If the monthly payment is less than or equal to the monthly interest on the balance, principal will not decline and payoff will not occur. The calculator will return an invalid or infinite payoff period in that case; increase the payment to cover interest plus some principal."
+      },
+      {
+        "question": "Can I rely solely on this tool for legal or financial decisions?",
+        "answer": "No. This calculator is for planning and educational purposes only. Verify numbers with your card issuer, a certified financial advisor, or official account statements before making binding decisions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The annual interest rate charged on the unpaid balance, expressed as a percentage."
+      },
+      {
+        "term": "Monthly rate",
+        "definition": "APR divided by 12. Used to compute monthly interest accrual for standard amortization formulas."
+      },
+      {
+        "term": "Minimum payment",
+        "definition": "The smallest amount the card issuer requires you to pay each billing cycle. Often a percentage of the balance or a fixed floor amount; exact rules vary by issuer."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down debt over time through regular payments that cover interest and principal according to a schedule."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/tools/debt/overview",
+      "/guides/credit-card-basics/payments"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST main site",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO main site",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,436 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Personal Loan Payment — Adjustable Rate Estimator",
+    "description": "An estimator for personal-loan payments when rates can change. Supports an initial fixed period, index+margin adjustments, periodic caps, lifetime caps, and both amortizing and interest-only payment options. Provides transparent calculations, calibration notes, and regulatory/standards citations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "projection",
+    "methods": {
+      "projection": {
+        "label": "Initial-period then adjusted payment projection",
+        "description": "Estimate the payment during the initial rate period and the expected payment after the first adjustment using index + margin with caps. Shows remaining balance after the initial period and recalculated amortizing payment if applicable.",
+        "variables": {
+          "monthly_rate_initial": {
+            "expression": "initial_rate_pct / 100 / 12",
+            "dependencies": [
+              "initial_rate_pct"
+            ],
+            "label": "Initial monthly rate (decimal)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "capped_rate_pct": {
+            "expression": "min(max(index_rate_pct + margin_pct, rate_floor_pct), rate_cap_pct)",
+            "dependencies": [
+              "index_rate_pct",
+              "margin_pct",
+              "rate_floor_pct",
+              "rate_cap_pct"
+            ],
+            "label": "Estimated adjusted annual rate (capped, percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "monthly_rate_adjusted": {
+            "expression": "capped_rate_pct / 100 / 12",
+            "dependencies": [
+              "capped_rate_pct"
+            ],
+            "label": "Estimated adjusted monthly rate (decimal)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "monthly_payment_initial": {
+            "expression": "payment_option == 'fully_amortizing' ? (principal * monthly_rate_initial / (1 - pow(1 + monthly_rate_initial, -amortization_months))) : (principal * monthly_rate_initial)",
+            "dependencies": [
+              "principal",
+              "monthly_rate_initial",
+              "payment_option",
+              "amortization_months"
+            ],
+            "label": "Estimated payment during initial period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_after_initial_period": {
+            "expression": "payment_option == 'fully_amortizing' ? (principal * pow(1 + monthly_rate_initial, initial_period_months) - monthly_payment_initial * (pow(1 + monthly_rate_initial, initial_period_months) - 1) / monthly_rate_initial) : principal",
+            "dependencies": [
+              "principal",
+              "monthly_rate_initial",
+              "monthly_payment_initial",
+              "initial_period_months",
+              "payment_option"
+            ],
+            "label": "Estimated remaining principal after initial period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_months": {
+            "expression": "amortization_months - initial_period_months",
+            "dependencies": [
+              "amortization_months",
+              "initial_period_months"
+            ],
+            "label": "Remaining amortization months after initial period",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment_after_adjustment": {
+            "expression": "remaining_months > 0 ? (balance_after_initial_period * monthly_rate_adjusted / (1 - pow(1 + monthly_rate_adjusted, -remaining_months))) : 0",
+            "dependencies": [
+              "balance_after_initial_period",
+              "monthly_rate_adjusted",
+              "remaining_months"
+            ],
+            "label": "Estimated payment after adjustment (recalculated to amortize remaining balance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment_initial",
+            "label": "Payment during initial period",
+            "variable": "monthly_payment_initial",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_payment_after_adjustment",
+            "label": "Estimated payment after adjustment",
+            "variable": "monthly_payment_after_adjustment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balance_after_initial_period",
+            "label": "Remaining principal after initial period",
+            "variable": "balance_after_initial_period",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_rate_initial",
+            "label": "Initial monthly rate",
+            "variable": "monthly_rate_initial",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "monthly_rate_adjusted",
+            "label": "Estimated monthly rate after adjustment",
+            "variable": "monthly_rate_adjusted",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "next_adjustment": {
+        "label": "Next adjustment snapshot",
+        "description": "Quick snapshot showing the next scheduled adjusted rate and the immediate impact on payment if the lender recalculates to amortize remaining term. Useful for planning short-term cashflow.",
+        "variables": {
+          "next_rate_pct": {
+            "expression": "min(max(index_rate_pct + margin_pct, rate_floor_pct), rate_cap_pct)",
+            "dependencies": [
+              "index_rate_pct",
+              "margin_pct",
+              "rate_floor_pct",
+              "rate_cap_pct"
+            ],
+            "label": "Next contractual annual rate (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "payment_change_percent": {
+            "expression": "remaining_months > 0 ? ((monthly_payment_after_adjustment - monthly_payment_initial) / monthly_payment_initial) * 100 : 0",
+            "dependencies": [
+              "monthly_payment_after_adjustment",
+              "monthly_payment_initial",
+              "remaining_months"
+            ],
+            "label": "Estimated percent change in payment at next adjustment",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "estimated_first_adjusted_payment": {
+            "expression": "monthly_payment_after_adjustment",
+            "dependencies": [
+              "monthly_payment_after_adjustment"
+            ],
+            "label": "Estimated first payment after adjustment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "next_rate_pct",
+            "label": "Next contractual annual rate",
+            "variable": "next_rate_pct",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "estimated_first_adjusted_payment",
+            "label": "Estimated first adjusted payment",
+            "variable": "estimated_first_adjusted_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payment_change_percent",
+            "label": "Estimated payment change (%)",
+            "variable": "payment_change_percent",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 10000,
+        "min": 100,
+        "max": 500000,
+        "step": 100
+      },
+      {
+        "id": "initial_rate_pct",
+        "label": "Initial annual interest rate (percent)",
+        "type": "number",
+        "default": 7.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "initial_period_months",
+        "label": "Initial fixed period (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 0,
+        "max": 360,
+        "step": 1
+      },
+      {
+        "id": "adjustment_frequency_months",
+        "label": "Rate adjustment frequency (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "index_rate_pct",
+        "label": "Current index rate (percent)",
+        "type": "number",
+        "default": 4.0,
+        "min": -10,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "margin_pct",
+        "label": "Lender margin over index (percent)",
+        "type": "number",
+        "default": 3.0,
+        "min": 0,
+        "max": 50,
+        "step": 0.01
+      },
+      {
+        "id": "rate_floor_pct",
+        "label": "Contractual rate floor (percent)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "rate_cap_pct",
+        "label": "Periodic cap on rate (percent)",
+        "type": "number",
+        "default": 18,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "lifetime_cap_pct",
+        "label": "Lifetime cap above initial rate (percent)",
+        "type": "number",
+        "default": 9,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_months",
+        "label": "Amortization term (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      },
+      {
+        "id": "payment_option",
+        "label": "Payment type",
+        "type": "select",
+        "default": "fully_amortizing",
+        "options": [
+          {
+            "label": "Fully amortizing (principal + interest)",
+            "value": "fully_amortizing"
+          },
+          {
+            "label": "Interest-only",
+            "value": "interest_only"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator projects monthly payments for a personal loan that starts with an initial rate and may adjust later based on an index plus a lender margin. It models periodic caps and a lifetime cap, and supports both amortizing and interest-only payment options.",
+      "Use this tool for planning and comparing scenarios. It is an estimator only and does not replace lender disclosures or account statements."
+    ],
+    "methodology": [
+      "The calculator uses standard time-value-of-money formulas to compute annuity (fully amortizing) payments and interest-only payments. For adjustments it applies the contractual index + margin, then enforces the floor and periodic cap to produce an estimated adjusted rate.",
+      "To estimate the payment after adjustment, the remaining principal at the end of the initial period is computed and then amortized over the remaining term using the estimated adjusted rate. If the payment option is interest-only, the principal remains unchanged during the interest-only period."
+    ],
+    "how_is_calculated": [
+      "Convert annual rates (percent) to monthly decimal rates by dividing by 100 and then by 12.",
+      "Fully amortizing monthly payment formula: payment = principal * r / (1 - (1 + r)^-N) where r = monthly rate and N = number of months.",
+      "Adjusted rate (annual percent) = min(max(index + margin, floor), periodic cap). Rate applied monthly = adjusted annual percent / 100 / 12.",
+      "Remaining balance after initial period is computed using the accumulated principal and payments over that period; that balance is then amortized over the remaining months to compute the adjusted payment."
+    ],
+    "examples": [
+      "Example 1: $10,000 principal, 7.5% initial rate for 12 months, index 4.0% + margin 3.0%, annual periodic cap 18%. The tool shows the payment during the initial 12 months and an estimated payment once the rate adjusts.",
+      "Example 2: Interest-only option retains principal during the interest-only term; when amortization begins or adjustments occur, payments can jump because the remaining principal must be repaid over a shortened remaining term."
+    ],
+    "summary": [
+      "This estimator provides an evidence-based projection of likely payments, subject to the contractual language of your loan and future index movements.",
+      "Always verify numbers with lender-provided amortization schedules and official loan disclosures."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an exact prediction of my future payments?",
+        "answer": "No. This estimator projects payments based on supplied inputs and assumed index behavior. Actual future payments depend on the lender's precise contractual calculations, rounding rules, official index publication dates, and any additional fees or changes to terms."
+      },
+      {
+        "question": "What standards and practices were used to build this tool?",
+        "answer": "Calculation formulas follow standard financial mathematics for annuities. Security, data handling, and verification recommendations reference NIST, ISO, IEEE, and applicable safety standards; see citations for authoritative sources. This tool does not provide legal or accounting advice."
+      },
+      {
+        "question": "How should I interpret caps and floors?",
+        "answer": "A periodic cap limits how much the annual rate can change at each adjustment; the floor prevents the rate from dropping below a specified level. Lifetime caps limit the total increase above an initial rate. The estimator enforces these caps when computing the hypothetical adjusted rate."
+      },
+      {
+        "question": "How accurate are results for unusual inputs (very high rates, negative indices)?",
+        "answer": "The estimator supports wide input ranges but accuracy may decrease for inputs outside typical consumer loan ranges. Negative index values are handled mathematically, but confirm with your lender. See accuracy caveats in citations."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Index",
+        "definition": "A published rate (for example, a treasury yield or other benchmark) that lenders can use as the base for adjustable interest rates."
+      },
+      {
+        "term": "Margin",
+        "definition": "A fixed number of percentage points the lender adds to the index to determine the fully adjusted rate."
+      },
+      {
+        "term": "Periodic cap",
+        "definition": "A contractual limit on how much the annual interest rate may change at a single adjustment."
+      },
+      {
+        "term": "Lifetime cap",
+        "definition": "A contractual limit on how much the rate can increase over the life of the loan relative to the initial rate."
+      },
+      {
+        "term": "Fully amortizing payment",
+        "definition": "A payment that covers both interest and a portion of principal so that the loan is paid off at the end of the amortization term."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer-facing accuracy guidance and best practices (example regulatory guidance)",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

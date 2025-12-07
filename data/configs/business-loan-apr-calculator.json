@@ -1,0 +1,480 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan APR & Bi-Weekly Payment Calculator",
+    "description": "Compute periodic payments, compare bi-weekly vs monthly schedules, estimate effective APR and total interest including fees. Designed for business loans with optional fees and extra payments; includes conservative accuracy notes and references to standards for numeric handling and disclosure best practices."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_schedule",
+    "methods": {
+      "standard_schedule": {
+        "label": "Standard amortization (selected payment frequency)",
+        "description": "Calculates periodic payment, total interest, and effective APR for the selected payment frequency (e.g., bi-weekly = 26 payments/year). Includes loan origination fees in total cost.",
+        "variables": {
+          "periodic_rate": {
+            "expression": "apr_percent / 100 / payments_per_year",
+            "dependencies": [
+              "apr_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "n_periods": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payment periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "payment": {
+            "expression": "if(apr_percent == 0, principal / n_periods, principal * periodic_rate / (1 - (1 + periodic_rate) ^ (-n_periods)))",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "n_periods",
+              "apr_percent"
+            ],
+            "label": "Payment per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment * n_periods + fees",
+            "dependencies": [
+              "payment",
+              "n_periods",
+              "fees"
+            ],
+            "label": "Total amount paid (payments + fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal - fees",
+            "dependencies": [
+              "total_paid",
+              "principal",
+              "fees"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_apr": {
+            "expression": "(1 + apr_percent / 100 / payments_per_year) ^ payments_per_year - 1",
+            "dependencies": [
+              "apr_percent",
+              "payments_per_year"
+            ],
+            "label": "Effective APR (annualized)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "estimated_term_with_extra": {
+            "expression": "if(extra_payment <= 0, n_periods, ceil(log(1 - (principal * periodic_rate) / (payment + extra_payment)) / log(1 + periodic_rate)))",
+            "dependencies": [
+              "extra_payment",
+              "principal",
+              "periodic_rate",
+              "payment",
+              "n_periods"
+            ],
+            "label": "Estimated remaining periods with extra payment",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment",
+            "label": "Payment per period",
+            "variable": "payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total amount paid (including fees)",
+            "variable": "total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "effective_apr",
+            "label": "Effective APR (annualized)",
+            "variable": "effective_apr",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "estimated_term_with_extra",
+            "label": "Estimated number of periods with extra payment",
+            "variable": "estimated_term_with_extra",
+            "unit": "periods",
+            "format": "integer"
+          }
+        ]
+      },
+      "compare_monthly_vs_biweekly": {
+        "label": "Compare monthly vs bi-weekly schedules (term & interest comparison)",
+        "description": "Side-by-side comparison using the same APR and fees: calculates payments and total interest for monthly (12) and bi-weekly (26) frequencies to estimate interest savings and effective APR differences.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "apr_percent / 100 / 12",
+            "dependencies": [
+              "apr_percent"
+            ],
+            "label": "Monthly periodic rate",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "monthly_n": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Monthly number of periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "if(apr_percent == 0, principal / monthly_n, principal * monthly_rate / (1 - (1 + monthly_rate) ^ (-monthly_n)))",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "monthly_n",
+              "apr_percent"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_total_interest": {
+            "expression": "monthly_payment * monthly_n - principal",
+            "dependencies": [
+              "monthly_payment",
+              "monthly_n",
+              "principal"
+            ],
+            "label": "Total interest (monthly payments)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_rate": {
+            "expression": "apr_percent / 100 / 26",
+            "dependencies": [
+              "apr_percent"
+            ],
+            "label": "Bi-weekly periodic rate",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "biweekly_n": {
+            "expression": "term_years * 26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Bi-weekly number of periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "biweekly_payment": {
+            "expression": "if(apr_percent == 0, principal / biweekly_n, principal * biweekly_rate / (1 - (1 + biweekly_rate) ^ (-biweekly_n)))",
+            "dependencies": [
+              "principal",
+              "biweekly_rate",
+              "biweekly_n",
+              "apr_percent"
+            ],
+            "label": "Bi-weekly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_total_interest": {
+            "expression": "biweekly_payment * biweekly_n - principal",
+            "dependencies": [
+              "biweekly_payment",
+              "biweekly_n",
+              "principal"
+            ],
+            "label": "Total interest (bi-weekly payments)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings": {
+            "expression": "monthly_total_interest - biweekly_total_interest",
+            "dependencies": [
+              "monthly_total_interest",
+              "biweekly_total_interest"
+            ],
+            "label": "Estimated interest savings (monthly vs bi-weekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_apr_monthly": {
+            "expression": "(1 + apr_percent / 100 / 12) ^ 12 - 1",
+            "dependencies": [
+              "apr_percent"
+            ],
+            "label": "Effective APR (monthly compounding)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "effective_apr_biweekly": {
+            "expression": "(1 + apr_percent / 100 / 26) ^ 26 - 1",
+            "dependencies": [
+              "apr_percent"
+            ],
+            "label": "Effective APR (bi-weekly compounding)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_payment",
+            "label": "Bi-weekly payment",
+            "variable": "biweekly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_total_interest",
+            "label": "Total interest (monthly)",
+            "variable": "monthly_total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_total_interest",
+            "label": "Total interest (bi-weekly)",
+            "variable": "biweekly_total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings",
+            "label": "Estimated interest savings (monthly -> bi-weekly)",
+            "variable": "interest_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "effective_apr_monthly",
+            "label": "Effective APR (monthly)",
+            "variable": "effective_apr_monthly",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "effective_apr_biweekly",
+            "label": "Effective APR (bi-weekly)",
+            "variable": "effective_apr_biweekly",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "apr_percent",
+        "label": "Nominal APR (annual % rate)",
+        "type": "number",
+        "default": 8.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.08,
+        "max": 30,
+        "step": 0.25
+      },
+      {
+        "id": "fees",
+        "label": "Upfront fees or origination charges (currency)",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Payment frequency (for calculation)",
+        "type": "select",
+        "default": "biweekly",
+        "options": [
+          {
+            "label": "Monthly (12/year)",
+            "value": "monthly"
+          },
+          {
+            "label": "Bi-weekly (26/year)",
+            "value": "biweekly"
+          },
+          {
+            "label": "Weekly (52/year)",
+            "value": "weekly"
+          },
+          {
+            "label": "Semi-monthly (24/year)",
+            "value": "semi-monthly"
+          }
+        ]
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (numeric, adjust if needed)",
+        "type": "number",
+        "default": 26,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment each period (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps business borrowers estimate periodic payments, effective APR, total interest, and compare monthly versus bi-weekly payment schedules. It accepts upfront fees and optional recurring extra payments so you can see realistic cost outcomes.",
+      "Results are numeric estimates for planning and negotiation; they are not a legally binding disclosure. Use the outputs to compare offers, verify lender disclosures, and estimate cash flow impacts of switching frequency or adding extra payments."
+    ],
+    "methodology": [
+      "Calculations use standard amortization math: periodic_rate = nominal APR / payments per year; payment is the annuity payment that amortizes principal over the term. Effective APR is annualized by compounding the periodic rate for the chosen frequency.",
+      "When fees are provided, they are added to total paid to show all-in cost. Term estimates with extra payments use iterative amortization logic; zero-interest loans use simple division by number of periods to avoid division-by-zero errors.",
+      "Numeric handling and disclosure follow general best practices for financial calculations and numeric reproducibility. For implementation and security guidance see NIST standards for numeric and software integrity. For disclosure and consumer protection, consult relevant regulatory guidance."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = APR (%) ÷ 100 ÷ payments_per_year",
+      "Payment per period = principal × periodic_rate ÷ (1 − (1 + periodic_rate) ^ (−n_periods)), where n_periods = term_years × payments_per_year. If APR = 0, payment = principal ÷ n_periods.",
+      "Effective APR = (1 + APR/100/payments_per_year) ^ payments_per_year − 1",
+      "Total interest = (payment × n_periods + fees) − principal − fees"
+    ],
+    "examples": [
+      "Example: $50,000 principal, 8.5% APR, 5 years, bi-weekly (26/y). Periodic rate = 0.085/26. Payment is computed with the annuity formula above and total interest is payment×n − principal.",
+      "Compare: same loan with monthly payments usually results in a different effective APR and different total interest; bi-weekly schedules can lower total interest by increasing payment frequency and shortening effective amortization period."
+    ],
+    "faqs": [
+      {
+        "question": "Will switching to bi-weekly payments always lower total interest?",
+        "answer": "Increasing payment frequency can reduce total interest because interest compounds less between payments and the principal is reduced earlier. The exact savings depend on whether the lender applies payments immediately and whether the lender charges additional fees. Use the comparison output to quantify differences."
+      },
+      {
+        "question": "Does this calculator produce an official APR disclosure?",
+        "answer": "No. This tool estimates APR effects and payments for planning and comparison. Official APR disclosures are provided by lenders and regulated by consumer protection rules. Always compare against the lender's Truth-in-Lending disclosure."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are mathematically consistent with the formulas shown but assume exact application of periodic compounding and immediate application of payments. Rounding, payment posting rules, day-count conventions, and lender-specific practices can change outcomes. See the accuracy caveats and cited standards for implementation guidance."
+      },
+      {
+        "question": "How should I account for fees?",
+        "answer": "Enter upfront origination or similar fees in the fees field. Fees are included in total amount paid to help estimate all-in cost. APR and effective APR computations shown here use nominal APR entered by the user and do not re-calculate legal APR from fees; consult lender disclosures or a compliance professional for legal APR re-computation."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "Nominal annual rate that lenders quote. APR represents the stated yearly interest rate before compounding adjustments."
+      },
+      {
+        "term": "Effective APR",
+        "definition": "Annualized rate that accounts for compounding at the payment frequency: (1 + period_rate) ^ periods_per_year − 1."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate applied each payment period; calculated as APR / payments per year."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of repaying principal and interest through scheduled payments over the loan term."
+      },
+      {
+        "term": "Truth-in-Lending",
+        "definition": "Consumer protection disclosure practices that describe how lenders present APR and finance charges; consult your local regulator for exact legal requirements."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - Publications",
+        "url": "https://www.nist.gov/publications"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - Standards",
+        "url": "https://www.iso.org/standards.html"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) - Xplore",
+        "url": "https://ieeexplore.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau - Loan & Credit Resources",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ]
+  }
+}

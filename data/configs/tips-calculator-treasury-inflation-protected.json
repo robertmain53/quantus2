@@ -1,0 +1,280 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "TIPS Calculator (Treasury Inflation-Protected Securities)",
+    "description": "Calculates inflation-adjusted principal and coupon payments for TIPS and converts between real and nominal yield estimates. Includes clear accuracy caveats, data inputs for CPI indexation, and a yield conversion method."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "indexation",
+    "methods": {
+      "indexation": {
+        "label": "Indexation: adjusted principal and coupon",
+        "description": "Compute inflation factor from two CPI index values, apply indexation to the TIPS face value, and compute semiannual coupon payment on the inflation-adjusted principal. Outputs do not automatically apply the statutory deflation floor; see notes.",
+        "variables": {
+          "inflation_factor": {
+            "expression": "cpi_now / cpi_acq",
+            "dependencies": [
+              "cpi_now",
+              "cpi_acq"
+            ],
+            "label": "Inflation factor (CPI now / CPI at acquisition)",
+            "format": "decimal",
+            "display": true
+          },
+          "adjusted_principal": {
+            "expression": "face_value * inflation_factor",
+            "dependencies": [
+              "face_value",
+              "inflation_factor"
+            ],
+            "label": "Inflation-adjusted principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "semiannual_coupon_payment": {
+            "expression": "adjusted_principal * (coupon_rate / 100) / 2",
+            "dependencies": [
+              "adjusted_principal",
+              "coupon_rate"
+            ],
+            "label": "Semiannual coupon payment (estimated)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_principal",
+            "label": "Inflation-adjusted principal",
+            "variable": "adjusted_principal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "semiannual_coupon_payment",
+            "label": "Semiannual coupon payment",
+            "variable": "semiannual_coupon_payment",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "yield_conversion": {
+        "label": "Yield conversion: real yield to nominal approximation",
+        "description": "Convert an entered real yield into an approximate nominal yield using an expected inflation rate. Uses the standard multiplicative relationship between real return and inflation.",
+        "variables": {
+          "real_yield_decimal": {
+            "expression": "real_yield_percent / 100",
+            "dependencies": [
+              "real_yield_percent"
+            ],
+            "label": "Real yield (decimal)",
+            "format": "decimal",
+            "display": true
+          },
+          "expected_inflation_decimal": {
+            "expression": "expected_inflation_percent / 100",
+            "dependencies": [
+              "expected_inflation_percent"
+            ],
+            "label": "Expected inflation (decimal)",
+            "format": "decimal",
+            "display": true
+          },
+          "approximate_nominal_yield_decimal": {
+            "expression": "(1 + real_yield_decimal) * (1 + expected_inflation_decimal) - 1",
+            "dependencies": [
+              "real_yield_decimal",
+              "expected_inflation_decimal"
+            ],
+            "label": "Approximate nominal yield (decimal)",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "approximate_nominal_yield_decimal",
+            "label": "Approximate nominal yield",
+            "variable": "approximate_nominal_yield_decimal",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "face_value",
+        "label": "Face value of one TIPS security",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "purchase_price",
+        "label": "Purchase price per security (optional)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "coupon_rate",
+        "label": "Coupon rate (annual percentage)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      },
+      {
+        "id": "cpi_acq",
+        "label": "Reference CPI index (index at acquisition)",
+        "type": "number",
+        "default": 300,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "cpi_now",
+        "label": "Current CPI index (index at valuation)",
+        "type": "number",
+        "default": 306,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "real_yield_percent",
+        "label": "Real yield (annual percentage)",
+        "type": "number",
+        "default": 0.5,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "expected_inflation_percent",
+        "label": "Expected inflation (annual percentage for nominal conversion)",
+        "type": "number",
+        "default": 2.0,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "adjusted_principal",
+          "label": "Inflation-adjusted principal"
+        },
+        {
+          "id": "semiannual_coupon_payment",
+          "label": "Semiannual coupon payment"
+        },
+        {
+          "id": "approximate_nominal_yield_decimal",
+          "label": "Approximate nominal yield"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This TIPS calculator produces an inflation-adjusted principal amount from two CPI index values and estimates the semiannual coupon payment based on the inflation-adjusted principal. It also converts a real yield to an approximate nominal yield using an expected inflation estimate.",
+      "Use the CPI index values you have for the security's reference date and for the valuation date. Enter percentage rates as annual percentages. Results are estimates for informational purposes and are not trade instructions."
+    ],
+    "methodology": [
+      "Indexation method uses the ratio of the current CPI index to the acquisition CPI index to compute an inflation factor. That factor scales the original face value to produce an inflation-adjusted principal.",
+      "Coupon payments on TIPS are paid semiannually on the inflation-adjusted principal. This calculator applies the stated coupon rate to the adjusted principal and divides by two to estimate each semiannual payment.",
+      "Yield conversion uses the multiplicative relation between real return and inflation. The nominal yield approximation equals (1 + real) * (1 + expected inflation) - 1."
+    ],
+    "how_is_calculated": [
+      "inflation factor = cpi_now / cpi_acq",
+      "inflation-adjusted principal = face_value * inflation factor",
+      "semiannual coupon = inflation-adjusted principal * (coupon_rate / 100) / 2",
+      "approximate nominal yield = (1 + real_yield_decimal) * (1 + expected_inflation_decimal) - 1"
+    ],
+    "examples": [
+      "Example 1. Face value 1000, CPI at acquisition 300, CPI now 306, coupon 1.00%: inflation factor 1.02, adjusted principal 1020.00, semiannual coupon 5.10.",
+      "Example 2. Real yield 0.50% and expected inflation 2.00%: approximate nominal yield = (1.005) * (1.02) - 1 = 0.0251 or about 2.51%."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator apply the statutory deflation floor for redemption principal?",
+        "answer": "No. This calculator displays the inflation-adjusted principal computed from CPI inputs. By statute, the redemption principal will not be less than the original face value when TIPS mature. Please interpret adjusted principal values accordingly."
+      },
+      {
+        "question": "Do I need to enter CPI indexes or CPI percentage changes?",
+        "answer": "Enter CPI index values for the reference date and the valuation date. The calculator computes the factor as a ratio of indexes. If you only have percent changes, you can reconstruct indexes using a base value."
+      },
+      {
+        "question": "How accurate are the yield conversions?",
+        "answer": "The nominal yield conversion is an approximation that assumes the provided expected inflation rate fairly represents future inflation. It does not replace a full yield-to-maturity calculation or market pricing analysis. Use it for rough comparisons only."
+      },
+      {
+        "question": "Are results suitable for tax or accounting filings?",
+        "answer": "No. Results are for informational estimates. For tax reporting, accounting, or compliance actions use official statements, consult a licensed professional, and follow the relevant regulatory guidance."
+      },
+      {
+        "question": "What rounding and precision should I expect?",
+        "answer": "Displayed numbers are rounded for clarity. Underlying calculations use standard numeric precision. For mission-critical uses, run independent checks and present uncertainty ranges where appropriate."
+      }
+    ],
+    "citations": [
+      {
+        "label": "U.S. Department of the Treasury marketable securities overview",
+        "url": "https://www.treasurydirect.gov/marketable-securities/tips/"
+      },
+      {
+        "label": "Bureau of Labor Statistics CPI homepage",
+        "url": "https://www.bls.gov/cpi/"
+      },
+      {
+        "label": "NIST guidelines on measurement uncertainty and software testing",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO general standards organization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE standards and best practices for software and numerical methods",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA general workplace safety and quality controls",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "CPI index",
+        "definition": "A consumer price index series value for a specific reference period. The calculator uses two CPI index values to compute the inflation factor."
+      },
+      {
+        "term": "Inflation-adjusted principal",
+        "definition": "Face value multiplied by the CPI ratio that reflects cumulative inflation since the reference date."
+      },
+      {
+        "term": "Real yield",
+        "definition": "The yield on a TIPS expressed in real terms, excluding inflation."
+      },
+      {
+        "term": "Nominal yield (approximate)",
+        "definition": "An approximate yield that combines a real return and an expected inflation rate using a multiplicative relationship."
+      },
+      {
+        "term": "Deflation floor",
+        "definition": "TIPS statutory rule that the principal at maturity will not be less than the original face value even after negative inflation adjustments."
+      }
+    ]
+  }
+}

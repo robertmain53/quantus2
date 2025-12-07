@@ -1,0 +1,697 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Share Price Calculator (Multi‑method)",
+    "description": "Interactive multi-method share price calculator for common equity tasks: profit/loss, average purchase price across multiple trades, dollar-to-shares allocation, and deriving price from market capitalisation."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "profit_loss",
+    "methods": {
+      "profit_loss": {
+        "label": "Profit / Loss and Return",
+        "description": "Calculate net profit or loss and percent return including explicit buy/sell commissions.",
+        "variables": {
+          "total_buy_cost": {
+            "expression": "purchase_price * shares + buy_commission",
+            "dependencies": [
+              "purchase_price",
+              "shares",
+              "buy_commission"
+            ],
+            "label": "Total cost of purchase",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_sell_proceeds": {
+            "expression": "sell_price * shares - sell_commission",
+            "dependencies": [
+              "sell_price",
+              "shares",
+              "sell_commission"
+            ],
+            "label": "Total proceeds from sale",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "net_profit": {
+            "expression": "total_sell_proceeds - total_buy_cost",
+            "dependencies": [
+              "total_sell_proceeds",
+              "total_buy_cost"
+            ],
+            "label": "Net profit (or loss)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "return_pct": {
+            "expression": "(net_profit / total_buy_cost) * 100",
+            "dependencies": [
+              "net_profit",
+              "total_buy_cost"
+            ],
+            "label": "Return on investment",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "break_even_sell_price": {
+            "expression": "(purchase_price * shares + buy_commission + sell_commission) / shares",
+            "dependencies": [
+              "purchase_price",
+              "shares",
+              "buy_commission",
+              "sell_commission"
+            ],
+            "label": "Break-even sell price per share",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "net_profit",
+            "label": "Net profit (currency)",
+            "variable": "net_profit",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "return_pct",
+            "label": "Return (%)",
+            "variable": "return_pct",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "break_even_sell_price",
+            "label": "Break-even price per share",
+            "variable": "break_even_sell_price",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "average_price": {
+        "label": "Average Price Across Multiple Trades",
+        "description": "Compute weighted average purchase price across up to four trades. User selects how many trades to include; unused trade rows are treated as zero.",
+        "variables": {
+          "total_shares": {
+            "expression": "trade1_shares + trade2_shares + trade3_shares + trade4_shares",
+            "dependencies": [
+              "trade1_shares",
+              "trade2_shares",
+              "trade3_shares",
+              "trade4_shares"
+            ],
+            "label": "Total shares purchased",
+            "unit": "",
+            "format": "integer",
+            "display": true
+          },
+          "total_cost": {
+            "expression": "trade1_shares * trade1_price + trade2_shares * trade2_price + trade3_shares * trade3_price + trade4_shares * trade4_price",
+            "dependencies": [
+              "trade1_shares",
+              "trade1_price",
+              "trade2_shares",
+              "trade2_price",
+              "trade3_shares",
+              "trade3_price",
+              "trade4_shares",
+              "trade4_price"
+            ],
+            "label": "Total cost of all trades",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "average_price": {
+            "expression": "total_cost / total_shares",
+            "dependencies": [
+              "total_cost",
+              "total_shares"
+            ],
+            "label": "Weighted average price per share",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "average_price",
+            "label": "Average price per share",
+            "variable": "average_price",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_shares",
+            "label": "Total shares",
+            "variable": "total_shares",
+            "unit": "",
+            "format": "integer"
+          }
+        ]
+      },
+      "dollars_to_shares": {
+        "label": "Dollar-to-Shares Allocation",
+        "description": "Convert a cash amount into the number of shares that can be acquired given a target price and flat commission. Results are illustrative and do not place orders.",
+        "variables": {
+          "shares_acquired": {
+            "expression": "(amount_dollars - conversion_commission) / price_per_share_for_conversion",
+            "dependencies": [
+              "amount_dollars",
+              "conversion_commission",
+              "price_per_share_for_conversion"
+            ],
+            "label": "Shares acquired (may be fractional depending on broker)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "cash_remaining": {
+            "expression": "amount_dollars - (shares_acquired * price_per_share_for_conversion) - conversion_commission",
+            "dependencies": [
+              "amount_dollars",
+              "shares_acquired",
+              "price_per_share_for_conversion",
+              "conversion_commission"
+            ],
+            "label": "Cash remaining after purchase and commission",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "shares_acquired",
+            "label": "Shares acquired",
+            "variable": "shares_acquired",
+            "unit": "",
+            "format": "decimal"
+          },
+          {
+            "id": "cash_remaining",
+            "label": "Cash remaining",
+            "variable": "cash_remaining",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "marketcap_price": {
+        "label": "Derive Price from Market Capitalisation",
+        "description": "Compute implied price per share from market capitalisation and shares outstanding.",
+        "variables": {
+          "price_per_share": {
+            "expression": "market_cap / shares_outstanding",
+            "dependencies": [
+              "market_cap",
+              "shares_outstanding"
+            ],
+            "label": "Implied price per share",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "price_per_share",
+            "label": "Price per share (implied)",
+            "variable": "price_per_share",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "currency",
+        "label": "Display currency",
+        "type": "select",
+        "default": "USD",
+        "options": [
+          {
+            "label": "USD",
+            "value": "USD"
+          },
+          {
+            "label": "EUR",
+            "value": "EUR"
+          },
+          {
+            "label": "GBP",
+            "value": "GBP"
+          },
+          {
+            "label": "INR",
+            "value": "INR"
+          }
+        ]
+      },
+      {
+        "id": "trades_count",
+        "label": "Number of trades to include (average price)",
+        "type": "select",
+        "default": "1",
+        "options": [
+          {
+            "label": "1",
+            "value": "1"
+          },
+          {
+            "label": "2",
+            "value": "2"
+          },
+          {
+            "label": "3",
+            "value": "3"
+          },
+          {
+            "label": "4",
+            "value": "4"
+          }
+        ]
+      },
+      {
+        "id": "trade1_shares",
+        "label": "Trade 1 - shares",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "trade1_price",
+        "label": "Trade 1 - price per share",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "trade2_shares",
+        "label": "Trade 2 - shares",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "trade2_price",
+        "label": "Trade 2 - price per share",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "trade3_shares",
+        "label": "Trade 3 - shares",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "trade3_price",
+        "label": "Trade 3 - price per share",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "trade4_shares",
+        "label": "Trade 4 - shares",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "trade4_price",
+        "label": "Trade 4 - price per share",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "purchase_price",
+        "label": "Purchase price per share",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "sell_price",
+        "label": "Sell price per share",
+        "type": "number",
+        "default": 12,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "shares",
+        "label": "Number of shares bought / sold",
+        "type": "integer",
+        "default": 100,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "buy_commission",
+        "label": "Buy commission / fees (flat)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "sell_commission",
+        "label": "Sell commission / fees (flat)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "amount_dollars",
+        "label": "Amount to invest (cash)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "price_per_share_for_conversion",
+        "label": "Target price per share",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "conversion_commission",
+        "label": "Commission / fees for allocation (flat)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "market_cap",
+        "label": "Market capitalisation",
+        "type": "number",
+        "default": 1000000000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "shares_outstanding",
+        "label": "Shares outstanding",
+        "type": "number",
+        "default": 100000000,
+        "min": 1,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "trades_section",
+        "label": "Trade rows (average price)",
+        "show_when": {
+          "field": "trades_count",
+          "is": "2"
+        },
+        "fields": [
+          {
+            "id": "trade2_shares",
+            "label": "Trade 2 - shares",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "trade2_price",
+            "label": "Trade 2 - price per share",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.0001
+          }
+        ]
+      },
+      {
+        "id": "trades_section_3",
+        "label": "Trade rows (average price) - 3",
+        "show_when": {
+          "field": "trades_count",
+          "is": "3"
+        },
+        "fields": [
+          {
+            "id": "trade2_shares",
+            "label": "Trade 2 - shares",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "trade2_price",
+            "label": "Trade 2 - price per share",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.0001
+          },
+          {
+            "id": "trade3_shares",
+            "label": "Trade 3 - shares",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "trade3_price",
+            "label": "Trade 3 - price per share",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.0001
+          }
+        ]
+      },
+      {
+        "id": "trades_section_4",
+        "label": "Trade rows (average price) - 4",
+        "show_when": {
+          "field": "trades_count",
+          "is": "4"
+        },
+        "fields": [
+          {
+            "id": "trade2_shares",
+            "label": "Trade 2 - shares",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "trade2_price",
+            "label": "Trade 2 - price per share",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.0001
+          },
+          {
+            "id": "trade3_shares",
+            "label": "Trade 3 - shares",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "trade3_price",
+            "label": "Trade 3 - price per share",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.0001
+          },
+          {
+            "id": "trade4_shares",
+            "label": "Trade 4 - shares",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "trade4_price",
+            "label": "Trade 4 - price per share",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.0001
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool helps calculate common share-price related metrics: profit/loss with commissions, weighted average purchase price across multiple trades, how many shares a cash amount will buy, and implied price per share from market capitalisation.",
+      "Use the method selector to switch workflows. Enter known values and leave unused trade rows at zero. Results are illustrative: they do not execute trades or retrieve live market data."
+    ],
+    "methodology": [
+      "Calculations are deterministic algebraic evaluations based on user inputs: multiplication, addition, subtraction and division. Commissions are treated as flat fees unless multiple trade rows are used for weighting.",
+      "Design and handling of numerical inputs follow common engineering and systems guidance for reproducible computations. For accuracy, results are computed at full numeric precision and then formatted for display; rounding is applied only for presentation.",
+      "Security, privacy, and data handling recommendations align with general standards: follow NIST guidelines for data protection, ISO 9001 for quality processes, and IEEE best practices for numerical robustness. This calculator does not store or transmit data by default."
+    ],
+    "how_is_calculated": [
+      "Profit/Loss: net_profit = (sell_price * shares - sell_commission) - (purchase_price * shares + buy_commission)",
+      "Average price: average_price = (sum(trade_shares * trade_price)) / sum(trade_shares)",
+      "Dollar to shares: shares_acquired = (amount_dollars - conversion_commission) / target_price",
+      "Market cap derived price: price_per_share = market_cap / shares_outstanding"
+    ],
+    "examples": [
+      "Example: Buy 100 shares at 10.00 with $5 buy fee, sell at 12.00 with $5 sell fee; net profit equals (12*100 - 5) minus (10*100 + 5) which is 185",
+      "Example: Average of two trades: 100 shares at 10.00 and 50 shares at 12.00; average price equals (100*10 + 50*12) divided by 150, which is 10.67"
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator use live market prices?",
+        "answer": "No. All values are based entirely on user input. To use live prices, enter the current quote manually or integrate with a data feed outside this tool."
+      },
+      {
+        "question": "Are commissions, taxes and slippage included?",
+        "answer": "Commissions can be entered as flat fees. This calculator does not model taxes, regulatory fees, or market slippage. Include those costs as additional inputs or perform post-calculation adjustments."
+      },
+      {
+        "question": "Can I enter fractional shares?",
+        "answer": "Yes—shares_acquired in the dollars-to-shares method is fractional if your broker allows it. For trade quantity inputs, use integer shares unless your holdings can be fractional."
+      },
+      {
+        "question": "Are results guaranteed accurate?",
+        "answer": "Results are mathematically accurate given inputs but are illustrative. They do not account for real-world factors like order execution, partial fills, timing, taxes, or currency conversion fees. Use them for planning, not as trading advice."
+      },
+      {
+        "question": "How should I treat empty trade rows when calculating average price?",
+        "answer": "Leave unused trade rows at zero. The tool sums all trade rows; zero entries do not affect the weighted average but ensure the trades_count selector matches how many rows you intend to include for UI clarity."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Cybersecurity and data protection guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "SEC - Investor guidance and definitions",
+        "url": "https://www.sec.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Total cost",
+        "definition": "The sum of (purchase price × shares) plus any buy-side commissions or fees."
+      },
+      {
+        "term": "Weighted average price",
+        "definition": "Aggregate cost of multiple trades divided by total shares; each trade contributes in proportion to shares transacted."
+      },
+      {
+        "term": "Market capitalisation",
+        "definition": "Total market value of a company's equity equal to price per share multiplied by shares outstanding."
+      },
+      {
+        "term": "Shares outstanding",
+        "definition": "Number of a company's shares currently held by all shareholders; used to derive implied share price from market cap."
+      },
+      {
+        "term": "Commission",
+        "definition": "Flat fee or charge applied to buy or sell transactions; modeled here as a flat amount per transaction."
+      },
+      {
+        "term": "Return (%)",
+        "definition": "Net profit divided by total buy cost, expressed as a percentage."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/finance/share-price-basics",
+      "/guides/investing/fees-and-commissions"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.sec.gov",
+        "label": "SEC - Investor resources",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

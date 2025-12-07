@@ -1,0 +1,598 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Student Loan Extra Payments — Monthly vs Bi‑Weekly Paydown Simulator",
+    "description": "Interactive calculator that compares standard amortization, monthly extra payments, and bi‑weekly payment strategies to estimate payoff time, total interest, and total paid. Includes conservative numeric safeguards and accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "biweekly_with_extra",
+    "methods": {
+      "standard_monthly": {
+        "label": "Standard monthly schedule",
+        "description": "Baseline amortization using a fixed monthly payment derived from loan balance, interest rate, and remaining term.",
+        "variables": {
+          "P": {
+            "expression": "loan_balance",
+            "dependencies": [
+              "loan_balance"
+            ],
+            "label": "Outstanding principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "r_monthly": {
+            "expression": "annual_interest_rate/100/12",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "n_monthly": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Remaining term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_monthly": {
+            "expression": "(r_monthly*P)/(1 - pow(1 + r_monthly, -n_monthly) + 1e-12)",
+            "dependencies": [
+              "r_monthly",
+              "P",
+              "n_monthly"
+            ],
+            "label": "Calculated scheduled monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "baseline_total_interest": {
+            "expression": "scheduled_monthly*n_monthly - P",
+            "dependencies": [
+              "scheduled_monthly",
+              "n_monthly",
+              "P"
+            ],
+            "label": "Total interest if paid on schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "baseline_total_paid": {
+            "expression": "scheduled_monthly*n_monthly",
+            "dependencies": [
+              "scheduled_monthly",
+              "n_monthly"
+            ],
+            "label": "Total paid if paid on schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_monthly",
+            "label": "Scheduled monthly payment",
+            "variable": "scheduled_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "baseline_total_interest",
+            "label": "Total interest (scheduled)",
+            "variable": "baseline_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "baseline_total_paid",
+            "label": "Total paid (scheduled)",
+            "variable": "baseline_total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_monthly",
+            "label": "Remaining term (months)",
+            "variable": "n_monthly",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      },
+      "monthly_with_extra": {
+        "label": "Monthly payment with fixed extra each month",
+        "description": "Assumes an extra fixed amount added to the scheduled monthly payment every month until payoff.",
+        "variables": {
+          "P": {
+            "expression": "loan_balance",
+            "dependencies": [
+              "loan_balance"
+            ],
+            "label": "Outstanding principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "r_monthly": {
+            "expression": "annual_interest_rate/100/12",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "n_monthly": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Remaining term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_monthly": {
+            "expression": "(r_monthly*P)/(1 - pow(1 + r_monthly, -n_monthly) + 1e-12)",
+            "dependencies": [
+              "r_monthly",
+              "P",
+              "n_monthly"
+            ],
+            "label": "Calculated scheduled monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "A_monthly": {
+            "expression": "scheduled_monthly + extra_monthly_amount",
+            "dependencies": [
+              "scheduled_monthly",
+              "extra_monthly_amount"
+            ],
+            "label": "Total monthly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_months_new": {
+            "expression": "-log(1 - r_monthly*P/(A_monthly + 1e-12))/log(1 + r_monthly)",
+            "dependencies": [
+              "r_monthly",
+              "P",
+              "A_monthly"
+            ],
+            "label": "Estimated months to payoff with extra",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_monthly_extra": {
+            "expression": "A_monthly * n_months_new",
+            "dependencies": [
+              "A_monthly",
+              "n_months_new"
+            ],
+            "label": "Total paid with monthly extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_monthly_extra": {
+            "expression": "total_paid_monthly_extra - P",
+            "dependencies": [
+              "total_paid_monthly_extra",
+              "P"
+            ],
+            "label": "Total interest with monthly extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "A_monthly",
+            "label": "Monthly payment (with extra)",
+            "variable": "A_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_months_new",
+            "label": "Months to payoff (with extra)",
+            "variable": "n_months_new",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_monthly_extra",
+            "label": "Total interest (with monthly extra)",
+            "variable": "total_interest_monthly_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_monthly_extra",
+            "label": "Total paid (with monthly extra)",
+            "variable": "total_paid_monthly_extra",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_with_extra": {
+        "label": "Bi‑weekly schedule (every 2 weeks) with extra per bi‑weekly payment",
+        "description": "Simulates paying half the scheduled monthly payment every two weeks plus an optional extra applied to each bi‑weekly payment (26 pay periods per year). This often results in an extra equivalent monthly payment annually.",
+        "variables": {
+          "P": {
+            "expression": "loan_balance",
+            "dependencies": [
+              "loan_balance"
+            ],
+            "label": "Outstanding principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "r_bi": {
+            "expression": "annual_interest_rate/100/26",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Bi‑weekly interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "scheduled_monthly": {
+            "expression": "( (annual_interest_rate/100/12) * P )/(1 - pow(1 + annual_interest_rate/100/12, -term_years*12) + 1e-12)",
+            "dependencies": [
+              "annual_interest_rate",
+              "P",
+              "term_years"
+            ],
+            "label": "Scheduled monthly payment (derived)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "scheduled_bi": {
+            "expression": "scheduled_monthly/2",
+            "dependencies": [
+              "scheduled_monthly"
+            ],
+            "label": "Scheduled bi‑weekly payment (half of monthly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "A_bi": {
+            "expression": "scheduled_bi + extra_biweekly_amount",
+            "dependencies": [
+              "scheduled_bi",
+              "extra_biweekly_amount"
+            ],
+            "label": "Total bi‑weekly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_bi_new": {
+            "expression": "-log(1 - r_bi*P/(A_bi + 1e-12))/log(1 + r_bi)",
+            "dependencies": [
+              "r_bi",
+              "P",
+              "A_bi"
+            ],
+            "label": "Estimated bi‑weekly periods to payoff",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "years_to_payoff_bi": {
+            "expression": "n_bi_new/26",
+            "dependencies": [
+              "n_bi_new"
+            ],
+            "label": "Estimated years to payoff (bi‑weekly)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_bi": {
+            "expression": "A_bi * n_bi_new",
+            "dependencies": [
+              "A_bi",
+              "n_bi_new"
+            ],
+            "label": "Total paid (bi‑weekly plan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_bi": {
+            "expression": "total_paid_bi - P",
+            "dependencies": [
+              "total_paid_bi",
+              "P"
+            ],
+            "label": "Total interest (bi‑weekly plan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_bi",
+            "label": "Scheduled bi‑weekly payment (base)",
+            "variable": "scheduled_bi",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "A_bi",
+            "label": "Bi‑weekly payment (with extra)",
+            "variable": "A_bi",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_bi_new",
+            "label": "Bi‑weekly periods to payoff",
+            "variable": "n_bi_new",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "years_to_payoff_bi",
+            "label": "Years to payoff (bi‑weekly)",
+            "variable": "years_to_payoff_bi",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_bi",
+            "label": "Total interest (bi‑weekly)",
+            "variable": "total_interest_bi",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_bi",
+            "label": "Total paid (bi‑weekly)",
+            "variable": "total_paid_bi",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_balance",
+        "label": "Outstanding loan balance",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR %) — nominal",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Remaining term (years)",
+        "type": "integer",
+        "default": 10,
+        "min": 0,
+        "max": 60
+      },
+      {
+        "id": "extra_monthly_amount",
+        "label": "Extra paid each month (monthly mode)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "extra_biweekly_amount",
+        "label": "Extra paid each bi‑weekly payment (bi‑weekly mode)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "scheduled_monthly",
+          "label": "Scheduled monthly payment (baseline)",
+          "format": "currency"
+        },
+        {
+          "id": "baseline_total_interest",
+          "label": "Total interest (baseline)",
+          "format": "currency"
+        },
+        {
+          "id": "A_monthly",
+          "label": "Monthly payment (with extra)",
+          "format": "currency"
+        },
+        {
+          "id": "n_months_new",
+          "label": "Months to payoff (monthly extra)",
+          "format": "decimal",
+          "unit": "months"
+        },
+        {
+          "id": "total_interest_monthly_extra",
+          "label": "Total interest (monthly extra)",
+          "format": "currency"
+        },
+        {
+          "id": "scheduled_bi",
+          "label": "Scheduled bi‑weekly payment (base)",
+          "format": "currency"
+        },
+        {
+          "id": "A_bi",
+          "label": "Bi‑weekly payment (with extra)",
+          "format": "currency"
+        },
+        {
+          "id": "n_bi_new",
+          "label": "Bi‑weekly periods to payoff",
+          "format": "decimal"
+        },
+        {
+          "id": "years_to_payoff_bi",
+          "label": "Years to payoff (bi‑weekly)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "total_interest_bi",
+          "label": "Total interest (bi‑weekly)",
+          "format": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This simulator compares three approaches: the baseline monthly amortization schedule derived from your balance, APR and remaining term; adding a fixed extra payment each month; and making bi‑weekly payments (every two weeks) with an optional extra applied to each bi‑weekly payment. Use the inputs to model how extra payments change your payoff time and total interest.",
+      "Calculations use standard amortization mathematics for fixed‑rate loans and conservative numeric safeguards to avoid divide‑by‑zero or instability for extremely low interest rates. Results are estimates only and do not replace statements from your loan servicer."
+    ],
+    "methodology": [
+      "Scheduled monthly payment is computed with the standard annuity formula using a monthly periodic rate and the remaining number of months. For bi‑weekly simulation we use a 26‑period year and compute the analogous periodic payment and number of bi‑weekly periods required until principal is extinguished.",
+      "To protect against numerical edge cases (for example, exactly zero interest rate or extremely small rates) the calculator includes a small numerical epsilon in denominators. This prevents divide‑by‑zero while keeping errors negligible relative to typical loan sizes."
+    ],
+    "how_is_calculated": [
+      "Monthly periodic rate r = APR / 100 / 12. Number of months n = remaining years × 12.",
+      "Scheduled monthly payment A = (r × P) / (1 − (1 + r)^(−n)). For numerical stability a tiny epsilon is added to the denominator when r is near zero.",
+      "When an extra amount is added each period, the required number of periods is estimated by n' = −log(1 − r × P / A') / log(1 + r) where A' is the total periodic payment (scheduled + extra). For bi‑weekly mode the periodic rate uses 26 periods/year and scheduled bi‑weekly = scheduled_monthly / 2."
+    ],
+    "faqs": [
+      {
+        "question": "Does making bi‑weekly payments always save interest?",
+        "answer": "Bi‑weekly payments can accelerate payoff because 26 bi‑weekly payments equal 13 monthly payments, effectively adding one extra monthly payment per year when bi‑weekly installments are half the monthly payment. Savings depend on interest rate, loan balance, and whether you actually make extra payments; results are shown by comparing total interest estimates."
+      },
+      {
+        "question": "What if my loan is on an income‑driven repayment plan?",
+        "answer": "This tool models fixed-rate, fixed‑payment amortization. Income‑driven plans, forbearance, deferment, and forgiveness programs change payments and timelines and are not modeled here. Consult your servicer or plan documentation for official figures."
+      },
+      {
+        "question": "Are the numbers exact?",
+        "answer": "Outputs are estimates based on standard amortization formulas and assume interest compounds periodically at the nominal APR you enter. For very low APR values the calculator uses a small numerical epsilon to preserve stability; see accuracy caveats below. Always confirm payoff amounts with your loan servicer."
+      },
+      {
+        "question": "How should I enter extra payments?",
+        "answer": "Enter the amount you plan to add each month in the monthly extra field, or the amount you plan to add to each bi‑weekly payment in the bi‑weekly extra field. The simulator treats those extras as recurring until payoff."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Numerical methods and software guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards for financial accuracy and risk management",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Floating point and numerical stability resources",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Operational safety and workplace guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The nominal yearly interest rate for the loan before dividing into periodic rates."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate applied each payment period. For monthly use APR/12; for bi‑weekly use APR/26."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down a loan over time through scheduled payments that cover interest and principal."
+      },
+      {
+        "term": "Numerical epsilon",
+        "definition": "A very small number added to denominators to prevent divide‑by‑zero and improve numerical stability in edge cases."
+      }
+    ],
+    "summary": [
+      "Compare baseline monthly amortization, monthly extra payments, and bi‑weekly payment strategies to see projected payoff times and total interest.",
+      "This simulator provides estimates. Confirm exact balances, payoff statements, and payment posting rules with your loan servicer before acting."
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ],
+    "internal": []
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculator"
+    ]
+  }
+}

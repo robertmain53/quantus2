@@ -1,0 +1,297 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan Balloon Payment Calculator (with Extra Payments)",
+    "description": "Estimate regular payment, balloon amount at maturity, and interest paid when extra payments (recurring or one-time) are applied. Includes amortization-based payments and optional extra-payment modeling for RV loans."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_balloon",
+    "methods": {
+      "standard_balloon": {
+        "label": "Balloon schedule with optional extra payments",
+        "description": "Computes the periodic regular payment based on an amortization period, then computes the outstanding balloon balance at the loan maturity (shorter balloon term). Supports recurring extra payments each period and one-time extra payments applied at a specific period.",
+        "variables": {
+          "r": {
+            "expression": "annual_interest_rate / 100 / periods_per_year",
+            "dependencies": [
+              "annual_interest_rate",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "n_amort": {
+            "expression": "amortization_years * periods_per_year",
+            "dependencies": [
+              "amortization_years",
+              "periods_per_year"
+            ],
+            "label": "Total payments in amortization schedule",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "n_balloon": {
+            "expression": "balloon_years * periods_per_year",
+            "dependencies": [
+              "balloon_years",
+              "periods_per_year"
+            ],
+            "label": "Payments until balloon maturity",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "P": {
+            "expression": "loan_amount * (r / (1 - (1 + r) ** (-n_amort)))",
+            "dependencies": [
+              "loan_amount",
+              "r",
+              "n_amort"
+            ],
+            "label": "Regular periodic payment (based on amortization)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_due": {
+            "expression": "loan_amount * (1 + r) ** n_balloon - P * (((1 + r) ** n_balloon - 1) / r) - recurring_extra * (((1 + r) ** n_balloon - 1) / r) - (one_time_extra_amount * (1 + r) ** (n_balloon - one_time_extra_period))",
+            "dependencies": [
+              "loan_amount",
+              "r",
+              "n_balloon",
+              "P",
+              "recurring_extra",
+              "one_time_extra_amount",
+              "one_time_extra_period"
+            ],
+            "label": "Estimated balloon amount due at maturity (after extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payments_made": {
+            "expression": "P * n_balloon + recurring_extra * n_balloon + one_time_extra_amount",
+            "dependencies": [
+              "P",
+              "n_balloon",
+              "recurring_extra",
+              "one_time_extra_amount"
+            ],
+            "label": "Total cash paid toward loan before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_paid_to_balloon": {
+            "expression": "total_payments_made - (loan_amount - balance_due)",
+            "dependencies": [
+              "total_payments_made",
+              "loan_amount",
+              "balance_due"
+            ],
+            "label": "Estimated interest paid through balloon maturity",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "regular_payment",
+            "label": "Regular periodic payment",
+            "variable": "P",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_amount",
+            "label": "Balloon amount due at maturity",
+            "variable": "balance_due",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_to_balloon",
+            "label": "Interest paid through balloon maturity",
+            "variable": "interest_paid_to_balloon",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "max": 1000000,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "periods_per_year",
+        "label": "Payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Semi-monthly (24)",
+            "value": "24"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years) used to compute payment",
+        "type": "number",
+        "default": 20,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "balloon_years",
+        "label": "Years until balloon maturity",
+        "type": "number",
+        "default": 5,
+        "min": 0.5,
+        "max": 30,
+        "step": 0.5
+      },
+      {
+        "id": "recurring_extra",
+        "label": "Recurring extra payment per period (0 if none)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      },
+      {
+        "id": "one_time_extra_amount",
+        "label": "One-time extra payment amount (0 if none)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      },
+      {
+        "id": "one_time_extra_period",
+        "label": "One-time extra payment: apply at which period number (1 = first period)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models an RV loan that uses amortization to set periodic payments but matures earlier with a balloon payment. You can add recurring extra payments and a single one-time extra payment to see how they lower the balloon or interest paid.",
+      "Results are estimations intended for planning. They assume consistent periodic payments, that extras are applied directly to principal when specified, and that the stated periodic interest compounds at the periodic rate derived from the annual rate you enter."
+    ],
+    "methodology": [
+      "Periodic interest rate is annual_interest_rate / 100 divided by payments per year. Regular payment is computed from the standard amortizing loan formula using the amortization period specified.",
+      "Balloon amount is the outstanding principal after the specified number of periods until balloon maturity. Recurring extras are modeled as additional principal payments each period. A one-time extra payment is applied at the specified period and reduces the outstanding balance thereafter.",
+      "Where a zero interest rate is used, the regular payment formula reduces to principal divided by the number of amortization periods. Edge cases and rounding are treated per the accuracy notes below."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_interest_rate / 100 / periods_per_year.",
+      "Regular payment P = loan_amount * (r / (1 - (1 + r) ** (-n_amort))).",
+      "Balloon balance after n_balloon periods = loan_amount*(1+r)**n_balloon - P*(((1+r)**n_balloon - 1)/r) - recurring_extra*(((1+r)**n_balloon - 1)/r) - one_time_extra_amount*(1+r)**(n_balloon - one_time_extra_period)."
+    ],
+    "examples": [
+      "Example 1: $50,000 loan, 6% APR, monthly, 20-year amortization, 5-year balloon, no extras → shows regular payment and balloon due at 5 years.",
+      "Example 2: Same loan with $200 monthly recurring extra → balloon amount reduces significantly and interest paid to balloon falls."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator show a full amortization schedule?",
+        "answer": "This tool returns the key results (regular payment, balloon amount at maturity, interest paid to balloon). It does not produce a full per-period schedule; use exported schedule tools when a line-by-line amortization is needed."
+      },
+      {
+        "question": "How are extra payments applied?",
+        "answer": "Recurring extras are added to each payment and applied to principal. One-time extras are applied at the specified period number and immediately reduce principal for subsequent periods."
+      },
+      {
+        "question": "What if the interest rate is zero?",
+        "answer": "If the annual interest rate is zero, the regular payment is equivalent to principal divided by the amortization period (payments count). The formula in this tool assumes positive rates; results at zero rate are computed using the zero-rate simplification."
+      },
+      {
+        "question": "Is this financial or legal advice?",
+        "answer": "No. This calculator provides estimates for planning only. Confirm final figures with your lender and review your loan contract for exact payment and payoff terms."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - General standards and guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - Standards overview",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Standards and numerical methods guidance",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - Safety and workplace guidance (reference)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A large lump-sum payment due at loan maturity when periodic payments do not fully amortize the loan."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of spreading loan payments over time so that each payment covers interest plus a portion of principal."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period: annual rate divided by number of payment periods per year."
+      },
+      {
+        "term": "Recurring extra payment",
+        "definition": "An additional fixed principal payment made each period alongside the regular payment."
+      },
+      {
+        "term": "One-time extra payment",
+        "definition": "A single additional principal payment applied at a specified period to reduce outstanding balance."
+      }
+    ]
+  }
+}

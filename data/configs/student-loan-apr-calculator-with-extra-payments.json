@@ -1,0 +1,382 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Student Loan APR & Extra-Payment Planner",
+    "description": "Estimate scheduled payments, payoff timing, interest cost, time saved from extra payments, and an APR estimate that includes fees. Designed for clear, conservative estimates with accuracy caveats and references to numeric and disclosure standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "amortization_with_extra",
+    "methods": {
+      "amortization_with_extra": {
+        "label": "Amortization with Extra Payments",
+        "description": "Computes regular scheduled payment, applies optional recurring extra payments and a one-time lump-sum toward principal, and estimates payoff period and total interest paid.",
+        "variables": {
+          "periodic_rate": {
+            "expression": "annual_rate_pct/100/payments_per_year",
+            "dependencies": [
+              "annual_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "periodic_rate_eps": {
+            "expression": "max(periodic_rate, 1e-12)",
+            "dependencies": [
+              "periodic_rate"
+            ],
+            "label": "Periodic rate (stabilized)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n_periods": {
+            "expression": "term_years*payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of scheduled payment periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "principal*periodic_rate_eps/(1-pow(1+periodic_rate_eps,-n_periods))",
+            "dependencies": [
+              "principal",
+              "periodic_rate_eps",
+              "n_periods"
+            ],
+            "label": "Scheduled periodic payment (no extras)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "base_payment+extra_payment",
+            "dependencies": [
+              "base_payment",
+              "extra_payment"
+            ],
+            "label": "Periodic payment including recurring extra",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "est_periods_to_payoff": {
+            "expression": "-ln(1 - principal*periodic_rate_eps/payment_with_extra)/ln(1+periodic_rate_eps)",
+            "dependencies": [
+              "principal",
+              "periodic_rate_eps",
+              "payment_with_extra"
+            ],
+            "label": "Estimated number of periods until payoff (excludes one-time lump applied at start)",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "est_periods_to_payoff_including_lump": {
+            "expression": "max(est_periods_to_payoff - (lump_sum/payment_with_extra), 0)",
+            "dependencies": [
+              "est_periods_to_payoff",
+              "lump_sum",
+              "payment_with_extra"
+            ],
+            "label": "Estimated periods to payoff after applying lump-sum",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payment_estimate": {
+            "expression": "payment_with_extra*est_periods_to_payoff_including_lump + lump_sum",
+            "dependencies": [
+              "payment_with_extra",
+              "est_periods_to_payoff_including_lump",
+              "lump_sum"
+            ],
+            "label": "Estimated total paid (principal + interest + fees)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_estimate": {
+            "expression": "total_payment_estimate - principal - origination_fee",
+            "dependencies": [
+              "total_payment_estimate",
+              "principal",
+              "origination_fee"
+            ],
+            "label": "Estimated total interest paid (estimate)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "time_saved_years": {
+            "expression": "(n_periods - est_periods_to_payoff_including_lump)/payments_per_year",
+            "dependencies": [
+              "n_periods",
+              "est_periods_to_payoff_including_lump",
+              "payments_per_year"
+            ],
+            "label": "Estimated years saved vs scheduled term",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "base_payment",
+            "label": "Scheduled payment (no extras)",
+            "variable": "base_payment",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Payment including recurring extra",
+            "variable": "payment_with_extra",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "est_periods_to_payoff_including_lump",
+            "label": "Estimated periods to payoff (including lump-sum)",
+            "variable": "est_periods_to_payoff_including_lump",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_estimate",
+            "label": "Estimated total interest paid",
+            "variable": "total_interest_estimate",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "time_saved_years",
+            "label": "Estimated time saved",
+            "variable": "time_saved_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "fee_adjusted_apr": {
+        "label": "Estimated APR Including Fees (Conservative Approximation)",
+        "description": "Provides a conservative APR approximation by annualizing upfront fees and adding to the stated nominal rate. This is an estimate for comparison only and does not substitute for lender-provided APR disclosures.",
+        "variables": {
+          "annualized_fee_pct": {
+            "expression": "(origination_fee/principal)/term_years*100",
+            "dependencies": [
+              "origination_fee",
+              "principal",
+              "term_years"
+            ],
+            "label": "Annualized fee as percentage of principal",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "apr_pct_estimate": {
+            "expression": "annual_rate_pct + annualized_fee_pct",
+            "dependencies": [
+              "annual_rate_pct",
+              "annualized_fee_pct"
+            ],
+            "label": "Estimated APR (nominal + annualized fees)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "apr_pct_estimate",
+            "label": "Estimated APR including fees",
+            "variable": "apr_pct_estimate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Nominal annual interest rate (APR stated by lender, %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Original term (years)",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 52,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Recurring extra payment per period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "lump_sum",
+        "label": "One-time lump-sum applied to principal",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "origination_fee",
+        "label": "Upfront fees or origination charged at closing",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This planner helps you compare the scheduled loan payment to adjusted schedules when you add recurring extra payments or apply a lump-sum to principal. It also provides a conservative APR estimate that annualizes upfront fees so you can compare offers on a like-for-like basis.",
+      "Results are estimates intended for planning. The tool uses standard amortization math and a conservative fee annualization method. It is not a substitute for the official APR disclosure from your lender or legal advice."
+    ],
+    "methodology": [
+      "Scheduled payment is calculated from the standard amortization formula using the periodic rate r = annual_rate_pct / 100 / payments_per_year and number of periods n = term_years * payments_per_year.",
+      "Extra recurring payments are added to the scheduled payment and used to estimate an accelerated payoff period by solving the amortization equation for the number of periods. A one-time lump-sum is treated as an immediate principal reduction applied at the start of the schedule.",
+      "APR including fees is approximated by annualizing upfront fees (origination_fee ÷ principal ÷ term_years) and adding that percentage to the nominal annual rate. This is a conservative approximation for quick comparisons only; official APR calculations are lender-specific and may include additional finance charges."
+    ],
+    "how_is_calculated": [
+      "Periodic rate: periodic_rate = annual_rate_pct / 100 / payments_per_year",
+      "Scheduled payment (no extras): payment = P * r / (1 - (1+r)^-n)",
+      "Payment with recurring extra: payment_with_extra = payment + extra_payment",
+      "Estimated payoff periods: solved from the amortization balance equation: n_est = -ln(1 - P*r/payment_with_extra)/ln(1+r)",
+      "Approximate APR including fees: APR_est ≈ annual_rate_pct + (origination_fee / principal) / term_years * 100"
+    ],
+    "examples": [
+      "Example 1: $30,000 at 5% for 10 years yields the scheduled monthly payment shown by the calculator. Adding $100 per month reduces payoff time and total interest; the time saved is reported in years.",
+      "Example 2: $20,000 at 6% for 15 years with a $500 origination fee produces an APR estimate that annualizes the fee on top of the nominal rate. Use this to compare offers that charge different upfront fees."
+    ],
+    "faqs": [
+      {
+        "question": "Is the APR shown here the same as the lender's APR disclosure?",
+        "answer": "No. The APR estimate here is a conservative, quick method that annualizes upfront fees for comparison. Official APR disclosures from lenders may include additional finance charges and specific regulatory calculations. Use official lender disclosures for contractual purposes."
+      },
+      {
+        "question": "How accurate are the payoff and interest estimates?",
+        "answer": "Estimates use standard amortization math and assume constant interest and on-time payments. They do not model deferred interest, capitalization rules, changing rates, penalties, forbearance, or income-driven adjustments. Small numeric differences may occur due to rounding and floating-point arithmetic."
+      },
+      {
+        "question": "Why does the calculator sometimes show very large or invalid payoff periods?",
+        "answer": "If the recurring payment (including extras) is less than the interest that accrues each period, the balance will not decline and the formula cannot produce a valid payoff period. Increase your extra payment or shorten the payment frequency to produce a valid payoff estimate."
+      },
+      {
+        "question": "Should I rely on this tool for legal or tax decisions?",
+        "answer": "No. This tool is for informal planning only. Consult your lender, tax advisor, or legal counsel for actions that require legal, tax, or contractual certainty."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Security & Privacy Controls (recommendations for secure software handling of financial data)",
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final"
+      },
+      {
+        "label": "ISO 4217 - Currency codes (recommended format for currency handling)",
+        "url": "https://www.iso.org/iso-4217-currency-codes.html"
+      },
+      {
+        "label": "IEEE 754 - Standard for floating-point arithmetic (rounding and representation considerations)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA - General guidance (workplace software safety culture and documentation best practices)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "A rate that attempts to capture the yearly cost of funds, including interest and certain fees. Official APR calculations vary by jurisdiction and lender; this tool provides an approximation when fees are entered."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a debt over time through regular payments that cover interest and principal according to a schedule."
+      },
+      {
+        "term": "Origination fee",
+        "definition": "An upfront charge by a lender to process a loan. When financed, it increases the effective cost of borrowing and is annualized in the APR approximation."
+      },
+      {
+        "term": "Lump-sum payment",
+        "definition": "A one-time payment applied to principal that immediately reduces the outstanding balance and can shorten the loan term."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final",
+        "label": "NIST SP 800-53 (security controls)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-4217-currency-codes.html",
+        "label": "ISO 4217 - Currency codes",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754 - Floating-Point",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

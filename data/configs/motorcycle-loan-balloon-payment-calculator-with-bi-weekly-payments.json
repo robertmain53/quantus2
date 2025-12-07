@@ -1,0 +1,550 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan Calculator — Balloon Payment with Bi‑Weekly & Monthly Modes",
+    "description": "Calculate periodic payments for a motorcycle loan that includes an optional balloon (residual) payment. Supports monthly and bi‑weekly schedules, sales tax, down payment and trade‑in. Provides payment, balloon, total cost and interest estimates with clear assumptions and accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "monthly",
+    "methods": {
+      "monthly": {
+        "label": "Monthly payments (12/year)",
+        "description": "Standard amortization with a balloon (residual) payment at loan maturity, using 12 payment periods per year.",
+        "variables": {
+          "tax_amount": {
+            "expression": "price * sales_tax_percent / 100",
+            "dependencies": [
+              "price",
+              "sales_tax_percent"
+            ],
+            "label": "Sales tax on vehicle price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "financed": {
+            "expression": "price + tax_amount - down_payment - trade_in",
+            "dependencies": [
+              "price",
+              "tax_amount",
+              "down_payment",
+              "trade_in"
+            ],
+            "label": "Amount financed (principal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periods_per_year": {
+            "expression": "12",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "integer",
+            "format": "integer",
+            "display": false
+          },
+          "n_payments": {
+            "expression": "loan_term_years * periods_per_year",
+            "dependencies": [
+              "loan_term_years",
+              "periods_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "integer",
+            "format": "integer",
+            "display": true
+          },
+          "r": {
+            "expression": "annual_interest_percent / 100 / periods_per_year",
+            "dependencies": [
+              "annual_interest_percent",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "balloon_abs": {
+            "expression": "(balloon_percent / 100) * financed + balloon_amount",
+            "dependencies": [
+              "balloon_percent",
+              "financed",
+              "balloon_amount"
+            ],
+            "label": "Balloon (residual) payment — absolute value used in calculations",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_adj": {
+            "expression": "financed - balloon_abs / ((1 + r) ^ n_payments)",
+            "dependencies": [
+              "financed",
+              "balloon_abs",
+              "r",
+              "n_payments"
+            ],
+            "label": "Present value of amortized portion (PV adjusted for balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "periodic_payment": {
+            "expression": "r * pv_adj / (1 - (1 + r) ^ (-n_payments))",
+            "dependencies": [
+              "r",
+              "pv_adj",
+              "n_payments"
+            ],
+            "label": "Periodic payment (principal + interest), excluding final balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "periodic_payment * n_payments + balloon_abs",
+            "dependencies": [
+              "periodic_payment",
+              "n_payments",
+              "balloon_abs"
+            ],
+            "label": "Total amount paid over loan life (payments + balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - financed",
+            "dependencies": [
+              "total_paid",
+              "financed"
+            ],
+            "label": "Total interest paid over loan life",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Periodic payment (monthly)",
+            "variable": "periodic_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_payment",
+            "label": "Balloon payment at maturity",
+            "variable": "balloon_abs",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_payments",
+            "label": "Number of payments",
+            "variable": "n_payments",
+            "unit": "integer",
+            "format": "integer"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (payments + balloon)",
+            "variable": "total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "financed",
+            "label": "Amount financed (principal)",
+            "variable": "financed",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly": {
+        "label": "Bi‑weekly payments (26/year)",
+        "description": "Bi‑weekly schedule (26 payments per year). Uses the same balloon formula and amortization logic as monthly but with 26 periods per year.",
+        "variables": {
+          "tax_amount": {
+            "expression": "price * sales_tax_percent / 100",
+            "dependencies": [
+              "price",
+              "sales_tax_percent"
+            ],
+            "label": "Sales tax on vehicle price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "financed": {
+            "expression": "price + tax_amount - down_payment - trade_in",
+            "dependencies": [
+              "price",
+              "tax_amount",
+              "down_payment",
+              "trade_in"
+            ],
+            "label": "Amount financed (principal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periods_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "integer",
+            "format": "integer",
+            "display": false
+          },
+          "n_payments": {
+            "expression": "loan_term_years * periods_per_year",
+            "dependencies": [
+              "loan_term_years",
+              "periods_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "integer",
+            "format": "integer",
+            "display": true
+          },
+          "r": {
+            "expression": "annual_interest_percent / 100 / periods_per_year",
+            "dependencies": [
+              "annual_interest_percent",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "balloon_abs": {
+            "expression": "(balloon_percent / 100) * financed + balloon_amount",
+            "dependencies": [
+              "balloon_percent",
+              "financed",
+              "balloon_amount"
+            ],
+            "label": "Balloon (residual) payment — absolute value used in calculations",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_adj": {
+            "expression": "financed - balloon_abs / ((1 + r) ^ n_payments)",
+            "dependencies": [
+              "financed",
+              "balloon_abs",
+              "r",
+              "n_payments"
+            ],
+            "label": "Present value of amortized portion (PV adjusted for balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "periodic_payment": {
+            "expression": "r * pv_adj / (1 - (1 + r) ^ (-n_payments))",
+            "dependencies": [
+              "r",
+              "pv_adj",
+              "n_payments"
+            ],
+            "label": "Periodic payment (principal + interest), excluding final balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "periodic_payment * n_payments + balloon_abs",
+            "dependencies": [
+              "periodic_payment",
+              "n_payments",
+              "balloon_abs"
+            ],
+            "label": "Total amount paid over loan life (payments + balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - financed",
+            "dependencies": [
+              "total_paid",
+              "financed"
+            ],
+            "label": "Total interest paid over loan life",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Periodic payment (bi‑weekly)",
+            "variable": "periodic_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_payment",
+            "label": "Balloon payment at maturity",
+            "variable": "balloon_abs",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_payments",
+            "label": "Number of payments",
+            "variable": "n_payments",
+            "unit": "integer",
+            "format": "integer"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (payments + balloon)",
+            "variable": "total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "financed",
+            "label": "Amount financed (principal)",
+            "variable": "financed",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "price",
+        "label": "Vehicle purchase price",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "sales_tax_percent",
+        "label": "Sales tax (%) on vehicle price",
+        "type": "number",
+        "default": 8.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment (cash)",
+        "type": "number",
+        "default": 1500,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "trade_in",
+        "label": "Trade‑in value applied",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "balloon_amount",
+        "label": "Balloon payment amount (enter 0 if using percent)",
+        "type": "number",
+        "default": 2000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "balloon_percent",
+        "label": "Balloon as percent of financed (enter 0 if using absolute amount)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "loan_term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 4,
+        "min": 1,
+        "max": 10,
+        "step": 0.25
+      },
+      {
+        "id": "annual_interest_percent",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments for a motorcycle loan that includes an optional balloon (residual) payment at maturity. Choose either monthly or bi‑weekly mode; the bi‑weekly mode uses 26 payments per year.",
+      "Enter sales tax, down payment and trade‑in values. You may specify the balloon either as an absolute dollar amount or as a percentage of the amount financed; when both are entered they are summed, so only fill the one you intend to use."
+    ],
+    "methodology": [
+      "We compute the amount financed by adding sales tax to the vehicle price and subtracting down payment and trade‑in. The balloon (residual) payment is treated as a lump sum due at loan maturity and discounted when determining the level periodic payment.",
+      "Payment calculation uses standard loan mathematics: the periodic interest rate equals APR divided by periods per year. The periodic payment is the annuity payment that amortizes the financed portion after removing the present value of the balloon."
+    ],
+    "how_is_calculated": [
+      "tax_amount = price * (sales_tax_percent / 100)",
+      "financed = price + tax_amount - down_payment - trade_in",
+      "periods_per_year = 12 (monthly) or 26 (bi‑weekly)",
+      "r = annual_interest_percent / 100 / periods_per_year",
+      "n = loan_term_years * periods_per_year",
+      "balloon_abs = (balloon_percent / 100) * financed + balloon_amount",
+      "periodic_payment = r * (financed - balloon_abs / (1 + r)^n) / (1 - (1 + r)^(-n))",
+      "total_paid = periodic_payment * n + balloon_abs",
+      "total_interest = total_paid - financed"
+    ],
+    "faqs": [
+      {
+        "question": "Which balloon input should I use: percent or amount?",
+        "answer": "Either works. Enter a single nonzero value in the field you prefer. If both fields are filled they are added; to avoid double counting leave the unused field at 0."
+      },
+      {
+        "question": "Does bi‑weekly mean I make an extra month of payments each year?",
+        "answer": "Bi‑weekly mode uses 26 payments per year. Compared to 12 monthly payments, 26 bi‑weekly payments can slightly increase annual payment counts (26*period ≈ 13 months if converted), and interest accrues per period. Use the bi‑weekly mode only if your lender schedules payments on that cadence."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "The calculator uses standard loan formulas and assumes interest compounds at the payment frequency. Results are estimates; actual lender schedules, fees, rounding rules and APR disclosures can change outcomes. See the accuracy caveats below."
+      },
+      {
+        "question": "What if the interest rate is 0%?",
+        "answer": "If the periodic interest rate is zero the formula simplifies to financed divided evenly across payments with the balloon added at maturity. Some implementations may require manual handling for exact zero‑rate edge cases."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — Mortgages & Loans guidance",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A large lump‑sum payment due at the end of the loan term that reduces periodic payments during the loan."
+      },
+      {
+        "term": "Amount financed",
+        "definition": "The principal borrowed after adding tax and subtracting down payment and trade‑in."
+      },
+      {
+        "term": "Periodic interest rate",
+        "definition": "Annual interest rate (APR) divided by the number of payment periods per year."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down principal and interest over time through periodic payments."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate — the nominal annual interest rate before conversion to periodic rate. It may differ from effective annual rate when compounding occurs."
+      }
+    ],
+    "summary": [
+      "This tool gives an estimate of periodic payments, balloon amount at maturity, total paid and total interest for motorcycle loans with an optional balloon payment. Use monthly mode for 12 payments per year or bi‑weekly mode for 26 payments per year.",
+      "Do not rely solely on these estimates for contract signing. Confirm exact payment schedules, fees and APR disclosures with your lender. Keep records of all inputs and check lender amortization tables for final numbers."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

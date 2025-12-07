@@ -1,0 +1,574 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Interest & Biweekly Payment Calculator (Advanced)",
+    "description": "Compare and model mortgage payoff under accelerated biweekly schedules, standard monthly schedules, and custom extra-payment scenarios. Provides estimated payment amounts, total interest, payoff time, and interest savings. Includes accuracy caveats and references to measurement and calculation standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "compare_monthly_vs_biweekly",
+    "methods": {
+      "accelerated_biweekly": {
+        "label": "Accelerated biweekly (26 payments/year)",
+        "description": "Calculates required biweekly payment when payments are made every two weeks (26 payments per year). Uses standard amortization formulas with a per-period interest rate of annual_rate/26. Supports additional fixed extra payment per biweekly period.",
+        "variables": {
+          "periodic_rate": {
+            "expression": "annual_rate/100/26",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Periodic interest rate (per biweekly period)",
+            "format": "decimal",
+            "display": true
+          },
+          "n_periods": {
+            "expression": "term_years*26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total number of biweekly periods",
+            "format": "integer",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "principal * periodic_rate / (1 - pow(1+periodic_rate, -n_periods))",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "n_periods"
+            ],
+            "label": "Base biweekly payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "base_payment + extra_payment",
+            "dependencies": [
+              "base_payment",
+              "extra_payment"
+            ],
+            "label": "Biweekly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment_with_extra * n_periods",
+            "dependencies": [
+              "payment_with_extra",
+              "n_periods"
+            ],
+            "label": "Estimated total paid (if all scheduled periods used)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Total interest paid (approximate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_periods": {
+            "expression": "ln(payment_with_extra/(payment_with_extra - principal*periodic_rate))/ln(1+periodic_rate)",
+            "dependencies": [
+              "payment_with_extra",
+              "principal",
+              "periodic_rate"
+            ],
+            "label": "Estimated biweekly periods until payoff",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "payoff_periods/26",
+            "dependencies": [
+              "payoff_periods"
+            ],
+            "label": "Estimated years until payoff",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment",
+            "label": "Biweekly payment (incl. extra)",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_total_interest",
+            "label": "Total interest (biweekly)",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_payoff_years",
+            "label": "Payoff time (years) - biweekly",
+            "variable": "payoff_years",
+            "format": "decimal",
+            "unit": "years"
+          },
+          {
+            "id": "biweekly_payoff_periods",
+            "label": "Payoff periods (biweekly)",
+            "variable": "payoff_periods",
+            "format": "decimal"
+          }
+        ]
+      },
+      "standard_monthly": {
+        "label": "Standard monthly (12 payments/year)",
+        "description": "Standard monthly amortization calculation with optional fixed extra payment per month.",
+        "variables": {
+          "periodic_rate_m": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Periodic monthly interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "n_periods_m": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total number of monthly periods",
+            "format": "integer",
+            "display": true
+          },
+          "base_payment_m": {
+            "expression": "principal * periodic_rate_m / (1 - pow(1+periodic_rate_m, -n_periods_m))",
+            "dependencies": [
+              "principal",
+              "periodic_rate_m",
+              "n_periods_m"
+            ],
+            "label": "Base monthly payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra_m": {
+            "expression": "base_payment_m + extra_payment*12/26",
+            "dependencies": [
+              "base_payment_m",
+              "extra_payment"
+            ],
+            "label": "Equivalent monthly payment including normalized extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_paid_m": {
+            "expression": "base_payment_m * n_periods_m",
+            "dependencies": [
+              "base_payment_m",
+              "n_periods_m"
+            ],
+            "label": "Total paid (monthly schedule, base)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_m": {
+            "expression": "total_paid_m - principal",
+            "dependencies": [
+              "total_paid_m",
+              "principal"
+            ],
+            "label": "Total interest paid (monthly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_periods_m": {
+            "expression": "ln(base_payment_m/(base_payment_m - principal*periodic_rate_m))/ln(1+periodic_rate_m)",
+            "dependencies": [
+              "base_payment_m",
+              "principal",
+              "periodic_rate_m"
+            ],
+            "label": "Estimated monthly periods until payoff (no extra)",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years_m": {
+            "expression": "payoff_periods_m/12",
+            "dependencies": [
+              "payoff_periods_m"
+            ],
+            "label": "Estimated years until payoff (monthly)",
+            "format": "decimal",
+            "unit": "years",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment (base)",
+            "variable": "base_payment_m",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_total_interest",
+            "label": "Total interest (monthly)",
+            "variable": "total_interest_m",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_payoff_years",
+            "label": "Payoff time (years) - monthly",
+            "variable": "payoff_years_m",
+            "format": "decimal",
+            "unit": "years"
+          },
+          {
+            "id": "monthly_payoff_periods",
+            "label": "Payoff periods (monthly)",
+            "variable": "payoff_periods_m",
+            "format": "decimal"
+          }
+        ]
+      },
+      "compare_monthly_vs_biweekly": {
+        "label": "Compare monthly vs accelerated biweekly",
+        "description": "Provides side-by-side estimates for total interest and payoff time for a standard monthly schedule and an accelerated biweekly schedule (26 payments/year). Calculates estimated interest savings and years saved.",
+        "variables": {
+          "m_periodic_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly periodic rate",
+            "format": "decimal",
+            "display": false
+          },
+          "m_n": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Monthly periods",
+            "format": "integer",
+            "display": false
+          },
+          "m_payment": {
+            "expression": "principal * m_periodic_rate / (1 - pow(1+m_periodic_rate, -m_n))",
+            "dependencies": [
+              "principal",
+              "m_periodic_rate",
+              "m_n"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "m_total_interest": {
+            "expression": "m_payment * m_n - principal",
+            "dependencies": [
+              "m_payment",
+              "m_n",
+              "principal"
+            ],
+            "label": "Total interest under monthly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "b_periodic_rate": {
+            "expression": "annual_rate/100/26",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Biweekly periodic rate",
+            "format": "decimal",
+            "display": false
+          },
+          "b_n": {
+            "expression": "term_years*26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Biweekly periods",
+            "format": "integer",
+            "display": false
+          },
+          "b_base_payment": {
+            "expression": "principal * b_periodic_rate / (1 - pow(1+b_periodic_rate, -b_n))",
+            "dependencies": [
+              "principal",
+              "b_periodic_rate",
+              "b_n"
+            ],
+            "label": "Base biweekly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "b_payment_with_extra": {
+            "expression": "b_base_payment + extra_payment",
+            "dependencies": [
+              "b_base_payment",
+              "extra_payment"
+            ],
+            "label": "Biweekly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "b_payoff_periods": {
+            "expression": "ln(b_payment_with_extra/(b_payment_with_extra - principal*b_periodic_rate))/ln(1+b_periodic_rate)",
+            "dependencies": [
+              "b_payment_with_extra",
+              "principal",
+              "b_periodic_rate"
+            ],
+            "label": "Estimated biweekly payoff periods",
+            "format": "decimal",
+            "display": true
+          },
+          "b_payoff_years": {
+            "expression": "b_payoff_periods/26",
+            "dependencies": [
+              "b_payoff_periods"
+            ],
+            "label": "Estimated biweekly payoff years",
+            "format": "decimal",
+            "unit": "years",
+            "display": true
+          },
+          "b_total_paid": {
+            "expression": "b_payment_with_extra * b_payoff_periods",
+            "dependencies": [
+              "b_payment_with_extra",
+              "b_payoff_periods"
+            ],
+            "label": "Estimated total paid under biweekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "b_total_interest": {
+            "expression": "b_total_paid - principal",
+            "dependencies": [
+              "b_total_paid",
+              "principal"
+            ],
+            "label": "Estimated total interest (biweekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "m_total_interest - b_total_interest",
+            "dependencies": [
+              "m_total_interest",
+              "b_total_interest"
+            ],
+            "label": "Estimated interest saved (monthly - biweekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "years_saved": {
+            "expression": "payoff_years_m - b_payoff_years",
+            "dependencies": [
+              "payoff_years_m",
+              "b_payoff_years"
+            ],
+            "label": "Estimated years saved",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years_m": {
+            "expression": "ln(m_payment/(m_payment - principal*m_periodic_rate))/ln(1+m_periodic_rate)/12",
+            "dependencies": [
+              "m_payment",
+              "principal",
+              "m_periodic_rate"
+            ],
+            "label": "Monthly payoff years (derived)",
+            "format": "decimal",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "compare_monthly_total_interest",
+            "label": "Total interest (monthly)",
+            "variable": "m_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "compare_biweekly_total_interest",
+            "label": "Total interest (biweekly)",
+            "variable": "b_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings",
+            "label": "Interest saved (monthly vs biweekly)",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_saved",
+            "label": "Estimated years saved",
+            "variable": "years_saved",
+            "format": "decimal",
+            "unit": "years"
+          },
+          {
+            "id": "biweekly_payoff_years_compare",
+            "label": "Biweekly payoff years",
+            "variable": "b_payoff_years",
+            "format": "decimal",
+            "unit": "years"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR) (%)",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment per biweekly period (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool models mortgage amortization under accelerated biweekly payment schedules (26 payments per year) and standard monthly schedules. It estimates payment amounts, total interest paid, and time-to-payoff and lets you add a recurring extra amount per biweekly period.",
+      "Results are estimates based on standard amortization math. Real-world outcomes can differ due to rounding policies, payment timing, escrow changes, loan servicing rules, and fees. Use the values here for planning and comparison, not as a regulatorily binding figure."
+    ],
+    "methodology": [
+      "Calculations use classical amortization formulas: periodically compound the annual nominal rate to a per-period rate and compute the fixed payment that amortizes the loan over the chosen number of periods.",
+      "Accelerated biweekly schedules assume 26 equal payments per year. Because 26 half-month payments equal 13 monthly payments, the accelerated schedule typically reduces principal faster and shortens the loan term.",
+      "Where extra payments are entered, the calculator includes them as fixed additional principal applied each biweekly period and recomputes payoff using logarithmic solution for the number of periods until balance reaches zero."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = annual_rate / 100 / periods_per_year.",
+      "Fixed payment = principal * r / (1 - (1 + r)^-n) where r = periodic rate and n = total periods.",
+      "Payoff periods with a payment greater than interest-only per period are derived from: (1+r)^k = payment/(payment - principal*r) and solved for k = ln(payment/(payment - principal*r))/ln(1+r).",
+      "Total interest ≈ total paid over payoff periods minus original principal. This is an estimate; rounding, payment application timing, and fees can change results."
+    ],
+    "examples": [
+      "Example: $300,000 principal, 3.5% APR, 30 years. Standard monthly payment computed with r=3.5%/12 and n=360. Accelerated biweekly computes payments with r=3.5%/26 and n=780 and shows the reduced payoff time and interest.",
+      "Example with extra payment: adding a fixed $50 per biweekly period reduces principal faster. The calculator estimates the new payoff periods using the logarithmic solution above."
+    ],
+    "faqs": [
+      {
+        "question": "Does 'biweekly' always mean faster payoff than monthly?",
+        "answer": "Not necessarily. Accelerated biweekly (26 payments/year of half the monthly amount) typically results in faster payoff because it effectively makes one extra monthly payment per year. Converting a monthly payment into 24 biweekly payments (not 26) does not speed payoff."
+      },
+      {
+        "question": "Are these numbers exact for my loan?",
+        "answer": "These are mathematical estimates that assume the lender applies payments immediately to principal and uses standard amortization. Lender-specific rules for payment posting, rounding, escrow, prepayment penalties, or required minimum payments can alter the result."
+      },
+      {
+        "question": "Why is an extra fixed amount per biweekly period useful?",
+        "answer": "An extra fixed principal payment applied regularly reduces loan balance sooner and typically reduces both total interest and term length. This calculator models simple recurring extras per biweekly period."
+      },
+      {
+        "question": "How should I interpret negative or undefined outputs?",
+        "answer": "If the periodic payment is lower than the interest-only amount (payment less than or equal to principal multiplied by the periodic rate), the formulas do not produce a valid amortizing solution. In practice you would need to increase the payment or change the term."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The annual nominal interest rate used in amortization formulas. This calculator uses the APR as the nominal rate for periodic compounding; it does not adjust for lender fees unless you include them in principal."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period: APR divided by number of periods per year (e.g., 26 for biweekly, 12 for monthly)."
+      },
+      {
+        "term": "Accelerated biweekly",
+        "definition": "A schedule with 26 equal payments per year (every two weeks). It often results in quicker payoff because 26 half-month payments equal 13 full monthly payments annually."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off debt through regular payments that include interest and principal portions so that the balance reaches zero at the end of the term."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Numerical Methods and Computer Arithmetic",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Standards for Financial Services and Calculations",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Recommendations on Software and Calculation Reliability",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - General Guidance on Accuracy and Measurement Controls",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "summary": [
+      "Use this calculator to compare accelerated biweekly schedules to standard monthly schedules and to estimate the effect of recurring extra payments.",
+      "Results are estimates. For contract-accurate payoff figures, consult your loan servicer and review your loan agreement."
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

@@ -1,0 +1,578 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Student Loan Balloon Payment Estimator",
+    "description": "Estimate the balloon payment and related amounts for student loans under different repayment scenarios, including scheduled amortization with a balloon, a custom periodic payment that leaves a balloon, and an interest-only period followed by a balloon. Includes clear limits, calibration notes, and accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_balloon",
+    "methods": {
+      "standard_balloon": {
+        "label": "Standard amortizing schedule with balloon at end",
+        "description": "Compute the scheduled periodic payment based on a full amortization schedule and the outstanding balance after a shorter balloon term.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_percent / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "N": {
+            "expression": "amortization_term_years * payments_per_year",
+            "dependencies": [
+              "amortization_term_years",
+              "payments_per_year"
+            ],
+            "label": "Total amortization payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "m": {
+            "expression": "balloon_term_years * payments_per_year",
+            "dependencies": [
+              "balloon_term_years",
+              "payments_per_year"
+            ],
+            "label": "Payments before balloon",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "principal * r / (1 - pow(1 + r, -N))",
+            "dependencies": [
+              "principal",
+              "r",
+              "N"
+            ],
+            "label": "Scheduled periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "outstanding_balance": {
+            "expression": "principal * pow(1 + r, m) - monthly_payment * ((pow(1 + r, m) - 1) / r)",
+            "dependencies": [
+              "principal",
+              "monthly_payment",
+              "r",
+              "m"
+            ],
+            "label": "Outstanding balance before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_amount": {
+            "expression": "outstanding_balance",
+            "dependencies": [
+              "outstanding_balance"
+            ],
+            "label": "Balloon payment due at balloon date",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_pct": {
+            "expression": "balloon_amount / principal * 100",
+            "dependencies": [
+              "balloon_amount",
+              "principal"
+            ],
+            "label": "Balloon as percent of original principal",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "total_paid_before_balloon": {
+            "expression": "monthly_payment * m",
+            "dependencies": [
+              "monthly_payment",
+              "m"
+            ],
+            "label": "Total payments made before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_paid_before_balloon": {
+            "expression": "total_paid_before_balloon - (principal - outstanding_balance)",
+            "dependencies": [
+              "total_paid_before_balloon",
+              "principal",
+              "outstanding_balance"
+            ],
+            "label": "Interest paid before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balloon_amount",
+            "label": "Balloon payment due",
+            "variable": "balloon_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_payment",
+            "label": "Scheduled periodic payment",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "outstanding_balance",
+            "label": "Outstanding balance before balloon",
+            "variable": "outstanding_balance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_pct",
+            "label": "Balloon as percent of original principal",
+            "variable": "balloon_pct",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "total_paid_before_balloon",
+            "label": "Total paid before balloon",
+            "variable": "total_paid_before_balloon",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid_before_balloon",
+            "label": "Interest paid before balloon",
+            "variable": "interest_paid_before_balloon",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "custom_payment": {
+        "label": "Custom periodic payment leaving a balloon",
+        "description": "Use a user-specified periodic payment to compute the remaining balance (balloon) after the balloon term. If the custom payment equals the scheduled amortizing payment, the balloon will match the standard amortizing result.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_percent / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "m": {
+            "expression": "balloon_term_years * payments_per_year",
+            "dependencies": [
+              "balloon_term_years",
+              "payments_per_year"
+            ],
+            "label": "Payments before balloon",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "monthly_payment_override",
+            "dependencies": [
+              "monthly_payment_override"
+            ],
+            "label": "User-specified periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "outstanding_balance": {
+            "expression": "principal * pow(1 + r, m) - monthly_payment * ((pow(1 + r, m) - 1) / r)",
+            "dependencies": [
+              "principal",
+              "monthly_payment",
+              "r",
+              "m"
+            ],
+            "label": "Outstanding balance before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_amount": {
+            "expression": "outstanding_balance",
+            "dependencies": [
+              "outstanding_balance"
+            ],
+            "label": "Balloon payment due at balloon date",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_pct": {
+            "expression": "balloon_amount / principal * 100",
+            "dependencies": [
+              "balloon_amount",
+              "principal"
+            ],
+            "label": "Balloon as percent of original principal",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balloon_amount",
+            "label": "Balloon payment due",
+            "variable": "balloon_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_payment",
+            "label": "Periodic payment (user-specified)",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "outstanding_balance",
+            "label": "Outstanding balance before balloon",
+            "variable": "outstanding_balance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_pct",
+            "label": "Balloon as percent of original principal",
+            "variable": "balloon_pct",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "interest_only": {
+        "label": "Interest-only payments then balloon",
+        "description": "Calculate payments and balloon when the borrower makes interest-only payments for the balloon period. Interest-only payments do not reduce principal; balloon equals principal unless additional principal payments are made.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_percent / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "m": {
+            "expression": "balloon_term_years * payments_per_year",
+            "dependencies": [
+              "balloon_term_years",
+              "payments_per_year"
+            ],
+            "label": "Interest-only payment count",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment_interest_only": {
+            "expression": "principal * r",
+            "dependencies": [
+              "principal",
+              "r"
+            ],
+            "label": "Interest-only periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "outstanding_balance": {
+            "expression": "principal",
+            "dependencies": [
+              "principal"
+            ],
+            "label": "Outstanding balance before balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_amount": {
+            "expression": "principal",
+            "dependencies": [
+              "principal"
+            ],
+            "label": "Balloon payment after interest-only period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment_interest_only",
+            "label": "Interest-only periodic payment",
+            "variable": "monthly_payment_interest_only",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_amount",
+            "label": "Balloon payment due",
+            "variable": "balloon_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "outstanding_balance",
+            "label": "Outstanding balance before balloon",
+            "variable": "outstanding_balance",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "repayment_method",
+        "label": "Repayment scenario",
+        "type": "select",
+        "default": "standard",
+        "options": [
+          {
+            "label": "Standard amortization with balloon",
+            "value": "standard"
+          },
+          {
+            "label": "Custom periodic payment (leaves balloon)",
+            "value": "custom"
+          },
+          {
+            "label": "Interest-only then balloon",
+            "value": "interest_only"
+          }
+        ]
+      },
+      {
+        "id": "principal",
+        "label": "Original loan principal",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_rate_percent",
+        "label": "Annual interest rate (nominal APR)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_term_years",
+        "label": "Amortization term (years) used to compute scheduled payment",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "balloon_term_years",
+        "label": "Time until balloon payment (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "custom_payment_section",
+        "label": "Custom periodic payment",
+        "show_when": {
+          "field": "repayment_method",
+          "is": "custom"
+        },
+        "fields": [
+          {
+            "id": "monthly_payment_override",
+            "label": "Periodic payment amount (currency) you will pay each period",
+            "type": "number",
+            "default": 200,
+            "min": 0,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you understand the size of a balloon payment that remains after making payments for a limited period on a student loan. It supports multiple scenarios: scheduled amortization with a balloon, a user-specified periodic payment that leaves a balloon, and an interest-only period followed by a balloon.",
+      "Use the tool to explore trade-offs: higher periodic payments reduce the balloon, shorter amortization leads to larger scheduled payments, and interest-only periods do not reduce principal unless extra principal payments are made. Results exclude fees, taxes, insurance, penalty charges, loan-specific capitalization rules, or special repayment program adjustments unless you include them manually."
+    ],
+    "methodology": [
+      "Calculations use nominal periodic interest rates derived from the entered annual rate, assuming fixed rate and consistent payment timing. The scheduled payment formula is the standard level-payment amortization formula. Outstanding balance after a number of payments is computed from the amortization schedule.",
+      "This tool provides model estimates intended for planning and comparison. It does not replace account statements, lender payoff quotes, or advice from a qualified financial advisor. Variable rates, administrative fees, capitalization of interest, forbearance, deferment, or income-driven repayment adjustments are not modeled unless entered as equivalent changes to rate or payment."
+    ],
+    "how_is_calculated": [
+      "periodic_rate r = annual_rate_percent / 100 / payments_per_year",
+      "scheduled payment A = principal * r / (1 - (1 + r) ^ -N) where N = amortization_term_years * payments_per_year",
+      "outstanding balance after m payments B = principal * (1 + r) ^ m - A * (( (1 + r) ^ m - 1) / r)",
+      "balloon = outstanding balance at balloon date",
+      "interest-only periodic payment = principal * r"
+    ],
+    "examples": [
+      "Example 1: Principal 30,000, 5% APR, amortization 10 years, balloon at 5 years. The tool computes the scheduled monthly payment and the outstanding balance at 5 years which becomes the balloon.",
+      "Example 2: Principal 20,000, 4% APR, you choose to pay 150 per month for 4 years. The estimator shows the remaining balance after 48 payments which will be due as a balloon."
+    ],
+    "summary": [
+      "Select the scenario that best matches your loan terms. For official payoff figures contact your loan servicer. Use this estimator for planning, scenario comparison, and sensitivity analysis.",
+      "Accuracy depends on input quality. Small changes to rate or payment frequency can materially change balloon sizes. Always verify with lender-provided payoff quotes before making decisions."
+    ],
+    "faqs": [
+      {
+        "question": "Does this estimator include fees, penalties, or capitalization of unpaid interest?",
+        "answer": "No. This estimator models principal and interest under fixed assumptions. It does not automatically apply late fees, origination fees, capitalization rules, or special program adjustments. Add those amounts manually to the principal input if you want them included."
+      },
+      {
+        "question": "Can I model variable interest rates or changes in payment amount over time?",
+        "answer": "This tool assumes a fixed nominal annual interest rate over the modeled period. To approximate rate changes, run scenarios using different rates for the period in question and compare results. For stepwise schedules you will need a dedicated multi-period amortization tool."
+      },
+      {
+        "question": "Why does the estimated balloon differ from my servicer's payoff?",
+        "answer": "Lenders may apply daily interest accrual, fees, recent payments not in our model, or different compounding conventions. This estimator is for planning and comparison only. Use the servicer's payoff statement for exact amounts."
+      },
+      {
+        "question": "How precise are the numbers?",
+        "answer": "Results are calculated using standard financial formulas and rounded for display. They are estimates and subject to rounding, input precision, and omitted loan-specific adjustments. See the accuracy and standards citations for details."
+      },
+      {
+        "question": "Is this financial or legal advice?",
+        "answer": "No. The estimator provides informational calculations only. For personal financial advice consult a licensed financial professional or your loan servicer."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau - Student Loans",
+        "url": "https://www.consumerfinance.gov/consumer-tools/student-loans/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at the end of a payment period that represents the outstanding balance after making smaller periodic payments."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a loan over time through regular payments of principal and interest according to a schedule."
+      },
+      {
+        "term": "Outstanding balance",
+        "definition": "The remaining principal owed on the loan at a specified point in time."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied to each payment period, calculated as the nominal annual rate divided by the number of payment periods per year."
+      },
+      {
+        "term": "Interest-only payment",
+        "definition": "A payment that covers only the interest due for the period and does not reduce the principal balance."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov/consumer-tools/student-loans/",
+        "label": "CFPB - Student Loans",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

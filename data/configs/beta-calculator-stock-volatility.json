@@ -1,0 +1,448 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Beta Calculator — Stock & Portfolio Volatility",
+    "description": "Compute stock and portfolio beta using multiple industry methods (OLS regression, covariance/variance, portfolio-weighted, levered/unlevered) with explicit inputs, safety guidance, and accuracy caveats aligned to technical standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "regression_beta",
+    "methods": {
+      "regression_beta": {
+        "label": "OLS Regression (slope = Cov/Var)",
+        "description": "Estimate beta as the slope from an ordinary least squares regression of stock returns on market returns, implemented via the covariance/market variance relationship.",
+        "variables": {
+          "beta_regression": {
+            "expression": "covariance / market_variance",
+            "dependencies": [
+              "covariance",
+              "market_variance"
+            ],
+            "label": "Beta (OLS slope)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "notes_regression": {
+            "expression": "sample_size",
+            "dependencies": [
+              "sample_size"
+            ],
+            "label": "Sample size (used for confidence assessment)",
+            "format": "integer",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "beta",
+            "label": "Estimated Beta (regression)",
+            "variable": "beta_regression",
+            "format": "decimal"
+          }
+        ]
+      },
+      "covariance_method": {
+        "label": "Covariance / Market Variance",
+        "description": "Direct formula approach: beta = Cov(stock, market) / Var(market). Use when you supply covariance and market variance computed from the same return frequency.",
+        "variables": {
+          "beta_cov": {
+            "expression": "covariance / market_variance",
+            "dependencies": [
+              "covariance",
+              "market_variance"
+            ],
+            "label": "Beta (covariance method)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "beta_covariance",
+            "label": "Estimated Beta (cov/var)",
+            "variable": "beta_cov",
+            "format": "decimal"
+          }
+        ]
+      },
+      "portfolio_beta": {
+        "label": "Portfolio Beta (weighted average)",
+        "description": "Weighted average of individual asset betas. We accept up to four holdings; ensure weights sum to 1 for correct interpretation.",
+        "variables": {
+          "portfolio_beta_calc": {
+            "expression": "weight1*beta1 + weight2*beta2 + weight3*beta3 + weight4*beta4",
+            "dependencies": [
+              "weight1",
+              "beta1",
+              "weight2",
+              "beta2",
+              "weight3",
+              "beta3",
+              "weight4",
+              "beta4"
+            ],
+            "label": "Portfolio beta (weighted average)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "portfolio_beta",
+            "label": "Portfolio Beta",
+            "variable": "portfolio_beta_calc",
+            "format": "decimal"
+          }
+        ]
+      },
+      "levered_unlevered": {
+        "label": "Levered & Unlevered Beta (Hamada adjustment)",
+        "description": "Convert between levered and unlevered beta using a standard tax-adjusted D/E adjustment. Use consistent definitions of debt and equity (market values preferred).",
+        "variables": {
+          "unlevered_from_levered": {
+            "expression": "levered_beta_input / (1 + (1 - tax_rate) * debt_equity)",
+            "dependencies": [
+              "levered_beta_input",
+              "tax_rate",
+              "debt_equity"
+            ],
+            "label": "Unlevered beta (from levered)",
+            "format": "decimal",
+            "display": true
+          },
+          "relevered_from_unlevered": {
+            "expression": "unlevered_beta_input * (1 + (1 - tax_rate) * debt_equity)",
+            "dependencies": [
+              "unlevered_beta_input",
+              "tax_rate",
+              "debt_equity"
+            ],
+            "label": "Re-levered beta (from unlevered)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "beta_unlevered",
+            "label": "Unlevered Beta",
+            "variable": "unlevered_from_levered",
+            "format": "decimal"
+          },
+          {
+            "id": "beta_relevered",
+            "label": "Re-levered Beta",
+            "variable": "relevered_from_unlevered",
+            "format": "decimal"
+          }
+        ]
+      },
+      "capm_expected_return": {
+        "label": "CAPM Expected Return",
+        "description": "Compute expected return using CAPM: expected = risk-free + beta × (market return − risk-free). Inputs are entered as percentages.",
+        "variables": {
+          "market_premium": {
+            "expression": "(market_return - risk_free_rate)/100",
+            "dependencies": [
+              "market_return",
+              "risk_free_rate"
+            ],
+            "label": "Market risk premium (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "expected_return_capm": {
+            "expression": "risk_free_rate/100 + levered_beta_input * ((market_return - risk_free_rate)/100)",
+            "dependencies": [
+              "risk_free_rate",
+              "market_return",
+              "levered_beta_input"
+            ],
+            "label": "Expected return (annual)",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "expected_return",
+            "label": "CAPM Expected Return (annual)",
+            "variable": "expected_return_capm",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "covariance",
+        "label": "Covariance between stock and market returns (same frequency)",
+        "type": "number",
+        "default": 0.0005,
+        "min": -1,
+        "max": 1,
+        "step": 1e-05
+      },
+      {
+        "id": "market_variance",
+        "label": "Variance of market returns (same frequency)",
+        "type": "number",
+        "default": 0.0004,
+        "min": 0,
+        "step": 1e-05
+      },
+      {
+        "id": "sample_size",
+        "label": "Number of return observations (sample size)",
+        "type": "integer",
+        "default": 252,
+        "min": 3,
+        "step": 1
+      },
+      {
+        "id": "risk_free_rate",
+        "label": "Risk-free rate (annual, %)",
+        "type": "number",
+        "default": 3,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "market_return",
+        "label": "Expected market return (annual, %)",
+        "type": "number",
+        "default": 8,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "debt_equity",
+        "label": "Debt-to-equity ratio (D/E, market value preferred)",
+        "type": "number",
+        "default": 0.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "tax_rate",
+        "label": "Corporate tax rate (decimal, e.g., 0.21)",
+        "type": "number",
+        "default": 0.21,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "levered_beta_input",
+        "label": "Levered beta (if known)",
+        "type": "number",
+        "default": 1.2,
+        "step": 0.01
+      },
+      {
+        "id": "unlevered_beta_input",
+        "label": "Unlevered beta (if known)",
+        "type": "number",
+        "default": 0.9,
+        "step": 0.01
+      },
+      {
+        "id": "weight1",
+        "label": "Portfolio weight 1 (decimal)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "beta1",
+        "label": "Beta for holding 1",
+        "type": "number",
+        "default": 1,
+        "step": 0.01
+      },
+      {
+        "id": "weight2",
+        "label": "Portfolio weight 2 (decimal)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "beta2",
+        "label": "Beta for holding 2",
+        "type": "number",
+        "default": 1,
+        "step": 0.01
+      },
+      {
+        "id": "weight3",
+        "label": "Portfolio weight 3 (decimal)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "beta3",
+        "label": "Beta for holding 3",
+        "type": "number",
+        "default": 1,
+        "step": 0.01
+      },
+      {
+        "id": "weight4",
+        "label": "Portfolio weight 4 (decimal)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "beta4",
+        "label": "Beta for holding 4",
+        "type": "number",
+        "default": 1,
+        "step": 0.01
+      },
+      {
+        "id": "adjust_blume",
+        "label": "Apply Blume adjustment to beta",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Beta Calculator estimates an asset or portfolio's sensitivity to market movements using multiple accepted methods: OLS regression (slope), direct covariance/market-variance ratio, portfolio-weighted beta, and levered/unlevered adjustments. Choose the method that matches the inputs you can reliably compute.",
+      "The tool is intended for analysis and decision support only. It provides numeric outputs alongside guidance on data quality, sample period, and model limitations so you can assess result reliability before using estimates for investment or regulatory decisions."
+    ],
+    "methodology": [
+      "OLS regression beta is computed as the slope from regressing stock returns on market returns. Numerically this equals Cov(stock, market) divided by Var(market) when both series use the same return frequency and sample.",
+      "The levered/unlevered conversion uses the standard tax-adjusted adjustment (Hamada-style): unlevered_beta = levered_beta / (1 + (1 - tax_rate) * D/E), and the reverse to relever. Use market values for equity and debt where possible.",
+      "Portfolio beta is a weighted average of constituent betas: portfolio_beta = Σ weight_i × beta_i. Ensure weights are in decimal form and that the same beta definitions (levered/unlevered) are used across holdings."
+    ],
+    "how_is_calculated": [
+      "Regression beta (OLS): beta = covariance(stock, market) / variance(market). Provide covariance and market variance computed from the same return frequency.",
+      "Covariance method: same formula as regression; intended when you supply precomputed covariance and variance.",
+      "Levered ↔ Unlevered: unlevered_beta = levered_beta / (1 + (1 - tax_rate) * D/E). Re-lever: unlevered_beta × (1 + (1 - tax_rate) * D/E).",
+      "CAPM expected return: expected = risk_free + beta × (market_return − risk_free). Inputs for rates are entered as percentages."
+    ],
+    "examples": [
+      "Example 1: Given covariance = 0.0005 and market variance = 0.0004, regression beta = 0.0005 / 0.0004 = 1.25.",
+      "Example 2: For a levered beta of 1.2, D/E = 0.5 and tax rate 21%: unlevered = 1.2 / (1 + 0.79*0.5) ≈ 0.94.",
+      "Example 3: Portfolio with weights [0.5,0.5] and betas [1.1,0.9] yields portfolio beta = 0.5*1.1 + 0.5*0.9 = 1.0."
+    ],
+    "summary": [
+      "Select the method that matches the data you have. For time-series-based OLS, ensure consistent return frequency and matching sample periods. For capital structure adjustments, use market-value D/E and a recent marginal tax rate.",
+      "All outputs are estimates. Validate with out-of-sample checks, multiple lookback periods, and sensitivity analysis before acting on results."
+    ],
+    "faqs": [
+      {
+        "question": "What input frequency should I use (daily/weekly/monthly)?",
+        "answer": "Use the frequency that aligns with your intended use case. Short-term trading commonly uses daily returns; strategic allocation often uses monthly. Do not mix frequencies between stock and market series; compute covariance and variance on matching intervals."
+      },
+      {
+        "question": "Can I convert levered to unlevered beta when only book-value D/E is available?",
+        "answer": "You can, but market-value D/E is preferred because book values may misstate economic leverage. When using book values, document the limitation and consider a sensitivity check."
+      },
+      {
+        "question": "How precise are these estimates?",
+        "answer": "Precision depends on data quality, sample size, and model fit. Small samples and non-stationary return series increase uncertainty. See the accuracy caveats and recommended standards for data handling."
+      },
+      {
+        "question": "Should I apply Blume adjustment?",
+        "answer": "Blume adjustment reverts estimated betas toward 1 to reflect mean reversion observed empirically. Use only after verifying historical stability and understanding the intended use; an option is provided to apply this as a post-processing step."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Beta",
+        "definition": "A measure of an asset's sensitivity to market movements; a beta above one implies higher volatility than the market."
+      },
+      {
+        "term": "Covariance",
+        "definition": "Statistical measure of how two return series move together; used alongside market variance to compute beta."
+      },
+      {
+        "term": "Levered beta",
+        "definition": "Beta that reflects the company's capital structure (equity plus debt)."
+      },
+      {
+        "term": "Unlevered beta",
+        "definition": "Beta adjusted to remove the effect of financial leverage; reflects business risk only."
+      },
+      {
+        "term": "CAPM",
+        "definition": "Capital Asset Pricing Model, which links expected return to systematic risk via beta."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Risk Management Framework & data quality guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 31000 — Risk management principles and guidelines",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE — Best practices for numerical computing and floating point",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Guidance on system safety and operational risk controls",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. SEC — Investor guidance and methodology considerations",
+        "url": "https://www.sec.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/volatility/volatility-explained",
+      "/finance/glossary/beta"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

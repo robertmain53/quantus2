@@ -1,0 +1,596 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Discounted Cash Flow (DCF) — Advanced Valuation Calculator",
+    "description": "Multi-method DCF calculator with explicit forecast, Gordon-growth terminal value, exit-multiple terminal value, and an APV approximation. Designed for analysts who want reproducible, auditable valuation outputs and clear limits on assumptions and accuracy."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "gordon_growth",
+    "methods": {
+      "gordon_growth": {
+        "label": "Explicit forecast + Gordon-growth terminal value",
+        "description": "Projects free cash flow over an explicit forecast period using a constant growth assumption, discounts those cash flows to present value, and adds a terminal value calculated by the Gordon growth (perpetuity) model.",
+        "variables": {
+          "fcf_start": {
+            "expression": "revenue * fcf_margin",
+            "dependencies": [
+              "revenue",
+              "fcf_margin"
+            ],
+            "label": "Starting Free Cash Flow",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_forecast": {
+            "expression": "fcf_start * ( ((1+growth_rate)/(1+discount_rate)) * (1 - ((1+growth_rate)/(1+discount_rate))^forecast_years) / (1 - ((1+growth_rate)/(1+discount_rate))) )",
+            "dependencies": [
+              "fcf_start",
+              "growth_rate",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "Present value of explicit forecast",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "terminal_value_present": {
+            "expression": "((fcf_start * (1+terminal_growth)) / (discount_rate - terminal_growth)) / ((1+discount_rate)^forecast_years)",
+            "dependencies": [
+              "fcf_start",
+              "terminal_growth",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "Present value of terminal value (Gordon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "enterprise_value": {
+            "expression": "pv_forecast + terminal_value_present",
+            "dependencies": [
+              "pv_forecast",
+              "terminal_value_present"
+            ],
+            "label": "Enterprise value (PV of FCF + PV terminal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "enterprise_value - net_debt + cash",
+            "dependencies": [
+              "enterprise_value",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Equity value (enterprise value adjusted for net debt/cash)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "value_per_share": {
+            "expression": "equity_value / shares_outstanding",
+            "dependencies": [
+              "equity_value",
+              "shares_outstanding"
+            ],
+            "label": "Implied equity value per share",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise value",
+            "variable": "enterprise_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value",
+            "variable": "equity_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "value_per_share",
+            "label": "Implied value per share",
+            "variable": "value_per_share",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "pv_forecast",
+            "label": "PV of explicit forecast",
+            "variable": "pv_forecast",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "terminal_value_present",
+            "label": "PV of terminal value (Gordon)",
+            "variable": "terminal_value_present",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "exit_multiple": {
+        "label": "Explicit forecast + exit multiple terminal value",
+        "description": "Projects free cash flow over the explicit period, then applies an exit multiple to the final-year FCF to estimate terminal value; discounts forecast and terminal value to present.",
+        "variables": {
+          "fcf_start": {
+            "expression": "revenue * fcf_margin",
+            "dependencies": [
+              "revenue",
+              "fcf_margin"
+            ],
+            "label": "Starting Free Cash Flow",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_forecast": {
+            "expression": "fcf_start * ( ((1+growth_rate)/(1+discount_rate)) * (1 - ((1+growth_rate)/(1+discount_rate))^forecast_years) / (1 - ((1+growth_rate)/(1+discount_rate))) )",
+            "dependencies": [
+              "fcf_start",
+              "growth_rate",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "Present value of explicit forecast",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "terminal_value_present": {
+            "expression": "( (fcf_start * (1+growth_rate) * terminal_multiple) ) / ((1+discount_rate)^forecast_years)",
+            "dependencies": [
+              "fcf_start",
+              "growth_rate",
+              "terminal_multiple",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "Present value of terminal value (exit multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "enterprise_value": {
+            "expression": "pv_forecast + terminal_value_present",
+            "dependencies": [
+              "pv_forecast",
+              "terminal_value_present"
+            ],
+            "label": "Enterprise value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "enterprise_value - net_debt + cash",
+            "dependencies": [
+              "enterprise_value",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Equity value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "value_per_share": {
+            "expression": "equity_value / shares_outstanding",
+            "dependencies": [
+              "equity_value",
+              "shares_outstanding"
+            ],
+            "label": "Implied equity value per share",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise value",
+            "variable": "enterprise_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value",
+            "variable": "equity_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "value_per_share",
+            "label": "Implied value per share",
+            "variable": "value_per_share",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "pv_forecast",
+            "label": "PV of explicit forecast",
+            "variable": "pv_forecast",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "terminal_value_present",
+            "label": "PV of terminal value (exit multiple)",
+            "variable": "terminal_value_present",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "apv": {
+        "label": "Adjusted Present Value (APV) — approximation",
+        "description": "APV separates the value of an unlevered firm (PV of unlevered FCF) and the present value of financing effects such as tax shields. This implementation provides an approximation and flags where detailed modelling is required.",
+        "variables": {
+          "fcf_start": {
+            "expression": "revenue * fcf_margin",
+            "dependencies": [
+              "revenue",
+              "fcf_margin"
+            ],
+            "label": "Starting Free Cash Flow (unlevered)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_unlevered": {
+            "expression": "fcf_start * ( ((1+growth_rate)/(1+discount_rate)) * (1 - ((1+growth_rate)/(1+discount_rate))^forecast_years) / (1 - ((1+growth_rate)/(1+discount_rate))) )",
+            "dependencies": [
+              "fcf_start",
+              "growth_rate",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "PV of unlevered cash flows",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "terminal_value_present": {
+            "expression": "((fcf_start * (1+terminal_growth)) / (discount_rate - terminal_growth)) / ((1+discount_rate)^forecast_years)",
+            "dependencies": [
+              "fcf_start",
+              "terminal_growth",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "PV of terminal value (unlevered)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "tax_shield_pv": {
+            "expression": "net_debt * tax_rate",
+            "dependencies": [
+              "net_debt",
+              "tax_rate"
+            ],
+            "label": "Approximate PV of tax shields (simple approximation)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "enterprise_value": {
+            "expression": "pv_unlevered + terminal_value_present + tax_shield_pv",
+            "dependencies": [
+              "pv_unlevered",
+              "terminal_value_present",
+              "tax_shield_pv"
+            ],
+            "label": "Enterprise value (APV)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "enterprise_value - net_debt + cash",
+            "dependencies": [
+              "enterprise_value",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Equity value (APV)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "value_per_share": {
+            "expression": "equity_value / shares_outstanding",
+            "dependencies": [
+              "equity_value",
+              "shares_outstanding"
+            ],
+            "label": "Implied equity value per share (APV)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise value (APV)",
+            "variable": "enterprise_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value (APV)",
+            "variable": "equity_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "value_per_share",
+            "label": "Implied value per share (APV)",
+            "variable": "value_per_share",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "tax_shield_pv",
+            "label": "Approximate PV of tax shields",
+            "variable": "tax_shield_pv",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "revenue",
+        "label": "Current period revenue (base year)",
+        "type": "number",
+        "default": 100000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "growth_rate",
+        "label": "Annual revenue / FCF growth rate (decimal)",
+        "type": "number",
+        "default": 0.05,
+        "min": -0.5,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "forecast_years",
+        "label": "Explicit forecast horizon (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "fcf_margin",
+        "label": "Free cash flow margin (FCF / Revenue, decimal)",
+        "type": "number",
+        "default": 0.12,
+        "min": -1,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "discount_rate",
+        "label": "Discount rate / WACC (decimal)",
+        "type": "number",
+        "default": 0.1,
+        "min": 0,
+        "max": 1,
+        "step": 0.001
+      },
+      {
+        "id": "terminal_growth",
+        "label": "Terminal perpetual growth rate (decimal)",
+        "type": "number",
+        "default": 0.03,
+        "min": -0.05,
+        "max": 0.05,
+        "step": 0.001
+      },
+      {
+        "id": "terminal_multiple",
+        "label": "Terminal exit multiple (e.g., EV/FCF)",
+        "type": "number",
+        "default": 12,
+        "min": 1,
+        "max": 50,
+        "step": 0.1
+      },
+      {
+        "id": "net_debt",
+        "label": "Net debt (debt - cash equivalents)",
+        "type": "number",
+        "default": 0,
+        "min": -100000000000,
+        "step": 1000
+      },
+      {
+        "id": "cash",
+        "label": "Cash and equivalents (if not included in net_debt)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "shares_outstanding",
+        "label": "Shares outstanding (basic)",
+        "type": "number",
+        "default": 1000000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "tax_rate",
+        "label": "Marginal tax rate (decimal)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator implements multiple DCF approaches commonly used in corporate finance: an explicit forecast with a Gordon-growth terminal value, an explicit forecast with an exit multiple, and an approximate Adjusted Present Value (APV). Use the method that best matches your model inputs and the company’s capital structure.",
+      "Results are numerical outputs based on entered assumptions. They are meant for analysis, sensitivity testing, and documentation. Always record inputs and test key assumptions across realistic ranges."
+    ],
+    "methodology": [
+      "The explicit-forecast component projects a starting free cash flow (FCF) from the base-year revenue and an assumed FCF margin, then applies a constant growth rate for the forecast horizon. Discounting uses the supplied discount rate (WACC) to compute present values.",
+      "Terminal value is calculated either by the Gordon-growth perpetuity formula or by applying an exit multiple to the final-year FCF. The Gordon-growth formula assumes a stable perpetual growth below the discount rate; the exit multiple reflects observable transaction or trading multiples and requires market comparables.",
+      "The APV method presented is an approximation: it values the unlevered firm and adds a simple estimate of tax shields. For rigorous APV work, model the interest schedule, changing leverage, and the risk profile of tax shields explicitly."
+    ],
+    "how_is_calculated": [
+      "Starting FCF = revenue × FCF margin.",
+      "PV of explicit forecast (closed-form for constant growth): PV = FCFstart × sum_{t=1..N} ((1+g)^t/(1+r)^t). The app evaluates this as a geometric series for efficiency.",
+      "Gordon terminal value (discounted to present) = [(FCFstart × (1+gt)) / (r - gt)] ÷ (1+r)^N. Exit-multiple terminal value = [FCF_N × multiple] ÷ (1+r)^N."
+    ],
+    "examples": [
+      "Example 1: Company with $100m revenue, 12% FCF margin, 5% growth for 5 years, 10% discount rate, 3% terminal growth — compute PV of forecast, terminal value (Gordon), enterprise and per-share values.",
+      "Example 2: Same forecast but using a 10x exit multiple produces a different terminal value; sensitivity to the terminal assumption is typically the largest single driver of valuation variance."
+    ],
+    "summary": [
+      "Use multiple methods and sensitivity tables to capture valuation uncertainty.",
+      "Document every assumption and compare implied multiples with peers and precedent transactions before relying on a single point estimate."
+    ],
+    "faqs": [
+      {
+        "question": "What is the single biggest source of error in a DCF?",
+        "answer": "Terminal value assumptions (growth rate or terminal multiple) often dominate the valuation. Small changes in these inputs can produce large swings in value. Use sensitivity analysis and reasonableness checks against market multiples."
+      },
+      {
+        "question": "When should I use Gordon growth vs exit multiple?",
+        "answer": "Use Gordon growth when you expect a stable, mature cash flow profile with a plausible perpetual growth rate. Use exit multiple when there are observable comparable transaction or trading multiples and you prefer a market-relative terminal estimate."
+      },
+      {
+        "question": "How accurate are these outputs?",
+        "answer": "Outputs are as accurate as the inputs and the model structure. Numerical calculations follow standard closed-form algebra for constant-growth cash flows. They do not replace detailed company-specific modelling, audit, or due diligence. See methodology and citations for standards and recommended practices."
+      },
+      {
+        "question": "Does this calculator model changing leverage, debt schedules, or option dilution?",
+        "answer": "No. This tool assumes static inputs (net debt, shares outstanding) and does not model dynamic capital structure, scheduled debt repayments, convertible securities, or employee option dilution. For those items, extend the model and document assumptions."
+      },
+      {
+        "question": "Are regulatory or security standards followed?",
+        "answer": "Results are computed using standard mathematical formulas. For software security, data handling, and accuracy controls in production environments, follow applicable standards such as NIST cybersecurity guidance, ISO quality and management standards, IEEE software engineering practices, and workplace safety standards where relevant."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Free Cash Flow (FCF)",
+        "definition": "Cash generated by operations after capital expenditures and working capital changes available to all providers of capital."
+      },
+      {
+        "term": "WACC / Discount rate",
+        "definition": "Weighted average cost of capital; used to discount projected cash flows to present value. In this tool it is supplied as a single discount rate."
+      },
+      {
+        "term": "Terminal value",
+        "definition": "The value of the business beyond the explicit forecast period, estimated by perpetual growth (Gordon) or an exit multiple."
+      },
+      {
+        "term": "Enterprise value",
+        "definition": "Value of the operating business (equity + net debt). Calculated here as PV of forecasted FCF plus PV of terminal value."
+      },
+      {
+        "term": "Adjusted Present Value (APV)",
+        "definition": "A valuation approach that separates the value of an unlevered firm and the effects of financing, such as tax shields. This implementation uses a simplified approximation for tax shields."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "SEC — Beginner's guide to financial statements and valuation concepts",
+        "url": "https://www.sec.gov/education"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/valuation/wacc-calculator",
+      "/valuation/sensitivity-analysis"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

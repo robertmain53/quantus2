@@ -1,0 +1,388 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Convertible Bond & Note Analyzer",
+    "description": "Multi-method calculator for convertible bonds and convertible notes. Decomposes market price into straight-bond (floor) and equity (conversion) components; computes conversion outcomes for startup notes under discount and valuation-cap scenarios. Includes conservative modeling caveats and references to standards for model governance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "decomposition",
+    "methods": {
+      "decomposition": {
+        "label": "Bond floor and conversion parity decomposition",
+        "description": "Separates a convertible bond into its straight bond (bond floor) and conversion/equity component given market inputs. Useful for investors comparing bond-floor value to market price and for estimating premium/discount to conversion value.",
+        "variables": {
+          "coupon_cash": {
+            "expression": "face_value * coupon_rate",
+            "dependencies": [
+              "face_value",
+              "coupon_rate"
+            ],
+            "label": "Annual coupon payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "pv_coupons": {
+            "expression": "coupon_cash * (1 - (1 + market_rate) ^ (-maturity_years)) / market_rate",
+            "dependencies": [
+              "coupon_cash",
+              "market_rate",
+              "maturity_years"
+            ],
+            "label": "Present value of coupon stream",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "pv_principal": {
+            "expression": "face_value * (1 + market_rate) ^ (-maturity_years)",
+            "dependencies": [
+              "face_value",
+              "market_rate",
+              "maturity_years"
+            ],
+            "label": "Present value of principal",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "straight_bond_value": {
+            "expression": "pv_coupons + pv_principal",
+            "dependencies": [
+              "pv_coupons",
+              "pv_principal"
+            ],
+            "label": "Straight bond (floor) value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "conversion_value": {
+            "expression": "conversion_ratio * company_share_price",
+            "dependencies": [
+              "conversion_ratio",
+              "company_share_price"
+            ],
+            "label": "Conversion value (equity component)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "parity_premium": {
+            "expression": "((market_price - conversion_value) / conversion_value) * 100",
+            "dependencies": [
+              "market_price",
+              "conversion_value"
+            ],
+            "label": "Premium or discount relative to conversion value",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "conv_ratio_field": {
+            "expression": "conversion_ratio",
+            "dependencies": [
+              "conversion_ratio"
+            ],
+            "label": "Conversion ratio (shares per bond)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "straight_bond_value",
+            "label": "Straight bond (floor) value",
+            "variable": "straight_bond_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "conversion_value",
+            "label": "Conversion value (equity component)",
+            "variable": "conversion_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "parity_premium",
+            "label": "Premium/Discount to conversion (%)",
+            "variable": "parity_premium",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "conversion_ratio",
+            "label": "Conversion ratio (shares per bond)",
+            "variable": "conv_ratio_field",
+            "format": "decimal"
+          }
+        ]
+      },
+      "convertible_note": {
+        "label": "Convertible note conversion (cap and discount)",
+        "description": "Estimates shares issued on conversion for a convertible note using either a discount to the qualified round price or a valuation cap. Produces both outcomes so the user can apply contract-specific rules (e.g., which provision governs).",
+        "variables": {
+          "conversion_price_from_discount": {
+            "expression": "qualified_round_price * (1 - discount_percent / 100)",
+            "dependencies": [
+              "qualified_round_price",
+              "discount_percent"
+            ],
+            "label": "Conversion price derived from discount",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "shares_from_discount": {
+            "expression": "note_principal / conversion_price_from_discount",
+            "dependencies": [
+              "note_principal",
+              "conversion_price_from_discount"
+            ],
+            "label": "Shares issued using discount",
+            "unit": "shares",
+            "format": "decimal",
+            "display": true
+          },
+          "conversion_price_from_cap": {
+            "expression": "cap_valuation / pre_money_shares",
+            "dependencies": [
+              "cap_valuation",
+              "pre_money_shares"
+            ],
+            "label": "Conversion price derived from valuation cap",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "shares_from_cap": {
+            "expression": "note_principal / conversion_price_from_cap",
+            "dependencies": [
+              "note_principal",
+              "conversion_price_from_cap"
+            ],
+            "label": "Shares issued using cap",
+            "unit": "shares",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "conversion_price_from_discount",
+            "label": "Conversion price (discount)",
+            "variable": "conversion_price_from_discount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "shares_from_discount",
+            "label": "Shares issued (from discount)",
+            "variable": "shares_from_discount",
+            "unit": "shares",
+            "format": "decimal"
+          },
+          {
+            "id": "conversion_price_from_cap",
+            "label": "Conversion price (cap)",
+            "variable": "conversion_price_from_cap",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "shares_from_cap",
+            "label": "Shares issued (from cap)",
+            "variable": "shares_from_cap",
+            "unit": "shares",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "face_value",
+        "label": "Face (par) value per bond",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "coupon_rate",
+        "label": "Coupon rate (annual, decimal)",
+        "type": "number",
+        "default": 0.05,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "maturity_years",
+        "label": "Years to maturity",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "market_rate",
+        "label": "Discount rate for straight bond (annual, decimal)",
+        "type": "number",
+        "default": 0.04,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "market_price",
+        "label": "Market price per convertible bond (clean price)",
+        "type": "number",
+        "default": 1050,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "company_share_price",
+        "label": "Company share price (for conversion value)",
+        "type": "number",
+        "default": 40,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "conversion_ratio",
+        "label": "Conversion ratio (shares received per bond)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "note_principal",
+        "label": "Convertible note principal (investor amount)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "cap_valuation",
+        "label": "Valuation cap (cap used for conversion)",
+        "type": "number",
+        "default": 5000000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "pre_money_shares",
+        "label": "Pre-money shares outstanding",
+        "type": "number",
+        "default": 1000000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "qualified_round_price",
+        "label": "Qualified round price per share",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "discount_percent",
+        "label": "Discount to qualified round (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool helps investors and issuers analyze convertible securities by separating the straight-bond component from the equity conversion component and by estimating conversion outcomes for convertible notes using common contract provisions (discount and valuation cap). It is intended for fast scenario analysis and to highlight key sensitivities.",
+      "Models use standard present-value formulas for the bond floor and algebraic conversion formulas for notes. Results are approximations that depend on your inputs and on assumptions about coupon timing and compounding. Use the provided outputs to cross-check legal documents and to support further due diligence."
+    ],
+    "methodology": [
+      "Bond-floor decomposition: we compute present value of an annual coupon stream plus discounted principal at an entered market discount rate to obtain the straight-bond value. The difference between market price and straight-bond value reflects the market value attributed to the conversion/equity option.",
+      "Conversion calculations for notes: discounts are applied to the qualified round price to derive a conversion price. A valuation cap implies an alternate conversion price when expressed as cap valuation divided by pre-money shares. The calculator reports both outcomes so the user can apply contract rules or administrative waterfall logic.",
+      "Design and governance: the tool documents inputs and formulas. For model risk management follow relevant guidance such as ISO 31000 for risk management, IEEE guidance for technical processes, and NIST publications for controls around data integrity and reproducibility."
+    ],
+    "how_is_calculated": [
+      "Straight bond value = PV(coupons) + PV(principal). For annual coupons: PV(coupons) = coupon * (1 - (1 + r)^-n) / r, PV(principal) = face / (1 + r)^n.",
+      "Conversion value = conversion ratio * company share price.",
+      "Parity premium (%) = (market price - conversion value) / conversion value * 100.",
+      "Note conversion price (discount) = qualified round price * (1 - discount%).",
+      "Note conversion price (cap) = valuation cap / pre-money shares. Shares issued = note principal / conversion price."
+    ],
+    "faqs": [
+      {
+        "question": "Which discount rate should I use for the straight-bond floor?",
+        "answer": "Choose a market-consistent discount rate that reflects the issuer's credit risk and comparable traded bonds. The floor is sensitive to this rate; small changes can materially affect decomposition. Document your rate choice and compare results across plausible ranges."
+      },
+      {
+        "question": "When should I use the cap versus the discount for note conversion?",
+        "answer": "Contract language specifies which provision governs (cap, discount, or best-of). This calculator reports both conversions: cap-derived and discount-derived outcomes. Apply the actual legal rule to determine the correct conversion in any transaction."
+      },
+      {
+        "question": "Are results precise valuations I can use for regulatory filings?",
+        "answer": "No. Outputs are model estimates for analysis and scenario planning. For regulatory or accounting purposes, use full valuation models, audited inputs, and follow IFRS/US GAAP guidance where applicable. Maintain documentation and controls as recommended by ISO 31000 and NIST."
+      },
+      {
+        "question": "How do rounding and compounding assumptions affect results?",
+        "answer": "This tool assumes annual coupon payments and annual discounting by default. If coupons are semiannual or daily compounding is required, adjust inputs or use a specialized model. Rounding can affect share counts for conversion; legal documents typically specify rounding rules, which should be applied downstream."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Frameworks and guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 31000 — Risk management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE Standards Association — standards overview",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission",
+        "url": "https://www.sec.gov"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (governance reference)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Conversion ratio",
+        "definition": "Number of shares received by converting one bond or note. Often contract-specified or computed as face value divided by conversion price."
+      },
+      {
+        "term": "Conversion price",
+        "definition": "Price per share used to convert debt into equity. For notes it may be derived from a discount to a qualified round price or from a valuation cap."
+      },
+      {
+        "term": "Straight bond (floor) value",
+        "definition": "Present value of promised cash flows (coupons and principal) discounted at a market rate reflecting credit and duration risk. Serves as a lower-bound value for the convertible."
+      },
+      {
+        "term": "Parity premium / discount",
+        "definition": "Percentage difference between market price and conversion (equity) value. Positive values indicate market price above conversion value (premium)."
+      },
+      {
+        "term": "Valuation cap",
+        "definition": "A cap used in convertible notes that effectively sets a maximum company valuation for conversion purposes, protecting early investors from dilution in high-priced financing rounds."
+      }
+    ]
+  }
+}

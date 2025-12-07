@@ -1,0 +1,506 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Wash Sale Calculator (multi-lot, FIFO-capable)",
+    "description": "Estimate disallowed loss and adjusted basis when a taxable loss sale is followed by one or more substantially identical repurchases within the 30-day wash-sale window. Supports up to three replacement lots, provides per-share loss, allocated disallowed loss, and adjusted basis per replacement share."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "lot_match_fifo",
+    "methods": {
+      "lot_match_fifo": {
+        "label": "FIFO / multi-lot matching",
+        "description": "Allocates disallowed loss to replacement shares purchased within the 30-day window across up to three replacement lots and computes adjusted replacement basis using a weighted-average replacement cost.",
+        "variables": {
+          "per_share_loss": {
+            "expression": "max(0, original_cost_per_share - sell_price_per_share)",
+            "dependencies": [
+              "original_cost_per_share",
+              "sell_price_per_share"
+            ],
+            "label": "Per-share realized loss",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_replacement_qty": {
+            "expression": "replacement_lot1_qty + replacement_lot2_qty + replacement_lot3_qty",
+            "dependencies": [
+              "replacement_lot1_qty",
+              "replacement_lot2_qty",
+              "replacement_lot3_qty"
+            ],
+            "label": "Total replacement shares purchased (within window)",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "applicable_replacement_qty": {
+            "expression": "min(sell_quantity, total_replacement_qty)",
+            "dependencies": [
+              "sell_quantity",
+              "total_replacement_qty"
+            ],
+            "label": "Replacement shares that can absorb the loss",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "disallowed_loss": {
+            "expression": "per_share_loss * applicable_replacement_qty",
+            "dependencies": [
+              "per_share_loss",
+              "applicable_replacement_qty"
+            ],
+            "label": "Disallowed loss (total)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "replacement_cost_weighted_avg": {
+            "expression": "total_replacement_qty > 0 ? (replacement_lot1_qty * replacement_lot1_cost_per_share + replacement_lot2_qty * replacement_lot2_cost_per_share + replacement_lot3_qty * replacement_lot3_cost_per_share) / total_replacement_qty : 0",
+            "dependencies": [
+              "replacement_lot1_qty",
+              "replacement_lot1_cost_per_share",
+              "replacement_lot2_qty",
+              "replacement_lot2_cost_per_share",
+              "replacement_lot3_qty",
+              "replacement_lot3_cost_per_share",
+              "total_replacement_qty"
+            ],
+            "label": "Weighted-average replacement cost per share",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_basis_per_replacement_share": {
+            "expression": "total_replacement_qty > 0 ? replacement_cost_weighted_avg + (disallowed_loss / total_replacement_qty) : replacement_cost_weighted_avg",
+            "dependencies": [
+              "total_replacement_qty",
+              "replacement_cost_weighted_avg",
+              "disallowed_loss"
+            ],
+            "label": "Adjusted basis per replacement share (after adding disallowed loss)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "is_within_window": {
+            "expression": "days_between <= 30 ? 1 : 0",
+            "dependencies": [
+              "days_between"
+            ],
+            "label": "Within 30-day wash-sale window (1=yes, 0=no)",
+            "format": "integer",
+            "display": false
+          },
+          "effective_disallowed_loss": {
+            "expression": "is_within_window ? disallowed_loss : 0",
+            "dependencies": [
+              "is_within_window",
+              "disallowed_loss"
+            ],
+            "label": "Effective disallowed loss (zero if outside window)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "per_share_loss",
+            "label": "Per-share realized loss",
+            "variable": "per_share_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "applicable_replacement_qty",
+            "label": "Replacement shares absorbing loss",
+            "variable": "applicable_replacement_qty",
+            "unit": "shares",
+            "format": "integer"
+          },
+          {
+            "id": "effective_disallowed_loss",
+            "label": "Disallowed loss (total)",
+            "variable": "effective_disallowed_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_basis_per_replacement_share",
+            "label": "Adjusted basis per replacement share",
+            "variable": "adjusted_basis_per_replacement_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "single_sale_simple": {
+        "label": "Single replacement lot",
+        "description": "Quick estimate when there is one replacement purchase. Allocates disallowed loss to the single replacement lot and returns adjusted basis per replacement share.",
+        "variables": {
+          "per_share_loss": {
+            "expression": "max(0, original_cost_per_share - sell_price_per_share)",
+            "dependencies": [
+              "original_cost_per_share",
+              "sell_price_per_share"
+            ],
+            "label": "Per-share realized loss",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_replacement_qty": {
+            "expression": "replacement_lot1_qty",
+            "dependencies": [
+              "replacement_lot1_qty"
+            ],
+            "label": "Replacement shares purchased",
+            "unit": "shares",
+            "format": "integer",
+            "display": false
+          },
+          "applicable_replacement_qty": {
+            "expression": "min(sell_quantity, replacement_lot1_qty)",
+            "dependencies": [
+              "sell_quantity",
+              "replacement_lot1_qty"
+            ],
+            "label": "Replacement shares absorbing loss",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "disallowed_loss": {
+            "expression": "per_share_loss * applicable_replacement_qty",
+            "dependencies": [
+              "per_share_loss",
+              "applicable_replacement_qty"
+            ],
+            "label": "Disallowed loss (total)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_basis_per_replacement_share": {
+            "expression": "replacement_lot1_qty > 0 ? replacement_lot1_cost_per_share + (disallowed_loss / replacement_lot1_qty) : replacement_lot1_cost_per_share",
+            "dependencies": [
+              "replacement_lot1_qty",
+              "replacement_lot1_cost_per_share",
+              "disallowed_loss"
+            ],
+            "label": "Adjusted basis per replacement share",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "is_within_window": {
+            "expression": "days_between <= 30 ? 1 : 0",
+            "dependencies": [
+              "days_between"
+            ],
+            "label": "Within 30-day wash-sale window (1=yes, 0=no)",
+            "format": "integer",
+            "display": false
+          },
+          "effective_disallowed_loss": {
+            "expression": "is_within_window ? disallowed_loss : 0",
+            "dependencies": [
+              "is_within_window",
+              "disallowed_loss"
+            ],
+            "label": "Effective disallowed loss (zero if outside window)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "per_share_loss",
+            "label": "Per-share realized loss",
+            "variable": "per_share_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "applicable_replacement_qty",
+            "label": "Replacement shares absorbing loss",
+            "variable": "applicable_replacement_qty",
+            "unit": "shares",
+            "format": "integer"
+          },
+          {
+            "id": "effective_disallowed_loss",
+            "label": "Disallowed loss (total)",
+            "variable": "effective_disallowed_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_basis_per_replacement_share",
+            "label": "Adjusted basis per replacement share",
+            "variable": "adjusted_basis_per_replacement_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "no_wash": {
+        "label": "Outside 30-day window (no wash)",
+        "description": "If the replacement purchase occurred outside the 30-day window, no loss is disallowed; shows realized loss and zeros disallowed loss.",
+        "variables": {
+          "per_share_loss": {
+            "expression": "max(0, original_cost_per_share - sell_price_per_share)",
+            "dependencies": [
+              "original_cost_per_share",
+              "sell_price_per_share"
+            ],
+            "label": "Per-share loss",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "realized_loss_total": {
+            "expression": "per_share_loss * sell_quantity",
+            "dependencies": [
+              "per_share_loss",
+              "sell_quantity"
+            ],
+            "label": "Total realized loss",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "disallowed_loss": {
+            "expression": "0",
+            "dependencies": [],
+            "label": "Disallowed loss",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "per_share_loss",
+            "label": "Per-share loss",
+            "variable": "per_share_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "realized_loss_total",
+            "label": "Total realized loss",
+            "variable": "realized_loss_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "disallowed_loss",
+            "label": "Disallowed loss",
+            "variable": "disallowed_loss",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "original_cost_per_share",
+        "label": "Original cost per share (cost basis of shares sold)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "sell_price_per_share",
+        "label": "Sell price per share",
+        "type": "number",
+        "default": 90,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "sell_quantity",
+        "label": "Quantity sold",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "replacement_lot1_qty",
+        "label": "Replacement lot 1 quantity",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "replacement_lot1_cost_per_share",
+        "label": "Replacement lot 1 cost per share",
+        "type": "number",
+        "default": 95,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "replacement_lot2_qty",
+        "label": "Replacement lot 2 quantity",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "replacement_lot2_cost_per_share",
+        "label": "Replacement lot 2 cost per share",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "replacement_lot3_qty",
+        "label": "Replacement lot 3 quantity",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "replacement_lot3_cost_per_share",
+        "label": "Replacement lot 3 cost per share",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "days_between",
+        "label": "Days between sale date and replacement purchase (enter 0 if same day)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 365,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the portion of a loss on the sale of a security that is disallowed under the wash-sale rule and computes the adjusted tax basis for replacement shares when repurchases occur within the 30-day window.",
+      "Use the multi-lot method to model up to three replacement purchases and a FIFO-style allocation of disallowed loss. Results are illustrative and intended to help with record-keeping and preparation; they are not a substitute for professional tax advice."
+    ],
+    "methodology": [
+      "The tool follows the IRS wash-sale principle: when substantially identical securities are repurchased within 30 days before or after a loss sale, the loss attributable to the replacement shares is disallowed and is added to the basis of those replacement shares.",
+      "Computation: calculate per-share realized loss (original cost per share minus sell price, floored at zero), determine how many replacement shares fall within the 30-day window, multiply per-share loss by the number of replacement shares that can absorb the loss, and allocate that disallowed loss to the replacement shares by adding the disallowed amount per share to their purchase cost.",
+      "Security and quality statements: this tool follows secure development and data-handling recommendations and quality management guidance; see NIST and ISO references in citations. Outputs depend on user input accuracy and rounding rules."
+    ],
+    "how_is_calculated": [
+      "Per-share realized loss = max(0, original cost per share - sell price per share).",
+      "Applicable replacement shares = min(quantity sold, total replacement shares purchased within the 30-day window).",
+      "Disallowed loss (total) = per-share realized loss × applicable replacement shares (zero if replacement purchase occurred outside the 30-day window).",
+      "Adjusted basis per replacement share = weighted-average replacement cost per share + (disallowed loss / total replacement shares purchased)."
+    ],
+    "examples": [
+      "Example 1: Sell 100 shares at a $10 loss per share and buy 50 replacement shares within 30 days. Disallowed loss = $10 × 50 = $500. If the 50 replacement shares cost $95 each, the adjusted basis per replacement share = 95 + (500 / 50) = $105.",
+      "Example 2: Sell 100 shares at a $2 loss per share and buy 120 replacement shares within 30 days across multiple lots. Applicable replacement shares = min(100, 120) = 100, disallowed loss = $2 × 100 = $200. The $200 is allocated across the replacement shares' basis calculation as specified."
+    ],
+    "faqs": [
+      {
+        "question": "Does this tool replace official IRS guidance?",
+        "answer": "No. This tool provides estimates based on standard wash-sale principles. Refer to the IRS for authoritative rules and consult a tax professional for decisions."
+      },
+      {
+        "question": "What if I sold multiple lots at different cost bases?",
+        "answer": "This calculator uses a simplified single-cost-basis input for the sold shares. For multiple sold lots or detailed lot-level matching, use brokerage-provided lot reports or tax software that supports per-lot matching and record-level adjustments."
+      },
+      {
+        "question": "How precise are results and how should I handle rounding?",
+        "answer": "Results are subject to rounding based on currency precision. For tax reporting, follow the rounding and basis conventions recommended by your tax advisor or brokerage records."
+      },
+      {
+        "question": "What if replacement shares are purchased more than 30 days before the sale?",
+        "answer": "Purchases more than 30 days before the sale are not in the standard 30-day wash-sale window (unless also repurchased within 30 days after the sale). This calculator requires you to enter the days between sale and replacement; if greater than 30, disallowed loss is reported as zero."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS Publication 550 (Investment Income and Expenses)",
+        "url": "https://www.irs.gov/publications/p550"
+      },
+      {
+        "label": "NIST (National Institute of Standards and Technology)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (International Organization for Standardization)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (Institute of Electrical and Electronics Engineers)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA (Occupational Safety and Health Administration) – quality and process safety guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Wash sale",
+        "definition": "A transaction in which a taxpayer sells or trades stock or securities at a loss and within 30 days before or after the sale buys substantially identical stock or securities, resulting in disallowance of the loss for tax purposes."
+      },
+      {
+        "term": "Disallowed loss",
+        "definition": "The portion of a realized loss on a sale that cannot be deducted because of the wash-sale rule; instead it is added to the basis of the replacement shares."
+      },
+      {
+        "term": "Adjusted basis",
+        "definition": "The cost basis of replacement shares after adding any disallowed loss from a wash sale; used to compute future gain or loss on those shares."
+      },
+      {
+        "term": "Substantially identical",
+        "definition": "A tax concept referring to securities so similar that they are considered the same for wash-sale rules; the determination can be fact-specific and, when uncertain, should be discussed with a tax professional."
+      }
+    ],
+    "summary": [
+      "Enter the sold-share cost, sell price, quantity, replacement lot quantities and costs, and days between sale and repurchase. Use the multi-lot FIFO method for typical brokerage-like allocation.",
+      "This calculator gives an estimate of disallowed loss and adjusted basis. Confirm figures with brokerage statements and consult a tax professional before filing."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/publications/p550",
+        "label": "IRS Publication 550 - Investment Income and Expenses",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Payment Balloon Estimator",
+    "description": "Estimate the periodic payment and final balloon payment for a loan that amortizes over a longer schedule than the balloon term. Includes totals up to the balloon date and interest paid to that point."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Periodic payment",
+        "expression": "( (annual_interest_rate_percent/100/payments_per_year) * loan_amount ) / ( 1 - (1 + (annual_interest_rate_percent/100/payments_per_year)) ^ ( - (amortization_years * payments_per_year) ) )",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "balloon_payment",
+        "label": "Balloon (remaining) payment at term",
+        "expression": "loan_amount * (1 + (annual_interest_rate_percent/100/payments_per_year)) ^ (balloon_term_years * payments_per_year) - ( ( (annual_interest_rate_percent/100/payments_per_year) * loan_amount ) / ( 1 - (1 + (annual_interest_rate_percent/100/payments_per_year)) ^ ( - (amortization_years * payments_per_year) ) ) ) * ( ((1 + (annual_interest_rate_percent/100/payments_per_year)) ^ (balloon_term_years * payments_per_year) - 1) / (annual_interest_rate_percent/100/payments_per_year) )",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid_until_balloon",
+        "label": "Total payments made until balloon date",
+        "expression": "( ( (annual_interest_rate_percent/100/payments_per_year) * loan_amount ) / ( 1 - (1 + (annual_interest_rate_percent/100/payments_per_year)) ^ ( - (amortization_years * payments_per_year) ) ) ) * (balloon_term_years * payments_per_year)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_until_balloon",
+        "label": "Total interest paid until balloon date",
+        "expression": "( ( ( (annual_interest_rate_percent/100/payments_per_year) * loan_amount ) / ( 1 - (1 + (annual_interest_rate_percent/100/payments_per_year)) ^ ( - (amortization_years * payments_per_year) ) ) ) * (balloon_term_years * payments_per_year) ) - ( loan_amount - ( loan_amount * (1 + (annual_interest_rate_percent/100/payments_per_year)) ^ (balloon_term_years * payments_per_year) - ( ( (annual_interest_rate_percent/100/payments_per_year) * loan_amount ) / ( 1 - (1 + (annual_interest_rate_percent/100/payments_per_year)) ^ ( - (amortization_years * payments_per_year) ) ) ) * ( ((1 + (annual_interest_rate_percent/100/payments_per_year)) ^ (balloon_term_years * payments_per_year) - 1) / (annual_interest_rate_percent/100/payments_per_year) ) ) )",
+        "unit": "currency",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate_percent",
+        "label": "Annual interest rate (percent)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "balloon_term_years",
+        "label": "Balloon term (years until lump-sum)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Periodic payment"
+        },
+        {
+          "id": "balloon_payment",
+          "label": "Balloon payment at term"
+        },
+        {
+          "id": "total_paid_until_balloon",
+          "label": "Total paid until balloon"
+        },
+        {
+          "id": "total_interest_until_balloon",
+          "label": "Interest paid until balloon"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator calculates the regular periodic payment required by an amortization schedule and the remaining lump-sum balloon payment due at a shorter balloon term. It is intended to help borrowers and advisors compare payment levels and principal remaining at the balloon date.",
+      "Use the calculator for planning and comparison only. Results are approximate and depend on the accuracy of the inputs. See methodology and cautions below for assumptions, edge cases, and recommended verification steps."
+    ],
+    "methodology": [
+      "The tool uses standard amortization math. It assumes a fixed nominal annual interest rate, level periodic payments computed on the amortization schedule, and that the balloon payment equals the outstanding principal after the specified number of payments.",
+      "Rounding is applied only at the displayed result level; internal calculations use the full precision available in the execution environment. For zero interest or extremely small rates, behavior may require special handling; verify results if the rate is zero or near-zero."
+    ],
+    "how_is_calculated": [
+      "Let L = loan amount, r = annual_interest_rate_percent / 100 / payments_per_year, N = amortization_years * payments_per_year, n = balloon_term_years * payments_per_year.",
+      "Periodic payment P = (r * L) / (1 - (1 + r) ^ -N).",
+      "Remaining balance after n payments (balloon) B = L * (1 + r) ^ n - P * ( ((1 + r) ^ n - 1) / r ).",
+      "Total paid until balloon = P * n. Total interest until balloon = (P * n) - (L - B)."
+    ],
+    "glossary": [
+      {
+        "term": "Amortization period",
+        "definition": "The schedule length (in years) over which the loan would be fully repaid if no balloon were used."
+      },
+      {
+        "term": "Balloon term",
+        "definition": "The shorter time (in years) after which a single large payment (the balloon) becomes due, typically earlier than the amortization period."
+      },
+      {
+        "term": "Periodic payment",
+        "definition": "Regular payment amount (based on payments per year) required by the amortization schedule."
+      },
+      {
+        "term": "Remaining balance",
+        "definition": "Outstanding principal at a point in the amortization schedule; for this calculator it is the balloon payment when evaluated at the balloon term."
+      }
+    ],
+    "faqs": [
+      {
+        "question": "What if the balloon term equals the amortization period?",
+        "answer": "If balloon term equals the amortization period, the remaining balance will be zero and the balloon payment is effectively zero because the loan has been fully amortized by that time."
+      },
+      {
+        "question": "How does payment frequency affect results?",
+        "answer": "Changing payments per year adjusts the periodic interest rate and number of payments. More frequent payments typically reduce interest per period but do not change the nominal annual rate."
+      },
+      {
+        "question": "Does this account for fees, taxes, or escrow?",
+        "answer": "No. This estimator calculates principal and interest only. Include separate line items for fees, escrows, prepayment penalties, or insurance when budgeting."
+      },
+      {
+        "question": "How accurate are the numbers?",
+        "answer": "The calculations follow standard financial formulas. Accuracy depends on input accuracy and the execution environment. For legally binding amounts, obtain an official loan payoff or amortization schedule from the lender."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  }
+}

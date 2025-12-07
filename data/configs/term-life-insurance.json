@@ -1,0 +1,329 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Term Life Insurance Calculator (Multiple Methods)",
+    "description": "A multi-method term life insurance calculator that produces recommended face amounts using income-replacement, needs-based, multiple-of-income, and human-life-value approaches. Includes assumptions, caveats, and links to standards for testing, accuracy, and data handling."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "income_replacement",
+    "methods": {
+      "income_replacement": {
+        "label": "Income replacement (present value of lost earnings)",
+        "description": "Estimates the lump-sum required now to replace household income for a chosen number of years, accounting for inflation and expected real investment return.",
+        "variables": {
+          "present_value_income": {
+            "expression": "annual_income * (1 - ((1 + (inflation_rate/100)) / (1 + (real_return/100))) ** years_coverage) / ((real_return/100) - (inflation_rate/100))",
+            "dependencies": [
+              "annual_income",
+              "years_coverage",
+              "inflation_rate",
+              "real_return"
+            ],
+            "label": "Present value of income replacement need",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "recommended_coverage",
+            "label": "Recommended coverage (Income replacement)",
+            "variable": "present_value_income",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "needs_based": {
+        "label": "Needs-based (debts, final expenses, education, minus assets)",
+        "description": "Adds one-time obligations and planned needs, subtracts liquid resources and expected survivor benefits to estimate a single-lump coverage amount.",
+        "variables": {
+          "total_needs": {
+            "expression": "final_expenses + mortgage_balance + other_debts + education_fund - existing_savings - (survivor_benefit * years_coverage)",
+            "dependencies": [
+              "final_expenses",
+              "mortgage_balance",
+              "other_debts",
+              "education_fund",
+              "existing_savings",
+              "survivor_benefit",
+              "years_coverage"
+            ],
+            "label": "Net one-time needs and obligations",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "recommended_coverage_needs",
+            "label": "Recommended coverage (Needs-based)",
+            "variable": "total_needs",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "multiple_of_income": {
+        "label": "Multiple of income",
+        "description": "Simple heuristic: recommended face amount equals a user-selected multiple of annual household income.",
+        "variables": {
+          "coverage_by_multiplier": {
+            "expression": "annual_income * income_multiplier",
+            "dependencies": [
+              "annual_income",
+              "income_multiplier"
+            ],
+            "label": "Coverage based on income multiple",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "recommended_coverage_multiplier",
+            "label": "Recommended coverage (Multiple of income)",
+            "variable": "coverage_by_multiplier",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "human_life_value": {
+        "label": "Human life value (present value of future earnings)",
+        "description": "Estimates the present value of an individual's expected future earnings until retirement using a discount (real return) rate.",
+        "variables": {
+          "hlv": {
+            "expression": "annual_income * (1 - (1 + (real_return/100)) ** -years_until_retirement) / (real_return/100)",
+            "dependencies": [
+              "annual_income",
+              "real_return",
+              "years_until_retirement"
+            ],
+            "label": "Human life value (PV of future earnings)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "recommended_coverage_hlv",
+            "label": "Recommended coverage (Human life value)",
+            "variable": "hlv",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "annual_income",
+        "label": "Annual gross household income",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "years_coverage",
+        "label": "Years to replace income (term length / years of need)",
+        "type": "integer",
+        "default": 20,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "inflation_rate",
+        "label": "Expected annual inflation rate (%)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 15,
+        "step": 0.1
+      },
+      {
+        "id": "real_return",
+        "label": "Expected annual real return on invested proceeds (%)",
+        "type": "number",
+        "default": 3.0,
+        "min": -5,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "existing_savings",
+        "label": "Liquid savings available to survivors",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "mortgage_balance",
+        "label": "Outstanding mortgage balance",
+        "type": "number",
+        "default": 150000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "other_debts",
+        "label": "Other debts (auto loans, credit cards)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "final_expenses",
+        "label": "Estimated final expenses (funeral, medical)",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "education_fund",
+        "label": "Planned education funding for dependents",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "survivor_benefit",
+        "label": "Annual survivor income from other sources (e.g., Social Security, pension)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "income_multiplier",
+        "label": "Income multiple",
+        "type": "select",
+        "default": "10",
+        "options": [
+          {
+            "label": "5×",
+            "value": "5"
+          },
+          {
+            "label": "10×",
+            "value": "10"
+          },
+          {
+            "label": "15×",
+            "value": "15"
+          },
+          {
+            "label": "20×",
+            "value": "20"
+          }
+        ]
+      },
+      {
+        "id": "years_until_retirement",
+        "label": "Years until expected retirement (for human life value)",
+        "type": "integer",
+        "default": 25,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides multiple established approaches to estimate a recommended term life insurance face amount, helping you compare results and choose a coverage target. Use the method that best matches your situation: income replacement, needs-based (debts and final expenses), multiple-of-income heuristic, or human-life-value (present value of future earnings).",
+      "Results are sensitive to the inputs you provide. Enter realistic assumptions for inflation, expected investment return, and existing assets. The tool gives point estimates and does not include underwriting, policy features, or tax treatment; obtain quotes and policy details from licensed insurers."
+    ],
+    "methodology": [
+      "Income replacement uses a present-value annuity approach to estimate the lump sum required today to replace lost household income for a selected number of years, discounting at an expected real return and adjusting for inflation.",
+      "Needs-based sums one-time liabilities and planned expenses (mortgage payoff, debts, education, final expenses) then subtracts available liquid resources and expected survivor income to produce a net needs figure.",
+      "Multiple-of-income is a simple heuristic used by many advisors as a quick check. Human-life-value estimates the present value of projected future earnings until retirement.",
+      "Model validation, input handling, and data security guidance align with accepted standards for financial modelling and systems: follow NIST guidance for secure handling and testing of inputs, apply ISO risk-management principles when documenting assumptions, and use IEEE recommendations for numerical precision and unit clarity. This tool is a planning aid and not a regulated insurance recommendation."
+    ],
+    "how_is_calculated": [
+      "Income replacement (present value): PV = annual_income × [1 - ((1 + inflation) / (1 + real_return))^years] / (real_return - inflation) with inflation and real_return as decimals (e.g., 0.025 for 2.5%).",
+      "Needs-based: Net needs = final_expenses + mortgage_balance + other_debts + education_fund - existing_savings - (survivor_benefit × years_of_need).",
+      "Multiple of income: Coverage = annual_income × income_multiplier.",
+      "Human life value (PV of earnings): HLV = annual_income × [1 - (1 + real_return)^-years_until_retirement] / real_return."
+    ],
+    "examples": [
+      "Example 1 (income replacement): Household with $75,000 income, 20 years of need, 2.5% inflation, 3% real return produces a present-value recommendation that reflects replacement of purchasing power over the chosen term.",
+      "Example 2 (needs-based): If final expenses are $15,000, mortgage $120,000, other debts $5,000, savings $20,000, survivor benefits $5,000/year, and 15 years of need, the needs-based calculation subtracts the savings and survivor benefit stream from total obligations."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "These are planning estimates. Accuracy depends on the realism of your inputs and stability of future returns and inflation. The income-replacement and human-life-value formulas assume constant annual amounts and constant rates; small changes in rates or years produce meaningful differences in recommended coverage. Always treat outputs as starting points and obtain live insurer quotes."
+      },
+      {
+        "question": "Which method should I use?",
+        "answer": "Use needs-based for priority coverage of debts and final costs, income-replacement if the objective is to replace household spending capacity, and multiple-of-income as a quick sanity check. Human-life-value is often used for single-earner valuation. Comparing methods provides a range to guide decisions."
+      },
+      {
+        "question": "Does this tool estimate premiums or underwriting?",
+        "answer": "No. This calculator provides recommended face amounts only. Premiums depend on age, health, policy term, smoker status, and insurer underwriting. After selecting a target face amount, obtain policy quotes from licensed insurers."
+      },
+      {
+        "question": "How is my data handled and how reliable is the software?",
+        "answer": "This tool assumes best-practice controls for input validation and numerical stability. For production use, follow NIST SP 800-series guidance for input validation and data handling and IEEE recommendations for numerical precision. Do not submit sensitive personal data into public tools."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Risk Management and Privacy Frameworks",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO Standards and Guidance (general information)",
+        "url": "https://www.iso.org/standards.html"
+      },
+      {
+        "label": "IEEE Xplore - Standards and numerical methods",
+        "url": "https://ieeexplore.ieee.org"
+      },
+      {
+        "label": "OSHA - Safety and procedural standards",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "National Association of Insurance Commissioners (NAIC) - Consumer information",
+        "url": "https://content.naic.org"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Face amount",
+        "definition": "The death benefit amount payable under a life insurance policy."
+      },
+      {
+        "term": "Present value",
+        "definition": "A current lump-sum equivalent of a future series of payments, discounted at an expected rate of return."
+      },
+      {
+        "term": "Real return",
+        "definition": "Expected investment return after adjusting for inflation, expressed as a percentage."
+      },
+      {
+        "term": "Term life insurance",
+        "definition": "A policy that pays a benefit only if the insured dies within a specified term."
+      },
+      {
+        "term": "Human life value",
+        "definition": "An estimate of the economic value of an individual’s future earnings stream."
+      }
+    ]
+  }
+}

@@ -1,0 +1,506 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Modified Duration & Effective Duration Calculator",
+    "description": "Calculate Macaulay duration, Modified duration, and Effective duration with common bond inputs. Supports standard fixed-rate bonds (coupon, face, yield, frequency) and a price-shift method for effective duration. Includes guidance on conventions, limits, numerical accuracy, and regulatory-quality testing practices."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "macaulay_from_yield",
+    "methods": {
+      "macaulay_from_yield": {
+        "label": "Macaulay → Modified (standard fixed-rate bond)",
+        "description": "Calculates Macaulay duration from a fixed schedule of level coupon payments using yield-to-maturity and converts to Modified duration using the chosen compounding frequency.",
+        "variables": {
+          "n_periods": {
+            "expression": "years_to_maturity * payments_per_year",
+            "dependencies": [
+              "years_to_maturity",
+              "payments_per_year"
+            ],
+            "label": "Total number of coupon periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "period_rate": {
+            "expression": "yield_to_maturity / payments_per_year",
+            "dependencies": [
+              "yield_to_maturity",
+              "payments_per_year"
+            ],
+            "label": "Periodic yield (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "coupon_per_period": {
+            "expression": "coupon_rate * face_value / payments_per_year",
+            "dependencies": [
+              "coupon_rate",
+              "face_value",
+              "payments_per_year"
+            ],
+            "label": "Coupon payment per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_coupons": {
+            "expression": "coupon_per_period * (1 - (1 + period_rate)^(-n_periods)) / period_rate",
+            "dependencies": [
+              "coupon_per_period",
+              "period_rate",
+              "n_periods"
+            ],
+            "label": "Present value of coupon annuity",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_face": {
+            "expression": "face_value / (1 + period_rate)^n_periods",
+            "dependencies": [
+              "face_value",
+              "period_rate",
+              "n_periods"
+            ],
+            "label": "Present value of face (principal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "clean_price": {
+            "expression": "pv_coupons + pv_face",
+            "dependencies": [
+              "pv_coupons",
+              "pv_face"
+            ],
+            "label": "Model clean price (present value)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "macaulay_numerator": {
+            "expression": "sum_{t=1..n_periods} [ t * coupon_per_period / (1 + period_rate)^t ] + n_periods * face_value / (1 + period_rate)^n_periods",
+            "dependencies": [
+              "coupon_per_period",
+              "period_rate",
+              "n_periods",
+              "face_value"
+            ],
+            "label": "Weighted PV sum (numerator for Macaulay)",
+            "unit": "currency*periods",
+            "format": "decimal",
+            "display": false
+          },
+          "macaulay_periods": {
+            "expression": "macaulay_numerator / clean_price",
+            "dependencies": [
+              "macaulay_numerator",
+              "clean_price"
+            ],
+            "label": "Macaulay duration (in periods)",
+            "unit": "periods",
+            "format": "decimal",
+            "display": false
+          },
+          "macaulay_years": {
+            "expression": "macaulay_periods / payments_per_year",
+            "dependencies": [
+              "macaulay_periods",
+              "payments_per_year"
+            ],
+            "label": "Macaulay duration (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "modified_duration": {
+            "expression": "macaulay_years / (1 + yield_to_maturity / payments_per_year)",
+            "dependencies": [
+              "macaulay_years",
+              "yield_to_maturity",
+              "payments_per_year"
+            ],
+            "label": "Modified duration",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "clean_price",
+            "label": "Model clean price",
+            "variable": "clean_price",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "macaulay_years",
+            "label": "Macaulay duration (years)",
+            "variable": "macaulay_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "modified_duration",
+            "label": "Modified duration",
+            "variable": "modified_duration",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "effective_duration_price_shift": {
+        "label": "Effective Duration (price-shift method)",
+        "description": "Numerical estimate of effective duration suitable for bonds with embedded options or unknown cash-flow sensitivity. Uses small parallel yield shocks and observed model or market prices.",
+        "variables": {
+          "price_current": {
+            "expression": "price_current",
+            "dependencies": [
+              "price_current"
+            ],
+            "label": "Reference (current) price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "price_up": {
+            "expression": "price_up",
+            "dependencies": [
+              "price_up"
+            ],
+            "label": "Price after +Δy shift",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "price_down": {
+            "expression": "price_down",
+            "dependencies": [
+              "price_down"
+            ],
+            "label": "Price after -Δy shift",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "delta_y": {
+            "expression": "delta_y",
+            "dependencies": [
+              "delta_y"
+            ],
+            "label": "Yield shift magnitude (absolute, decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "effective_duration": {
+            "expression": "- (price_up - price_down) / (2 * price_current * delta_y)",
+            "dependencies": [
+              "price_up",
+              "price_down",
+              "price_current",
+              "delta_y"
+            ],
+            "label": "Effective duration",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "effective_duration",
+            "label": "Effective duration",
+            "variable": "effective_duration",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "pricing_mode",
+        "label": "Input mode",
+        "type": "select",
+        "default": "yield",
+        "options": [
+          {
+            "label": "Use yield-to-maturity (common) ",
+            "value": "yield"
+          },
+          {
+            "label": "Use observed prices (price-shift / effective duration)",
+            "value": "price"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "bond_specs",
+        "label": "Bond specifications",
+        "fields": [
+          {
+            "id": "face_value",
+            "label": "Face / Par value",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "coupon_rate",
+            "label": "Coupon rate (annual, decimal)",
+            "type": "number",
+            "default": 0.05,
+            "min": 0,
+            "step": 0.0001
+          },
+          {
+            "id": "years_to_maturity",
+            "label": "Time to maturity (years)",
+            "type": "number",
+            "default": 5,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "payments_per_year",
+            "label": "Payments per year",
+            "type": "select",
+            "default": "2",
+            "options": [
+              {
+                "label": "Annual",
+                "value": "1"
+              },
+              {
+                "label": "Semiannual",
+                "value": "2"
+              },
+              {
+                "label": "Monthly",
+                "value": "12"
+              }
+            ]
+          },
+          {
+            "id": "day_count",
+            "label": "Day count convention (informational)",
+            "type": "select",
+            "default": "actual_actual",
+            "options": [
+              {
+                "label": "Actual/Actual",
+                "value": "actual_actual"
+              },
+              {
+                "label": "30/360",
+                "value": "30_360"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "yield_inputs",
+        "label": "Yield inputs (used by Macaulay/Modified method)",
+        "show_when": {
+          "field": "pricing_mode",
+          "is": "yield"
+        },
+        "fields": [
+          {
+            "id": "yield_to_maturity",
+            "label": "Yield to maturity (annual, decimal)",
+            "type": "number",
+            "default": 0.05,
+            "min": 0,
+            "step": 0.0001
+          }
+        ]
+      },
+      {
+        "id": "price_inputs",
+        "label": "Price-shift inputs (used by Effective Duration)",
+        "show_when": {
+          "field": "pricing_mode",
+          "is": "price"
+        },
+        "fields": [
+          {
+            "id": "price_current",
+            "label": "Reference price (clean)",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "price_up",
+            "label": "Price after +Δy",
+            "type": "number",
+            "default": 990,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "price_down",
+            "label": "Price after -Δy",
+            "type": "number",
+            "default": 1010,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "delta_y",
+            "label": "Yield shift magnitude Δy (absolute, decimal)",
+            "type": "number",
+            "default": 0.001,
+            "min": 1e-06,
+            "step": 1e-06
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool calculates Macaulay and Modified duration for standard fixed-rate bonds and estimates Effective duration using a price-shift numerical method. Duration measures a bond's sensitivity to small, parallel changes in yield and is used for interest-rate risk management.",
+      "Two modes are provided: a formula-based Macaulay→Modified route (requires yield-to-maturity and bond specs) and a price-shift effective-duration route (useful for bonds with embedded options or when cash-flow sensitivity is unknown). The calculator reports intermediate values (model clean price, Macaulay duration in years) to support validation and audit."
+    ],
+    "methodology": [
+      "Macaulay duration is the weighted average time to receive the bond's cash flows where weights are present-value fractions. Modified duration adjusts Macaulay by the periodic yield to estimate percent price change per unit yield change under small, parallel shifts.",
+      "Effective duration is computed numerically by observing model or market price changes to small yield perturbations and is preferred when cash flows change with yield (for callable, convertible, or prepayable instruments).",
+      "Numerical and rounding behavior follows IEEE 754 floating point conventions for predictable results. Quality control and traceability recommendations reference ISO and NIST guidance on measurement uncertainty and software quality management."
+    ],
+    "how_is_calculated": [
+      "Macaulay (periods): numerator = sum_{t=1..N} t * CF_t / (1 + i)^t ; denominator = sum_{t=1..N} CF_t / (1 + i)^t ; Macaulay (years) = (numerator / denominator) / payments_per_year.",
+      "Modified duration = Macaulay_years / (1 + yield_to_maturity / payments_per_year).",
+      "Effective duration (price-shift) = - (P_up - P_down) / (2 * P0 * Δy), where P_up and P_down are prices after +Δy and -Δy yield shifts and P0 is the reference price."
+    ],
+    "examples": [
+      "Example 1 (standard): 5-year bond, 5% annual coupon, semiannual payments, face 1000, YTM 4.5% → compute model price, Macaulay and Modified durations. Use Macaulay→Modified mode.",
+      "Example 2 (embedded option): For a callable bond, run a valuation model to obtain P0, P(+Δy), and P(-Δy) then use the price-shift mode to estimate effective duration."
+    ],
+    "faqs": [
+      {
+        "question": "When should I use Modified duration versus Effective duration?",
+        "answer": "Use Modified duration for plain-vanilla fixed-rate bonds with fixed cash flows. Use Effective duration for bonds whose cash flows change with yield (callable, puttable, convertible, mortgage-backed)."
+      },
+      {
+        "question": "What size of Δy should I use for price-shift effective duration?",
+        "answer": "Choose a small absolute shift (for example 1–10 basis points = 0.0001–0.001) so linear approximation holds but large enough to avoid numerical noise. Report Δy when saving results."
+      },
+      {
+        "question": "Does this calculator handle day-count conventions and accrued interest?",
+        "answer": "This tool uses simple period counts (payments per year) for duration formulas. Accrued interest and detailed day-count adjustments are informational; include those adjustments externally when using market clean/dirty prices."
+      },
+      {
+        "question": "How accurate are the results and what are the limitations?",
+        "answer": "Results assume level periodic coupons and parallel yield shifts. Modified duration is a linear approximation and ignores convexity; effective duration accounts for nonlinearity if proper shifted prices are provided. Numerical rounding follows IEEE floating-point; document test vectors and error tolerances when using results for regulatory reporting."
+      },
+      {
+        "question": "Is there guidance for testing and quality control?",
+        "answer": "Validate the implementation with known analytic test cases, check convergence for numerical solvers, record input snapshots, and follow ISO 9001 quality practices and NIST measurement uncertainty guidance for traceability."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Risk Management and Measurement Guidance",
+        "url": "https://www.nist.gov/topics/risk-management"
+      },
+      {
+        "label": "ISO — Quality and Management Standards",
+        "url": "https://www.iso.org/standards.html"
+      },
+      {
+        "label": "IEEE — Standards and Floating-Point (IEEE 754 background)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA — General Guidance on Recordkeeping and Traceability",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Macaulay duration",
+        "definition": "Weighted average time until cash flows are received, weights are present-value fractions of each cash flow."
+      },
+      {
+        "term": "Modified duration",
+        "definition": "Macaulay duration divided by (1 + periodic yield). It estimates price sensitivity to small parallel yield changes."
+      },
+      {
+        "term": "Effective duration",
+        "definition": "A numerical measure of duration using observed or modelled price changes for small yield shifts; suitable when cash flows are yield-dependent."
+      },
+      {
+        "term": "Convexity",
+        "definition": "Second-order sensitivity of price to yield; modified duration ignores this curvature, so duration*Δy is an approximation."
+      },
+      {
+        "term": "Yield to maturity (YTM)",
+        "definition": "The internal rate of return of the bond's cash flows assuming they are reinvested at the YTM and no defaults."
+      }
+    ],
+    "summary": [
+      "Use the Macaulay→Modified mode for standard fixed-cash-flow bonds when you know the yield. Use the price-shift mode to estimate effective duration for instruments with yield-dependent cash flows.",
+      "Document inputs (day-count, Δy, price type), validate with test vectors, and be aware of linear approximation limits. Follow IEEE numeric practices and ISO/NIST recommendations for QA and traceability."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/finance/bonds/convexity-calculator",
+      "/finance/bonds/price-yield-conversion"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

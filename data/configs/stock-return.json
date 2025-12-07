@@ -1,0 +1,504 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Stock Return Calculator (multi-method)",
+    "description": "Multi-method stock return calculator supporting simple total return, dividend reinvestment (approximate), and direct annualized (CAGR) calculations. Includes fees and tax adjustments and clear accuracy/assumption notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "total_return",
+    "methods": {
+      "total_return": {
+        "label": "Total return (price change + dividends)",
+        "description": "Computes money return, percent return and annualized return (CAGR) assuming constant share count (no reinvestment). Taxes and fees are applied as entered.",
+        "variables": {
+          "initial_value": {
+            "expression": "initial_shares * initial_price",
+            "dependencies": [
+              "initial_shares",
+              "initial_price"
+            ],
+            "label": "Initial investment value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "gross_gain": {
+            "expression": "(final_price - initial_price) * initial_shares",
+            "dependencies": [
+              "final_price",
+              "initial_price",
+              "initial_shares"
+            ],
+            "label": "Gross price gain",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_return_amount": {
+            "expression": "gross_gain + dividends_total - fees_total",
+            "dependencies": [
+              "gross_gain",
+              "dividends_total",
+              "fees_total"
+            ],
+            "label": "Total return (amount)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "taxes_paid": {
+            "expression": "(gross_gain + dividends_total - fees_total) * taxes_percent / 100",
+            "dependencies": [
+              "gross_gain",
+              "dividends_total",
+              "fees_total",
+              "taxes_percent"
+            ],
+            "label": "Estimated taxes paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "final_value_with_dividends": {
+            "expression": "final_price * initial_shares + dividends_total - fees_total - taxes_paid",
+            "dependencies": [
+              "final_price",
+              "initial_shares",
+              "dividends_total",
+              "fees_total",
+              "taxes_paid"
+            ],
+            "label": "Net final value",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "percent_total_return": {
+            "expression": "total_return_amount / initial_value * 100",
+            "dependencies": [
+              "total_return_amount",
+              "initial_value"
+            ],
+            "label": "Total return (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "annualized_return": {
+            "expression": "(pow(final_value_with_dividends / initial_value, 1/holding_years) - 1) * 100",
+            "dependencies": [
+              "final_value_with_dividends",
+              "initial_value",
+              "holding_years"
+            ],
+            "label": "Annualized return (CAGR, %)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "total_return_amount",
+            "label": "Total return (money)",
+            "variable": "total_return_amount",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "percent_total_return",
+            "label": "Total return (%)",
+            "variable": "percent_total_return",
+            "format": "percent"
+          },
+          {
+            "id": "annualized_return",
+            "label": "Annualized return (CAGR)",
+            "variable": "annualized_return",
+            "format": "percent"
+          }
+        ]
+      },
+      "dividend_reinvest": {
+        "label": "Dividend reinvestment (approximate)",
+        "description": "Estimates return assuming all dividends are reinvested at a single average reinvestment price. This is an approximation; for precise results use a transaction-level reinvestment/XIRR tool.",
+        "variables": {
+          "initial_investment": {
+            "expression": "initial_shares * initial_price",
+            "dependencies": [
+              "initial_shares",
+              "initial_price"
+            ],
+            "label": "Initial investment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "shares_from_dividends": {
+            "expression": "dividends_total / avg_reinvestment_price",
+            "dependencies": [
+              "dividends_total",
+              "avg_reinvestment_price"
+            ],
+            "label": "Shares bought with dividends (approx.)",
+            "unit": "shares",
+            "format": "decimal",
+            "display": false
+          },
+          "shares_after": {
+            "expression": "initial_shares + shares_from_dividends",
+            "dependencies": [
+              "initial_shares",
+              "shares_from_dividends"
+            ],
+            "label": "Shares after reinvestment (approx.)",
+            "unit": "shares",
+            "format": "decimal",
+            "display": false
+          },
+          "taxes_paid": {
+            "expression": "((shares_after * final_price) - initial_investment) * taxes_percent / 100",
+            "dependencies": [
+              "shares_after",
+              "final_price",
+              "initial_investment",
+              "taxes_percent"
+            ],
+            "label": "Estimated taxes (approx.)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "final_value_net": {
+            "expression": "shares_after * final_price - fees_total - taxes_paid",
+            "dependencies": [
+              "shares_after",
+              "final_price",
+              "fees_total",
+              "taxes_paid"
+            ],
+            "label": "Net final value after reinvestment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "percent_total_return": {
+            "expression": "(final_value_net - initial_investment) / initial_investment * 100",
+            "dependencies": [
+              "final_value_net",
+              "initial_investment"
+            ],
+            "label": "Total return (%) (approx.)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "annualized_return": {
+            "expression": "(pow(final_value_net / initial_investment, 1/holding_years) - 1) * 100",
+            "dependencies": [
+              "final_value_net",
+              "initial_investment",
+              "holding_years"
+            ],
+            "label": "Annualized return (CAGR, %; approx.)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "final_value_net",
+            "label": "Net final value (approx.)",
+            "variable": "final_value_net",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "percent_total_return",
+            "label": "Total return (%) (approx.)",
+            "variable": "percent_total_return",
+            "format": "percent"
+          },
+          {
+            "id": "annualized_return",
+            "label": "Annualized return (CAGR) (approx.)",
+            "variable": "annualized_return",
+            "format": "percent"
+          }
+        ]
+      },
+      "annualized": {
+        "label": "Annualized return from values (CAGR)",
+        "description": "Compute annualized return (CAGR) from a starting value and an ending value over a number of years. Use when you have portfolio-level start and end values (or cash-flow-adjusted totals).",
+        "variables": {
+          "cagr": {
+            "expression": "(pow(final_value_input / initial_value_input, 1/holding_years) - 1) * 100",
+            "dependencies": [
+              "final_value_input",
+              "initial_value_input",
+              "holding_years"
+            ],
+            "label": "Annualized return (CAGR)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "cagr",
+            "label": "Annualized return (CAGR)",
+            "variable": "cagr",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "total_return",
+        "options": [
+          {
+            "label": "Total return (price + dividends)",
+            "value": "total_return"
+          },
+          {
+            "label": "Dividend reinvestment (approx.)",
+            "value": "dividend_reinvest"
+          },
+          {
+            "label": "Annualized from values (CAGR)",
+            "value": "annualized"
+          }
+        ]
+      },
+      {
+        "id": "initial_shares",
+        "label": "Initial shares owned",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "initial_price",
+        "label": "Initial price per share (in your currency)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "final_price",
+        "label": "Final price per share (in your currency)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "dividends_total",
+        "label": "Total dividends received during holding period (sum of cash dividends)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "fees_total",
+        "label": "Total fees and commissions paid (cash)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "taxes_percent",
+        "label": "Estimated effective tax rate on gains and dividends (%)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "holding_years",
+        "label": "Holding period in years",
+        "type": "number",
+        "default": 1,
+        "min": 0.0001,
+        "step": 0.0001
+      }
+    ],
+    "sections": [
+      {
+        "id": "dividend_reinvest_section",
+        "label": "Dividend reinvestment inputs",
+        "show_when": {
+          "field": "method",
+          "is": "dividend_reinvest"
+        },
+        "fields": [
+          {
+            "id": "avg_reinvestment_price",
+            "label": "Average price used for reinvesting dividends (approx.)",
+            "type": "number",
+            "default": 12,
+            "min": 0,
+            "step": 0.0001
+          }
+        ]
+      },
+      {
+        "id": "annualized_values_section",
+        "label": "Annualized (value-based) inputs",
+        "show_when": {
+          "field": "method",
+          "is": "annualized"
+        },
+        "fields": [
+          {
+            "id": "initial_value_input",
+            "label": "Starting portfolio value (currency)",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "final_value_input",
+            "label": "Ending portfolio value (currency)",
+            "type": "number",
+            "default": 1200,
+            "min": 0,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps estimate stock investment returns using multiple common approaches: simple total return (price change plus cash dividends), an approximate dividend-reinvestment model, and a direct annualized (CAGR) computation from start and end values.",
+      "Use the method that best matches your record-keeping. For transaction-level precision (per-dividend reinvestments and irregular cash flows) use export and a time-weighted or XIRR-capable tool; this calculator provides high-quality estimates for planning and comparison."
+    ],
+    "methodology": [
+      "Total return (simple): calculates money gain from price change plus cash dividends, subtracts fees and estimates taxes using the entered effective tax rate, then annualizes the net result to a CAGR.",
+      "Dividend reinvestment (approximate): assumes all dividends are used to buy shares at a single average reinvestment price you provide. This is an approximation; exact results require per-dividend transaction data.",
+      "Annualized from values (CAGR): computes the compound annual growth rate from a starting and ending portfolio value and the holding period in years. This method is appropriate when you have portfolio-level beginning and ending balances."
+    ],
+    "how_is_calculated": [
+      "Initial investment = initial_shares × initial_price",
+      "Total return (amount) = (final_price − initial_price) × initial_shares + dividends_total − fees_total − estimated_taxes",
+      "Estimated taxes = (gross profit + dividends − fees) × taxes_percent / 100 (user-supplied effective rate)",
+      "Approximate dividend reinvestment: additional shares = dividends_total / avg_reinvestment_price; final shares = initial_shares + additional shares; final value = final_shares × final_price − fees − taxes",
+      "CAGR = (Ending value / Starting value)^(1 / holding_years) − 1, reported as a percentage"
+    ],
+    "examples": [
+      "Example 1 (simple): 100 shares bought at $10, sold at $15 after 2 years, $50 total dividends, no fees or taxes: total return = (15−10)×100 + 50 = $550; CAGR ≈ ( (1500+50)/1000 )^(1/2) − 1 ≈ 22.47%.",
+      "Example 2 (reinvest): same scenario but dividends reinvested at $12 average: additional shares = 50/12 ≈ 4.167, final shares ≈ 104.167, final value ≈ 104.167×15 = 1562.50; adjust for fees/taxes as entered."
+    ],
+    "faqs": [
+      {
+        "question": "Does this account for per-dividend transaction dates and fractional shares?",
+        "answer": "No. The dividend reinvestment mode uses a single average reinvestment price for simplicity. For exact per-dividend timing and fractional-share effects use a transaction-level IRR/XIRR tool or import your trade/dividend history."
+      },
+      {
+        "question": "How are taxes handled?",
+        "answer": "Taxes are applied as a simple effective rate you enter and are applied to gains and dividends in the estimate. This is not tax advice; consult a tax professional for jurisdiction-specific treatment and capital gains timing rules."
+      },
+      {
+        "question": "What precision can I expect?",
+        "answer": "Arithmetic is performed to typical double-precision limits, and final results are rounded for display. Results are estimates—see the accuracy and standards notes below."
+      },
+      {
+        "question": "Is the calculator providing investment advice?",
+        "answer": "No. This tool provides mathematical estimates only and is not investment advice. Consider professional financial advice for decisions that require tailored recommendations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission - Investor Information",
+        "url": "https://www.sec.gov/investor"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "CAGR (Compound Annual Growth Rate)",
+        "definition": "The annual growth rate of an investment assuming profits are reinvested and compound at a constant rate over the holding period."
+      },
+      {
+        "term": "Total return",
+        "definition": "Sum of price appreciation and cash dividends received, before and after adjustments such as fees and taxes."
+      },
+      {
+        "term": "Dividend reinvestment (DRIP)",
+        "definition": "The practice of using dividend payments to purchase additional shares. Exact results require per-dividend transaction pricing; this tool offers an approximate single-price model."
+      },
+      {
+        "term": "XIRR",
+        "definition": "Internal rate of return for irregular cash flows. Transaction-level timing is required for exact XIRR calculations; this calculator provides approximations when per-event data is absent."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/investment/overview",
+      "/guides/return-calculations/cagr-vs-irR"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST - Standards and guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO - International standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.sec.gov/investor",
+        "label": "SEC - Investor information",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

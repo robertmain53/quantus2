@@ -1,0 +1,238 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Balloon Payment Calculator — Bi‑Weekly Payments",
+    "description": "Estimate bi‑weekly loan payment amount, remaining principal at a balloon date, the balloon payment due, and interest paid up to the balloon. Includes accelerated bi‑weekly and standard bi‑weekly frequency options and explains formulae, assumptions, and accuracy limits."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Periodic payment (per payment period)",
+        "expression": "principal * (annual_rate/100/payments_per_year) / (1 - pow(1 + annual_rate/100/payments_per_year, -amortization_years * payments_per_year))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "payments_until_balloon",
+        "label": "Number of payments until balloon",
+        "expression": "balloon_years * payments_per_year",
+        "format": "integer"
+      },
+      {
+        "id": "outstanding_balance_at_balloon",
+        "label": "Outstanding principal at balloon date",
+        "expression": "principal * pow(1 + annual_rate/100/payments_per_year, balloon_years * payments_per_year) - ( principal * (annual_rate/100/payments_per_year) / (1 - pow(1 + annual_rate/100/payments_per_year, -amortization_years * payments_per_year)) ) * ( (pow(1 + annual_rate/100/payments_per_year, balloon_years * payments_per_year) - 1) / (annual_rate/100/payments_per_year) )",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "balloon_payment",
+        "label": "Balloon payment due (principal outstanding)",
+        "expression": "outstanding_balance_at_balloon",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid_until_balloon",
+        "label": "Total amount paid until balloon (sum of periodic payments)",
+        "expression": "( principal * (annual_rate/100/payments_per_year) / (1 - pow(1 + annual_rate/100/payments_per_year, -amortization_years * payments_per_year)) ) * (balloon_years * payments_per_year)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_until_balloon",
+        "label": "Total interest paid until balloon",
+        "expression": "(( principal * (annual_rate/100/payments_per_year) / (1 - pow(1 + annual_rate/100/payments_per_year, -amortization_years * payments_per_year)) ) * (balloon_years * payments_per_year)) - (principal - outstanding_balance_at_balloon)",
+        "unit": "currency",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "balloon_years",
+        "label": "Balloon due after (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (schedule)",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Bi‑weekly (26 payments/year) — common accelerated bi‑weekly",
+            "value": "26"
+          },
+          {
+            "label": "Semi‑monthly (24 payments/year)",
+            "value": "24"
+          },
+          {
+            "label": "Monthly (12 payments/year)",
+            "value": "12"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Periodic payment",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "payments_until_balloon",
+          "label": "Payments until balloon",
+          "format": "integer"
+        },
+        {
+          "id": "outstanding_balance_at_balloon",
+          "label": "Outstanding principal at balloon",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "balloon_payment",
+          "label": "Balloon payment due",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_paid_until_balloon",
+          "label": "Total paid until balloon",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest_until_balloon",
+          "label": "Total interest until balloon",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the periodic payment based on an amortization schedule and then computes the outstanding principal (the balloon) at a specified balloon date. It supports bi‑weekly (26), semi‑monthly (24) and monthly (12) schedules with the bi‑weekly option set as the default.",
+      "Use this tool to compare how making bi‑weekly payments changes the payment cadence and to see the amount due if a balloon payment is required before full amortization. Results assume fixed interest, equal periodic payments, and that interest compounds at the stated periodic rate."
+    ],
+    "methodology": [
+      "We compute the periodic payment as if the loan amortizes over the full amortization period; that periodic payment is then applied to the shorter balloon term to determine remaining principal.",
+      "Periodic rate r is annual_rate/100 divided by payments_per_year. Number of scheduled payments N for amortization is amortization_years × payments_per_year. Number of payments until the balloon is balloon_years × payments_per_year.",
+      "Remaining principal at the balloon date is calculated using the closed‑form amortization formulas (no iterative schedule needed). Totals are simple sums of periodic payments and principal reduction over the balloon period."
+    ],
+    "how_is_calculated": [
+      "Periodic payment formula: payment = P * r / (1 - (1 + r)^(-N)) where r = APR/100 ÷ payments_per_year and N = amortization_years × payments_per_year.",
+      "Number of payments until balloon: k = balloon_years × payments_per_year.",
+      "Outstanding principal after k payments: balance = P*(1+r)^k - payment * ( ( (1+r)^k - 1 ) / r ).",
+      "Balloon payment equals the outstanding principal at the balloon date. Total interest until balloon = (sum of payments made) - (principal paid down during that period)."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include taxes, insurance, or escrow?",
+        "answer": "No. This tool calculates principal and interest only. Taxes, insurance, escrow, fees, and prepayment penalties are not included. Add those outside the calculator to estimate total cash flow."
+      },
+      {
+        "question": "Is a bi‑weekly payment the same as accelerated bi‑weekly?",
+        "answer": "This calculator treats each payment as an independent periodic payment at the chosen frequency. Using 26 payments per year (bi‑weekly) results in two extra half‑monthly payments compared with 12 monthly payments and accelerates principal reduction. Semi‑monthly (24) is different and not identical to accelerated bi‑weekly."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results use standard closed‑form formulas for fixed-rate amortizing loans. They are accurate for the mathematical model assumed (fixed rate, fixed periodic payments, interest compounding at the periodic rate). Real‑world lender rounding, day‑count conventions, different compounding rules, fees, and prepayment penalties may change exact amounts."
+      },
+      {
+        "question": "Can I rely on this for legal disclosures or underwriting?",
+        "answer": "No. This calculator is for estimation and planning only. For binding figures, obtain an official loan schedule or disclosure from your lender. Always verify with contracts and professional advice."
+      },
+      {
+        "question": "What happens if balloon_years ≥ amortization_years?",
+        "answer": "If balloon_years equals the amortization period, the outstanding balance will be approximately zero after rounding and the balloon payment will be a final small rounding difference. If balloon_years is greater than amortization_years, the model will produce a negative exponent in the payment formula and should be reviewed; typical use keeps balloon_years less than amortization_years."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — Mortgage basics",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization period",
+        "definition": "The total length of time over which the loan would be fully repaid under the computed periodic payment schedule."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at a specified date that pays off the remaining principal when the scheduled payments do not fully amortize the loan."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate per payment period: APR divided by the number of payments per year."
+      },
+      {
+        "term": "Principal",
+        "definition": "The original amount borrowed, not including interest or fees."
+      },
+      {
+        "term": "Outstanding balance",
+        "definition": "Remaining principal owed at a given point in the amortization schedule."
+      },
+      {
+        "term": "Bi‑weekly payments",
+        "definition": "Payments made every two weeks, typically 26 payments in a full year; results in slightly more paid per year than 12 monthly payments."
+      }
+    ]
+  }
+}

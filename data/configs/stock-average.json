@@ -1,0 +1,669 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Stock Average Calculator (Advanced)",
+    "description": "Calculate weighted average share price, update average after additional purchases or sales, compute realized/unrealized P/L and target sell prices. Supports aggregate totals, row entry (up to 6 trades), add-purchase and sale scenarios. Assumes average-cost method unless lot-level accounting (FIFO/LIFO) is selected externally."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "add_purchase",
+    "methods": {
+      "aggregate": {
+        "label": "Aggregate totals (total shares and total cost)",
+        "description": "Use when you already have total shares and total cost and want the weighted average price.",
+        "variables": {
+          "total_shares": {
+            "expression": "total_shares_input",
+            "dependencies": [
+              "total_shares_input"
+            ],
+            "label": "Total shares",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "total_cost": {
+            "expression": "total_cost_input",
+            "dependencies": [
+              "total_cost_input"
+            ],
+            "label": "Total cost (aggregate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "average_price": {
+            "expression": "total_cost / total_shares",
+            "dependencies": [
+              "total_cost",
+              "total_shares"
+            ],
+            "label": "Average price per share",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "average_price",
+            "label": "Weighted average price",
+            "variable": "average_price",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_shares",
+            "label": "Total shares",
+            "variable": "total_shares",
+            "format": "integer",
+            "unit": "shares"
+          },
+          {
+            "id": "total_cost",
+            "label": "Total cost",
+            "variable": "total_cost",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "add_purchase": {
+        "label": "Add a new purchase to existing holdings",
+        "description": "Update your average price after buying additional shares. Uses weighted average (cost basis aggregated).",
+        "variables": {
+          "current_total_cost": {
+            "expression": "current_shares * current_avg_price",
+            "dependencies": [
+              "current_shares",
+              "current_avg_price"
+            ],
+            "label": "Current total cost",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_total_shares": {
+            "expression": "current_shares + new_shares",
+            "dependencies": [
+              "current_shares",
+              "new_shares"
+            ],
+            "label": "New total shares",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "new_total_cost": {
+            "expression": "current_total_cost + new_shares * new_price",
+            "dependencies": [
+              "current_total_cost",
+              "new_shares",
+              "new_price"
+            ],
+            "label": "New total cost",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_average_price": {
+            "expression": "new_total_cost / new_total_shares",
+            "dependencies": [
+              "new_total_cost",
+              "new_total_shares"
+            ],
+            "label": "Updated average price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "new_average_price",
+            "label": "Updated average price",
+            "variable": "new_average_price",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "new_total_shares",
+            "label": "Total shares after purchase",
+            "variable": "new_total_shares",
+            "format": "integer",
+            "unit": "shares"
+          },
+          {
+            "id": "new_total_cost",
+            "label": "Total cost after purchase",
+            "variable": "new_total_cost",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "after_sale": {
+        "label": "Effect of a sale (average-cost basis)",
+        "description": "Calculate remaining shares and realized profit/loss assuming average-cost reduction. For lot-level (FIFO/LIFO) tax accounting, use lot tracking outside this tool.",
+        "variables": {
+          "remaining_shares": {
+            "expression": "current_shares - sold_shares",
+            "dependencies": [
+              "current_shares",
+              "sold_shares"
+            ],
+            "label": "Shares remaining",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "realized_pl": {
+            "expression": "sold_shares * (sell_price - current_avg_price)",
+            "dependencies": [
+              "sold_shares",
+              "sell_price",
+              "current_avg_price"
+            ],
+            "label": "Realized profit / loss from sale",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_cost": {
+            "expression": "remaining_shares * current_avg_price",
+            "dependencies": [
+              "remaining_shares",
+              "current_avg_price"
+            ],
+            "label": "Remaining cost basis",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "average_after_sale": {
+            "expression": "current_avg_price",
+            "dependencies": [
+              "current_avg_price"
+            ],
+            "label": "Average price after sale (average-cost method)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "average_after_sale",
+            "label": "Average price after sale",
+            "variable": "average_after_sale",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "remaining_shares",
+            "label": "Shares remaining",
+            "variable": "remaining_shares",
+            "format": "integer",
+            "unit": "shares"
+          },
+          {
+            "id": "realized_pl",
+            "label": "Realized profit / loss",
+            "variable": "realized_pl",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "row_entry": {
+        "label": "Row entry (up to 6 trades)",
+        "description": "Enter up to six buy trades (quantity and price) and compute the weighted average. Leave unused rows at zero.",
+        "variables": {
+          "sum_qty": {
+            "expression": "tx1_qty + tx2_qty + tx3_qty + tx4_qty + tx5_qty + tx6_qty",
+            "dependencies": [
+              "tx1_qty",
+              "tx2_qty",
+              "tx3_qty",
+              "tx4_qty",
+              "tx5_qty",
+              "tx6_qty"
+            ],
+            "label": "Total shares (sum of rows)",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "sum_cost": {
+            "expression": "tx1_qty * tx1_price + tx2_qty * tx2_price + tx3_qty * tx3_price + tx4_qty * tx4_price + tx5_qty * tx5_price + tx6_qty * tx6_price",
+            "dependencies": [
+              "tx1_qty",
+              "tx1_price",
+              "tx2_qty",
+              "tx2_price",
+              "tx3_qty",
+              "tx3_price",
+              "tx4_qty",
+              "tx4_price",
+              "tx5_qty",
+              "tx5_price",
+              "tx6_qty",
+              "tx6_price"
+            ],
+            "label": "Total cost (sum of row cost)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "row_average": {
+            "expression": "sum_cost / sum_qty",
+            "dependencies": [
+              "sum_cost",
+              "sum_qty"
+            ],
+            "label": "Weighted average from rows",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "row_average",
+            "label": "Weighted average price (rows)",
+            "variable": "row_average",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "sum_qty",
+            "label": "Total shares (rows)",
+            "variable": "sum_qty",
+            "format": "integer",
+            "unit": "shares"
+          },
+          {
+            "id": "sum_cost",
+            "label": "Total cost (rows)",
+            "variable": "sum_cost",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "target_price": {
+        "label": "Target sell price to reach desired gain",
+        "description": "Calculate the per-share sell price required to reach a target percent gain or a target absolute profit.",
+        "variables": {
+          "target_price_percent": {
+            "expression": "current_avg_price * (1 + desired_profit_percent / 100)",
+            "dependencies": [
+              "current_avg_price",
+              "desired_profit_percent"
+            ],
+            "label": "Target price for percent gain",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "target_price_amount": {
+            "expression": "current_avg_price + desired_profit_amount / current_shares",
+            "dependencies": [
+              "current_avg_price",
+              "desired_profit_amount",
+              "current_shares"
+            ],
+            "label": "Target price for absolute profit",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_proceeds_percent": {
+            "expression": "current_shares * target_price_percent",
+            "dependencies": [
+              "current_shares",
+              "target_price_percent"
+            ],
+            "label": "Estimated proceeds at target percent",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "target_price_percent",
+            "label": "Target price (percent goal)",
+            "variable": "target_price_percent",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "target_price_amount",
+            "label": "Target price (absolute profit goal)",
+            "variable": "target_price_amount",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "total_shares_input",
+        "label": "Total shares (aggregate)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "total_cost_input",
+        "label": "Total cost (aggregate)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "current_shares",
+        "label": "Current shares held",
+        "type": "integer",
+        "default": 100,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_avg_price",
+        "label": "Current average price per share",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "new_shares",
+        "label": "New purchase shares",
+        "type": "integer",
+        "default": 10,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "new_price",
+        "label": "New purchase price per share",
+        "type": "number",
+        "default": 12,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "sold_shares",
+        "label": "Shares sold",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "sell_price",
+        "label": "Sale price per share",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "desired_profit_percent",
+        "label": "Desired profit (%)",
+        "type": "number",
+        "default": 10,
+        "min": -100,
+        "max": 10000,
+        "step": 0.01
+      },
+      {
+        "id": "desired_profit_amount",
+        "label": "Desired absolute profit (USD)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      }
+    ],
+    "sections": [
+      {
+        "id": "transaction_rows",
+        "label": "Trade rows (up to 6)",
+        "fields": [
+          {
+            "id": "tx1_qty",
+            "label": "Row 1 — quantity",
+            "type": "integer",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "tx1_price",
+            "label": "Row 1 — price",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "tx2_qty",
+            "label": "Row 2 — quantity",
+            "type": "integer",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "tx2_price",
+            "label": "Row 2 — price",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "tx3_qty",
+            "label": "Row 3 — quantity",
+            "type": "integer",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "tx3_price",
+            "label": "Row 3 — price",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "tx4_qty",
+            "label": "Row 4 — quantity",
+            "type": "integer",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "tx4_price",
+            "label": "Row 4 — price",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "tx5_qty",
+            "label": "Row 5 — quantity",
+            "type": "integer",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "tx5_price",
+            "label": "Row 5 — price",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "tx6_qty",
+            "label": "Row 6 — quantity",
+            "type": "integer",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "tx6_price",
+            "label": "Row 6 — price",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Stock Average Calculator computes weighted average share price, updates averages after additional purchases or sales, and helps estimate target sell prices. It supports both aggregate totals and up to six detailed trade rows for flexible input.",
+      "Results assume the average-cost approach to cost basis unless you track lots (FIFO/LIFO). Use row entry or aggregate totals as appropriate. For tax reporting or lot-level profit calculations, consult your broker or tax advisor."
+    ],
+    "methodology": [
+      "The tool uses weighted-average arithmetic: average price = total cost / total shares. When adding purchases we sum prior cost and new cost, then divide by combined shares.",
+      "For sales, the calculator assumes the average-cost method where cost basis decreases proportionally; realized profit or loss is computed as shares sold × (sale price − average cost). Lot-level accounting (FIFO/LIFO) is outside this calculator's scope."
+    ],
+    "how_is_calculated": [
+      "Weighted average: average = (Σ quantity_i × price_i) / (Σ quantity_i).",
+      "Add purchase: new_average = (current_shares × current_avg_price + new_shares × new_price) / (current_shares + new_shares).",
+      "Sale (average-cost): realized P/L = sold_shares × (sell_price − current_avg_price); remaining_shares = current_shares − sold_shares."
+    ],
+    "examples": [
+      "Aggregate example: 150 shares total cost $1,650 → average = 1650 / 150 = $11.00 per share.",
+      "Add purchase example: hold 100 shares at $10, buy 50 shares at $12 → new average = (100×10 + 50×12) / 150 = $10.67.",
+      "Sale example: hold 100 shares at $10, sell 20 at $15 → realized profit = 20 × (15 − 10) = $100; remaining shares = 80 and average remains $10 under average-cost method."
+    ],
+    "summary": [
+      "Use aggregate mode when you have total shares and total cost. Use row entry for per-trade inputs. Use add-purchase to update average after a new buy, and use sale mode to compute realized P/L assuming average-cost basis.",
+      "This tool is not a substitute for broker lot reports or tax advice. For precise tax treatment, refer to your tax authority and broker statements."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator handle FIFO or LIFO?",
+        "answer": "No. This calculator uses the average-cost approach. For FIFO/LIFO (lot-level) calculations you need transaction-level lot tracking and broker reports; consult your broker or tax advisor for lot-level realized P/L."
+      },
+      {
+        "question": "Are results exact for tax reporting?",
+        "answer": "Results are estimates based on the inputs and assumptions you select. Taxable gain/loss depends on jurisdictional rules, broker lot selection, fees, and applicable tax regulations. Consult a tax professional before filing."
+      },
+      {
+        "question": "Can I include transaction fees and commissions?",
+        "answer": "Yes. For accurate cost basis, add fees to the cost of the corresponding purchase (or subtract from sale proceeds). This calculator treats fees as part of cost when included in the inputs."
+      },
+      {
+        "question": "What rounding and precision does the calculator use?",
+        "answer": "Displayed values are rounded to two decimal places for prices and currency amounts. Underlying calculations use full precision; round-off may produce small differences."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 31000 — Risk management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE standards (numeric computing and formats)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Weighted average price",
+        "definition": "Total cost of shares divided by total number of shares, i.e., (Σ quantity × price) / (Σ quantity)."
+      },
+      {
+        "term": "Cost basis",
+        "definition": "The original value of an investment for tax purposes, usually the purchase price plus fees."
+      },
+      {
+        "term": "Realized profit / loss",
+        "definition": "Profit or loss recognized when shares are sold; computed as sale proceeds minus cost basis for the shares sold."
+      },
+      {
+        "term": "Average-cost method",
+        "definition": "An accounting method where cost basis is averaged across all shares; selling shares reduces holdings and proportional cost basis but leaves per-share average unchanged."
+      },
+      {
+        "term": "Lot-level accounting",
+        "definition": "Accounting that tracks individual purchase lots (e.g., FIFO or LIFO) to determine which specific shares were sold and the corresponding cost basis."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/finance/average-cost-method",
+      "/guides/tax-basis-and-lot-accounting"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000 Risk Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculation"
+    ]
+  }
+}

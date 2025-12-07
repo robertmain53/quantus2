@@ -1,0 +1,552 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan Refinance & Bi‑Weekly Payment Comparison",
+    "description": "Compare your current business loan to a refinanced loan or to switching payment frequency (monthly ↔ bi‑weekly). Outputs include periodic payment amounts, total interest, interest savings, annual cash flow impact, break‑even time for closing costs, and payoff time saved. Designed for clarity, traceable formulas, and conservative assumptions — not a substitute for lender quotes or accounting advice."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "refinance_compare",
+    "methods": {
+      "refinance_compare": {
+        "label": "Refinance / Switch frequency comparison",
+        "description": "Compare your existing loan (remaining balance, rate, remaining years, current payments per year) against a proposed refinanced loan (new rate, term, payments per year). Includes closing costs and prepayment penalties rolled into financed principal if selected.",
+        "variables": {
+          "payments_per_year_existing": {
+            "expression": "existing_payments_per_year",
+            "dependencies": [
+              "existing_payments_per_year"
+            ],
+            "label": "Existing payments per year",
+            "unit": "payments/year",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate_existing": {
+            "expression": "existing_annual_rate/100 / payments_per_year_existing",
+            "dependencies": [
+              "existing_annual_rate",
+              "payments_per_year_existing"
+            ],
+            "label": "Existing periodic interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "n_existing": {
+            "expression": "existing_remaining_years * payments_per_year_existing",
+            "dependencies": [
+              "existing_remaining_years",
+              "payments_per_year_existing"
+            ],
+            "label": "Remaining number of existing payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "payment_existing": {
+            "expression": "existing_balance * (periodic_rate_existing) / (1 - (1 + periodic_rate_existing) ^ (-n_existing))",
+            "dependencies": [
+              "existing_balance",
+              "periodic_rate_existing",
+              "n_existing"
+            ],
+            "label": "Existing periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_existing": {
+            "expression": "payment_existing * n_existing",
+            "dependencies": [
+              "payment_existing",
+              "n_existing"
+            ],
+            "label": "Total amount paid remaining (existing)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_existing": {
+            "expression": "total_paid_existing - existing_balance",
+            "dependencies": [
+              "total_paid_existing",
+              "existing_balance"
+            ],
+            "label": "Total interest remaining (existing)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "principal_new": {
+            "expression": "existing_balance + closing_costs + prepay_penalty",
+            "dependencies": [
+              "existing_balance",
+              "closing_costs",
+              "prepay_penalty"
+            ],
+            "label": "Financed principal for new loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payments_per_year_new": {
+            "expression": "new_payments_per_year",
+            "dependencies": [
+              "new_payments_per_year"
+            ],
+            "label": "New payments per year",
+            "unit": "payments/year",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate_new": {
+            "expression": "new_annual_rate/100 / payments_per_year_new",
+            "dependencies": [
+              "new_annual_rate",
+              "payments_per_year_new"
+            ],
+            "label": "New periodic interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "n_new": {
+            "expression": "new_term_years * payments_per_year_new",
+            "dependencies": [
+              "new_term_years",
+              "payments_per_year_new"
+            ],
+            "label": "Number of payments for new loan",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "payment_new": {
+            "expression": "principal_new * (periodic_rate_new) / (1 - (1 + periodic_rate_new) ^ (-n_new))",
+            "dependencies": [
+              "principal_new",
+              "periodic_rate_new",
+              "n_new"
+            ],
+            "label": "New periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_new": {
+            "expression": "payment_new * n_new",
+            "dependencies": [
+              "payment_new",
+              "n_new"
+            ],
+            "label": "Total amount paid (new loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_new": {
+            "expression": "total_paid_new - principal_new",
+            "dependencies": [
+              "total_paid_new",
+              "principal_new"
+            ],
+            "label": "Total interest (new loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings": {
+            "expression": "total_interest_existing - total_interest_new",
+            "dependencies": [
+              "total_interest_existing",
+              "total_interest_new"
+            ],
+            "label": "Interest savings over life of loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_payment_existing": {
+            "expression": "payment_existing * payments_per_year_existing",
+            "dependencies": [
+              "payment_existing",
+              "payments_per_year_existing"
+            ],
+            "label": "Annual payment (existing loan)",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": false
+          },
+          "annual_payment_new": {
+            "expression": "payment_new * payments_per_year_new",
+            "dependencies": [
+              "payment_new",
+              "payments_per_year_new"
+            ],
+            "label": "Annual payment (new loan)",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": false
+          },
+          "annual_cashflow_savings": {
+            "expression": "annual_payment_existing - annual_payment_new",
+            "dependencies": [
+              "annual_payment_existing",
+              "annual_payment_new"
+            ],
+            "label": "Annual cash flow savings (existing vs new)",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": true
+          },
+          "break_even_years": {
+            "expression": "total_cash_outlay / annual_cashflow_savings",
+            "dependencies": [
+              "total_cash_outlay",
+              "annual_cashflow_savings"
+            ],
+            "label": "Break‑even time for closing costs (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_cash_outlay": {
+            "expression": "closing_costs + prepay_penalty",
+            "dependencies": [
+              "closing_costs",
+              "prepay_penalty"
+            ],
+            "label": "Total cash outlay to refinance",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payoff_time_saved_years": {
+            "expression": "existing_remaining_years - (n_new / payments_per_year_new)",
+            "dependencies": [
+              "existing_remaining_years",
+              "n_new",
+              "payments_per_year_new"
+            ],
+            "label": "Estimated payoff time saved (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_existing",
+            "label": "Existing periodic payment",
+            "variable": "payment_existing",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payment_new",
+            "label": "New periodic payment",
+            "variable": "payment_new",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_existing",
+            "label": "Total interest remaining (existing)",
+            "variable": "total_interest_existing",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_new",
+            "label": "Total interest (new loan)",
+            "variable": "total_interest_new",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings",
+            "label": "Interest savings (life of loan)",
+            "variable": "interest_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_cashflow_savings",
+            "label": "Estimated annual cash flow savings",
+            "variable": "annual_cashflow_savings",
+            "unit": "currency/year",
+            "format": "currency"
+          },
+          {
+            "id": "break_even_years",
+            "label": "Break‑even (years) for closing costs",
+            "variable": "break_even_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "payoff_time_saved_years",
+            "label": "Estimated payoff time saved (years)",
+            "variable": "payoff_time_saved_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "principal_new",
+            "label": "Financed principal for new loan",
+            "variable": "principal_new",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "existing_balance",
+        "label": "Existing loan remaining balance",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "existing_annual_rate",
+        "label": "Existing annual interest rate (APR %) ",
+        "type": "number",
+        "default": 6.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "existing_remaining_years",
+        "label": "Remaining term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "existing_payments_per_year",
+        "label": "Existing payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "new_annual_rate",
+        "label": "Proposed new annual interest rate (APR %)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "new_term_years",
+        "label": "Proposed new loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "new_payments_per_year",
+        "label": "Proposed payments per year",
+        "type": "integer",
+        "default": 26,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "closing_costs",
+        "label": "Estimated closing costs for refinance",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "prepay_penalty",
+        "label": "Estimated prepayment penalty (if any)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "payment_existing",
+          "label": "Existing periodic payment",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "payment_new",
+          "label": "New periodic payment",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "total_interest_existing",
+          "label": "Total interest remaining (existing)",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "total_interest_new",
+          "label": "Total interest (new loan)",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "interest_savings",
+          "label": "Interest savings (life of loan)",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "annual_cashflow_savings",
+          "label": "Estimated annual cash flow savings",
+          "format": "currency",
+          "unit": "/year"
+        },
+        {
+          "id": "break_even_years",
+          "label": "Break‑even for closing costs (years)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "payoff_time_saved_years",
+          "label": "Estimated payoff time saved (years)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "principal_new",
+          "label": "Financed principal for new loan",
+          "format": "currency",
+          "unit": ""
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps business borrowers compare their current loan against a refinanced loan or a change in payment frequency (for example, switching from monthly to bi‑weekly payments). It reports periodic payment amounts, total interest over the remaining life of each loan, estimated annual cash flow impact, interest savings, and an estimated break‑even period for any closing costs or prepayment penalties.",
+      "Results are computed using standard amortization formulas and conservative assumptions. Use them for planning and initial comparison only. Always obtain official pay‑off figures and loan terms from your lender and consult an accountant or financial advisor before refinancing."
+    ],
+    "methodology": [
+      "Periodic payments are calculated using the standard amortizing loan formula with the periodic interest rate = annual APR / payments per year, and the number of payments = term years × payments per year. The financed principal for the new loan includes the remaining balance plus optional closing costs and prepayment penalties when indicated.",
+      "This tool follows software quality and accuracy best practices: calculation formulas are explicit and reproducible, inputs are validated for plausible ranges, and results include clear caveats. For operational security and data handling, follow applicable standards such as NIST guidance for secure systems and ISO/IEC standards for quality management where relevant. This tool is informational and not a regulated loan disclosure."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = (Annual APR %) / 100 / payments_per_year",
+      "Number of payments = term_years × payments_per_year",
+      "Periodic payment = principal × (periodic_rate) / (1 - (1 + periodic_rate) ^ (-number_of_payments))",
+      "Total interest = (periodic payment × number_of_payments) - principal",
+      "Annual cash flow savings = (periodic payment_existing × payments_per_year_existing) - (periodic payment_new × payments_per_year_new)",
+      "Break‑even (years) = (closing costs + prepayment penalties) / annual cash flow savings"
+    ],
+    "examples": [
+      "Example: $100,000 remaining at 6% APR with 5 years remaining (monthly) vs refinancing to 5% APR for 5 years with bi‑weekly payments and $1,000 closing costs. The calculator shows periodic payments for each scenario, total interest across each loan, estimated interest savings, and how many years until the $1,000 closing cost is recovered by lower annual payments.",
+      "If annual cash flow savings is zero or negative (i.e., new loan increases annual payments), break‑even is not meaningful and the calculator will show a non‑positive value; in such a case refinancing may not improve cash flow."
+    ],
+    "faqs": [
+      {
+        "question": "Does switching to bi‑weekly payments always save money?",
+        "answer": "Switching to bi‑weekly payments increases the number of payments per year (26 vs 12) which can reduce interest over time if the loan amortizes with each payment and you do not simply split a monthly payment into two. Savings depend on whether the lender applies payments toward principal immediately and whether the payment amount changes."
+      },
+      {
+        "question": "Are the results exact lender quotes?",
+        "answer": "No. Results are estimates based on the inputs and standard amortization math. Lenders may use different day count conventions, rounding, fees, or apply payments differently. Always request a payoff statement and a written loan estimate from the lender."
+      },
+      {
+        "question": "What if the periodic interest rate is zero?",
+        "answer": "The calculator uses the standard amortization formula which assumes a non‑zero interest rate. A zero‑interest loan simplifies to principal divided by number of payments. If you enter 0% APR, interpret results accordingly and verify arithmetic."
+      },
+      {
+        "question": "Is this tool compliant with regulatory guidance?",
+        "answer": "This tool is informational and not a regulated disclosure. It is designed with traceable formulas and accuracy caveats. For regulated disclosures, rely on lender documents and applicable consumer protection laws."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Computer Security and Software Quality Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Standards for Quality and Information Security",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA - Workplace Safety and Operational Guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied to each payment period, calculated as APR divided by the number of payments per year."
+      },
+      {
+        "term": "Number of payments",
+        "definition": "Total count of remaining payments equal to remaining years multiplied by payments per year."
+      },
+      {
+        "term": "Financed principal (new loan)",
+        "definition": "Existing loan balance plus any closing costs and prepayment penalties rolled into the new loan if selected."
+      },
+      {
+        "term": "Annual cash flow savings",
+        "definition": "Difference between the annual cost of payments under the existing loan versus the proposed loan; useful to estimate how fast upfront costs are recovered."
+      }
+    ],
+    "summary": [
+      "This calculator uses standard amortization formulas to compare existing and proposed loans, supporting comparisons that involve changing payment frequency (e.g., monthly to bi‑weekly) and rolling costs into a refinance.",
+      "Treat outputs as planning estimates. Confirm numbers with lenders and advisors before making refinance decisions."
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ],
+    "internal": [
+      "/calculators/loans/mortgage-payment",
+      "/guides/refinance/checklist"
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculation"
+    ]
+  }
+}

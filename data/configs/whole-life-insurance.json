@@ -1,0 +1,386 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Whole Life Insurance Calculator (Illustrative, Multi‑Method)",
+    "description": "Estimate projected cash value, net death benefit, or an illustrative annual premium for a whole life policy using user inputs and simple financial projection assumptions. Results are illustrative and not a policy quote."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "projection",
+    "methods": {
+      "projection": {
+        "label": "Projection from Annual Premium (Illustrative)",
+        "description": "Projects policy cash value and an illustrative net death benefit after a specified number of years using an assumed annual return and an expense ratio. This method assumes level annual premiums and compounding at the net assumed rate. It does not model insurer mortality charges, dividends, or guaranteed vs non‑guaranteed components in detail.",
+        "variables": {
+          "effective_decimal": {
+            "expression": "(assumed_return - expense_ratio)/100",
+            "dependencies": [
+              "assumed_return",
+              "expense_ratio"
+            ],
+            "label": "Net annual return (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "annuity_factor": {
+            "expression": "((1+effective_decimal)**projection_years - 1)/effective_decimal",
+            "dependencies": [
+              "effective_decimal",
+              "projection_years"
+            ],
+            "label": "Annuity accumulation factor",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "accumulated_premiums": {
+            "expression": "annual_premium * annuity_factor",
+            "dependencies": [
+              "annual_premium",
+              "annuity_factor"
+            ],
+            "label": "Accumulated premiums (no mortality/fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "projected_cash_value": {
+            "expression": "current_cash_value*(1+effective_decimal)**projection_years + accumulated_premiums",
+            "dependencies": [
+              "current_cash_value",
+              "effective_decimal",
+              "projection_years",
+              "accumulated_premiums"
+            ],
+            "label": "Projected cash value after projection years",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "projected_net_death_benefit": {
+            "expression": "desired_death_benefit + projected_cash_value - outstanding_loan",
+            "dependencies": [
+              "desired_death_benefit",
+              "projected_cash_value",
+              "outstanding_loan"
+            ],
+            "label": "Illustrative net death benefit",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_cash_value",
+            "label": "Projected cash value",
+            "variable": "projected_cash_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_net_death_benefit",
+            "label": "Illustrative net death benefit",
+            "variable": "projected_net_death_benefit",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "estimate_premium": {
+        "label": "Estimated Level Annual Premium for Target Death Benefit (Illustrative)",
+        "description": "Provides an illustrative estimate of a level annual premium that, at the assumed net return and over the projection horizon, would accumulate (together with existing cash value) toward the target death benefit. This is a simplified funding model and excludes insurer mortality charges, guaranteed vs non‑guaranteed splits, dividends, and policy fees.",
+        "variables": {
+          "effective_decimal": {
+            "expression": "(assumed_return - expense_ratio)/100",
+            "dependencies": [
+              "assumed_return",
+              "expense_ratio"
+            ],
+            "label": "Net annual return (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "denominator": {
+            "expression": "((1+effective_decimal)**projection_years - 1)",
+            "dependencies": [
+              "effective_decimal",
+              "projection_years"
+            ],
+            "label": "Denominator for level premium formula",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "required_annual_premium": {
+            "expression": "(desired_death_benefit - current_cash_value + outstanding_loan) * effective_decimal / denominator",
+            "dependencies": [
+              "desired_death_benefit",
+              "current_cash_value",
+              "outstanding_loan",
+              "effective_decimal",
+              "denominator"
+            ],
+            "label": "Estimated level annual premium",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_projected_cash_value": {
+            "expression": "current_cash_value*(1+effective_decimal)**projection_years + required_annual_premium * (denominator / effective_decimal)",
+            "dependencies": [
+              "current_cash_value",
+              "effective_decimal",
+              "projection_years",
+              "required_annual_premium",
+              "denominator"
+            ],
+            "label": "Projected cash value using estimated premium",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_annual_premium",
+            "label": "Estimated level annual premium (illustrative)",
+            "variable": "required_annual_premium",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_projected_cash_value",
+            "label": "Projected cash value using that premium",
+            "variable": "estimated_projected_cash_value",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "age",
+        "label": "Age",
+        "type": "integer",
+        "default": 40,
+        "min": 18,
+        "max": 90,
+        "step": 1
+      },
+      {
+        "id": "gender",
+        "label": "Gender",
+        "type": "select",
+        "default": "other",
+        "options": [
+          {
+            "label": "Male",
+            "value": "male"
+          },
+          {
+            "label": "Female",
+            "value": "female"
+          },
+          {
+            "label": "Other / Prefer not to say",
+            "value": "other"
+          }
+        ]
+      },
+      {
+        "id": "tobacco_use",
+        "label": "Tobacco use",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "annual_premium",
+        "label": "Annual premium you plan to pay (USD)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "desired_death_benefit",
+        "label": "Desired death benefit / face amount (USD)",
+        "type": "number",
+        "default": 500000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "current_cash_value",
+        "label": "Current policy cash value (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "outstanding_loan",
+        "label": "Outstanding policy loan (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "assumed_return",
+        "label": "Assumed gross annual return (percent)",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "max": 15,
+        "step": 0.1
+      },
+      {
+        "id": "expense_ratio",
+        "label": "Assumed annual expense load (percent)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "projection_years",
+        "label": "Projection horizon (years)",
+        "type": "integer",
+        "default": 20,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Whole Life Insurance Calculator provides illustrative estimates for projected cash value and net death benefit or an illustrative level annual premium based on the inputs you provide. It uses simplified financial projection assumptions and is intended for planning and comparison, not as a policy quote.",
+      "Results assume constant annual returns and level premiums for the projection horizon. The tool does not model insurer mortality charges, guaranteed versus non‑guaranteed splits, dividend scale changes, or policy‑specific fees. For a formal illustration or a binding quote, contact a licensed insurance representative or the issuing company."
+    ],
+    "methodology": [
+      "The calculator offers two methods: a projection method that accumulates existing cash value and level annual premiums at an assumed net return, and an estimating method that computes an illustrative level annual premium required to meet a target face amount over the projection horizon.",
+      "Net return is modeled as Assumed gross annual return minus the assumed expense load, converted to a decimal. Premium accumulation uses a standard future value of an annuity formula under the net return assumption. This is a simplified funding approximation and does not replace insurer illustrations or actuarial valuations."
+    ],
+    "how_is_calculated": [
+      "Effective net rate (decimal) = (assumed_return percent - expense_ratio percent) / 100.",
+      "Accumulated premiums = annual_premium * (((1 + effective_net_rate) ** projection_years - 1) / effective_net_rate).",
+      "Projected cash value = current_cash_value * (1 + effective_net_rate) ** projection_years + Accumulated premiums.",
+      "Estimated annual premium (illustrative) = (desired_death_benefit - current_cash_value + outstanding_loan) * effective_net_rate / ((1 + effective_net_rate) ** projection_years - 1).",
+      "If the effective net rate is zero, formulas that divide by the net rate are undefined; in that case a linear (no‑growth) accumulation interpretation is required and results will differ materially."
+    ],
+    "faqs": [
+      {
+        "question": "Is this a guaranteed quote?",
+        "answer": "No. This tool provides illustrative projections only. Actual policy guarantees, non‑guaranteed dividends, fees, and insurer mortality charges are determined by the issuing insurer and shown on a formal policy illustration."
+      },
+      {
+        "question": "Why are dividends and insurer charges not modeled?",
+        "answer": "Dividends and mortality/expense loadings vary by insurer, policy class, and are often partly discretionary. Accurately modeling them requires insurer‑specific illustrations or actuarial assumptions that are beyond a generic public calculator."
+      },
+      {
+        "question": "What if I enter a zero or very small assumed return?",
+        "answer": "If the net assumed return is zero, formulas that divide by the net rate are not valid and the calculator may produce large or undefined estimates. Use a positive net return or interpret outputs with caution. See methodology for details."
+      },
+      {
+        "question": "How should I use the estimated premium result?",
+        "answer": "Use the estimated annual premium as a planning reference only. It is an illustration of funding needed under the tool's assumptions to reach a target face amount over the chosen horizon. Obtain a formal illustration from a licensed provider before making decisions."
+      },
+      {
+        "question": "How is my data handled and secured?",
+        "answer": "This tool is intended to be embedded in environments that follow standard security best practices. Data handling should conform to recognized frameworks such as NIST and ISO information security guidance. Do not submit sensitive personal identifiers here unless you trust the host site."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO/IEC 27001 Information security management",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE Standards Overview",
+        "url": "https://www.ieee.org/about/ieee/standards/index.html"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Cash value",
+        "definition": "The savings component of a whole life policy that accumulates over time and may be available to the policyholder via surrender or policy loans."
+      },
+      {
+        "term": "Face amount / Death benefit",
+        "definition": "The nominal death benefit amount specified in the policy. Some policies pay face amount plus accumulated cash value; others pay face amount only. Check your policy contract."
+      },
+      {
+        "term": "Net death benefit",
+        "definition": "Illustrative death benefit after accounting for projected cash value and outstanding policy loans, as used by this calculator for planning purposes."
+      },
+      {
+        "term": "Projection horizon",
+        "definition": "The number of years into the future for which the calculator projects cash value and death benefit."
+      },
+      {
+        "term": "Non‑guaranteed elements",
+        "definition": "Policy features such as dividends or certain interest crediting rates that are declared by the insurer and are not contractually guaranteed."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/isoiec-27001-information-security.html",
+        "label": "ISO/IEC 27001 Information security",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/about/ieee/standards/index.html",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

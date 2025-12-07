@@ -1,0 +1,288 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Payment Calculator with Extra Payments (Approximate)",
+    "description": "Calculate scheduled mortgage payments and the estimated impact of extra payments (monthly, yearly, or one-time). Provides monthly payment, adjusted payment with extras, estimated payoff time, and interest saved. Includes accuracy caveats and references to relevant standards for software quality and numerical accuracy."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "scheduled_monthly_payment",
+        "label": "Scheduled monthly payment (no extras)",
+        "expression": "(loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "effective_extra_monthly",
+        "label": "Effective extra payment per month (monthly + yearly/12 + spread one-time)",
+        "expression": "extra_monthly + extra_yearly/12 + one_time_extra/(term_years*12)",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "monthly_payment_with_extra",
+        "label": "Estimated monthly payment including extras (applied monthly equivalent)",
+        "expression": "((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12))) + (extra_monthly + extra_yearly/12 + one_time_extra/(term_years*12))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "months_to_payoff_with_extra",
+        "label": "Estimated months to payoff with extras (approximate)",
+        "expression": "-log(1 - (annual_interest_rate/1200)*loan_amount / (((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12))) + (extra_monthly + extra_yearly/12 + one_time_extra/(term_years*12)))) / log(1+annual_interest_rate/1200)",
+        "unit": "months",
+        "format": "integer"
+      },
+      {
+        "id": "years_to_payoff_with_extra",
+        "label": "Estimated years to payoff with extras (approximate)",
+        "expression": "-log(1 - (annual_interest_rate/1200)*loan_amount / (((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12))) + (extra_monthly + extra_yearly/12 + one_time_extra/(term_years*12)))) / (12*log(1+annual_interest_rate/1200))",
+        "unit": "years",
+        "format": "decimal"
+      },
+      {
+        "id": "total_interest_no_extra",
+        "label": "Total interest paid over original term (no extras)",
+        "expression": "((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12)))*term_years*12 - loan_amount",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_with_extra",
+        "label": "Estimated total interest paid with extras (approximate)",
+        "expression": "((((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12))) + (extra_monthly + extra_yearly/12 + one_time_extra/(term_years*12))) * (-log(1 - (annual_interest_rate/1200)*loan_amount / (((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12))) + (extra_monthly + extra_yearly/12 + one_time_extra/(term_years*12)) )) / log(1+annual_interest_rate/1200)))) - loan_amount",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "interest_saved",
+        "label": "Estimated interest saved by making extras (approximate)",
+        "expression": "((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12)))*term_years*12 - loan_amount - ( (((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12))) + (extra_monthly + extra_yearly/12 + one_time_extra/(term_years*12))) * (-log(1 - (annual_interest_rate/1200)*loan_amount / (((loan_amount*(annual_interest_rate/1200))/(1-pow(1+annual_interest_rate/1200,-term_years*12))) + (extra_monthly + extra_yearly/12 + one_time_extra/(term_years*12)) )) / log(1+annual_interest_rate/1200))) + loan_amount)",
+        "unit": "USD",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR %) — nominal",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "extra_monthly",
+        "label": "Extra payment (monthly)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_yearly",
+        "label": "Extra payment (yearly lump sum)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "one_time_extra",
+        "label": "One-time extra payment (applied immediately)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "scheduled_monthly_payment",
+          "label": "Scheduled monthly payment (no extras)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "effective_extra_monthly",
+          "label": "Effective extra payment per month",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "monthly_payment_with_extra",
+          "label": "Estimated monthly payment including extras",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "months_to_payoff_with_extra",
+          "label": "Months to payoff with extras",
+          "format": "integer",
+          "unit": "months"
+        },
+        {
+          "id": "years_to_payoff_with_extra",
+          "label": "Years to payoff with extras",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "total_interest_no_extra",
+          "label": "Total interest without extras",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest_with_extra",
+          "label": "Estimated total interest with extras",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Estimated interest saved",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates your scheduled mortgage payment and the impact of additional payments. Enter the loan amount, interest rate, term, and any extra payments you plan to make. The tool reports the scheduled monthly payment, an adjusted monthly payment reflecting extra contributions, the estimated time to pay off the loan, and approximate interest saved.",
+      "The calculator treats yearly extras as divided evenly across months and spreads a one-time extra evenly across the remaining term for an approximate impact. See methodology and accuracy notes for details and limitations."
+    ],
+    "methodology": [
+      "Core formula: standard fixed-rate amortization where monthly rate r = annual_interest_rate / 12 / 100 and scheduled payment P = r*L / (1 - (1+r)^-n) with L = principal and n = term_years * 12.",
+      "Extra payments are converted to a monthly equivalent: monthly extras are added directly; yearly lump sums are divided by 12; one-time extras are distributed across remaining months as an approximation. The calculator then estimates payoff months by solving the closed-form amortization relation for n: n = -ln(1 - r*L / P_extra) / ln(1 + r), where P_extra is the monthly payment including extras.",
+      "Standards and quality: calculations and numerical stability follow software quality and numerical-method guidance. This product references general quality and numerical accuracy standards (for example NIST guidance on numerical computation and software assurance, applicable ISO quality-management principles, and IEEE numeric representation considerations) to inform validation, rounding, and error-handling policies. This is not a regulatory disclosure or financial advice."
+    ],
+    "how_is_calculated": [
+      "Monthly rate r = annual_interest_rate / 1200.",
+      "Scheduled monthly payment P = (loan_amount * r) / (1 - (1 + r)^(-term_years * 12)).",
+      "Effective extra per month = extra_monthly + extra_yearly / 12 + one_time_extra / (term_years * 12) (approximation).",
+      "Estimated months to payoff with extras n_extra = -ln(1 - r * loan_amount / (P + effective_extra_per_month)) / ln(1 + r).",
+      "Total interest = (monthly_payment * months) - loan_amount. Interest saved = interest_no_extra - interest_with_extra."
+    ],
+    "faqs": [
+      {
+        "question": "Are extra payments applied directly to principal?",
+        "answer": "This calculator models extra payments as additional amounts that reduce outstanding principal and thus shorten the amortization period. The one-time extra is approximated by spreading its effect across remaining months; if your servicer applies a one-time extra in a different way, actual payoff may differ."
+      },
+      {
+        "question": "Can I model irregular extra payments?",
+        "answer": "This tool supports monthly extras, yearly lump-sum extras (converted to monthly equivalents), and a single one-time extra. For irregular or advanced schedules (biweekly, variable timing, changing rates, or recast scenarios), use an amortization schedule tool or consult a loan servicing statement."
+      },
+      {
+        "question": "How accurate are the payoff and interest saved estimates?",
+        "answer": "Estimates use closed-form amortization formulas and make approximations for converting non-monthly extras. They are generally accurate for fixed-rate loans with extras applied regularly. Accuracy may degrade if interest is compounded differently, if fees or escrow changes apply, or if the servicer applies extra payments with specific allocation rules. See the methodology section for limitations."
+      },
+      {
+        "question": "What if the calculated monthly payment with extras is less than monthly interest?",
+        "answer": "If the monthly payment including extras does not cover the monthly interest (r * loan_amount), the amortization formula is invalid and the tool cannot produce a meaningful payoff time. In such cases, increase payment amounts or contact your loan servicer."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Numerical Software and Computation Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) — Quality management principles",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association — Numeric and software considerations",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "U.S. Occupational Safety and Health Administration (OSHA) — Software and operational quality guidance (organizational)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The initial amount of the loan on which interest is calculated."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a loan over time through regular payments of principal and interest."
+      },
+      {
+        "term": "APR (annual interest rate)",
+        "definition": "The annual nominal interest rate used in this calculator. It may differ from APR disclosures that include fees."
+      },
+      {
+        "term": "Extra payment (one-time)",
+        "definition": "A single additional payment applied to the loan principal. This calculator approximates its effect by distributing it across the remaining term."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

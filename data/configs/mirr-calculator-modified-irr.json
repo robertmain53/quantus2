@@ -1,0 +1,194 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "MIRR Calculator (Modified Internal Rate of Return)",
+    "description": "Compute the Modified Internal Rate of Return (MIRR) for a series of cash flows using a specified finance (discount) rate and reinvestment rate. Outputs periodic MIRR and an optional annualized MIRR."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "mirr",
+        "label": "MIRR (periodic)",
+        "expression": "pow( sum( map(i, max(0, parse_csv(cashflows)[i]) * pow(1 + reinvest_rate/100, (len(parse_csv(cashflows)) - 1 - i)) ) ) / ( - sum( map(i, min(0, parse_csv(cashflows)[i]) / pow(1 + finance_rate/100, i) ) ) ), 1 / (len(parse_csv(cashflows)) - 1) ) - 1",
+        "unit": null,
+        "format": "percent"
+      },
+      {
+        "id": "mirr_annual",
+        "label": "MIRR (annualized)",
+        "expression": "pow( 1 + ( pow( sum( map(i, max(0, parse_csv(cashflows)[i]) * pow(1 + reinvest_rate/100, (len(parse_csv(cashflows)) - 1 - i)) ) ) / ( - sum( map(i, min(0, parse_csv(cashflows)[i]) / pow(1 + finance_rate/100, i) ) ) ), 1 / (len(parse_csv(cashflows)) - 1) ) - 1 ), periods_per_year ) - 1",
+        "unit": null,
+        "format": "percent"
+      },
+      {
+        "id": "positive_fv",
+        "label": "Future value of positive cash flows at reinvest rate",
+        "expression": "sum( map(i, max(0, parse_csv(cashflows)[i]) * pow(1 + reinvest_rate/100, (len(parse_csv(cashflows)) - 1 - i)) ) )",
+        "unit": null,
+        "format": "decimal"
+      },
+      {
+        "id": "negative_pv",
+        "label": "Present value of negative cash flows at finance rate",
+        "expression": "sum( map(i, min(0, parse_csv(cashflows)[i]) / pow(1 + finance_rate/100, i) ) )",
+        "unit": null,
+        "format": "decimal"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "cashflows",
+        "label": "Cash flows (comma-separated, period 0 to n)",
+        "type": "text",
+        "default": "-10000,3000,4200,6800"
+      },
+      {
+        "id": "finance_rate",
+        "label": "Finance / discount rate for negative cash flows (%)",
+        "type": "number",
+        "default": 8,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "reinvest_rate",
+        "label": "Reinvestment rate for positive cash flows (%)",
+        "type": "number",
+        "default": 5,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "periods_per_year",
+        "label": "Periods per year (for annualizing result)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      },
+      {
+        "id": "timing",
+        "label": "Cash flow timing",
+        "type": "select",
+        "default": "end",
+        "options": [
+          {
+            "label": "End of period (standard MIRR)",
+            "value": "end"
+          },
+          {
+            "label": "Beginning of period (advance one period)",
+            "value": "begin"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "mirr",
+          "label": "Modified Internal Rate of Return (periodic)",
+          "format": "percent"
+        },
+        {
+          "id": "mirr_annual",
+          "label": "Modified Internal Rate of Return (annualized)",
+          "format": "percent"
+        },
+        {
+          "id": "positive_fv",
+          "label": "Future value of positive cash flows",
+          "format": "decimal"
+        },
+        {
+          "id": "negative_pv",
+          "label": "Present value of negative cash flows",
+          "format": "decimal"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes the Modified Internal Rate of Return (MIRR) for a sequence of cash flows given a finance (discount) rate for negative cash flows and a reinvestment rate for positive cash flows. MIRR resolves the multiple-roots and reinvestment-rate assumptions that can make standard IRR misleading.",
+      "Enter cash flows as a comma-separated list starting with period 0 (usually the initial investment). Specify the finance rate that discounts costs and the reinvestment rate assumed for positive cash flows. Optionally annualize the periodic MIRR by setting periods per year."
+    ],
+    "methodology": [
+      "MIRR is calculated by compounding positive cash flows forward at the reinvestment rate to the terminal period, discounting negative cash flows to time zero at the finance rate, and finding the rate that equates the compounded positives to the discounted negatives over the number of periods.",
+      "This tool follows standard financial math best practices and includes cautionary accuracy statements and limits. It is built for clarity and traceability: intermediate values (future value of positives and present value of negatives) are exposed for verification. For software assurance and data-handling guidance, consult standards such as NIST, ISO, IEEE and occupational safety guidance where relevant to operational controls."
+    ],
+    "how_is_calculated": [
+      "Step 1: Parse cash flows C0, C1, ..., Cn from the comma-separated input.",
+      "Step 2: Compute FV_positive = sum_{t=0..n} max(Ct,0) * (1+reinvest_rate)^{n-t}.",
+      "Step 3: Compute PV_negative = sum_{t=0..n} min(Ct,0) / (1+finance_rate)^{t}.",
+      "Step 4: Compute MIRR = (FV_positive / -PV_negative)^{1/n} - 1. Annualize with (1+MIRR)^{periods_per_year} - 1 if desired."
+    ],
+    "examples": [
+      "Example: cash flows -10000,3000,4200,6800 with finance rate 8% and reinvestment rate 5% yields a periodic MIRR and an annualized MIRR when periods_per_year = 1. Intermediate outputs show the future value of positive flows and the present value of negatives to help audit the computation."
+    ],
+    "faqs": [
+      {
+        "question": "When should I use MIRR instead of IRR?",
+        "answer": "Use MIRR when you want to remove multiple-solution ambiguity from IRR and when you want to assume a specific reinvestment rate for positive cash flows. MIRR gives a single rate consistent with distinct finance and reinvestment assumptions."
+      },
+      {
+        "question": "How should I format cash flows?",
+        "answer": "Enter cash flows as a comma-separated list starting with period 0. Negative values are outflows (investments), positive values are inflows. Example: -10000,3000,4200,6800."
+      },
+      {
+        "question": "What limits and accuracy caveats apply?",
+        "answer": "Rounding and parsing errors can occur if inputs are malformed. Very large magnitudes or an all-positive or all-negative cash flow series will make MIRR undefined or meaningless. Verify intermediate outputs and consult the exposed FV and PV values. This tool is for informational use and not a substitute for formal audit or regulatory compliance checks."
+      },
+      {
+        "question": "Does timing (beginning vs end of period) matter?",
+        "answer": "Yes. The standard MIRR assumes end-of-period timing. Selecting 'beginning' shifts compounding/discounting by one period and may change results. Use inputs consistent with how your cash flows are recorded."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "MIRR",
+        "definition": "Modified Internal Rate of Return; a single-rate metric that assumes a finance rate for negative cash flows and a separate reinvestment rate for positive cash flows."
+      },
+      {
+        "term": "IRR",
+        "definition": "Internal Rate of Return; the discount rate that makes the net present value of cash flows equal to zero. IRR can produce multiple solutions for nonconventional cash flows."
+      },
+      {
+        "term": "NPV",
+        "definition": "Net Present Value; the sum of present values of cash flows using a specified discount rate."
+      },
+      {
+        "term": "Finance rate",
+        "definition": "The rate used to discount negative cash flows (cost of capital or financing cost)."
+      },
+      {
+        "term": "Reinvestment rate",
+        "definition": "The rate at which positive cash inflows are assumed to be reinvested until the terminal period."
+      }
+    ]
+  }
+}

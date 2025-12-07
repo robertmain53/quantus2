@@ -1,0 +1,716 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Extra Payments Calculator (Amortization & Payoff Impact)",
+    "description": "Estimate how one-time, recurring, or annual extra payments change your mortgage payoff date, total interest paid, and years saved. Includes configurable inputs for loan amount, rate, term, and multiple extra-payment scenarios. Results are estimates only; verify with your servicer."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "recurring_extra",
+    "methods": {
+      "recurring_extra": {
+        "label": "Recurring Extra Payment (monthly)",
+        "description": "Assumes an additional fixed amount added to each monthly payment starting immediately.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_interest_rate/100/12",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "n_payments": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total scheduled payments (months)",
+            "format": "integer",
+            "display": true
+          },
+          "scheduled_payment": {
+            "expression": "principal * (monthly_rate) / (1 - pow(1 + monthly_rate, -n_payments))",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "n_payments"
+            ],
+            "label": "Scheduled monthly payment (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "scheduled_total": {
+            "expression": "scheduled_payment + extra_amount",
+            "dependencies": [
+              "scheduled_payment",
+              "extra_amount"
+            ],
+            "label": "Monthly payment including recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_months": {
+            "expression": "(-log(1 - monthly_rate * principal / scheduled_total) / log(1 + monthly_rate))",
+            "dependencies": [
+              "monthly_rate",
+              "principal",
+              "scheduled_total"
+            ],
+            "label": "Estimated months to payoff with recurring extra (exact)",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_months_rounded": {
+            "expression": "ceil(payoff_months)",
+            "dependencies": [
+              "payoff_months"
+            ],
+            "label": "Estimated months to payoff with recurring extra (rounded up)",
+            "format": "integer",
+            "display": true
+          },
+          "total_interest_original": {
+            "expression": "scheduled_payment * n_payments - principal",
+            "dependencies": [
+              "scheduled_payment",
+              "n_payments",
+              "principal"
+            ],
+            "label": "Total interest if no extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_with_extra": {
+            "expression": "scheduled_total * payoff_months_rounded - principal",
+            "dependencies": [
+              "scheduled_total",
+              "payoff_months_rounded",
+              "principal"
+            ],
+            "label": "Estimated total interest with recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_original - total_interest_with_extra",
+            "dependencies": [
+              "total_interest_original",
+              "total_interest_with_extra"
+            ],
+            "label": "Estimated interest saved",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "years_shaved": {
+            "expression": "n_payments/12 - payoff_months_rounded/12",
+            "dependencies": [
+              "n_payments",
+              "payoff_months_rounded"
+            ],
+            "label": "Estimated years reduced from loan term",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments_with_extra": {
+            "expression": "scheduled_total * payoff_months_rounded",
+            "dependencies": [
+              "scheduled_total",
+              "payoff_months_rounded"
+            ],
+            "label": "Total amount paid including principal and interest with extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled monthly payment (no extra)",
+            "variable": "scheduled_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_months_rounded",
+            "label": "Months to payoff (with recurring extra)",
+            "variable": "payoff_months_rounded",
+            "format": "integer"
+          },
+          {
+            "id": "years_shaved",
+            "label": "Years shaved from original term",
+            "variable": "years_shaved",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments_with_extra",
+            "label": "Total payments with extra",
+            "variable": "total_payments_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "one_time_extra": {
+        "label": "One-Time Extra Payment",
+        "description": "Applies a single extra payment at a specified time (approximate effect calculated as if applied at month 1 by default).",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_interest_rate/100/12",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "n_payments": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total scheduled payments (months)",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "principal * (monthly_rate) / (1 - pow(1 + monthly_rate, -n_payments))",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "n_payments"
+            ],
+            "label": "Scheduled monthly payment (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "adjusted_principal": {
+            "expression": "principal - one_time_amount",
+            "dependencies": [
+              "principal",
+              "one_time_amount"
+            ],
+            "label": "Principal after one-time payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_months_one_time": {
+            "expression": "(-log(1 - monthly_rate * adjusted_principal / scheduled_payment) / log(1 + monthly_rate))",
+            "dependencies": [
+              "monthly_rate",
+              "adjusted_principal",
+              "scheduled_payment"
+            ],
+            "label": "Estimated months to payoff after one-time payment",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_months_one_time_rounded": {
+            "expression": "ceil(payoff_months_one_time)",
+            "dependencies": [
+              "payoff_months_one_time"
+            ],
+            "label": "Estimated months to payoff after one-time (rounded)",
+            "format": "integer",
+            "display": true
+          },
+          "total_interest_with_one_time": {
+            "expression": "scheduled_payment * payoff_months_one_time_rounded - principal + one_time_amount",
+            "dependencies": [
+              "scheduled_payment",
+              "payoff_months_one_time_rounded",
+              "principal",
+              "one_time_amount"
+            ],
+            "label": "Estimated total interest with one-time payment (adjusted)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved_one_time": {
+            "expression": "scheduled_payment * n_payments - principal - (total_interest_with_one_time - one_time_amount)",
+            "dependencies": [
+              "scheduled_payment",
+              "n_payments",
+              "principal",
+              "total_interest_with_one_time",
+              "one_time_amount"
+            ],
+            "label": "Estimated interest saved by one-time payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_principal",
+            "label": "Principal after one-time payment",
+            "variable": "adjusted_principal",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_months_one_time_rounded",
+            "label": "Months to payoff (after one-time)",
+            "variable": "payoff_months_one_time_rounded",
+            "format": "integer"
+          },
+          {
+            "id": "interest_saved_one_time",
+            "label": "Estimated interest saved (one-time)",
+            "variable": "interest_saved_one_time",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_with_one_time",
+            "label": "Estimated total interest with one-time payment",
+            "variable": "total_interest_with_one_time",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "annual_lump": {
+        "label": "Annual Lump Sum Payments",
+        "description": "Applies a fixed lump sum once per 12 months; approximated by converting the annual lump sum to an equivalent monthly amount and treating it as a recurring monthly extra.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_interest_rate/100/12",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "n_payments": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total scheduled payments (months)",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "principal * (monthly_rate) / (1 - pow(1 + monthly_rate, -n_payments))",
+            "dependencies": [
+              "principal",
+              "monthly_rate",
+              "n_payments"
+            ],
+            "label": "Scheduled monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_equivalent_extra": {
+            "expression": "annual_amount / 12",
+            "dependencies": [
+              "annual_amount"
+            ],
+            "label": "Monthly equivalent of annual lump sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "scheduled_total": {
+            "expression": "scheduled_payment + monthly_equivalent_extra",
+            "dependencies": [
+              "scheduled_payment",
+              "monthly_equivalent_extra"
+            ],
+            "label": "Monthly payment including annual-equivalent extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_months": {
+            "expression": "(-log(1 - monthly_rate * principal / scheduled_total) / log(1 + monthly_rate))",
+            "dependencies": [
+              "monthly_rate",
+              "principal",
+              "scheduled_total"
+            ],
+            "label": "Estimated months to payoff using annual-equivalent approach",
+            "format": "decimal",
+            "display": false
+          },
+          "payoff_months_rounded": {
+            "expression": "ceil(payoff_months)",
+            "dependencies": [
+              "payoff_months"
+            ],
+            "label": "Estimated months to payoff (rounded)",
+            "format": "integer",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "scheduled_payment * n_payments - principal - (scheduled_total * payoff_months_rounded - principal)",
+            "dependencies": [
+              "scheduled_payment",
+              "n_payments",
+              "principal",
+              "scheduled_total",
+              "payoff_months_rounded"
+            ],
+            "label": "Estimated interest saved with annual lump sums (approx)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_equivalent_extra",
+            "label": "Monthly equivalent of annual lump sum",
+            "variable": "monthly_equivalent_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_months_rounded",
+            "label": "Months to payoff (with annual lump sums)",
+            "variable": "payoff_months_rounded",
+            "format": "integer"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved (annual lump sums)",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_made",
+        "label": "Payments already made (months)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_type",
+        "label": "Extra payment type",
+        "type": "select",
+        "default": "recurring",
+        "options": [
+          {
+            "label": "Recurring monthly extra",
+            "value": "recurring"
+          },
+          {
+            "label": "One-time extra payment",
+            "value": "one_time"
+          },
+          {
+            "label": "Annual lump sum",
+            "value": "annual"
+          },
+          {
+            "label": "No extra payments",
+            "value": "none"
+          }
+        ]
+      },
+      {
+        "id": "extra_amount",
+        "label": "Recurring extra amount (monthly)",
+        "type": "number",
+        "default": 200,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "one_time_amount",
+        "label": "One-time extra amount",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_amount",
+        "label": "Annual lump sum amount",
+        "type": "number",
+        "default": 1200,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "recurring_section",
+        "label": "Recurring extra options",
+        "show_when": {
+          "field": "extra_type",
+          "is": "recurring"
+        },
+        "fields": [
+          {
+            "id": "extra_amount",
+            "label": "Recurring extra amount (monthly)",
+            "type": "number",
+            "default": 200,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "one_time_section",
+        "label": "One-time extra options",
+        "show_when": {
+          "field": "extra_type",
+          "is": "one_time"
+        },
+        "fields": [
+          {
+            "id": "one_time_amount",
+            "label": "One-time extra amount",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "annual_section",
+        "label": "Annual lump sum options",
+        "show_when": {
+          "field": "extra_type",
+          "is": "annual"
+        },
+        "fields": [
+          {
+            "id": "annual_amount",
+            "label": "Annual lump sum amount",
+            "type": "number",
+            "default": 1200,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "scheduled_payment",
+          "label": "Scheduled monthly payment (no extra)"
+        },
+        {
+          "id": "payoff_months_rounded",
+          "label": "Months to payoff (with selected extra)"
+        },
+        {
+          "id": "years_shaved",
+          "label": "Years shaved from original term"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Estimated interest saved"
+        },
+        {
+          "id": "total_payments_with_extra",
+          "label": "Total payments (with extra)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates how extra mortgage payments affect payoff timing and interest costs. You can model recurring monthly extras, a single one-time payment, or annual lump sums and compare estimated interest saved and shortened term.",
+      "Values are estimates based on standard amortization formulas and assume payments are applied to principal in the same period as interest accrual. The tool does not replace statements from your loan servicer or professional financial advice."
+    ],
+    "methodology": [
+      "Calculations use the standard fixed-rate mortgage amortization formula to compute the scheduled monthly payment and then recompute payoff duration when extra principal payments are applied.",
+      "Recurring extra payments are modeled as an additional fixed amount added to each monthly payment. One-time payments are modeled as an immediate principal reduction. Annual lumps are approximated by an equivalent monthly amount (annual amount divided by 12).",
+      "Outputs are rounded to whole months for payoff timing estimates; intermediate expressions use continuous math functions and natural logarithms to compute the exact number of payments before rounding."
+    ],
+    "how_is_calculated": [
+      "monthly_rate = annual_interest_rate / 100 / 12",
+      "n_payments = term_years * 12",
+      "scheduled_payment = principal * monthly_rate / (1 - (1 + monthly_rate)^(-n_payments))",
+      "When adding an extra monthly payment E: new_payment = scheduled_payment + E; months_to_payoff = -ln(1 - monthly_rate * principal / new_payment) / ln(1 + monthly_rate)",
+      "One-time payment reduces principal immediately: adjusted_principal = principal - one_time_amount; then recalculate months_to_payoff using scheduled_payment against adjusted_principal"
+    ],
+    "examples": [
+      "Example: $300,000 loan at 4.00% for 30 years. Paying an extra $200/month reduces the payoff period and saves interest; the calculator shows estimated months to payoff, years shaved, and interest saved.",
+      "Example: A $1000 one-time payment applied at the next payment reduces principal and shortens the amortization schedule; the tool approximates the effect by recomputing payoff with the reduced principal."
+    ],
+    "summary": [
+      "Use recurring extra payments to see ongoing reduction in interest and term. One-time payments are effective at reducing principal immediately but will usually save less interest than the same amount paid regularly over time.",
+      "Results are approximations and assume consistent application of extra payments toward principal. Check your loan agreement for prepayment rules and verify results with your loan servicer."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an exact statement from my lender?",
+        "answer": "No. This tool provides an estimate based on common amortization math. Your lender or servicer may apply payments differently, and real statements should be obtained from them."
+      },
+      {
+        "question": "Does this account for prepayment penalties or escrow changes?",
+        "answer": "No. The calculator does not model prepayment penalties, escrow adjustments, taxes, insurance changes, or changes to interest rate. Check your loan contract for penalty terms."
+      },
+      {
+        "question": "How accurate are the payoff month and interest savings numbers?",
+        "answer": "Accuracy depends on assumptions: fixed interest rate, payment timing, and that extras are applied to principal each period. Results are rounded and intended for planning only. See citations for standards on algorithmic validation and software reliability."
+      },
+      {
+        "question": "Is my data saved or transmitted?",
+        "answer": "This configuration does not specify storage. Implementations should follow data minimization and security best practices (see NIST and ISO guidance cited)."
+      },
+      {
+        "question": "Can I model biweekly or irregular extra payments?",
+        "answer": "This tool models monthly-frequency scenarios and approximates annual lumps. For biweekly or irregular schedules, use a dedicated amortization schedule or consult your servicer."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Cybersecurity and Software Assurance Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org/standards.html"
+      },
+      {
+        "label": "IEEE - Standards and Best Practices for Reliable Software",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - Guidance on workplace safety for software/hardware teams",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau - Mortgage resources",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down loan principal and interest over time using regular payments."
+      },
+      {
+        "term": "Principal",
+        "definition": "The outstanding loan balance on which interest is calculated."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "Any payment amount paid in addition to the scheduled periodic payment, typically applied to reduce principal."
+      },
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The annual interest rate charged for borrowing, expressed as a percentage."
+      },
+      {
+        "term": "Payoff period",
+        "definition": "The time required to fully repay the loan, typically expressed in months or years."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standards.html",
+        "label": "ISO Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

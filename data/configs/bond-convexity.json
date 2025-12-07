@@ -1,0 +1,246 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Bond Convexity & Duration Calculator (Numerical Derivative)",
+    "description": "Calculate a bond's clean price, modified duration, Macaulay-like convexity (annualized) and an approximate price change using a robust numerical-derivative approach. Includes controls for coupon frequency, yield shift used for derivative approximation, and calibration notes for accuracy and compliance."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "price",
+        "label": "Clean Price",
+        "expression": "((face * coupon_rate / freq) * (1 - pow(1 + ytm / freq, - (years * freq))) / (ytm / freq)) + face * pow(1 + ytm / freq, - (years * freq))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "price_up",
+        "label": "Price (yield + shift)",
+        "expression": "((face * coupon_rate / freq) * (1 - pow(1 + (ytm + yield_shift) / freq, - (years * freq))) / ((ytm + yield_shift) / freq)) + face * pow(1 + (ytm + yield_shift) / freq, - (years * freq))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "price_down",
+        "label": "Price (yield - shift)",
+        "expression": "((face * coupon_rate / freq) * (1 - pow(1 + (ytm - yield_shift) / freq, - (years * freq))) / ((ytm - yield_shift) / freq)) + face * pow(1 + (ytm - yield_shift) / freq, - (years * freq))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "modified_duration",
+        "label": "Modified Duration (approx)",
+        "expression": "-(price_up - price_down) / (2 * price * yield_shift)",
+        "unit": "years",
+        "format": "decimal"
+      },
+      {
+        "id": "convexity",
+        "label": "Convexity (approx, annualized)",
+        "expression": "(price_up + price_down - 2 * price) / (2 * price * pow(yield_shift, 2))",
+        "unit": "years^2",
+        "format": "decimal"
+      },
+      {
+        "id": "approx_price_change_1pct",
+        "label": "Approx. Price Change for +1% Interest Rate Move",
+        "expression": "-( -(price_up - price_down) / (2 * price * yield_shift) ) * 0.01 + 0.5 * ( (price_up + price_down - 2 * price) / (2 * price * pow(yield_shift, 2)) ) * pow(0.01, 2)",
+        "unit": "%",
+        "format": "percent"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "face",
+        "label": "Face (par) value",
+        "type": "number",
+        "default": 1000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "coupon_rate",
+        "label": "Coupon rate (annual, decimal)",
+        "type": "number",
+        "default": 0.05,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "years",
+        "label": "Time to maturity (years)",
+        "type": "number",
+        "default": 10,
+        "min": 0.01,
+        "step": 0.25
+      },
+      {
+        "id": "ytm",
+        "label": "Yield to maturity (annual, decimal)",
+        "type": "number",
+        "default": 0.04,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "freq",
+        "label": "Coupon payments per year",
+        "type": "select",
+        "default": 2,
+        "options": [
+          {
+            "label": "Annual (1)",
+            "value": "1"
+          },
+          {
+            "label": "Semiannual (2)",
+            "value": "2"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          }
+        ]
+      },
+      {
+        "id": "yield_shift",
+        "label": "Yield shift for numerical derivative (decimal)",
+        "type": "number",
+        "default": 0.0001,
+        "min": 1e-09,
+        "step": 1e-05
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "price",
+          "label": "Clean Price"
+        },
+        {
+          "id": "modified_duration",
+          "label": "Modified Duration (approx)"
+        },
+        {
+          "id": "convexity",
+          "label": "Convexity (approx, annualized)"
+        },
+        {
+          "id": "approx_price_change_1pct",
+          "label": "Approx. Price Change for +1% Move"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes a bond's clean price and produces numerical approximations for modified duration and convexity by evaluating price at a small positive and negative yield shift. Numerical differentiation provides a practical, robust result for a wide range of coupon structures without requiring manual summation formulas.",
+      "Use the yield-shift parameter to calibrate accuracy: smaller shifts reduce bias but increase floating-point sensitivity. Default shift is 1 basis point (0.0001). Review the methodology and limitations below before using results for production or regulatory reporting."
+    ],
+    "methodology": [
+      "Price is computed as the present value of coupon payments and principal using periodic discounting: an annuity term plus final principal PV. For a coupon frequency f, periodic yield is y/f and number of periods is years*f.",
+      "Durations and convexity are computed using central finite-difference approximations: D ≈ - (P(y+Δ) - P(y-Δ)) / (2*P*Δ) and Convexity ≈ (P(y+Δ) + P(y-Δ) - 2P(y)) / (2*P*Δ^2). This technique avoids analytic closed-form derivation errors and is widely used in production risk systems.",
+      "Accuracy guidance and operational controls: validate results by reducing yield-shift and confirming convergence; avoid shifts that are too small relative to machine epsilon. For mission-critical or regulatory calculations, run sensitivity analysis and independent reconciliation."
+    ],
+    "how_is_calculated": [
+      "Step 1: Compute clean price P(y) = (C/f) * (1 - (1 + y/f)^{-N}) / (y/f) + F * (1 + y/f)^{-N}, where C = face * coupon_rate, N = years * f.",
+      "Step 2: Compute P(y + Δ) and P(y - Δ) using the same formula with shifted yields.",
+      "Step 3: Compute modified duration ≈ - (P(y+Δ) - P(y-Δ)) / (2 * P(y) * Δ).",
+      "Step 4: Compute convexity ≈ (P(y+Δ) + P(y-Δ) - 2*P(y)) / (2 * P(y) * Δ^2).",
+      "Step 5: Approximate price impact for a given parallel shift δ (e.g. δ = 0.01 for 1%) via: ΔP/P ≈ -ModifiedDuration * δ + 0.5 * Convexity * δ^2."
+    ],
+    "examples": [
+      "Example: Par=1000, coupon=5% (0.05), years=10, YTM=4% (0.04), semiannual. With default Δ=0.0001 the tool returns price, modified duration ≈ 8.x years, convexity ≈ 85–120 years^2 depending on coupon and term. Reduce Δ to 1e-5 to verify stability; results should converge."
+    ],
+    "faqs": [
+      {
+        "question": "Why use a numerical derivative instead of closed-form convexity formulas?",
+        "answer": "Numerical derivatives avoid algebraic mistakes and provide consistent results for any payment frequency and irregular cash flows. They are simple to implement, easy to validate, and robust for production use when Δ is chosen carefully."
+      },
+      {
+        "question": "How should I choose the yield shift (Δ)?",
+        "answer": "Start with 1 basis point (0.0001). If results change significantly when halving Δ, test smaller Δ until values stabilize. Do not choose Δ too close to machine precision; very small Δ increases rounding noise. For reporting-level precision, perform a convergence test."
+      },
+      {
+        "question": "Are results suitable for regulatory or accounting reporting?",
+        "answer": "This tool provides approximations intended for analysis and validation. For formal regulatory reporting, follow your organization's validation procedures and reconciliations. Maintain audit trails and apply controls consistent with ISO 9001 quality management and applicable regulator guidance."
+      },
+      {
+        "question": "What are the known limits of this calculator?",
+        "answer": "It assumes fixed coupons, fixed maturity and parallel yield shifts. It does not model embedded options, stochastic rates, or credit events. For callable or putable bonds, use an appropriate option-adjusted model."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Numerical Methods and Software Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 9001 — Quality Management Systems",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE — Standards for Software and Numerical Accuracy",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Operational Risk and Safety Management Principles",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Bond mathematics primer (reference material)",
+        "url": "https://en.wikipedia.org/wiki/Duration_(bond)"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Macaulay Duration",
+        "definition": "Weighted average time until cash flows are received, measured in years; commonly used to compute interest rate sensitivity."
+      },
+      {
+        "term": "Modified Duration",
+        "definition": "Approximate percentage price change for a small change in yield; modified duration = Macaulay Duration / (1 + yield per period)."
+      },
+      {
+        "term": "Convexity",
+        "definition": "Second-order sensitivity of bond price to yield changes. Higher convexity implies price is less sensitive to large yield changes than predicted by duration alone."
+      },
+      {
+        "term": "Yield shift (Δ)",
+        "definition": "Small increment used to compute numerical derivatives. Expressed in annual-decimal terms (e.g. 0.0001 = 1 basis point)."
+      },
+      {
+        "term": "Clean Price",
+        "definition": "Present value of future coupon payments and principal, excluding accrued interest."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST Home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001, Quality Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

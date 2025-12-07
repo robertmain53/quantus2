@@ -1,0 +1,574 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan APR — Bi‑Weekly & Monthly Payment Calculator (Advanced)",
+    "description": "Estimate scheduled bi‑weekly or monthly payments, total payment and interest, and the effect of upfront fees and additional periodic payments. Includes conservative accuracy notes, references to standards, and clear assumptions for regulatory disclosure."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "biweekly_standard",
+    "methods": {
+      "biweekly_standard": {
+        "label": "Bi‑Weekly (Standard amortization, no fees)",
+        "description": "Standard amortization assuming 26 payment periods per year. Extra periodic payments are added to each scheduled payment and shown as an estimate; exact payoff date requires iterative amortization.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payment periods per year",
+            "unit": "periods/year",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate": {
+            "expression": "apr / 100 / periods_per_year",
+            "dependencies": [
+              "apr",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "number_of_payments": {
+            "expression": "term_years * periods_per_year",
+            "dependencies": [
+              "term_years",
+              "periods_per_year"
+            ],
+            "label": "Number of scheduled payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "discount_factor": {
+            "expression": "1 - pow(1 + periodic_rate, - number_of_payments)",
+            "dependencies": [
+              "periodic_rate",
+              "number_of_payments"
+            ],
+            "label": "Annuity discount factor",
+            "format": "decimal",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "(loan_amount * periodic_rate) / discount_factor",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "discount_factor"
+            ],
+            "label": "Scheduled payment (per period)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment_with_extra": {
+            "expression": "scheduled_payment + extra_payment",
+            "dependencies": [
+              "scheduled_payment",
+              "extra_payment"
+            ],
+            "label": "Periodic payment including extra amount (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_paid": {
+            "expression": "periodic_payment_with_extra * number_of_payments",
+            "dependencies": [
+              "periodic_payment_with_extra",
+              "number_of_payments"
+            ],
+            "label": "Estimated total paid (no term reduction applied)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_interest": {
+            "expression": "estimated_total_paid - loan_amount",
+            "dependencies": [
+              "estimated_total_paid",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest paid (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled payment (bi‑weekly)",
+            "variable": "scheduled_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periodic_payment_with_extra",
+            "label": "Periodic payment including extra (estimate)",
+            "variable": "periodic_payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "number_of_payments",
+            "label": "Scheduled number of payments",
+            "variable": "number_of_payments",
+            "format": "integer"
+          },
+          {
+            "id": "estimated_total_paid",
+            "label": "Estimated total paid (estimate)",
+            "variable": "estimated_total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_total_interest",
+            "label": "Estimated total interest (estimate)",
+            "variable": "estimated_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_with_fees": {
+        "label": "Bi‑Weekly with Upfront Fees",
+        "description": "Adds upfront financeable fees to the principal (fees are included in financed amount). APR is treated as the nominal APR provided; including fees changes financed principal. This method shows scheduled payments when fees are financed.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payment periods per year",
+            "unit": "periods/year",
+            "format": "integer",
+            "display": false
+          },
+          "principal_with_fees": {
+            "expression": "loan_amount + origination_fee",
+            "dependencies": [
+              "loan_amount",
+              "origination_fee"
+            ],
+            "label": "Financed principal including fees",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "apr / 100 / periods_per_year",
+            "dependencies": [
+              "apr",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "number_of_payments": {
+            "expression": "term_years * periods_per_year",
+            "dependencies": [
+              "term_years",
+              "periods_per_year"
+            ],
+            "label": "Number of scheduled payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "discount_factor": {
+            "expression": "1 - pow(1 + periodic_rate, - number_of_payments)",
+            "dependencies": [
+              "periodic_rate",
+              "number_of_payments"
+            ],
+            "label": "Annuity discount factor",
+            "format": "decimal",
+            "display": false
+          },
+          "scheduled_payment_with_fees": {
+            "expression": "(principal_with_fees * periodic_rate) / discount_factor",
+            "dependencies": [
+              "principal_with_fees",
+              "periodic_rate",
+              "discount_factor"
+            ],
+            "label": "Scheduled payment when fees are financed",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment_with_extra": {
+            "expression": "scheduled_payment_with_fees + extra_payment",
+            "dependencies": [
+              "scheduled_payment_with_fees",
+              "extra_payment"
+            ],
+            "label": "Periodic payment including extra amount (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_paid": {
+            "expression": "periodic_payment_with_extra * number_of_payments",
+            "dependencies": [
+              "periodic_payment_with_extra",
+              "number_of_payments"
+            ],
+            "label": "Estimated total paid (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_interest": {
+            "expression": "estimated_total_paid - principal_with_fees",
+            "dependencies": [
+              "estimated_total_paid",
+              "principal_with_fees"
+            ],
+            "label": "Estimated total interest paid (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment_with_fees",
+            "label": "Scheduled payment (bi‑weekly) when fees financed",
+            "variable": "scheduled_payment_with_fees",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "principal_with_fees",
+            "label": "Financed principal (loan + fees)",
+            "variable": "principal_with_fees",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periodic_payment_with_extra",
+            "label": "Periodic payment including extra (estimate)",
+            "variable": "periodic_payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_total_paid",
+            "label": "Estimated total paid (estimate)",
+            "variable": "estimated_total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_total_interest",
+            "label": "Estimated total interest (estimate)",
+            "variable": "estimated_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "monthly_standard": {
+        "label": "Monthly (Standard amortization)",
+        "description": "Monthly amortization using 12 periods per year. Provided for comparison only; select bi‑weekly methods to see the bi‑weekly schedule.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "12",
+            "dependencies": [],
+            "label": "Payment periods per year",
+            "unit": "periods/year",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate": {
+            "expression": "apr / 100 / periods_per_year",
+            "dependencies": [
+              "apr",
+              "periods_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "number_of_payments": {
+            "expression": "term_years * periods_per_year",
+            "dependencies": [
+              "term_years",
+              "periods_per_year"
+            ],
+            "label": "Number of scheduled payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "discount_factor": {
+            "expression": "1 - pow(1 + periodic_rate, - number_of_payments)",
+            "dependencies": [
+              "periodic_rate",
+              "number_of_payments"
+            ],
+            "label": "Annuity discount factor",
+            "format": "decimal",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "(loan_amount * periodic_rate) / discount_factor",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "discount_factor"
+            ],
+            "label": "Scheduled payment (per period)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment_with_extra": {
+            "expression": "scheduled_payment + extra_payment",
+            "dependencies": [
+              "scheduled_payment",
+              "extra_payment"
+            ],
+            "label": "Periodic payment including extra amount (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_paid": {
+            "expression": "periodic_payment_with_extra * number_of_payments",
+            "dependencies": [
+              "periodic_payment_with_extra",
+              "number_of_payments"
+            ],
+            "label": "Estimated total paid (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_interest": {
+            "expression": "estimated_total_paid - loan_amount",
+            "dependencies": [
+              "estimated_total_paid",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest paid (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled payment (monthly)",
+            "variable": "scheduled_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periodic_payment_with_extra",
+            "label": "Periodic payment including extra (estimate)",
+            "variable": "periodic_payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "number_of_payments",
+            "label": "Scheduled number of payments",
+            "variable": "number_of_payments",
+            "format": "integer"
+          },
+          {
+            "id": "estimated_total_paid",
+            "label": "Estimated total paid (estimate)",
+            "variable": "estimated_total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_total_interest",
+            "label": "Estimated total interest (estimate)",
+            "variable": "estimated_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "apr",
+        "label": "APR (annual percentage rate, nominal)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.5,
+        "max": 10,
+        "step": 0.25
+      },
+      {
+        "id": "origination_fee",
+        "label": "Upfront fees financed (e.g., origination fee)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Additional periodic payment (applied each period)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates scheduled loan payments when you select bi‑weekly (26 payments/year) or monthly (12 payments/year) frequency. It supports adding upfront fees to the financed principal and adding a recurring extra payment per period as an estimate of the impact on cash flow and interest.",
+      "Results labeled \"estimate\" use closed‑form amortization formulas and assume the number of scheduled payments remains equal to term_years × periods_per_year. If you add recurring extra payments, the actual payoff date and total interest will usually be lower; determining the exact payoff date requires stepwise amortization and rounding rules which the calculator notes explicitly."
+    ],
+    "methodology": [
+      "Periodic rate is calculated as APR ÷ periods per year. Scheduled payment uses the standard annuity formula for level payments with that periodic rate and number of payments.",
+      "When fees are financed the financed principal increases by the fee amount and payments are recalculated on that principal. Additional periodic payments are added to the scheduled payment and presented as an estimate; exact amortization with extra payments requires iterative decrementing of principal per payment.",
+      "Design and numerical considerations follow common best practices for financial calculators. For software quality and numeric handling we recommend alignment with NIST software assurance practices and IEEE numerical stability recommendations; for financial messaging and interoperability consider ISO 20022 guidance."
+    ],
+    "how_is_calculated": [
+      "periodic_rate = apr / 100 / periods_per_year",
+      "number_of_payments = term_years × periods_per_year",
+      "scheduled_payment = (principal × periodic_rate) / (1 − (1 + periodic_rate)^(−number_of_payments))",
+      "if fees are financed: principal = loan_amount + origination_fee",
+      "periodic_payment_with_extra = scheduled_payment + extra_payment",
+      "estimated_total_paid = periodic_payment_with_extra × number_of_payments",
+      "estimated_total_interest = estimated_total_paid − financed_principal"
+    ],
+    "faqs": [
+      {
+        "question": "What is APR vs interest rate?",
+        "answer": "APR (annual percentage rate) is the annualized cost of credit expressed as a percentage. In this calculator APR is treated as the nominal APR and converted to a periodic rate by dividing by the number of payments per year. Some regulatory disclosures require an 'effective APR' that accounts for fees and compounding; this tool shows financed fees separately and provides estimates."
+      },
+      {
+        "question": "Why do bi‑weekly payments often reduce interest cost?",
+        "answer": "Bi‑weekly schedules create more frequent compounding and, in practice, correspond to 26 half‑month payments per year. If you keep the same nominal payment cadence (and especially if you make an extra payment each year), you typically reduce principal faster. This calculator shows scheduled bi‑weekly payments and an extra payment estimate; exact interest savings need full amortization."
+      },
+      {
+        "question": "Are results exact to the cent?",
+        "answer": "The closed‑form formulas provide precise mathematical results, but real loan schedules depend on rounding rules (per payment rounding, truncation), payment timing, and lender practices. Use results as a reliable estimate. For regulatory disclosures, always use lender‑provided amortization schedule and Truth in Lending Act (TILA) disclosures."
+      },
+      {
+        "question": "How should I treat fees?",
+        "answer": "If you choose to finance upfront fees, this tool adds them to the principal and recalculates payments. Many regulations require separate disclosure of finance charges; include financed fees in comparisons but verify required disclosure formats with your compliance team."
+      },
+      {
+        "question": "What if I want exact payoff date when adding extra payments?",
+        "answer": "Exact payoff date requires iterative amortization: apply each payment to interest then principal, subtract extra payment each period, and stop when principal ≤ 0. This tool provides an upper‑bound estimate using fixed number_of_payments; for an exact schedule export to a stepwise amortization tool or request a lender amortization schedule."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology (software assurance & numeric guidance)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization (financial messaging and standards)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association (numeric stability and software engineering guidance)",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA (safety and workplace guidance referenced for organizational standards)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau (information on APR and Truth in Lending)",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "A nominal annualized interest rate that may be used for regulatory disclosure. In this tool APR is converted to a periodic rate by dividing by the number of payment periods per year."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period: APR / periods per year."
+      },
+      {
+        "term": "Scheduled payment (annuity formula)",
+        "definition": "The fixed payment per period that amortizes the loan using the periodic rate and number of payments, calculated by the annuity (level payment) formula."
+      },
+      {
+        "term": "Finance charge / financed fees",
+        "definition": "Upfront costs (origination fees, processing fees) that may be added to the financed principal. Inclusion changes financed principal and payments; regulatory disclosures may require separate presentation."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The schedule of payments that allocate each payment between interest and principal until the loan is paid off."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

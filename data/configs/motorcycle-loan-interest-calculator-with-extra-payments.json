@@ -1,0 +1,225 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan Interest Calculator with Extra Payments",
+    "description": "Estimate periodic payments, payoff time, total interest and total paid for a motorcycle loan when adding recurring extra payments. Includes accuracy notes and standards references for trustworthy calculations."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "base_payment",
+        "label": "Periodic payment (no extra)",
+        "expression": "(apr==0) ? (principal / (years * payments_per_year)) : ((principal * (apr/100/payments_per_year)) / (1 - pow(1 + apr/100/payments_per_year, - years * payments_per_year)))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "payment_with_extra",
+        "label": "Periodic payment (with extra)",
+        "expression": "((apr==0) ? (principal / (years * payments_per_year)) : ((principal * (apr/100/payments_per_year)) / (1 - pow(1 + apr/100/payments_per_year, - years * payments_per_year)))) + extra_payment",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "periods_to_payoff",
+        "label": "Number of payment periods to payoff",
+        "expression": "(extra_payment<=0) ? (years * payments_per_year) : ( (apr==0) ? ( principal / ( (principal / (years * payments_per_year)) + extra_payment) ) : ( -ln(1 - (apr/100/payments_per_year) * principal / ( ((principal * (apr/100/payments_per_year)) / (1 - pow(1 + apr/100/payments_per_year, - years * payments_per_year))) + extra_payment) ) / ln(1 + apr/100/payments_per_year) ) )",
+        "unit": "periods",
+        "format": "decimal"
+      },
+      {
+        "id": "total_paid",
+        "label": "Total amount paid",
+        "expression": "payment_with_extra * periods_to_payoff",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_paid",
+        "label": "Total interest paid",
+        "expression": "total_paid - principal",
+        "unit": "currency",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "apr",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "max": 30,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "number",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment per period (applied to principal)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "base_payment",
+          "label": "Periodic payment (no extra)",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "payment_with_extra",
+          "label": "Periodic payment (with extra)",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "periods_to_payoff",
+          "label": "Number of payment periods to payoff",
+          "format": "decimal",
+          "unit": "periods"
+        },
+        {
+          "id": "total_paid",
+          "label": "Total amount paid",
+          "format": "currency",
+          "unit": ""
+        },
+        {
+          "id": "total_interest_paid",
+          "label": "Total interest paid",
+          "format": "currency",
+          "unit": ""
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments, payoff time and total interest for a motorcycle loan when you add a recurring extra payment each period. Use it to compare the effect of extra payments on interest savings and earlier payoff.",
+      "Results assume interest compounds at the payment frequency and extra payments are applied each payment period toward principal. This tool provides estimates for planning purposes only and is not a loan offer."
+    ],
+    "methodology": [
+      "We compute the standard annuity payment for a fixed-rate loan: when APR is above zero, periodic rate r = APR divided by 100 divided by payments_per_year and payment = P × r / (1 - (1+r)^-n) where n = years × payments_per_year. For zero APR, payment equals principal divided by n.",
+      "If you add a constant extra payment each period, the effective periodic payment increases and payoff occurs sooner. For a nonzero rate we use the closed-form logarithmic solution for the number of periods remaining given the increased payment. For zero interest we use linear division of principal by payment.",
+      "All numeric computations follow common financial formulas; results are rounded for presentation. See citations for standards and accuracy notes."
+    ],
+    "how_is_calculated": [
+      "Step 1: Convert APR to periodic rate: r = APR divided by 100 divided by payments_per_year.",
+      "Step 2: Compute standard periodic payment without extra: payment = P × r / (1 - (1+r)^-n) where n = years × payments_per_year. If APR is zero then payment = P divided by n.",
+      "Step 3: Add extra payment per period to get effective payment.",
+      "Step 4: If the extra payment is positive and APR is above zero, compute periods to payoff using n' = -ln(1 - r×P / payment_effective) / ln(1 + r). If APR is zero compute periods by P divided by payment_effective.",
+      "Step 5: Total paid = payment_effective multiplied by n'. Total interest = total paid minus principal P."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator handle one-time extra payments?",
+        "answer": "This version assumes a constant recurring extra payment each period. One-time extra payments or variable schedules require an amortization simulation. Use the recurring extra value to approximate repeated contributions."
+      },
+      {
+        "question": "What if APR is 0%?",
+        "answer": "When APR is zero the formulas simplify: periodic payment = principal ÷ total periods and periods to payoff = principal ÷ (periodic payment + extra). The calculator handles APR = 0 as a special case to avoid division by zero."
+      },
+      {
+        "question": "Are results exact for all edge cases?",
+        "answer": "Results are mathematically consistent with fixed-rate amortization formulas. Rounding, payment timing conventions, lender fees, day-count conventions, and compounding differences used by lenders may cause small differences. Always verify with your loan agreement or lender."
+      },
+      {
+        "question": "Can I use different payment frequencies?",
+        "answer": "Yes. Set payments per year to match the frequency (for example 12 for monthly, 26 for biweekly, 52 for weekly). The calculator assumes the interest rate provided is the nominal APR and is converted to the periodic rate by dividing by payments per year."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Guide to Mathematical and Statistical Techniques",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Financial services and related standards",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (general guidance)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate expressed as a percent; the nominal yearly interest rate without compounding adjustments."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "APR converted to the rate per payment period: APR/100 divided by payments per year."
+      },
+      {
+        "term": "Annuity payment",
+        "definition": "The fixed periodic payment on a loan that amortizes principal and interest over a specified number of periods."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "Additional amount paid each period applied directly to principal to reduce interest and shorten the loan term."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

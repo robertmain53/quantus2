@@ -1,0 +1,540 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan APR Calculator with Bi-Weekly Payments (Advanced)",
+    "description": "Estimate bi-weekly and accelerated bi-weekly payments, compare to monthly schedules, and see total interest, estimated total paid, and effective annual rate. Includes clear caveats about regulatory APR vs effective rates and guidance on precision, rounding, and compliance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "accelerated_biweekly",
+    "methods": {
+      "standard_biweekly": {
+        "label": "Standard bi-weekly schedule (rate split across 26 periods)",
+        "description": "Calculates level bi-weekly payments using 26 payment periods per year and periodic compounding based on the entered annual interest rate.",
+        "variables": {
+          "payments_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_rate_pct/100/payments_per_year",
+            "dependencies": [
+              "annual_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate (per payment)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "number_of_payments": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "loan_amount * periodic_rate / (1 - (1 + periodic_rate) ^ (-number_of_payments))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "number_of_payments"
+            ],
+            "label": "Bi-weekly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "periodic_payment * number_of_payments + fees_upfront",
+            "dependencies": [
+              "periodic_payment",
+              "number_of_payments",
+              "fees_upfront"
+            ],
+            "label": "Estimated total paid (principal + interest + upfront fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - loan_amount - fees_upfront",
+            "dependencies": [
+              "total_paid",
+              "loan_amount",
+              "fees_upfront"
+            ],
+            "label": "Estimated total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_annual_rate_pct": {
+            "expression": "((1 + periodic_rate) ^ payments_per_year - 1) * 100",
+            "dependencies": [
+              "periodic_rate",
+              "payments_per_year"
+            ],
+            "label": "Effective annual rate (compounded at payment frequency)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Bi-weekly payment",
+            "variable": "periodic_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "number_of_payments",
+            "label": "Number of payments",
+            "variable": "number_of_payments",
+            "format": "integer"
+          },
+          {
+            "id": "total_paid",
+            "label": "Estimated total paid",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_annual_rate_pct",
+            "label": "Effective annual rate (%)",
+            "variable": "effective_annual_rate_pct",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "accelerated_biweekly": {
+        "label": "Accelerated bi-weekly (half monthly payment every two weeks) - approximate",
+        "description": "Estimates results when a borrower pays half of the equivalent monthly payment every two weeks. This commonly produces faster payoff and interest savings; the calculation below is an approximation and does not replace an exact amortization schedule.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate_pct/100/12",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "n_months": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "loan_amount * monthly_rate / (1 - (1 + monthly_rate) ^ (-n_months))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "n_months"
+            ],
+            "label": "Equivalent monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "monthly_payment / 2",
+            "dependencies": [
+              "monthly_payment"
+            ],
+            "label": "Bi-weekly payment when splitting monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year (bi-weekly)",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "approx_number_of_payments": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Approximate number of bi-weekly payments (for comparison)",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "approx_total_paid": {
+            "expression": "periodic_payment * approx_number_of_payments + fees_upfront",
+            "dependencies": [
+              "periodic_payment",
+              "approx_number_of_payments",
+              "fees_upfront"
+            ],
+            "label": "Approximate total paid (does not account for earlier payoff shortening)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "approx_total_interest": {
+            "expression": "approx_total_paid - loan_amount - fees_upfront",
+            "dependencies": [
+              "approx_total_paid",
+              "loan_amount",
+              "fees_upfront"
+            ],
+            "label": "Approximate total interest",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Equivalent monthly payment",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periodic_payment",
+            "label": "Estimated bi-weekly payment (split monthly/2)",
+            "variable": "periodic_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "approx_number_of_payments",
+            "label": "Approximate number of payments (for comparison)",
+            "variable": "approx_number_of_payments",
+            "format": "integer"
+          },
+          {
+            "id": "approx_total_paid",
+            "label": "Approximate total paid",
+            "variable": "approx_total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "approx_total_interest",
+            "label": "Approximate total interest",
+            "variable": "approx_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "monthly_equivalent": {
+        "label": "Monthly schedule (for direct comparison)",
+        "description": "Standard monthly amortization computed from the entered annual rate and term.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate_pct/100/12",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "n_months": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "loan_amount * monthly_rate / (1 - (1 + monthly_rate) ^ (-n_months))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "n_months"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_monthly": {
+            "expression": "monthly_payment * n_months + fees_upfront",
+            "dependencies": [
+              "monthly_payment",
+              "n_months",
+              "fees_upfront"
+            ],
+            "label": "Total paid under monthly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_monthly": {
+            "expression": "total_paid_monthly - loan_amount - fees_upfront",
+            "dependencies": [
+              "total_paid_monthly",
+              "loan_amount",
+              "fees_upfront"
+            ],
+            "label": "Total interest under monthly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_monthly",
+            "label": "Total paid (monthly)",
+            "variable": "total_paid_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_monthly",
+            "label": "Total interest (monthly)",
+            "variable": "total_interest_monthly",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (APR %) - nominal",
+        "type": "number",
+        "default": 5.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.25,
+        "max": 30,
+        "step": 0.25
+      },
+      {
+        "id": "fees_upfront",
+        "label": "Upfront fees (origination, documentation, etc.)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "display_precision",
+        "label": "Display precision (decimal places)",
+        "type": "select",
+        "default": "2",
+        "options": [
+          {
+            "label": "2 decimals",
+            "value": "2"
+          },
+          {
+            "label": "4 decimals",
+            "value": "4"
+          },
+          {
+            "label": "Rounded to cents",
+            "value": "2"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates payments and interest for auto loans when you make bi-weekly payments. It offers both a standard bi-weekly calculation (splitting the nominal annual rate across 26 periods) and an accelerated bi-weekly approximation (paying half of the equivalent monthly payment every two weeks).",
+      "Use the tool to compare monthly, standard bi-weekly, and accelerated bi-weekly approaches. Results include estimated periodic payment, estimated total interest, and effective annual rate when compounding at the payment frequency. These estimates are suitable for planning and comparison but are not a substitute for a lender's contract schedule."
+    ],
+    "methodology": [
+      "Calculations use standard annuity formulas to compute level periodic payments: Payment = P * r / (1 - (1 + r)^(-n)), where r is the periodic rate and n is the number of periods. For the standard bi-weekly method we divide the entered nominal annual rate by 26 to get the periodic rate and set n = years * 26.",
+      "The accelerated bi-weekly mode estimates results by halving the equivalent monthly payment and applying it on a bi-weekly cadence. This produces interest savings in practice because it increases the number of payments per year relative to monthly schedules, but the model here is an approximation and does not perform a full per-period amortization with early-payoff date shortening.",
+      "Precision and numerical behavior follow widely used floating-point and financial calculation practices. For transparency we flag effective annual rate computed as (1 + periodic_rate) ^ payments_per_year - 1. Regulatory APR under consumer lending law is a legal disclosure that may differ from the effective annual rate shown here."
+    ],
+    "how_is_calculated": [
+      "Periodic rate (standard bi-weekly) = annual_rate_pct / 100 / 26.",
+      "Number of payments = term_years * payments_per_year.",
+      "Periodic payment (annuity) = loan_amount * r / (1 - (1 + r)^(-n)).",
+      "Effective annual rate = (1 + periodic_rate) ^ payments_per_year - 1, shown as a percentage.",
+      "Accelerated bi-weekly is an approximation: periodic payment = (monthly annuity payment) / 2, applied over ~26 payments/year; amortization shortening and exact payoff dates are not simulated here."
+    ],
+    "examples": [
+      "Example 1: $20,000 loan, 5% APR, 5 years. Standard bi-weekly splits the rate into 26 periods to compute the bi-weekly payment and total interest. Accelerated bi-weekly splits the monthly payment and typically reduces total interest versus monthly payments.",
+      "Example 2: A borrower with $15,000, 6% APR, 4-year term and $300 fees can compare the estimated total paid under monthly, standard bi-weekly, and accelerated bi-weekly options to see potential savings before discussing exact terms with the lender."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator show the legally required APR (Regulation Z)?",
+        "answer": "No. This tool shows nominal periodic payment calculations and an effective annual rate derived from periodic compounding. The legally required APR disclosed by a lender under consumer protection law may differ because it follows regulatory definitions and specific treatment of fees and finance charges. For the legally required APR see your lender's disclosure."
+      },
+      {
+        "question": "Is the accelerated bi-weekly result exact?",
+        "answer": "No. The accelerated bi-weekly method here approximates the common practice of paying half the monthly payment every two weeks. That practice typically results in faster payoff and interest savings, but exact payoff dates and interest require a full amortization schedule with each payment applied to interest and principal."
+      },
+      {
+        "question": "How precise are the numbers? Should I round?",
+        "answer": "Displayed values are rounded for readability. Internal calculations follow standard floating-point arithmetic consistent with IEEE 754. For contract-level precision consult your lender; small rounding differences can change the final cent amount on long schedules."
+      },
+      {
+        "question": "Can I include additional fees or balloon payments?",
+        "answer": "This version supports an upfront fees field. It does not model periodic extra payments, balloon payments, or irregular payment schedules. For complex scenarios use a detailed amortization tool or request an exact payoff schedule from your lender."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Numerical Accuracy and Floating Point (general reference)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Financial services and related standards (general reference)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - IEEE 754 standard for floating-point arithmetic (general reference)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - Safety and workplace standards (general reference for operational controls)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer financial disclosure reference (truth-in-lending guidance)",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "A standardized measure of the cost of borrowing expressed as an annual rate. Regulatory APR used in disclosures may include fees and follow specific legal rules and can differ from effective annual rates shown by this calculator."
+      },
+      {
+        "term": "Effective annual rate",
+        "definition": "The annual interest rate that accounts for the effect of compounding within the year. Computed here from the periodic rate as (1 + r)^m - 1 where m is payments per year."
+      },
+      {
+        "term": "Bi-weekly",
+        "definition": "A payment frequency with payments every two weeks, typically yielding 26 payments per year."
+      },
+      {
+        "term": "Accelerated bi-weekly",
+        "definition": "A common practice where borrowers pay half of the monthly payment every two weeks, which results in the equivalent of 13 full monthly payments per year and typically faster payoff and lower interest than monthly payments. The calculator provides an approximation, not a full per-period amortization."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a loan over time through scheduled payments consisting of principal and interest. Exact amortization requires period-by-period application of each payment to interest and principal."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loan/auto-loan",
+      "/guides/loan/frequency-comparison"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

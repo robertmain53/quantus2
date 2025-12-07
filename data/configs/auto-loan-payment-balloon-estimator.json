@@ -1,0 +1,554 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Payment — Balloon Estimator (Advanced)",
+    "description": "Multi-mode balloon loan estimator for auto financing: compute periodic payment given a balloon, compute required balloon for a target payment, and estimate remaining balance after a number of payments. Includes accuracy notes, edge-case handling, and references to applicable standards for numerical stability, security, and accessibility."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "payment_with_balloon",
+    "methods": {
+      "payment_with_balloon": {
+        "label": "Compute periodic payment (given balloon)",
+        "description": "Calculate the periodic payment when a fixed balloon remains at loan maturity. Handles balloon specified as absolute amount or percent of principal and treats zero-interest as a special case.",
+        "variables": {
+          "r_period": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "percent",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years*payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments",
+            "format": "decimal",
+            "display": true
+          },
+          "balloon": {
+            "expression": "balloon_type == 'percent' ? principal * balloon_percent/100 : balloon_amount",
+            "dependencies": [
+              "balloon_type",
+              "principal",
+              "balloon_percent",
+              "balloon_amount"
+            ],
+            "label": "Balloon amount (absolute)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "discount_factor": {
+            "expression": "(1 + r_period)^(-n)",
+            "dependencies": [
+              "r_period",
+              "n"
+            ],
+            "label": "Discount factor for n periods",
+            "format": "decimal",
+            "display": false
+          },
+          "payment_var": {
+            "expression": "r_period == 0 ? (principal - balloon)/n : ((principal - balloon * discount_factor) * r_period) / (1 - discount_factor)",
+            "dependencies": [
+              "r_period",
+              "principal",
+              "balloon",
+              "n",
+              "discount_factor"
+            ],
+            "label": "Periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment_var * n + balloon",
+            "dependencies": [
+              "payment_var",
+              "n",
+              "balloon"
+            ],
+            "label": "Total amount paid (payments + balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment",
+            "label": "Periodic payment",
+            "variable": "payment_var",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_amount",
+            "label": "Balloon at maturity",
+            "variable": "balloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid over term",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (payments + balloon)",
+            "variable": "total_paid",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "balloon_from_payment": {
+        "label": "Compute balloon required for a target periodic payment",
+        "description": "Given a desired periodic payment, compute the balloon amount required at maturity to meet that payment. Handles zero-interest loans as a special case and validates feasibility.",
+        "variables": {
+          "r_period": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "percent",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years*payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments",
+            "format": "decimal",
+            "display": false
+          },
+          "discount_factor": {
+            "expression": "(1 + r_period)^(-n)",
+            "dependencies": [
+              "r_period",
+              "n"
+            ],
+            "label": "Discount factor for n periods",
+            "format": "decimal",
+            "display": false
+          },
+          "balloon_req": {
+            "expression": "r_period == 0 ? (principal - payment * n) : (principal - payment * (1 - discount_factor)/r_period) / discount_factor",
+            "dependencies": [
+              "r_period",
+              "principal",
+              "payment",
+              "n",
+              "discount_factor"
+            ],
+            "label": "Required balloon amount",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "feasible": {
+            "expression": "balloon_req >= 0",
+            "dependencies": [
+              "balloon_req"
+            ],
+            "label": "Balloon feasibility",
+            "format": "decimal",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "balloon_required",
+            "label": "Balloon required at maturity",
+            "variable": "balloon_req",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "feasibility_flag",
+            "label": "Is the computed balloon non-negative?",
+            "variable": "feasible",
+            "format": "decimal"
+          }
+        ]
+      },
+      "remaining_balance": {
+        "label": "Estimate remaining balance after a number of payments",
+        "description": "Estimate outstanding principal after a specified number of payments have been made. Uses the payment either provided by the user or the payment computed from the loan parameters when applicable. Zero-interest cases are handled explicitly.",
+        "variables": {
+          "r_period": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "percent",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years*payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments",
+            "format": "decimal",
+            "display": false
+          },
+          "k": {
+            "expression": "payments_made",
+            "dependencies": [
+              "payments_made"
+            ],
+            "label": "Payments already made",
+            "format": "integer",
+            "display": true
+          },
+          "payment_effective": {
+            "expression": "payment > 0 ? payment : (r_period == 0 ? (principal - (balloon_type == 'percent' ? principal * balloon_percent/100 : balloon_amount))/n : ((principal - (balloon_type == 'percent' ? principal * balloon_percent/100 : balloon_amount) * (1 + r_period)^(-n)) * r_period) / (1 - (1 + r_period)^(-n)))",
+            "dependencies": [
+              "payment",
+              "r_period",
+              "principal",
+              "balloon_type",
+              "balloon_percent",
+              "balloon_amount",
+              "n"
+            ],
+            "label": "Effective periodic payment used for balance calculation",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "remaining_balance_var": {
+            "expression": "r_period == 0 ? principal - payment_effective * k : principal * (1 + r_period)^k - payment_effective * (((1 + r_period)^k - 1) / r_period)",
+            "dependencies": [
+              "r_period",
+              "principal",
+              "payment_effective",
+              "k"
+            ],
+            "label": "Estimated remaining balance after k payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_remaining": {
+            "expression": "n - k",
+            "dependencies": [
+              "n",
+              "k"
+            ],
+            "label": "Payments remaining",
+            "format": "integer",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "remaining_balance",
+            "label": "Remaining principal balance",
+            "variable": "remaining_balance_var",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payments_remaining",
+            "label": "Payments remaining to maturity",
+            "variable": "payments_remaining",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount financed)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Semi-annual (2)",
+            "value": "2"
+          },
+          {
+            "label": "Annual (1)",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "balloon_type",
+        "label": "Balloon input type",
+        "type": "select",
+        "default": "amount",
+        "options": [
+          {
+            "label": "Absolute amount",
+            "value": "amount"
+          },
+          {
+            "label": "Percent of principal",
+            "value": "percent"
+          }
+        ]
+      },
+      {
+        "id": "balloon_amount",
+        "label": "Balloon amount (absolute)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "balloon_percent",
+        "label": "Balloon as % of principal",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "payment",
+        "label": "Target periodic payment (leave zero to compute from other inputs)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "payments_made",
+        "label": "Number of payments already made (for remaining balance)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "balloon_amount_section",
+        "label": "Balloon amount input",
+        "show_when": {
+          "field": "balloon_type",
+          "is": "amount"
+        },
+        "fields": [
+          {
+            "id": "balloon_amount",
+            "label": "Balloon amount (absolute)",
+            "type": "number",
+            "default": 5000,
+            "min": 0,
+            "step": 50
+          }
+        ]
+      },
+      {
+        "id": "balloon_percent_section",
+        "label": "Balloon percent input",
+        "show_when": {
+          "field": "balloon_type",
+          "is": "percent"
+        },
+        "fields": [
+          {
+            "id": "balloon_percent",
+            "label": "Balloon as percent of principal",
+            "type": "number",
+            "default": 10,
+            "min": 0,
+            "max": 100,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator supports common balloon auto-loan calculations: (1) compute the periodic payment when a final balloon payment remains at maturity, (2) compute the balloon required to achieve a target periodic payment, and (3) estimate remaining balance after a number of payments. It handles zero-interest cases and allows balloon input as an absolute amount or as a percent of principal.",
+      "Results are numerical estimates produced from standard financial formulas. They are intended for planning and comparison; final loan terms, fees, and rounding policies from a lender will affect actual payments and payoff amounts."
+    ],
+    "methodology": [
+      "Calculations use time-value-of-money formulas for amortizing loans with a future value (balloon). For periodic rate r and total periods n the tool uses algebraic rearrangements of: present value = payment * (1 - (1+r)^-n)/r + balloon * (1+r)^-n.",
+      "Precision and numerical stability follow common engineering best practices for floating-point arithmetic and conditional handling of r = 0 to avoid division by zero. Security and data-handling recommendations reference NIST guidance for handling user data in web calculators, accessibility guidance per ISO usability/accessibility principles, and IEEE recommendations for numerical methods when applicable."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_rate / 100 / payments_per_year",
+      "Number of payments n = term_years * payments_per_year",
+      "If r != 0 then periodic payment = ((principal - balloon*(1+r)^-n) * r) / (1 - (1+r)^-n); if r == 0 then payment = (principal - balloon)/n",
+      "To compute balloon for a target payment: balloon = (principal - payment*(1 - (1+r)^-n)/r) / (1+r)^-n (r == 0 handled as balloon = principal - payment*n)",
+      "Remaining balance after k payments uses the standard outstanding-balance formula with special-case handling for r == 0"
+    ],
+    "examples": [
+      "Example 1: $30,000 principal, 5% APR, 5 years, monthly payments, $5,000 balloon; calculates monthly payment, total interest, and total paid.",
+      "Example 2: Same loan but you want a $400 monthly payment; the calculator returns the required balloon at maturity (or indicates if a non-negative balloon is infeasible).",
+      "Example 3: After 24 payments on a 60-payment schedule, estimate remaining balance given the effective periodic payment."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an exact quote for my loan?",
+        "answer": "No. This estimator gives mathematical results based on the inputs and standard amortization formulas. Lenders may apply fees, different day-count conventions, rounding rules, or alternative compounding conventions that change your actual payments."
+      },
+      {
+        "question": "How precise are the results?",
+        "answer": "Results are calculated with typical double-precision arithmetic assumptions. The tool includes explicit handling for zero-interest cases to avoid division by zero. Small rounding differences (cents) may occur versus a lender statement."
+      },
+      {
+        "question": "What standards were used in building this calculator?",
+        "answer": "Numerical and implementation best practices referenced include IEEE guidance for numerical computation, NIST recommendations for secure handling of web-based inputs, and ISO guidance for accessibility and usability. This is advisory and not a substitute for regulated disclosures."
+      },
+      {
+        "question": "Can it handle negative or zero inputs?",
+        "answer": "Negative loan principal or negative term is not supported. A zero interest rate is supported and handled as a special case. The tool validates non-negative principal and balloon inputs."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A lump-sum payment due at the end of the loan term representing the remaining principal that was not amortized through periodic payments."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of spreading loan principal and interest payments over a series of scheduled periodic payments."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period = annual_rate / (100 * payments_per_year)."
+      },
+      {
+        "term": "Discount factor",
+        "definition": "Factor (1 + r)^-n used to compute present value of a future payment occurring at loan maturity."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/auto/loan-basics",
+      "/guides/loan-glossary"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

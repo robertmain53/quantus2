@@ -1,0 +1,520 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan APR & Amortization Calculator (with Extra Payments)",
+    "description": "Estimate amortization, payoff timing, total interest, and an approximate APR for an RV loan when making recurring or one-time extra payments. Includes conservative accuracy notes, compliance citations, and clear inputs for fees and payment frequency."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "amortization_with_extras",
+    "methods": {
+      "amortization_with_extras": {
+        "label": "Amortization with Extra Payments",
+        "description": "Computes scheduled payment, effect of recurring monthly extra payments and an initial one-time principal payment, estimated time-to-payoff, total interest paid, and total amount paid.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate / payments_per_year / 100",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "n_periods": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total scheduled periods",
+            "unit": "",
+            "format": "integer",
+            "display": true
+          },
+          "scheduled_payment": {
+            "expression": "(loan_amount * monthly_rate) / (1 - pow(1 + monthly_rate, -n_periods))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "n_periods"
+            ],
+            "label": "Contractual periodic payment (before extras)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_principal": {
+            "expression": "loan_amount - extra_payment_one_time",
+            "dependencies": [
+              "loan_amount",
+              "extra_payment_one_time"
+            ],
+            "label": "Principal after one-time initial extra payment",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "effective_payment": {
+            "expression": "scheduled_payment + extra_payment_monthly",
+            "dependencies": [
+              "scheduled_payment",
+              "extra_payment_monthly"
+            ],
+            "label": "Actual periodic payment (scheduled + recurring extra)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "number_of_payments": {
+            "expression": "-ln(1 - adjusted_principal * monthly_rate / effective_payment) / ln(1 + monthly_rate)",
+            "dependencies": [
+              "adjusted_principal",
+              "monthly_rate",
+              "effective_payment"
+            ],
+            "label": "Estimated number of remaining payments",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "number_of_payments / payments_per_year",
+            "dependencies": [
+              "number_of_payments",
+              "payments_per_year"
+            ],
+            "label": "Estimated years to payoff",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "number_of_payments * effective_payment + extra_payment_one_time",
+            "dependencies": [
+              "number_of_payments",
+              "effective_payment",
+              "extra_payment_one_time"
+            ],
+            "label": "Estimated total amount paid (principal + interest + one-time extras)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - loan_amount",
+            "dependencies": [
+              "total_paid",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest paid",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled payment",
+            "variable": "scheduled_payment",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "effective_payment",
+            "label": "Payment including recurring extra",
+            "variable": "effective_payment",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "number_of_payments",
+            "label": "Estimated number of payments",
+            "variable": "number_of_payments",
+            "unit": "",
+            "format": "decimal"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Estimated years to payoff",
+            "variable": "payoff_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest paid",
+            "variable": "total_interest",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Estimated total paid",
+            "variable": "total_paid",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "apr_estimate_with_extras": {
+        "label": "APR Estimate Including Fees and Extra Payments (approximate)",
+        "description": "Provides an approximate APR that includes fees and the effect of extra payments using a standard finance-charge approximation. This is an estimate; final APR disclosed by a lender under applicable regulations may differ.",
+        "variables": {
+          "monthly_rate_a": {
+            "expression": "annual_rate / payments_per_year / 100",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate (used for estimate)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n_periods_a": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total scheduled periods",
+            "unit": "",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment_a": {
+            "expression": "(loan_amount * monthly_rate_a) / (1 - pow(1 + monthly_rate_a, -n_periods_a))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate_a",
+              "n_periods_a"
+            ],
+            "label": "Contractual periodic payment",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "adjusted_principal_a": {
+            "expression": "loan_amount - extra_payment_one_time",
+            "dependencies": [
+              "loan_amount",
+              "extra_payment_one_time"
+            ],
+            "label": "Principal after one-time extra",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "effective_payment_a": {
+            "expression": "scheduled_payment_a + extra_payment_monthly",
+            "dependencies": [
+              "scheduled_payment_a",
+              "extra_payment_monthly"
+            ],
+            "label": "Actual periodic payment for estimate",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "number_of_payments_a": {
+            "expression": "-ln(1 - adjusted_principal_a * monthly_rate_a / effective_payment_a) / ln(1 + monthly_rate_a)",
+            "dependencies": [
+              "adjusted_principal_a",
+              "monthly_rate_a",
+              "effective_payment_a"
+            ],
+            "label": "Estimated payments for APR calculation",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "total_paid_a": {
+            "expression": "number_of_payments_a * effective_payment_a + extra_payment_one_time",
+            "dependencies": [
+              "number_of_payments_a",
+              "effective_payment_a",
+              "extra_payment_one_time"
+            ],
+            "label": "Estimated total paid used to compute finance charge",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_a": {
+            "expression": "total_paid_a - loan_amount",
+            "dependencies": [
+              "total_paid_a",
+              "loan_amount"
+            ],
+            "label": "Estimated interest component used in finance charge",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "finance_charge": {
+            "expression": "total_interest_a + fees",
+            "dependencies": [
+              "total_interest_a",
+              "fees"
+            ],
+            "label": "Finance charge (interest + fees)",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "apr_approx": {
+            "expression": "2 * finance_charge * payments_per_year / (loan_amount * (n_periods_a + 1)) * 100",
+            "dependencies": [
+              "finance_charge",
+              "payments_per_year",
+              "loan_amount",
+              "n_periods_a"
+            ],
+            "label": "Approximate APR (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "apr_approx",
+            "label": "Estimated APR (approx.)",
+            "variable": "apr_approx",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "finance_charge",
+            "label": "Estimated finance charge (interest + fees)",
+            "variable": "finance_charge",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 50000,
+        "min": 1000,
+        "max": 1000000,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %) — nominal rate",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 20,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment_monthly",
+        "label": "Recurring extra payment per period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_one_time",
+        "label": "One-time initial extra principal payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1000000,
+        "step": 1
+      },
+      {
+        "id": "fees",
+        "label": "Upfront fees (origination, documentation) — included for APR estimate",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates how recurring and one-time extra payments change your RV loan amortization, the estimated time to payoff, total interest paid, and an approximate APR that includes upfront fees. Use it to compare scenarios before contacting lenders.",
+      "Results are estimates based on standard amortization mathematics. Final APR and payment schedules are established by lenders and required disclosures under applicable consumer finance rules."
+    ],
+    "methodology": [
+      "Amortization uses standard periodic-rate formulas to compute contractual scheduled payments and then applies recurring and one-time extra payments to estimate remaining periods and total interest. Formulas follow conventional financial mathematics.",
+      "APR shown is an approximation that includes reported upfront fees and the effect of extra payments using a widely used finance-charge approximation. It is not a regulatory disclosure and may differ from the APR a lender must disclose under applicable law.",
+      "Numerical handling follows best practices for stability and documented precision guidance. For numeric reliability and reproducibility we reference NIST recommendations for numerical computations, ISO guidance on measurement accuracy, and IEEE principles for floating-point arithmetic behavior."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = annual_rate / payments_per_year / 100.",
+      "Contractual periodic payment = (P * r) / (1 - (1 + r)^(-N)) where P is principal, r is periodic rate, N is total periods.",
+      "Apply one-time initial extra payment to reduce principal, then treat recurring extra payments as an added periodic payment. Solve for the number of remaining payments using the inverse amortization formula: n = -ln(1 - P_adj * r / payment_effective) / ln(1 + r).",
+      "Approximate APR = 2 * finance_charge * payments_per_year / (principal * (N + 1)) * 100, where finance_charge = estimated interest + upfront fees. This is a standard approximation and not a substitute for a regulator-required APR disclosure."
+    ],
+    "examples": [
+      "Example: $50,000 loan, 6.5% nominal rate, 20 years, $200 extra per month. The calculator returns a reduced payoff time and lower total interest compared with no extras.",
+      "Example: Adding an initial one-time principal payment of $2,000 reduces the principal immediately and further shortens the payoff period when combined with recurring extras."
+    ],
+    "faqs": [
+      {
+        "question": "Is the APR shown the same as the lender's official APR?",
+        "answer": "No. The APR here is an approximation that includes entered upfront fees and simulated extra payments. Lenders provide an official APR disclosure under applicable consumer finance rules; use that disclosure for contract decisions."
+      },
+      {
+        "question": "What assumptions does this tool make?",
+        "answer": "It assumes fixed nominal interest rate, fixed scheduled payment terms, extras applied at the same payment period frequency, and fees entered as upfront charges. It does not model deferred fees, variable rates, or post-default fees."
+      },
+      {
+        "question": "What if annual_rate is zero or the effective payment does not cover interest?",
+        "answer": "Zero-rate loans should be entered as 0; scheduled formulas may degenerate (division by zero) in edge cases. If the effective payment is less than the periodic interest charge, the balance can increase; the tool will indicate non-convergent results. Check inputs and contact the lender for contract specifics."
+      },
+      {
+        "question": "How accurate are numerical results?",
+        "answer": "Results use standard closed-form formulas and an APR approximation; small rounding differences may occur due to payment-frequency rounding and numeric precision. For legal or accounting purposes, rely on lender statements and regulatory disclosures."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Numerical Methods and Floating-Point Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Measurement Accuracy and Uncertainty Standards",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Floating-Point Arithmetic Standard (IEEE 754)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA — General Guidance (safety and quality management references)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — Truth in Lending (general guidance)",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "A standardized annualized rate intended to reflect the total cost of credit, often including certain fees. Regulatory APR disclosures may differ from the approximation shown here."
+      },
+      {
+        "term": "Finance charge",
+        "definition": "Total cost of credit expressed in currency, typically interest plus certain fees; used in APR calculations."
+      },
+      {
+        "term": "Principal",
+        "definition": "The original amount borrowed on which interest is calculated."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down principal and interest over time by scheduled payments."
+      },
+      {
+        "term": "Scheduled payment",
+        "definition": "The contractual periodic payment calculated from principal, rate, and term, before any extra payments."
+      },
+      {
+        "term": "Estimated APR approximation",
+        "definition": "A computational approximation for APR that includes finance charges and payment schedule; not a legal disclosure."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

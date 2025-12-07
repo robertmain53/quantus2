@@ -1,0 +1,240 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan Interest Calculator (supports Bi-Weekly Payments)",
+    "description": "Calculate periodic RV loan payments for different payment frequencies (including bi-weekly). Supports down payment, balloon/residual, and returns periodic payment, total paid and total interest. Includes accuracy notes and references to standards."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Periodic Payment",
+        "expression": " ( (interest_rate/100/payments_per_year) == 0 ? ( ( (loan_amount - down_payment) - balloon_payment ) / (term_years*payments_per_year) ) : ( ( (interest_rate/100/payments_per_year) * ( (loan_amount - down_payment) - (balloon_payment / pow(1 + (interest_rate/100/payments_per_year), term_years*payments_per_year) ) ) ) / (1 - pow(1 + (interest_rate/100/payments_per_year), - (term_years*payments_per_year) ) ) ) ) ",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "number_of_payments",
+        "label": "Number of Payments",
+        "expression": " term_years * payments_per_year ",
+        "unit": "count",
+        "format": "integer"
+      },
+      {
+        "id": "total_paid",
+        "label": "Total Amount Paid (payments + balloon)",
+        "expression": " ( ( (interest_rate/100/payments_per_year) == 0 ? ( ( (loan_amount - down_payment) - balloon_payment ) / (term_years*payments_per_year) ) : ( ( (interest_rate/100/payments_per_year) * ( (loan_amount - down_payment) - (balloon_payment / pow(1 + (interest_rate/100/payments_per_year), term_years*payments_per_year) ) ) ) / (1 - pow(1 + (interest_rate/100/payments_per_year), - (term_years*payments_per_year) ) ) ) ) * (term_years*payments_per_year) ) + balloon_payment ",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest",
+        "label": "Total Interest Paid",
+        "expression": " ( ( ( (interest_rate/100/payments_per_year) == 0 ? ( ( (loan_amount - down_payment) - balloon_payment ) / (term_years*payments_per_year) ) : ( ( (interest_rate/100/payments_per_year) * ( (loan_amount - down_payment) - (balloon_payment / pow(1 + (interest_rate/100/payments_per_year), term_years*payments_per_year) ) ) ) / (1 - pow(1 + (interest_rate/100/payments_per_year), - (term_years*payments_per_year) ) ) ) ) * (term_years*payments_per_year) ) + balloon_payment ) - (loan_amount - down_payment) ",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "loan_principal",
+        "label": "Loan Principal (amount financed)",
+        "expression": " loan_amount - down_payment ",
+        "unit": "currency",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "RV purchase price or loan amount",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "interest_rate",
+        "label": "Annual interest rate (APR %) — nominal",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (use 26 for bi-weekly)",
+        "type": "integer",
+        "default": 26,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "balloon_payment",
+        "label": "Balloon / residual payment at term end (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Periodic Payment"
+        },
+        {
+          "id": "number_of_payments",
+          "label": "Number of Payments",
+          "format": "integer"
+        },
+        {
+          "id": "total_paid",
+          "label": "Total Paid (payments + balloon)"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total Interest Paid"
+        },
+        {
+          "id": "loan_principal",
+          "label": "Loan Principal"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic RV loan payments for a chosen payment frequency, including bi-weekly (26 payments per year). Enter the RV price or financed amount, any down payment, the APR (annual percentage rate), loan term, and an optional balloon/residual payment to see the periodic payment, total paid and total interest.",
+      "Results assume a nominal APR with interest applied per payment period (interest_rate / payments_per_year). For accuracy, match the payments_per_year to your lender's schedule (26 for bi-weekly). This tool is intended for planning only and does not replace official loan disclosures."
+    ],
+    "methodology": [
+      "We compute the periodic (per-payment) interest rate by dividing the annual interest rate (APR) by the number of payments per year.",
+      "The number of payments equals term in years multiplied by payments per year. If a balloon (residual) payment is present, the formula treats it as the loan's future value and solves for a level periodic payment that amortizes the remaining principal to that future value.",
+      "For zero interest rate (0% APR) the calculator divides the principal less balloon evenly across payments to avoid dividing by zero."
+    ],
+    "how_is_calculated": [
+      "periodic rate r = interest_rate / 100 / payments_per_year",
+      "number of payments n = term_years * payments_per_year",
+      "present value adjusted PV_adj = (loan_amount - down_payment) - balloon_payment / (1 + r)^n",
+      "periodic payment = if r==0 then PV_adj / n else [ r * PV_adj ] / [ 1 - (1 + r)^(-n) ]",
+      "total paid = periodic payment * n + balloon_payment",
+      "total interest = total paid - (loan_amount - down_payment)"
+    ],
+    "faqs": [
+      {
+        "question": "Why use 26 payments for bi-weekly?",
+        "answer": "Bi-weekly means every two weeks, which typically yields 26 payments per year (52 weeks / 2). Some lenders use semi-monthly (24) instead; confirm with your lender and match the payments_per_year field accordingly."
+      },
+      {
+        "question": "Does this calculator use APR or an effective rate?",
+        "answer": "This calculator uses the input APR as a nominal annual rate and divides it by payments per year to form the periodic rate. If your lender quotes an APR that already accounts for fees or uses a different compounding convention, results will differ from the loan disclosure."
+      },
+      {
+        "question": "How accurate are these results?",
+        "answer": "This tool provides estimates for planning. Results may vary from your lender's amortization due to rounding, per-period compounding conventions, lender-specific fees, daily interest accrual, or differing APR definitions. See the accuracy and standards citations below."
+      },
+      {
+        "question": "What should I check on the loan agreement?",
+        "answer": "Confirm payment frequency, exact APR and whether interest is compounded per payment period, the presence of prepayment penalties, and whether any lender fees are financed into the loan balance. Use the official loan amortization schedule provided by the lender for exact numbers."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "Nominal annual interest rate expressed as a percentage. This calculator treats APR as the nominal rate divided by payment periods; some lenders may compute effective rates differently."
+      },
+      {
+        "term": "Bi-weekly",
+        "definition": "Payment frequency occurring once every two weeks. Typically equates to 26 payments per year."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A residual lump-sum payment due at the end of the loan that reduces periodic payment amounts during the term."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate applied to each payment period; equal to APR divided by the number of payments per year."
+      }
+    ],
+    "summary": [
+      "Use payments_per_year = 26 for bi-weekly schedules. Verify payment frequency and APR definitions with your lender.",
+      "This tool estimates payments and totals; it is not a substitute for the lender's official amortization schedule or Reg Z / truth-in-lending disclosures."
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,462 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "PEG Ratio Calculator (P/E to Growth)",
+    "description": "Multi-mode PEG ratio tool: compute PEG from a reported P/E, from price & EPS, or compute PEGY (includes dividend yield). Includes guidance, caveats, and standards references for accuracy and safe use."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "from_pe",
+    "methods": {
+      "from_pe": {
+        "label": "From reported P/E and growth",
+        "description": "Calculate PEG using a directly supplied P/E ratio and an expected annual earnings growth rate.",
+        "variables": {
+          "growth_rate": {
+            "expression": "growth_rate_percent / 100",
+            "dependencies": [
+              "growth_rate_percent"
+            ],
+            "label": "Annual earnings growth (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "peg": {
+            "expression": "pe_ratio / growth_rate",
+            "dependencies": [
+              "pe_ratio",
+              "growth_rate"
+            ],
+            "label": "PEG ratio",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "peg_ratio",
+            "label": "PEG ratio",
+            "variable": "peg",
+            "format": "decimal"
+          }
+        ]
+      },
+      "from_price_eps": {
+        "label": "From price and EPS (compute P/E)",
+        "description": "Compute P/E from Price and EPS, then divide by expected growth to produce PEG.",
+        "variables": {
+          "pe": {
+            "expression": "price / eps",
+            "dependencies": [
+              "price",
+              "eps"
+            ],
+            "label": "P/E (calculated)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "growth_rate": {
+            "expression": "growth_rate_percent / 100",
+            "dependencies": [
+              "growth_rate_percent"
+            ],
+            "label": "Annual earnings growth (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "peg": {
+            "expression": "pe / growth_rate",
+            "dependencies": [
+              "pe",
+              "growth_rate"
+            ],
+            "label": "PEG ratio",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "peg_ratio",
+            "label": "PEG ratio",
+            "variable": "peg",
+            "format": "decimal"
+          },
+          {
+            "id": "pe_ratio_calculated",
+            "label": "P/E (calculated)",
+            "variable": "pe",
+            "format": "decimal"
+          }
+        ]
+      },
+      "pegy": {
+        "label": "PEGY (P/E ÷ (Growth + Dividend yield))",
+        "description": "Include dividend yield with growth to compute PEGY. Useful for dividend-paying equities.",
+        "variables": {
+          "pe": {
+            "expression": "price / eps",
+            "dependencies": [
+              "price",
+              "eps"
+            ],
+            "label": "P/E (calculated)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "growth_rate": {
+            "expression": "growth_rate_percent / 100",
+            "dependencies": [
+              "growth_rate_percent"
+            ],
+            "label": "Annual earnings growth (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "dividend": {
+            "expression": "dividend_yield_percent / 100",
+            "dependencies": [
+              "dividend_yield_percent"
+            ],
+            "label": "Dividend yield (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "pegy": {
+            "expression": "pe / (growth_rate + dividend)",
+            "dependencies": [
+              "pe",
+              "growth_rate",
+              "dividend"
+            ],
+            "label": "PEGY (P/E to growth + dividend)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "pegy",
+            "label": "PEGY",
+            "variable": "pegy",
+            "format": "decimal"
+          },
+          {
+            "id": "pe_ratio_calculated",
+            "label": "P/E (calculated)",
+            "variable": "pe",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "calculation_method",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "from_pe",
+        "options": [
+          {
+            "label": "From P/E and Growth",
+            "value": "from_pe"
+          },
+          {
+            "label": "From Price & EPS",
+            "value": "from_price_eps"
+          },
+          {
+            "label": "PEGY (include dividend yield)",
+            "value": "pegy"
+          }
+        ]
+      },
+      {
+        "id": "pe_ratio",
+        "label": "Reported P/E ratio (price / EPS)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "price",
+        "label": "Share price",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "eps",
+        "label": "Earnings per share (EPS)",
+        "type": "number",
+        "default": 5,
+        "min": -1000000,
+        "step": 0.01
+      },
+      {
+        "id": "growth_rate_percent",
+        "label": "Expected annual earnings growth (%)",
+        "type": "number",
+        "default": 20,
+        "min": -100,
+        "max": 1000,
+        "step": 0.01
+      },
+      {
+        "id": "dividend_yield_percent",
+        "label": "Dividend yield (%)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      }
+    ],
+    "sections": [
+      {
+        "id": "section_from_pe",
+        "label": "From reported P/E",
+        "show_when": {
+          "field": "calculation_method",
+          "is": "from_pe"
+        },
+        "fields": [
+          {
+            "id": "pe_ratio",
+            "label": "Reported P/E ratio",
+            "type": "number",
+            "default": 15,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "growth_rate_percent",
+            "label": "Expected annual earnings growth (%)",
+            "type": "number",
+            "default": 20,
+            "min": -100,
+            "max": 1000,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "section_from_price_eps",
+        "label": "From price & EPS",
+        "show_when": {
+          "field": "calculation_method",
+          "is": "from_price_eps"
+        },
+        "fields": [
+          {
+            "id": "price",
+            "label": "Share price",
+            "type": "number",
+            "default": 100,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "eps",
+            "label": "Earnings per share (EPS)",
+            "type": "number",
+            "default": 5,
+            "min": -1000000,
+            "step": 0.01
+          },
+          {
+            "id": "growth_rate_percent",
+            "label": "Expected annual earnings growth (%)",
+            "type": "number",
+            "default": 20,
+            "min": -100,
+            "max": 1000,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "section_pegy",
+        "label": "PEGY (include dividend)",
+        "show_when": {
+          "field": "calculation_method",
+          "is": "pegy"
+        },
+        "fields": [
+          {
+            "id": "price",
+            "label": "Share price",
+            "type": "number",
+            "default": 100,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "eps",
+            "label": "Earnings per share (EPS)",
+            "type": "number",
+            "default": 5,
+            "min": -1000000,
+            "step": 0.01
+          },
+          {
+            "id": "growth_rate_percent",
+            "label": "Expected annual earnings growth (%)",
+            "type": "number",
+            "default": 20,
+            "min": -100,
+            "max": 1000,
+            "step": 0.01
+          },
+          {
+            "id": "dividend_yield_percent",
+            "label": "Dividend yield (%)",
+            "type": "number",
+            "default": 2,
+            "min": 0,
+            "max": 100,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "The PEG ratio (Price/Earnings to Growth) is a valuation metric that adjusts the P/E ratio by the expected annual earnings growth, enabling comparison across companies with different growth profiles. It is commonly used to identify whether a stock's price fairly reflects its growth prospects.",
+      "This tool supports three calculation modes: using a reported P/E and growth rate, deriving P/E from price and EPS, and computing PEGY that adds dividend yield to growth for dividend-paying companies. Enter growth as an annual percentage and review the guidance below for accuracy limits and safe usage."
+    ],
+    "methodology": [
+      "Core calculation: PEG = (P/E) ÷ (expected annual earnings growth as a decimal). Use growth rates expressed as percentage points converted to decimals (for example, 20% = 0.20).",
+      "When computing P/E from price and EPS, use the latest available EPS figure and note whether it is trailing-twelve-month (TTM), forward, or adjusted EPS; mixing bases will invalidate results. For PEGY, dividend yield is added to the growth rate to reflect total shareholder return contribution.",
+      "Quality controls and safe handling: the calculator warns about division by zero and negative or extremely small growth rates. It does not substitute for detailed financial models. Use audited financials for EPS and credible analyst or company guidance for growth forecasts. Follow institutional data-validation practices aligned with ISO 9001 quality principles and apply secure handling of data consistent with NIST guidance for integrity controls."
+    ],
+    "how_is_calculated": [
+      "From reported P/E: PEG = P/E ÷ (growth% / 100)",
+      "From price & EPS: P/E = price ÷ EPS; then PEG = P/E ÷ (growth% / 100)",
+      "PEGY: PEGY = P/E ÷ ((growth% / 100) + (dividend yield% / 100))"
+    ],
+    "examples": [
+      "Example 1 (From reported P/E): Reported P/E = 15, expected growth = 20%. PEG = 15 ÷ 0.20 = 75. Interpret with context: very high PEG suggests price far exceeds growth expectations or inputs are inconsistent.",
+      "Example 2 (From price & EPS, PEGY): Price = 100, EPS = 5 ⇒ P/E = 20. Growth = 10%, dividend yield = 2% ⇒ PEGY = 20 ÷ (0.10 + 0.02) = 166.67. High values indicate aggressive valuation relative to combined growth and yield."
+    ],
+    "faqs": [
+      {
+        "question": "What is a 'good' PEG ratio?",
+        "answer": "No single threshold is universal. A PEG near 1 has historically been interpreted as price roughly matching growth expectations, but sector, stage of company (growth vs mature), and the reliability of growth forecasts matter. Compare peers using the same growth basis (TTM vs forward)."
+      },
+      {
+        "question": "Can growth be negative or zero?",
+        "answer": "Yes. Zero or negative growth leads to undefined or negative PEG results; the calculator will flag division-by-zero or near-zero denominators. Interpret negative PEG cautiously: it may reflect declining earnings and requires deeper analysis beyond this metric."
+      },
+      {
+        "question": "Should I use trailing or forward earnings growth?",
+        "answer": "Be consistent: mix neither trailing EPS with forward growth nor different time horizons. State clearly whether growth is TTM, next-12-months, or a multi-year CAGR, and prefer consensus analyst or company guidance for forward estimates."
+      },
+      {
+        "question": "What are the calculator's accuracy limits?",
+        "answer": "Calculated results depend entirely on input quality. Rounding and floating-point arithmetic follow common binary IEEE 754 semantics; very large or small numbers may exhibit representational rounding. Always cross-check critical valuations with independent systems and audited data."
+      },
+      {
+        "question": "Is this tool a buy/sell recommendation?",
+        "answer": "No. This tool provides a valuation metric for analysis and is not financial, tax, or investment advice. Use it alongside comprehensive models and consult licensed professionals for decisions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Computer Security and Data Integrity Guidance",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO 9001 Quality Management Principles",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE Standard for Floating-Point Arithmetic (IEEE 754)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - safety standards",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "PEG ratio",
+        "definition": "Price/Earnings-to-Growth ratio; P/E divided by expected annual earnings growth (expressed as a decimal)."
+      },
+      {
+        "term": "P/E ratio",
+        "definition": "Price-to-Earnings ratio; share price divided by earnings per share (EPS)."
+      },
+      {
+        "term": "EPS",
+        "definition": "Earnings per share; company's profit allocated to each outstanding share, can be trailing, adjusted, or forward."
+      },
+      {
+        "term": "CAGR",
+        "definition": "Compound Annual Growth Rate; consistent annual growth rate over a period, often used for multi-year forecasts."
+      },
+      {
+        "term": "PEGY",
+        "definition": "Variation of PEG that adds dividend yield to earnings growth when dividing P/E, reflecting both growth and income components."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

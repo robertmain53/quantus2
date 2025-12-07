@@ -1,0 +1,572 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Refinance & Extra-Payments Calculator (Compare Current vs Refinance)",
+    "description": "Estimate monthly payments, payoff time, interest paid, and savings when refinancing an auto loan and/or making extra payments. Produces a side-by-side comparison of your current loan and a refinance scenario that can include recurring extra payments."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "refinance_vs_current",
+    "methods": {
+      "refinance_vs_current": {
+        "label": "Refinance comparison (with optional extra payments)",
+        "description": "Compares remaining balance on your current loan with a refinance offer. Optionally models recurring extra payments applied to principal to estimate earlier payoff and interest savings.",
+        "variables": {
+          "current_monthly_rate": {
+            "expression": "current_annual_rate/1200",
+            "dependencies": [
+              "current_annual_rate"
+            ],
+            "label": "Current monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "current_monthly_payment": {
+            "expression": "current_balance * current_monthly_rate / (1 - pow(1+current_monthly_rate, -current_remaining_months))",
+            "dependencies": [
+              "current_balance",
+              "current_monthly_rate",
+              "current_remaining_months"
+            ],
+            "label": "Estimated current monthly payment (remaining schedule)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "current_total_payment": {
+            "expression": "current_monthly_payment * current_remaining_months",
+            "dependencies": [
+              "current_monthly_payment",
+              "current_remaining_months"
+            ],
+            "label": "Total remaining payments (current loan)",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "current_total_interest": {
+            "expression": "current_total_payment - current_balance",
+            "dependencies": [
+              "current_total_payment",
+              "current_balance"
+            ],
+            "label": "Remaining interest to be paid under current loan",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "loan_amount": {
+            "expression": "current_balance + refinance_fees",
+            "dependencies": [
+              "current_balance",
+              "refinance_fees"
+            ],
+            "label": "Refinance principal (balance + fees capitalized)",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "refinance_monthly_rate": {
+            "expression": "refinance_annual_rate/1200",
+            "dependencies": [
+              "refinance_annual_rate"
+            ],
+            "label": "Refinance monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "refinance_payment_no_extra": {
+            "expression": "loan_amount * refinance_monthly_rate / (1 - pow(1+refinance_monthly_rate, -refinance_term_months))",
+            "dependencies": [
+              "loan_amount",
+              "refinance_monthly_rate",
+              "refinance_term_months"
+            ],
+            "label": "Refinance monthly payment (no extra payments)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "extra_monthly_payment": {
+            "expression": "extra_payment * extra_freq_factor",
+            "dependencies": [
+              "extra_payment",
+              "extra_freq_factor"
+            ],
+            "label": "Extra payment converted to monthly equivalent",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "A": {
+            "expression": "refinance_payment_no_extra + extra_monthly_payment",
+            "dependencies": [
+              "refinance_payment_no_extra",
+              "extra_monthly_payment"
+            ],
+            "label": "Total monthly amount applied (scheduled + extra)",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "refinance_months_with_extra": {
+            "expression": "-log(1 - refinance_monthly_rate * loan_amount / A) / log(1 + refinance_monthly_rate)",
+            "dependencies": [
+              "refinance_monthly_rate",
+              "loan_amount",
+              "A"
+            ],
+            "label": "Months to payoff under refinance with extra payments",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "refinance_total_payment_with_extra": {
+            "expression": "A * refinance_months_with_extra",
+            "dependencies": [
+              "A",
+              "refinance_months_with_extra"
+            ],
+            "label": "Total amount paid under refinance + extra",
+            "unit": "",
+            "format": "currency",
+            "display": false
+          },
+          "refinance_total_interest_with_extra": {
+            "expression": "refinance_total_payment_with_extra - loan_amount",
+            "dependencies": [
+              "refinance_total_payment_with_extra",
+              "loan_amount"
+            ],
+            "label": "Total interest paid under refinance with extra",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings": {
+            "expression": "current_total_interest - refinance_total_interest_with_extra",
+            "dependencies": [
+              "current_total_interest",
+              "refinance_total_interest_with_extra"
+            ],
+            "label": "Estimated interest saved by refinancing and using extra payments",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "months_saved": {
+            "expression": "current_remaining_months - refinance_months_with_extra",
+            "dependencies": [
+              "current_remaining_months",
+              "refinance_months_with_extra"
+            ],
+            "label": "Months of loan term shortened",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "break_even_months": {
+            "expression": "refinance_fees / (current_monthly_payment - refinance_payment_no_extra)",
+            "dependencies": [
+              "refinance_fees",
+              "current_monthly_payment",
+              "refinance_payment_no_extra"
+            ],
+            "label": "Estimated months to break even on refinance fees (if monthly payment is lower)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_monthly_payment",
+            "label": "Current monthly payment (remaining)",
+            "variable": "current_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "current_total_interest",
+            "label": "Remaining interest on current loan",
+            "variable": "current_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "refinance_payment_no_extra",
+            "label": "Refinance monthly payment (no extras)",
+            "variable": "refinance_payment_no_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "refinance_months_with_extra",
+            "label": "Months to payoff with refinance + extras",
+            "variable": "refinance_months_with_extra",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "refinance_total_interest_with_extra",
+            "label": "Total interest under refinance with extras",
+            "variable": "refinance_total_interest_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings",
+            "label": "Estimated interest savings vs current loan",
+            "variable": "interest_savings",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "months_saved",
+            "label": "Estimated months saved",
+            "variable": "months_saved",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "break_even_months",
+            "label": "Estimated break-even months for refinance fees",
+            "variable": "break_even_months",
+            "unit": "months",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_balance",
+        "label": "Current loan remaining balance",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_annual_rate",
+        "label": "Current annual interest rate (APR %) on remaining loan",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "current_remaining_months",
+        "label": "Months remaining on current loan",
+        "type": "integer",
+        "default": 36,
+        "min": 1,
+        "max": 480,
+        "step": 1
+      },
+      {
+        "id": "refinance_annual_rate",
+        "label": "Offered refinance annual interest rate (APR %)",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "refinance_term_months",
+        "label": "Refinance loan term (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 720,
+        "step": 1
+      },
+      {
+        "id": "refinance_fees",
+        "label": "Refinance fees or costs to be capitalized (or 0)",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment amount (per selected frequency)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_freq_factor",
+        "label": "Extra payment frequency (internal factor applied to convert to monthly equivalent)",
+        "type": "select",
+        "default": "1",
+        "options": [
+          {
+            "label": "Monthly (applies once per month)",
+            "value": "1"
+          },
+          {
+            "label": "Biweekly (26 payments/year; converted to monthly equivalent)",
+            "value": "2.1666667"
+          },
+          {
+            "label": "Yearly (1 payment per year)",
+            "value": "0.083333333"
+          }
+        ]
+      },
+      {
+        "id": "extra_start_after_months",
+        "label": "Delay extra payments until after how many months (0 = start now)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 480,
+        "step": 1
+      },
+      {
+        "id": "prepayment_penalty_percent",
+        "label": "Estimated prepayment penalty (percentage of balance, if any)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      }
+    ],
+    "sections": [
+      {
+        "id": "current_loan",
+        "label": "Current loan (remaining)",
+        "fields": [
+          {
+            "id": "current_balance",
+            "label": "Current loan remaining balance",
+            "type": "number",
+            "default": 15000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "current_annual_rate",
+            "label": "Current annual interest rate (APR %)",
+            "type": "number",
+            "default": 6.5,
+            "min": 0,
+            "max": 100,
+            "step": 0.01
+          },
+          {
+            "id": "current_remaining_months",
+            "label": "Months remaining",
+            "type": "integer",
+            "default": 36,
+            "min": 1,
+            "max": 480,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "refinance_offer",
+        "label": "Refinance offer",
+        "fields": [
+          {
+            "id": "refinance_annual_rate",
+            "label": "Refinance APR (%)",
+            "type": "number",
+            "default": 4.5,
+            "min": 0,
+            "max": 100,
+            "step": 0.01
+          },
+          {
+            "id": "refinance_term_months",
+            "label": "Refinance term (months)",
+            "type": "integer",
+            "default": 60,
+            "min": 1,
+            "max": 720,
+            "step": 1
+          },
+          {
+            "id": "refinance_fees",
+            "label": "Fees to be added/capitalized (USD)",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "extra_payments",
+        "label": "Extra payments",
+        "fields": [
+          {
+            "id": "extra_payment",
+            "label": "Extra payment amount",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "extra_freq_factor",
+            "label": "Frequency (internal multiplier)",
+            "type": "select",
+            "default": "1",
+            "options": [
+              {
+                "label": "Monthly",
+                "value": "1"
+              },
+              {
+                "label": "Biweekly (26/yr → monthly equivalent)",
+                "value": "2.1666667"
+              },
+              {
+                "label": "Yearly",
+                "value": "0.083333333"
+              }
+            ]
+          },
+          {
+            "id": "extra_start_after_months",
+            "label": "Start extras after (months)",
+            "type": "integer",
+            "default": 0,
+            "min": 0,
+            "max": 480,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares your current auto loan's remaining balance and schedule with a refinance offer, optionally modeling recurring extra payments applied to principal. It estimates monthly payments, interest paid, payoff time, and break-even months for refinance fees.",
+      "The tool assumes monthly compounding and scheduled payments. Extra payments are converted to a monthly equivalent based on the selected frequency. Results are estimates for planning and discussion with lenders; actual loan agreements and amortization schedules may differ."
+    ],
+    "methodology": [
+      "Monthly payment formulas use standard amortization: payment = P * r / (1 - (1+r)^-n), where P is principal, r is monthly rate, and n is number of months remaining.",
+      "When extra payments are applied, months to payoff are estimated using the inverse of the loan amortization formula: n = -ln(1 - r*P/A) / ln(1+r), where A is the total monthly amount applied (scheduled payment + extra).",
+      "Assumptions and rounding: rates are entered as annual APR and converted to a monthly rate by dividing by 12 and by 100. Fees entered as 'refinance fees' are added to the financed amount for the refinance scenario. The model does not include taxes, insurance, or changes to rate (variable-rate loans)."
+    ],
+    "how_is_calculated": [
+      "Convert APR to monthly rate: r = APR / 1200.",
+      "Scheduled monthly payment: payment = P * r / (1 - (1+r)^(-n)).",
+      "With extras, total monthly applied = scheduled payment + extra_monthly_equivalent. Months to payoff = -ln(1 - r*P / total_monthly_applied) / ln(1+r).",
+      "Interest paid = total paid - principal financed."
+    ],
+    "examples": [
+      "Example: $15,000 balance, 6.5% APR, 36 months remaining vs refinance at 4.5% for 60 months with $500 fees. Without extras the refinance monthly payment may be lower but term longer; adding $100/month extra can shorten payoff and save interest.",
+      "Example: Biweekly extra payments are converted to a monthly equivalent by multiplying the biweekly amount by 26 (payments per year) then dividing by 12 to obtain a monthly figure used in the amortization calculation."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator include tax, title, or insurance?",
+        "answer": "No. This tool models loan principal, interest, extra payments, and fees only. Taxes, title, insurance, and other charges are not included and can change the financed amount in a real transaction."
+      },
+      {
+        "question": "What if the refinance rate is 0% or very small?",
+        "answer": "The formulas assume a positive monthly interest rate. For 0% APR, the payment calculation simplifies to principal divided by months. Extremely small rates may create numerical instability; use results as approximate and verify with lender schedules."
+      },
+      {
+        "question": "How accurate are the savings estimates?",
+        "answer": "Estimates use standard amortization math and are intended for planning. They do not substitute for lender-provided payoff statements or official loan disclosures. Always confirm exact numbers with the lender before refinancing or making payment decisions."
+      },
+      {
+        "question": "Does the calculator account for prepayment penalties?",
+        "answer": "You can enter an estimated prepayment penalty percentage. The tool treats refinance fees as costs to be capitalized; prepayment penalties should be considered separately when deciding whether refinancing saves money."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST – National Institute of Standards and Technology (standards & measurement guidance)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO – International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE – Institute of Electrical and Electronics Engineers (numerical methods and standards)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA – Occupational Safety and Health Administration (general standards reference)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau (loan disclosure best practices)",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate — the annual interest rate including certain fees, shown as a percentage."
+      },
+      {
+        "term": "Principal",
+        "definition": "The outstanding loan balance on which interest is calculated."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off debt over time through regular payments of principal and interest."
+      },
+      {
+        "term": "Extra payments",
+        "definition": "Payments made in addition to the scheduled monthly payment, typically applied to reduce principal and interest over time."
+      },
+      {
+        "term": "Break-even months",
+        "definition": "Estimated number of months required for cumulative monthly savings to offset refinance fees or costs."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "CFPB",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

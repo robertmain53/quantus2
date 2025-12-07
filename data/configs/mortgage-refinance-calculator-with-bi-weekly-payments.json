@@ -1,0 +1,609 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Refinance & Bi-Weekly Payments Calculator (Comparative)",
+    "description": "Compare your existing mortgage to a refinance option and evaluate switching to bi-weekly payments. Shows per-period payments, total interest paid, interest savings, and estimated break-even for closing costs. Includes a standalone bi-weekly vs monthly comparison."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "refinance_compare",
+    "methods": {
+      "refinance_compare": {
+        "label": "Refinance comparison (monthly or bi-weekly)",
+        "description": "Compare total cost and payments for your current mortgage vs a proposed refinance using the payment frequency you specify for each loan.",
+        "variables": {
+          "r_current": {
+            "expression": "current_interest_rate/100 / payments_per_year_current",
+            "dependencies": [
+              "current_interest_rate",
+              "payments_per_year_current"
+            ],
+            "label": "Periodic interest rate (current)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n_current": {
+            "expression": "current_remaining_years * payments_per_year_current",
+            "dependencies": [
+              "current_remaining_years",
+              "payments_per_year_current"
+            ],
+            "label": "Remaining periods (current)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "payment_current": {
+            "expression": "r_current * current_balance / (1 - (1 + r_current)^(-n_current))",
+            "dependencies": [
+              "r_current",
+              "n_current",
+              "current_balance"
+            ],
+            "label": "Current periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_current": {
+            "expression": "payment_current * n_current",
+            "dependencies": [
+              "payment_current",
+              "n_current"
+            ],
+            "label": "Total paid under current schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_current": {
+            "expression": "total_payment_current - current_balance",
+            "dependencies": [
+              "total_payment_current",
+              "current_balance"
+            ],
+            "label": "Total interest remaining (current)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "r_new": {
+            "expression": "new_interest_rate/100 / payments_per_year_new",
+            "dependencies": [
+              "new_interest_rate",
+              "payments_per_year_new"
+            ],
+            "label": "Periodic interest rate (new)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n_new": {
+            "expression": "new_term_years * payments_per_year_new",
+            "dependencies": [
+              "new_term_years",
+              "payments_per_year_new"
+            ],
+            "label": "Periods (new loan)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "payment_new": {
+            "expression": "r_new * current_balance / (1 - (1 + r_new)^(-n_new))",
+            "dependencies": [
+              "r_new",
+              "n_new",
+              "current_balance"
+            ],
+            "label": "Proposed periodic payment (new loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_new": {
+            "expression": "payment_new * n_new",
+            "dependencies": [
+              "payment_new",
+              "n_new"
+            ],
+            "label": "Total paid under new loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_new": {
+            "expression": "total_payment_new - current_balance",
+            "dependencies": [
+              "total_payment_new",
+              "current_balance"
+            ],
+            "label": "Total interest (new loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings_total": {
+            "expression": "total_interest_current - total_interest_new",
+            "dependencies": [
+              "total_interest_current",
+              "total_interest_new"
+            ],
+            "label": "Total interest savings (current - new)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_payment_current": {
+            "expression": "payment_current * payments_per_year_current",
+            "dependencies": [
+              "payment_current",
+              "payments_per_year_current"
+            ],
+            "label": "Annual payment current",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": false
+          },
+          "annual_payment_new": {
+            "expression": "payment_new * payments_per_year_new",
+            "dependencies": [
+              "payment_new",
+              "payments_per_year_new"
+            ],
+            "label": "Annual payment new",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": false
+          },
+          "annual_savings": {
+            "expression": "annual_payment_current - annual_payment_new",
+            "dependencies": [
+              "annual_payment_current",
+              "annual_payment_new"
+            ],
+            "label": "Approximate annual cash flow savings",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": true
+          },
+          "break_even_years": {
+            "expression": "refinance_closing_costs / (annual_savings == 0 ? 1e-9 : annual_savings)",
+            "dependencies": [
+              "refinance_closing_costs",
+              "annual_savings"
+            ],
+            "label": "Estimated break-even (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "break_even_months": {
+            "expression": "round(break_even_years * 12)",
+            "dependencies": [
+              "break_even_years"
+            ],
+            "label": "Estimated break-even (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_current",
+            "label": "Current payment (per period)",
+            "variable": "payment_current",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payment_new",
+            "label": "Proposed payment (per period)",
+            "variable": "payment_new",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_current",
+            "label": "Total interest remaining (current)",
+            "variable": "total_interest_current",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_new",
+            "label": "Total interest (new loan)",
+            "variable": "total_interest_new",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings_total",
+            "label": "Total interest savings",
+            "variable": "interest_savings_total",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_savings",
+            "label": "Approximate annual savings",
+            "variable": "annual_savings",
+            "unit": "currency/year",
+            "format": "currency"
+          },
+          {
+            "id": "break_even_months",
+            "label": "Estimated break-even (months)",
+            "variable": "break_even_months",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      },
+      "biweekly_vs_monthly": {
+        "label": "Bi-weekly versus monthly payment effect (same loan)",
+        "description": "Estimate how switching the same loan from monthly to bi-weekly payments (26 periods/year) changes total interest and payoff time.",
+        "variables": {
+          "r_monthly": {
+            "expression": "current_interest_rate/100 / 12",
+            "dependencies": [
+              "current_interest_rate"
+            ],
+            "label": "Monthly periodic rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n_monthly": {
+            "expression": "current_remaining_years * 12",
+            "dependencies": [
+              "current_remaining_years"
+            ],
+            "label": "Remaining months",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "payment_monthly": {
+            "expression": "r_monthly * current_balance / (1 - (1 + r_monthly)^(-n_monthly))",
+            "dependencies": [
+              "r_monthly",
+              "n_monthly",
+              "current_balance"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_monthly": {
+            "expression": "payment_monthly * n_monthly",
+            "dependencies": [
+              "payment_monthly",
+              "n_monthly"
+            ],
+            "label": "Total paid (monthly schedule)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_monthly": {
+            "expression": "total_payment_monthly - current_balance",
+            "dependencies": [
+              "total_payment_monthly",
+              "current_balance"
+            ],
+            "label": "Total interest (monthly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "r_biweekly": {
+            "expression": "current_interest_rate/100 / 26",
+            "dependencies": [
+              "current_interest_rate"
+            ],
+            "label": "Bi-weekly periodic rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n_biweekly": {
+            "expression": "current_remaining_years * 26",
+            "dependencies": [
+              "current_remaining_years"
+            ],
+            "label": "Remaining bi-weekly periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "payment_biweekly": {
+            "expression": "r_biweekly * current_balance / (1 - (1 + r_biweekly)^(-n_biweekly))",
+            "dependencies": [
+              "r_biweekly",
+              "n_biweekly",
+              "current_balance"
+            ],
+            "label": "Bi-weekly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_biweekly": {
+            "expression": "payment_biweekly * n_biweekly",
+            "dependencies": [
+              "payment_biweekly",
+              "n_biweekly"
+            ],
+            "label": "Total paid (bi-weekly schedule)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_biweekly": {
+            "expression": "total_payment_biweekly - current_balance",
+            "dependencies": [
+              "total_payment_biweekly",
+              "current_balance"
+            ],
+            "label": "Total interest (bi-weekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_interest_savings": {
+            "expression": "total_interest_monthly - total_interest_biweekly",
+            "dependencies": [
+              "total_interest_monthly",
+              "total_interest_biweekly"
+            ],
+            "label": "Interest savings (monthly -> bi-weekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_monthly",
+            "label": "Monthly payment",
+            "variable": "payment_monthly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payment_biweekly",
+            "label": "Bi-weekly payment",
+            "variable": "payment_biweekly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_monthly",
+            "label": "Total interest if monthly",
+            "variable": "total_interest_monthly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_biweekly",
+            "label": "Total interest if bi-weekly",
+            "variable": "total_interest_biweekly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_interest_savings",
+            "label": "Estimated interest savings by switching to bi-weekly",
+            "variable": "biweekly_interest_savings",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_balance",
+        "label": "Current remaining principal balance",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "current_interest_rate",
+        "label": "Current annual interest rate (percent)",
+        "type": "number",
+        "default": 4.25,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "current_remaining_years",
+        "label": "Remaining loan term (years)",
+        "type": "number",
+        "default": 25,
+        "min": 0.1,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year_current",
+        "label": "Payments per year for current loan (enter 12 for monthly or 26 for bi-weekly)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "new_interest_rate",
+        "label": "Refinance annual interest rate (percent)",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "new_term_years",
+        "label": "Refinance term (years)",
+        "type": "number",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year_new",
+        "label": "Payments per year for new loan (enter 12 for monthly or 26 for bi-weekly)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "refinance_closing_costs",
+        "label": "Total refinance closing costs (cash out of pocket)",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool compares your current mortgage schedule to a proposed refinance and offers a separate comparison of switching from monthly to bi-weekly payments. Enter your loan balance, interest rates, terms and the payment frequency (12 or 26 payments per year). Results show per-period payments, total interest over the remaining life, estimated interest savings and an approximate break-even for closing costs.",
+      "The calculator provides estimates only. Results depend on your inputs and assumptions (for example, whether closing costs are paid up front or financed). Use the output to inform decisions; confirm exact numbers with your lender and review loan documents carefully."
+    ],
+    "methodology": [
+      "Periodic payment is calculated using the standard amortizing loan formula: payment = r * PV / (1 - (1+r)^-n) where r is the periodic rate and n is the number of remaining periods.",
+      "Total interest equals the sum of all scheduled payments minus the principal balance. Break-even estimates divide closing costs by the calculated annual cash-flow savings to approximate time to recover closing costs.",
+      "Bi-weekly vs monthly comparisons use 26 and 12 payments per year respectively and recompute payment and total interest for the same principal, rate and remaining term."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_rate (%) / 100 / payments_per_year.",
+      "Number of periods n = remaining_years * payments_per_year.",
+      "Periodic payment = r * principal / (1 - (1 + r)^(-n)).",
+      "Total interest = (periodic payment * n) - principal.",
+      "Annual savings = (periodic payment_current * ppy_current) - (periodic payment_new * ppy_new).",
+      "Break-even years = closing_costs divided by annual_savings when annual_savings is positive."
+    ],
+    "faqs": [
+      {
+        "question": "Should I include closing costs in the new loan principal?",
+        "answer": "This calculator treats closing costs as a cash outlay (not financed). If you plan to finance closing costs into the loan, payments and total interest will change; consult your lender and re-enter the effective loan amount as the principal."
+      },
+      {
+        "question": "Why do bi-weekly payments sometimes save interest?",
+        "answer": "Bi-weekly schedules make 26 half-payments per year, which equals 13 monthly-sized payments—one extra monthly payment per year—reducing outstanding principal faster and lowering total interest over the loan life."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are approximate and depend on input accuracy and assumptions. They do not account for irregular extra payments, escrow changes, penalties, prepayment rules, or taxes. Use as a planning tool and verify with lender-provided amortization schedules."
+      },
+      {
+        "question": "What if I already have a bi-weekly plan set up through my servicer?",
+        "answer": "If your servicer simply holds payments and applies them monthly, the effective amortization may match monthly payments. This tool assumes true bi-weekly application (payment applied every half-month). Check your servicer's terms."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Cybersecurity & Software Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Quality Management (ISO 9001)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE - Software & Systems Engineering Standards",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA - General Guidance",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection information on refinancing",
+        "url": "https://www.consumerfinance.gov/owning-a-home/refinancing/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The outstanding loan balance on which interest is charged."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period; annual rate divided by payments per year."
+      },
+      {
+        "term": "Bi-weekly",
+        "definition": "A payment frequency with 26 payments per year (every two weeks)."
+      },
+      {
+        "term": "Break-even",
+        "definition": "The time required for cumulative savings from a refinance or payment change to equal the closing costs paid."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of gradually paying down loan principal through scheduled payments that include interest and principal components."
+      }
+    ],
+    "summary": [
+      "Enter current loan details and proposed refinance terms. For frequency, enter 12 for monthly or 26 for bi-weekly payments in the payments-per-year fields.",
+      "The tool returns estimated per-period payments, total interest for each scenario, estimated annual savings, and an approximate break-even for closing costs."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 Quality Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,910 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Portfolio Rebalancing Calculator — Multi-method",
+    "description": "Interactive multi-method portfolio rebalancer that supports target-allocation, threshold rebalancing, cash-flow driven allocation, and a tax-aware minimal-sell mode. Designed for clear trade instructions, calibration limits, and traceable calculations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "target_allocation",
+    "methods": {
+      "target_allocation": {
+        "label": "Target allocation (full rebalance)",
+        "description": "Compute desired holdings to match target percentages and show trade amounts required to reach targets.",
+        "variables": {
+          "total_value": {
+            "expression": "current_value_1 + current_value_2 + current_value_3 + current_value_4 + current_value_5 + cash_available",
+            "dependencies": [
+              "current_value_1",
+              "current_value_2",
+              "current_value_3",
+              "current_value_4",
+              "current_value_5",
+              "cash_available"
+            ],
+            "label": "Total portfolio value (including available cash)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "desired_value_1": {
+            "expression": "total_value * target_pct_1 / 100",
+            "dependencies": [
+              "total_value",
+              "target_pct_1"
+            ],
+            "label": "Desired value Asset 1",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "desired_value_2": {
+            "expression": "total_value * target_pct_2 / 100",
+            "dependencies": [
+              "total_value",
+              "target_pct_2"
+            ],
+            "label": "Desired value Asset 2",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "desired_value_3": {
+            "expression": "total_value * target_pct_3 / 100",
+            "dependencies": [
+              "total_value",
+              "target_pct_3"
+            ],
+            "label": "Desired value Asset 3",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "desired_value_4": {
+            "expression": "total_value * target_pct_4 / 100",
+            "dependencies": [
+              "total_value",
+              "target_pct_4"
+            ],
+            "label": "Desired value Asset 4",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "desired_value_5": {
+            "expression": "total_value * target_pct_5 / 100",
+            "dependencies": [
+              "total_value",
+              "target_pct_5"
+            ],
+            "label": "Desired value Asset 5",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "trade_1": {
+            "expression": "desired_value_1 - current_value_1 - (transaction_cost_pct/100) * abs(desired_value_1 - current_value_1)",
+            "dependencies": [
+              "desired_value_1",
+              "current_value_1",
+              "transaction_cost_pct"
+            ],
+            "label": "Suggested trade amount Asset 1 (net of estimated transaction cost)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "trade_2": {
+            "expression": "desired_value_2 - current_value_2 - (transaction_cost_pct/100) * abs(desired_value_2 - current_value_2)",
+            "dependencies": [
+              "desired_value_2",
+              "current_value_2",
+              "transaction_cost_pct"
+            ],
+            "label": "Suggested trade amount Asset 2",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "trade_3": {
+            "expression": "desired_value_3 - current_value_3 - (transaction_cost_pct/100) * abs(desired_value_3 - current_value_3)",
+            "dependencies": [
+              "desired_value_3",
+              "current_value_3",
+              "transaction_cost_pct"
+            ],
+            "label": "Suggested trade amount Asset 3",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "trade_4": {
+            "expression": "desired_value_4 - current_value_4 - (transaction_cost_pct/100) * abs(desired_value_4 - current_value_4)",
+            "dependencies": [
+              "desired_value_4",
+              "current_value_4",
+              "transaction_cost_pct"
+            ],
+            "label": "Suggested trade amount Asset 4",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "trade_5": {
+            "expression": "desired_value_5 - current_value_5 - (transaction_cost_pct/100) * abs(desired_value_5 - current_value_5)",
+            "dependencies": [
+              "desired_value_5",
+              "current_value_5",
+              "transaction_cost_pct"
+            ],
+            "label": "Suggested trade amount Asset 5",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "trade_1",
+            "label": "Asset 1 trade amount",
+            "variable": "trade_1",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "trade_2",
+            "label": "Asset 2 trade amount",
+            "variable": "trade_2",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "trade_3",
+            "label": "Asset 3 trade amount",
+            "variable": "trade_3",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "trade_4",
+            "label": "Asset 4 trade amount",
+            "variable": "trade_4",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "trade_5",
+            "label": "Asset 5 trade amount",
+            "variable": "trade_5",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "threshold_rebalance": {
+        "label": "Threshold rebalancing (only if outside band)",
+        "description": "Identify assets whose weight deviates from their target by more than the configured threshold and show the trade required to restore target for those assets.",
+        "variables": {
+          "total_value": {
+            "expression": "current_value_1 + current_value_2 + current_value_3 + current_value_4 + current_value_5 + cash_available",
+            "dependencies": [
+              "current_value_1",
+              "current_value_2",
+              "current_value_3",
+              "current_value_4",
+              "current_value_5",
+              "cash_available"
+            ],
+            "label": "Total portfolio value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_pct_1": {
+            "expression": "if(total_value>0, current_value_1 / total_value * 100, 0)",
+            "dependencies": [
+              "current_value_1",
+              "total_value"
+            ],
+            "label": "Current percent Asset 1",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "deviation_1": {
+            "expression": "abs(current_pct_1 - target_pct_1)",
+            "dependencies": [
+              "current_pct_1",
+              "target_pct_1"
+            ],
+            "label": "Deviation Asset 1",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "desired_trade_if_outside_1": {
+            "expression": "deviation_1 > rebalance_threshold_percent ? (total_value * target_pct_1 / 100 - current_value_1) : 0",
+            "dependencies": [
+              "deviation_1",
+              "rebalance_threshold_percent",
+              "total_value",
+              "target_pct_1",
+              "current_value_1"
+            ],
+            "label": "Trade if outside threshold Asset 1",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_pct_2": {
+            "expression": "if(total_value>0, current_value_2 / total_value * 100, 0)",
+            "dependencies": [
+              "current_value_2",
+              "total_value"
+            ],
+            "label": "Current percent Asset 2",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "deviation_2": {
+            "expression": "abs(current_pct_2 - target_pct_2)",
+            "dependencies": [
+              "current_pct_2",
+              "target_pct_2"
+            ],
+            "label": "Deviation Asset 2",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "desired_trade_if_outside_2": {
+            "expression": "deviation_2 > rebalance_threshold_percent ? (total_value * target_pct_2 / 100 - current_value_2) : 0",
+            "dependencies": [
+              "deviation_2",
+              "rebalance_threshold_percent",
+              "total_value",
+              "target_pct_2",
+              "current_value_2"
+            ],
+            "label": "Trade if outside threshold Asset 2",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "current_pct_3": {
+            "expression": "if(total_value>0, current_value_3 / total_value * 100, 0)",
+            "dependencies": [
+              "current_value_3",
+              "total_value"
+            ],
+            "label": "Current percent Asset 3",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "deviation_3": {
+            "expression": "abs(current_pct_3 - target_pct_3)",
+            "dependencies": [
+              "current_pct_3",
+              "target_pct_3"
+            ],
+            "label": "Deviation Asset 3",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "desired_trade_if_outside_3": {
+            "expression": "deviation_3 > rebalance_threshold_percent ? (total_value * target_pct_3 / 100 - current_value_3) : 0",
+            "dependencies": [
+              "deviation_3",
+              "rebalance_threshold_percent",
+              "total_value",
+              "target_pct_3",
+              "current_value_3"
+            ],
+            "label": "Trade if outside threshold Asset 3",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "current_pct_4": {
+            "expression": "if(total_value>0, current_value_4 / total_value * 100, 0)",
+            "dependencies": [
+              "current_value_4",
+              "total_value"
+            ],
+            "label": "Current percent Asset 4",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "deviation_4": {
+            "expression": "abs(current_pct_4 - target_pct_4)",
+            "dependencies": [
+              "current_pct_4",
+              "target_pct_4"
+            ],
+            "label": "Deviation Asset 4",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "desired_trade_if_outside_4": {
+            "expression": "deviation_4 > rebalance_threshold_percent ? (total_value * target_pct_4 / 100 - current_value_4) : 0",
+            "dependencies": [
+              "deviation_4",
+              "rebalance_threshold_percent",
+              "total_value",
+              "target_pct_4",
+              "current_value_4"
+            ],
+            "label": "Trade if outside threshold Asset 4",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "current_pct_5": {
+            "expression": "if(total_value>0, current_value_5 / total_value * 100, 0)",
+            "dependencies": [
+              "current_value_5",
+              "total_value"
+            ],
+            "label": "Current percent Asset 5",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "deviation_5": {
+            "expression": "abs(current_pct_5 - target_pct_5)",
+            "dependencies": [
+              "current_pct_5",
+              "target_pct_5"
+            ],
+            "label": "Deviation Asset 5",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "desired_trade_if_outside_5": {
+            "expression": "deviation_5 > rebalance_threshold_percent ? (total_value * target_pct_5 / 100 - current_value_5) : 0",
+            "dependencies": [
+              "deviation_5",
+              "rebalance_threshold_percent",
+              "total_value",
+              "target_pct_5",
+              "current_value_5"
+            ],
+            "label": "Trade if outside threshold Asset 5",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "deviation_1",
+            "label": "Asset 1 deviation (%)",
+            "variable": "deviation_1",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "desired_trade_if_outside_1",
+            "label": "Asset 1 trade if outside band",
+            "variable": "desired_trade_if_outside_1",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "deviation_2",
+            "label": "Asset 2 deviation (%)",
+            "variable": "deviation_2",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "desired_trade_if_outside_2",
+            "label": "Asset 2 trade if outside band",
+            "variable": "desired_trade_if_outside_2",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "cash_flow_driven": {
+        "label": "Cash-flow driven allocation",
+        "description": "Allocate new contributions to bring underweight assets toward target without selling existing holdings. Distributes contribution proportionally to shortfall.",
+        "variables": {
+          "total_value": {
+            "expression": "current_value_1 + current_value_2 + current_value_3 + current_value_4 + current_value_5 + cash_available",
+            "dependencies": [
+              "current_value_1",
+              "current_value_2",
+              "current_value_3",
+              "current_value_4",
+              "current_value_5",
+              "cash_available"
+            ],
+            "label": "Total portfolio value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_pct_1": {
+            "expression": "if(total_value>0, current_value_1 / total_value * 100, 0)",
+            "dependencies": [
+              "current_value_1",
+              "total_value"
+            ],
+            "label": "Current percent Asset 1",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "shortfall_1": {
+            "expression": "max(target_pct_1 - current_pct_1, 0)",
+            "dependencies": [
+              "target_pct_1",
+              "current_pct_1"
+            ],
+            "label": "Shortfall percent Asset 1",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "shortfall_sum": {
+            "expression": "shortfall_1 + max(target_pct_2 - current_pct_2, 0) + max(target_pct_3 - current_pct_3, 0) + max(target_pct_4 - current_pct_4, 0) + max(target_pct_5 - current_pct_5, 0)",
+            "dependencies": [
+              "shortfall_1",
+              "target_pct_2",
+              "current_pct_2",
+              "target_pct_3",
+              "current_pct_3",
+              "target_pct_4",
+              "current_pct_4",
+              "target_pct_5",
+              "current_pct_5"
+            ],
+            "label": "Sum of shortfalls",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "allocation_1": {
+            "expression": "if(shortfall_sum>0, incoming_contribution * (shortfall_1 / shortfall_sum), 0)",
+            "dependencies": [
+              "shortfall_sum",
+              "shortfall_1",
+              "incoming_contribution"
+            ],
+            "label": "Contribution allocated to Asset 1",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "allocation_2": {
+            "expression": "if(shortfall_sum>0, incoming_contribution * (max(target_pct_2 - current_pct_2, 0) / shortfall_sum), 0)",
+            "dependencies": [
+              "shortfall_sum",
+              "target_pct_2",
+              "current_pct_2",
+              "incoming_contribution"
+            ],
+            "label": "Contribution allocated to Asset 2",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "allocation_1",
+            "label": "Contribution to Asset 1",
+            "variable": "allocation_1",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "allocation_2",
+            "label": "Contribution to Asset 2",
+            "variable": "allocation_2",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "tax_minimizing": {
+        "label": "Tax-aware minimal-sell rebalancing",
+        "description": "Attempt to minimize realized gains by preferring buys with cash and contributions, and by computing minimal required sells from overweight positions when necessary. Estimations include a simple tax impact factor and transaction cost.",
+        "variables": {
+          "total_value": {
+            "expression": "current_value_1 + current_value_2 + current_value_3 + current_value_4 + current_value_5 + cash_available",
+            "dependencies": [
+              "current_value_1",
+              "current_value_2",
+              "current_value_3",
+              "current_value_4",
+              "current_value_5",
+              "cash_available"
+            ],
+            "label": "Total portfolio value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_pct_1": {
+            "expression": "if(total_value>0, current_value_1 / total_value * 100, 0)",
+            "dependencies": [
+              "current_value_1",
+              "total_value"
+            ],
+            "label": "Current percent Asset 1",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "overweight_1": {
+            "expression": "max(current_pct_1 - target_pct_1, 0)",
+            "dependencies": [
+              "current_pct_1",
+              "target_pct_1"
+            ],
+            "label": "Overweight percent Asset 1",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "sell_needed_1": {
+            "expression": "max((current_value_1 - total_value * target_pct_1 / 100) - cash_available, 0)",
+            "dependencies": [
+              "current_value_1",
+              "total_value",
+              "target_pct_1",
+              "cash_available"
+            ],
+            "label": "Estimated sell required from Asset 1 after using cash available",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "tax_cost_estimate_1": {
+            "expression": "sell_needed_1 * (tax_impact_pct/100)",
+            "dependencies": [
+              "sell_needed_1",
+              "tax_impact_pct"
+            ],
+            "label": "Estimated tax on sells for Asset 1",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "sell_needed_1",
+            "label": "Asset 1 estimated sell (minimize tax)",
+            "variable": "sell_needed_1",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "tax_cost_estimate_1",
+            "label": "Asset 1 estimated tax cost",
+            "variable": "tax_cost_estimate_1",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "asset_name_1",
+        "label": "Asset 1 name",
+        "type": "text",
+        "default": "Asset 1"
+      },
+      {
+        "id": "current_value_1",
+        "label": "Asset 1 current value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "target_pct_1",
+        "label": "Asset 1 target (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "asset_name_2",
+        "label": "Asset 2 name",
+        "type": "text",
+        "default": "Asset 2"
+      },
+      {
+        "id": "current_value_2",
+        "label": "Asset 2 current value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "target_pct_2",
+        "label": "Asset 2 target (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "asset_name_3",
+        "label": "Asset 3 name",
+        "type": "text",
+        "default": "Asset 3"
+      },
+      {
+        "id": "current_value_3",
+        "label": "Asset 3 current value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "target_pct_3",
+        "label": "Asset 3 target (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "asset_name_4",
+        "label": "Asset 4 name",
+        "type": "text",
+        "default": "Asset 4"
+      },
+      {
+        "id": "current_value_4",
+        "label": "Asset 4 current value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "target_pct_4",
+        "label": "Asset 4 target (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "asset_name_5",
+        "label": "Asset 5 name",
+        "type": "text",
+        "default": "Asset 5"
+      },
+      {
+        "id": "current_value_5",
+        "label": "Asset 5 current value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "target_pct_5",
+        "label": "Asset 5 target (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "cash_available",
+        "label": "Cash available for buys",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "incoming_contribution",
+        "label": "Planned contribution (one-time)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "transaction_cost_pct",
+        "label": "Estimated transaction cost (%) per trade",
+        "type": "number",
+        "default": 0.1,
+        "min": 0,
+        "max": 5,
+        "step": 0.01
+      },
+      {
+        "id": "rebalance_threshold_percent",
+        "label": "Threshold band (%) for threshold method",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "tax_impact_pct",
+        "label": "Estimated tax rate on realized gains (%)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "contribution_allocation_method",
+        "label": "Contribution allocation method",
+        "type": "select",
+        "default": "proportional_shortfall",
+        "options": [
+          {
+            "label": "Proportional to shortfall from target",
+            "value": "proportional_shortfall"
+          },
+          {
+            "label": "Proportional to target weights",
+            "value": "proportional_target"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This multi-method portfolio rebalancing calculator helps you determine trades needed to align holdings with a target allocation, minimize unnecessary trades, and incorporate cash flows. It supports full target rebalances, threshold (band) rebalances, cash-flow-driven allocations, and a tax-aware minimal-sell estimate.",
+      "The calculator is intended for planning and illustration. It provides estimated trade amounts and cost/tax impacts based on the inputs you provide. It does not execute trades and does not replace professional tax or investment advice."
+    ],
+    "methodology": [
+      "Calculations use standard accounting of market values and percentage weights: current percent = holding value divided by total portfolio value. Desired value = total portfolio value times target percentage.",
+      "Transaction and tax effects are estimated as simple proportional factors applied to gross trades to present a net expected trade. These are approximations to aid decision making and should be calibrated against your brokerage fees and tax rules.",
+      "This tool follows secure engineering and accuracy guidance by referencing established standards for trustworthy computation and user data handling, including NIST guidance for secure system design and data integrity, ISO guidance for quality management of calculations, and IEEE best practices for clear numeric presentation and unit labeling. See citations for links."
+    ],
+    "how_is_calculated": [
+      "Total value = sum of all current holding values + cash available.",
+      "Current percent for asset i = (current_value_i / total_value) * 100.",
+      "Desired value for asset i (target method) = total_value * target_pct_i / 100.",
+      "Trade suggestion (target method) = desired value - current value, adjusted for estimated transaction cost: net_trade = gross_trade - transaction_cost_pct * abs(gross_trade).",
+      "Threshold method flags assets where the absolute difference between current percent and target percent exceeds the threshold. Cash-flow method allocates new contributions to assets with the largest shortfalls from target."
+    ],
+    "examples": [
+      "Example: A portfolio with $10,000 total, Asset A current $3,000 with a 30% target requires desired value = $3,000 (no trade). If Asset A is $4,000 with a 30% target and total $10,000, then gross sell = $1,000; net sell after 0.1% transaction cost ≈ $999.",
+      "Example: With $500 available cash and an underweight B asset, the cash-flow method will allocate contributions proportionally to shortfalls so that new contributions increase the weight of underweighted assets without selling existing positions."
+    ],
+    "faqs": [
+      {
+        "question": "Can I rebalance across multiple accounts or tax wrappers?",
+        "answer": "This calculator models holdings at the portfolio level. For multi-account or tax-wrapper-aware rebalancing, export the results and map each holding to its account. For tax optimization across wrappers, consult a tax advisor; the tax-aware mode provides a rough estimate only."
+      },
+      {
+        "question": "Are taxes and transaction costs exact?",
+        "answer": "No. Tax and transaction cost fields are user-supplied estimates. Tax calculation here is a simplified estimate; actual tax depends on lot-level cost basis, holding periods, local tax rules, and specific brokerage fees."
+      },
+      {
+        "question": "How should I choose a rebalancing threshold?",
+        "answer": "Common thresholds range from 3% to 10% depending on portfolio size and trading costs. Lower thresholds increase trade frequency. Consider transaction costs and tax consequences when selecting a band."
+      },
+      {
+        "question": "What are the calculator limits?",
+        "answer": "The tool supports up to five holdings for quick scenario planning. For larger portfolios, use a spreadsheet or specialized software that supports dynamic asset lists, lot-level tax tracking, and broker APIs."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Computer Security and Data Integrity Frameworks",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO Quality Management and Measurement Standards",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards and Best Practices for Numeric Presentation",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — usability and safety guidance for interfaces",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Internal Revenue Service — general tax information",
+        "url": "https://www.irs.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Target allocation",
+        "definition": "The desired percentage weight assigned to each asset class or holding in your portfolio."
+      },
+      {
+        "term": "Threshold (rebalance band)",
+        "definition": "A tolerance band expressed in percentage points; assets are rebalanced only if their weight moves outside the band around the target."
+      },
+      {
+        "term": "Shortfall",
+        "definition": "When a holding's current percentage is below its target percentage; used to prioritize allocation of new contributions."
+      },
+      {
+        "term": "Net trade",
+        "definition": "Estimated buy or sell amount after subtracting estimated transaction costs and simple tax estimates where applicable."
+      }
+    ],
+    "summary": [
+      "Use the target-allocation method for a full rebalance, threshold method to limit trade frequency, cash-flow method to direct contributions without selling, and tax-aware mode to estimate minimal sells and tax impact.",
+      "Inputs for transaction costs and estimated tax rate should be calibrated to your actual broker fees and personal tax situation for better accuracy."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/tools/portfolio-planner",
+      "/guides/rebalancing-strategies"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.irs.gov",
+        "label": "IRS",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

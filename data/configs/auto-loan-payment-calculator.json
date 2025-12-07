@@ -1,0 +1,267 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Bi‑Weekly Payment Calculator",
+    "description": "Calculate bi‑weekly auto loan payments, total interest, total amount paid, and comparison to a monthly payment. Includes principal after down payment, fees and trade‑in value. Built with conservative rounding and accuracy caveats for lenders' amortization schedules."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "principal_financed",
+        "label": "Principal financed",
+        "expression": "loan_price - down_payment - trade_in + fees",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "periodic_rate",
+        "label": "Periodic interest rate (per bi‑weekly period)",
+        "expression": "annual_rate/100/26",
+        "unit": "%",
+        "format": "percent"
+      },
+      {
+        "id": "number_of_payments",
+        "label": "Number of bi‑weekly payments",
+        "expression": "term_years * 26",
+        "format": "integer"
+      },
+      {
+        "id": "biweekly_payment",
+        "label": "Bi‑weekly payment (scheduled)",
+        "expression": "((loan_price - down_payment - trade_in + fees) * (annual_rate/100/26)) / (1 - (1 + (annual_rate/100/26)) ^ (- term_years * 26))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "equivalent_monthly_payment",
+        "label": "Equivalent monthly payment (for comparison)",
+        "expression": "(((loan_price - down_payment - trade_in + fees) * (annual_rate/100/26)) / (1 - (1 + (annual_rate/100/26)) ^ (- term_years * 26))) * 26 / 12",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid",
+        "label": "Total paid (scheduled)",
+        "expression": "(((loan_price - down_payment - trade_in + fees) * (annual_rate/100/26)) / (1 - (1 + (annual_rate/100/26)) ^ (- term_years * 26))) * (term_years * 26)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest",
+        "label": "Total interest paid (scheduled)",
+        "expression": "((((loan_price - down_payment - trade_in + fees) * (annual_rate/100/26)) / (1 - (1 + (annual_rate/100/26)) ^ (- term_years * 26))) * (term_years * 26)) - (loan_price - down_payment - trade_in + fees)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "payoff_years",
+        "label": "Loan payoff time (years)",
+        "expression": "term_years",
+        "unit": "years",
+        "format": "decimal"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_price",
+        "label": "Vehicle price (purchase price)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "trade_in",
+        "label": "Trade‑in value or rebate",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "fees",
+        "label": "Upfront fees (taxes, title, dealer fees)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 1,
+        "max": 10,
+        "step": 0.5
+      },
+      {
+        "id": "extra_payment",
+        "label": "Optional extra payment each bi‑weekly period (added to scheduled payment)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "principal_financed",
+          "label": "Principal financed"
+        },
+        {
+          "id": "biweekly_payment",
+          "label": "Bi‑weekly payment (scheduled)",
+          "format": "currency"
+        },
+        {
+          "id": "equivalent_monthly_payment",
+          "label": "Equivalent monthly payment",
+          "format": "currency"
+        },
+        {
+          "id": "total_paid",
+          "label": "Total paid (scheduled)",
+          "format": "currency"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest paid (scheduled)",
+          "format": "currency"
+        },
+        {
+          "id": "number_of_payments",
+          "label": "Number of bi‑weekly payments",
+          "format": "integer"
+        },
+        {
+          "id": "payoff_years",
+          "label": "Loan payoff time (years)",
+          "format": "decimal",
+          "unit": "years"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes scheduled bi‑weekly payments for an auto loan and provides a straightforward comparison to an equivalent monthly payment. Enter the vehicle price, down payment, trade‑in value, upfront fees, APR, and loan term. Results show principal financed, bi‑weekly payment, total interest and total amount paid using standard amortization.",
+      "Outputs are computed using standard amortizing loan formulas and assume consistent, on‑time bi‑weekly payments and a fixed APR for the loan term. Extra payments are captured as an input for planning but do not automatically re‑calculate a reduced amortization schedule in this view; see methodology and caveats for details."
+    ],
+    "methodology": [
+      "The calculator uses the standard annuity formula for fixed‑rate installment loans applied at the bi‑weekly period. A bi‑weekly period is assumed to be 1/26 of a year.",
+      "Principal financed equals vehicle price minus down payment and trade‑in, plus any upfront fees included in financing. Interest is applied per bi‑weekly period using APR/26. Results are rounded for display; lenders may round differently and use slightly different conventions when generating an official amortization schedule."
+    ],
+    "how_is_calculated": [
+      "Principal financed = vehicle price - down payment - trade‑in + fees",
+      "Periodic rate (per bi‑weekly) = APR / 100 / 26",
+      "Number of payments = term (years) × 26",
+      "Bi‑weekly payment = (Principal × periodic_rate) / (1 − (1 + periodic_rate)^(−number_of_payments))",
+      "Total paid = bi‑weekly payment × number_of_payments; Total interest = Total paid − Principal financed"
+    ],
+    "faqs": [
+      {
+        "question": "Why use 26 payments per year for bi‑weekly?",
+        "answer": "Bi‑weekly payments assume 26 periods per year (52 weeks / 2). Some lenders offer 'semi‑monthly' schedules (24 payments) which differ from bi‑weekly; this tool models true bi‑weekly timing with 26 periods per year."
+      },
+      {
+        "question": "Does this calculator show the exact amortization schedule?",
+        "answer": "No. This calculator shows scheduled payment amounts and aggregates (total interest, total paid) based on standard amortization math. Precise payoff timing with extra payments, per‑payment principal breakdowns, and lender rounding rules require a full amortization table or the official loan contract."
+      },
+      {
+        "question": "How do extra payments affect payoff?",
+        "answer": "Regular extra amounts applied each bi‑weekly period reduce outstanding principal and can shorten the loan. This tool accepts an extra payment input for planning visibility but does not produce a re‑amortized schedule here. Use a detailed amortization tool or consult your lender for exact payoff dates."
+      },
+      {
+        "question": "Why might my lender's quoted payment differ?",
+        "answer": "Lenders may apply different day‑count conventions, rounding rules, fees treatment, or offer slightly different APR definitions. This calculator provides mathematically consistent estimates but not a legally binding payment quote."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The yearly interest rate charged on the loan, expressed as a percentage."
+      },
+      {
+        "term": "Bi‑weekly payment",
+        "definition": "A payment made every two weeks; for loans this typically implies 26 payments per year."
+      },
+      {
+        "term": "Principal financed",
+        "definition": "The amount borrowed after subtracting down payment and trade‑in, and adding any financed fees."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down a loan principal over time through scheduled payments that include principal and interest."
+      }
+    ],
+    "summary": [
+      "This tool provides reliable bi‑weekly payment estimates, total interest and total paid using standard amortization formulas. Use the results for budgeting and comparison; obtain lender amortization schedules for official payoff figures."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

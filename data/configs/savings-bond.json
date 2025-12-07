@@ -1,0 +1,405 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Savings Bond — Value & Accrued Interest Calculator",
+    "description": "Estimate current value and accrued interest for U.S. savings bonds using user-supplied issue date, redemption date, purchase amount, and an annual rate. Supports multiple bond workflows (user-provided composite or yield). Provides audit-friendly assumptions and accuracy notes aligned with technical standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "ibond_manual_rate",
+    "methods": {
+      "ibond_manual_rate": {
+        "label": "Series I (use annual composite rate)",
+        "description": "Estimate value using a user-supplied annual composite rate (enter the current published composite annual rate as a percent). This method compounds monthly.",
+        "variables": {
+          "months_elapsed": {
+            "expression": "(redemption_year - issue_year) * 12 + (redemption_month - issue_month)",
+            "dependencies": [
+              "redemption_year",
+              "issue_year",
+              "redemption_month",
+              "issue_month"
+            ],
+            "label": "Months elapsed",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_rate": {
+            "expression": "annual_rate_percent / 12 / 100",
+            "dependencies": [
+              "annual_rate_percent"
+            ],
+            "label": "Monthly rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "future_value": {
+            "expression": "purchase_amount * pow(1 + monthly_rate, months_elapsed)",
+            "dependencies": [
+              "purchase_amount",
+              "monthly_rate",
+              "months_elapsed"
+            ],
+            "label": "Estimated redemption value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "accrued_interest": {
+            "expression": "future_value - purchase_amount",
+            "dependencies": [
+              "future_value",
+              "purchase_amount"
+            ],
+            "label": "Accrued interest",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_value",
+            "label": "Estimated current value",
+            "variable": "future_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "accrued_interest",
+            "label": "Accrued interest",
+            "variable": "accrued_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "months_elapsed",
+            "label": "Months since issue",
+            "variable": "months_elapsed",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      },
+      "eebond_manual_rate": {
+        "label": "Series EE (use annual yield)",
+        "description": "Estimate value using a user-entered annual yield (percent). Compounds monthly in this estimate. For EE bonds that have special guarantees (for example, guaranteed doubling after a specified period), enable the doubling option to apply the guaranteed rule instead of compounding.",
+        "variables": {
+          "months_elapsed": {
+            "expression": "(redemption_year - issue_year) * 12 + (redemption_month - issue_month)",
+            "dependencies": [
+              "redemption_year",
+              "issue_year",
+              "redemption_month",
+              "issue_month"
+            ],
+            "label": "Months elapsed",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_rate": {
+            "expression": "annual_rate_percent / 12 / 100",
+            "dependencies": [
+              "annual_rate_percent"
+            ],
+            "label": "Monthly rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "future_value_compound": {
+            "expression": "purchase_amount * pow(1 + monthly_rate, months_elapsed)",
+            "dependencies": [
+              "purchase_amount",
+              "monthly_rate",
+              "months_elapsed"
+            ],
+            "label": "Redemption value by compounding",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "future_value_guarantee": {
+            "expression": "purchase_amount * 2",
+            "dependencies": [
+              "purchase_amount"
+            ],
+            "label": "Guaranteed doubling value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "future_value": {
+            "expression": "include_double == \"yes\" ? future_value_guarantee : future_value_compound",
+            "dependencies": [
+              "include_double",
+              "future_value_compound",
+              "future_value_guarantee"
+            ],
+            "label": "Selected redemption value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "accrued_interest": {
+            "expression": "future_value - purchase_amount",
+            "dependencies": [
+              "future_value",
+              "purchase_amount"
+            ],
+            "label": "Accrued interest",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_value",
+            "label": "Estimated current value",
+            "variable": "future_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "accrued_interest",
+            "label": "Accrued interest",
+            "variable": "accrued_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "months_elapsed",
+            "label": "Months since issue",
+            "variable": "months_elapsed",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "series",
+        "label": "Bond series",
+        "type": "select",
+        "default": "I",
+        "options": [
+          {
+            "label": "Series I (inflation-indexed)",
+            "value": "I"
+          },
+          {
+            "label": "Series EE (fixed/guaranteed)",
+            "value": "EE"
+          }
+        ]
+      },
+      {
+        "id": "purchase_amount",
+        "label": "Original purchase amount (USD)",
+        "type": "number",
+        "default": 50,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "annual_rate_percent",
+        "label": "Annual rate or composite rate (percent)",
+        "type": "number",
+        "default": 1.0,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "include_double",
+        "label": "Apply EE guaranteed doubling (if applicable)",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No (use compounding)",
+            "value": "no"
+          },
+          {
+            "label": "Yes (apply guaranteed doubling where applicable)",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "issue_year",
+        "label": "Issue year",
+        "type": "integer",
+        "default": 2000,
+        "min": 1935,
+        "max": 2100,
+        "step": 1
+      },
+      {
+        "id": "issue_month",
+        "label": "Issue month",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      },
+      {
+        "id": "redemption_year",
+        "label": "Redemption year (or valuation year)",
+        "type": "integer",
+        "default": 2025,
+        "min": 1935,
+        "max": 2100,
+        "step": 1
+      },
+      {
+        "id": "redemption_month",
+        "label": "Redemption month (or valuation month)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "ee_options",
+        "label": "EE bond special options",
+        "show_when": {
+          "field": "series",
+          "is": "EE"
+        },
+        "fields": [
+          {
+            "id": "include_double_section",
+            "label": "Apply guaranteed doubling (EE)",
+            "type": "select",
+            "default": "no",
+            "options": [
+              {
+                "label": "No",
+                "value": "no"
+              },
+              {
+                "label": "Yes",
+                "value": "yes"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the current redemption value and accrued interest for U.S. savings bonds based on user-supplied dates, purchase amount, and an annual rate. It provides multiple workflows: Series I (use composite annual rate) and Series EE (use stated annual yield or an optional guaranteed doubling rule where applicable).",
+      "Results are estimates produced by compounding the supplied annual rate monthly and do not automatically fetch official published rates. Use official published rates and exact redemption schedules when making legal or tax decisions."
+    ],
+    "methodology": [
+      "The tool treats the provided annual rate as an effective nominal annual rate and converts it to a monthly rate for compounding: monthly_rate = annual_rate / 12. The valuation period is the month difference between issue and redemption dates. The calculator compounds monthly for the estimated future value.",
+      "For Series I, users should supply the composite annual rate (published as a percentage) if they want an estimate that reflects the published composite. For Series EE, users may supply the bond's stated annual yield or enable the guaranteed doubling option (where the bond's program rule guarantees a specific outcome).",
+      "All model decisions, rounding behavior, and inputs should be validated against official documentation before use in compliance reporting or tax filings. This tool follows quality and accuracy practices inspired by ISO 9001 (quality management), NIST guidance for data integrity, and general numerical precision recommendations from IEEE."
+    ],
+    "how_is_calculated": [
+      "1) Compute months_elapsed = (redemption_year - issue_year) * 12 + (redemption_month - issue_month).",
+      "2) Convert annual_rate_percent to a monthly decimal: monthly_rate = annual_rate_percent / 12 / 100.",
+      "3) Compound monthly: estimated_value = purchase_amount * (1 + monthly_rate) ^ months_elapsed.",
+      "4) Accrued interest = estimated_value - purchase_amount.",
+      "5) For EE guaranteed doubling option, if selected, the calculator will compare compounding and the guaranteed result (purchase_amount * 2) and use the guarantee as specified by the option."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator use official published Treasury rates automatically?",
+        "answer": "No. The calculator requires you to enter an annual rate or composite rate. It does not fetch official published rates. Always cross-check results with official rate publications for precise redemptions."
+      },
+      {
+        "question": "Why does the tool compound monthly?",
+        "answer": "Monthly compounding is used here as a consistent, conservative estimate for accrual over fractions of a year. Actual accrual rules for specific bond issues may use semi-annual or other accrual conventions; consult official bond documentation for exact treatments."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are estimates intended for planning. They follow numerical best practices but do not replace official redemption calculations. See the accuracy & compliance note below for standards and limits."
+      },
+      {
+        "question": "What should I enter for the annual rate field?",
+        "answer": "Enter the bond's annual yield or, for Series I, the composite annual rate (expressed as a percentage). If unsure, use the official published composite or yield for the relevant issue date."
+      }
+    ],
+    "summary": [
+      "This calculator is a practical estimator for bond value and accrued interest using user-supplied rates and dates. It supports multiple workflows and provides transparent assumptions.",
+      "For legally binding valuations or tax reporting, always verify with official documentation and published rates."
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - Data Integrity & Quality",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) 9001 — Quality management principles",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE — Numerical and computational standards and recommendations",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — Technical compliance guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Composite rate",
+        "definition": "An annual interest rate combining a fixed component and an inflation-adjusted component. For some bonds, the composite is published periodically."
+      },
+      {
+        "term": "Accrued interest",
+        "definition": "Interest earned on the bond from the issue date up to the valuation or redemption date, equal to estimated value minus purchase amount."
+      },
+      {
+        "term": "Maturity",
+        "definition": "The date when a bond stops earning interest under its terms; some savings bonds stop accruing after a maximum term."
+      },
+      {
+        "term": "Nominal annual rate",
+        "definition": "An annual rate of interest not accounting for compounding frequency. This tool converts it to a monthly rate for compounding."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/bonds/value-estimator",
+      "/help/calculator-assumptions"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

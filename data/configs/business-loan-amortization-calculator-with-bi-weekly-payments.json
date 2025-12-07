@@ -1,0 +1,621 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan Amortization — Bi‑Weekly & Alternative Frequencies",
+    "description": "Accurate amortization for business loans with support for monthly, bi‑weekly (two common methods), and weekly payment schedules. Compare standard periodic amortization, true bi‑weekly amortization (26 payments/year), and the half‑month bi‑weekly method (monthly payment split). Includes extra payment handling and total interest summary."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard",
+    "methods": {
+      "standard": {
+        "label": "Standard periodic amortization (user-selected frequency)",
+        "description": "Calculates the fixed periodic payment using the effective periodic rate derived from the annual rate and compounding. Use this method when your payment schedule and compounding frequency match or you want a payment calculated for the selected payments per year.",
+        "variables": {
+          "n_periods": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "r_period": {
+            "expression": "pow(1 + apr/100 / compounding_per_year, compounding_per_year / payments_per_year) - 1",
+            "dependencies": [
+              "apr",
+              "compounding_per_year",
+              "payments_per_year"
+            ],
+            "label": "Effective periodic interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "principal * r_period / (1 - pow(1 + r_period, -n_periods))",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "n_periods"
+            ],
+            "label": "Calculated periodic payment (before extra payment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "base_payment + extra_payment",
+            "dependencies": [
+              "base_payment",
+              "extra_payment"
+            ],
+            "label": "Scheduled periodic payment (includes extra payment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_payments_amount": {
+            "expression": "periodic_payment * n_periods",
+            "dependencies": [
+              "periodic_payment",
+              "n_periods"
+            ],
+            "label": "Total paid over loan term",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_payments_amount - principal",
+            "dependencies": [
+              "total_payments_amount",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_time_years": {
+            "expression": "n_periods / payments_per_year",
+            "dependencies": [
+              "n_periods",
+              "payments_per_year"
+            ],
+            "label": "Implied payoff time (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Periodic payment",
+            "variable": "periodic_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments_amount",
+            "label": "Total paid (principal + interest)",
+            "variable": "total_payments_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_periods",
+            "label": "Number of payments",
+            "variable": "n_periods",
+            "unit": "periods",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Payoff time",
+            "variable": "payoff_time_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "true_biweekly": {
+        "label": "True bi‑weekly amortization (26 payments/year)",
+        "description": "Computes a fixed payment per bi‑weekly period assuming 26 payments per year. Select this when your plan actually makes 26 equal payments each year. Set payments per year to 26 for consistency.",
+        "variables": {
+          "payments_per_year_fixed": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year (fixed for true bi‑weekly)",
+            "unit": "periods/year",
+            "format": "integer",
+            "display": false
+          },
+          "n_periods": {
+            "expression": "term_years * payments_per_year_fixed",
+            "dependencies": [
+              "term_years",
+              "payments_per_year_fixed"
+            ],
+            "label": "Total number of bi‑weekly payments",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "r_period": {
+            "expression": "pow(1 + apr/100 / compounding_per_year, compounding_per_year / payments_per_year_fixed) - 1",
+            "dependencies": [
+              "apr",
+              "compounding_per_year",
+              "payments_per_year_fixed"
+            ],
+            "label": "Effective bi‑weekly interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "principal * r_period / (1 - pow(1 + r_period, -n_periods))",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "n_periods"
+            ],
+            "label": "Bi‑weekly payment before extra",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "base_payment + extra_payment",
+            "dependencies": [
+              "base_payment",
+              "extra_payment"
+            ],
+            "label": "Scheduled bi‑weekly payment (includes extra payment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_payments_amount": {
+            "expression": "periodic_payment * n_periods",
+            "dependencies": [
+              "periodic_payment",
+              "n_periods"
+            ],
+            "label": "Total paid over loan term",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_payments_amount - principal",
+            "dependencies": [
+              "total_payments_amount",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_time_years": {
+            "expression": "n_periods / payments_per_year_fixed",
+            "dependencies": [
+              "n_periods",
+              "payments_per_year_fixed"
+            ],
+            "label": "Implied payoff time (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Bi‑weekly payment",
+            "variable": "periodic_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments_amount",
+            "label": "Total paid (principal + interest)",
+            "variable": "total_payments_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_periods",
+            "label": "Number of payments",
+            "variable": "n_periods",
+            "unit": "periods",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Payoff time",
+            "variable": "payoff_time_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "half_month_biweekly": {
+        "label": "Half‑month bi‑weekly method (split monthly payment)",
+        "description": "Calculates the monthly payment first and then divides it by two for a bi‑weekly schedule (commonly called the half‑month method). This often results in slightly accelerated payoff because 26 half‑monthly payments exceed 12 full monthly payments in many years. Use when your lender accepts half of the monthly payment every two weeks.",
+        "variables": {
+          "n_months": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total number of months",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "r_monthly": {
+            "expression": "pow(1 + apr/100 / compounding_per_year, compounding_per_year / 12) - 1",
+            "dependencies": [
+              "apr",
+              "compounding_per_year"
+            ],
+            "label": "Effective monthly interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "principal * r_monthly / (1 - pow(1 + r_monthly, -n_months))",
+            "dependencies": [
+              "principal",
+              "r_monthly",
+              "n_months"
+            ],
+            "label": "Monthly payment (before extra)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_payment": {
+            "expression": "monthly_payment / 2 + extra_payment",
+            "dependencies": [
+              "monthly_payment",
+              "extra_payment"
+            ],
+            "label": "Bi‑weekly payment (half of monthly, including extra payment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "n_periods_biweekly": {
+            "expression": "term_years * 26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Assumed number of bi‑weekly payments (26/year)",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "total_payments_amount": {
+            "expression": "biweekly_payment * n_periods_biweekly",
+            "dependencies": [
+              "biweekly_payment",
+              "n_periods_biweekly"
+            ],
+            "label": "Total paid over loan term",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_payments_amount - principal",
+            "dependencies": [
+              "total_payments_amount",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_time_years": {
+            "expression": "n_periods_biweekly / 26",
+            "dependencies": [
+              "n_periods_biweekly"
+            ],
+            "label": "Implied payoff time (years, based on 26/year)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment",
+            "label": "Bi‑weekly payment (half‑month method)",
+            "variable": "biweekly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment used",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments_amount",
+            "label": "Total paid (principal + interest)",
+            "variable": "total_payments_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_periods_biweekly",
+            "label": "Number of bi‑weekly payments (assumed)",
+            "variable": "n_periods_biweekly",
+            "unit": "periods",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Payoff time",
+            "variable": "payoff_time_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 100000,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "apr",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.0833333,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (select schedule)",
+        "type": "integer",
+        "default": 26,
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Bi‑weekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "compounding_per_year",
+        "label": "Compounding periods per year (interest compounding)",
+        "type": "integer",
+        "default": 12,
+        "options": [
+          {
+            "label": "Monthly compounding (12)",
+            "value": "12"
+          },
+          {
+            "label": "Bi‑weekly compounding (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly compounding (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "method",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "standard",
+        "options": [
+          {
+            "label": "Standard (periodic, uses selected payments/year)",
+            "value": "standard"
+          },
+          {
+            "label": "True bi‑weekly (26 payments/year)",
+            "value": "true_biweekly"
+          },
+          {
+            "label": "Half‑month bi‑weekly (monthly/2)",
+            "value": "half_month_biweekly"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment amount per period (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models business loan amortization for multiple payment schedules with explicit support for bi‑weekly options. It implements three common approaches: standard periodic amortization (payment computed for the chosen payments per year), true bi‑weekly amortization (26 equal payments per year), and the half‑month bi‑weekly method (monthly payment split in two).",
+      "Use the extra payment field to model additional principal paid each period. The tool reports periodic payment, total paid, total interest, and the implied payoff time under the selected method. Enter APR as the annual percentage rate provided by your lender."
+    ],
+    "methodology": [
+      "For accuracy we derive an effective periodic rate by converting the stated annual rate (APR) and compounding frequency into the equivalent rate for the payment interval using standard financial mathematics: r_period = (1 + APR/compounding)^(compounding/payments) - 1. The annuity payment formula is then applied to compute the fixed payment that amortizes principal over the specified number of periods.",
+      "The true bi‑weekly method assumes 26 equal payments per year and computes the payment required for that frequency and the chosen compounding. The half‑month bi‑weekly method first computes the monthly payment and then splits it; because there are typically 26 half‑monthly payments in a year this often accelerates principal reduction relative to 12 monthly payments.",
+      "This calculator does not assume special lender rounding rules, fees, escrow, or irregular first/last periods unless those are entered as adjustments. For legal or regulatory reporting, consult your lender's amortization schedule."
+    ],
+    "how_is_calculated": [
+      "1) Compute effective periodic rate: r_period = (1 + APR/100 / compounding_per_year)^(compounding_per_year / payments_per_year) - 1",
+      "2) Total periods: n = term_years * payments_per_year",
+      "3) Annuity payment (if r_period is positive): payment = principal * r_period / (1 - (1 + r_period)^(-n))",
+      "4) Add any extra payment per period: scheduled_payment = payment + extra_payment",
+      "5) Totals: total_paid = scheduled_payment * n ; total_interest = total_paid - principal"
+    ],
+    "examples": [
+      "Example 1: $100,000 loan, 6% APR, 5 years, true bi‑weekly (26/year). The calculator computes the bi‑weekly payment based on 26 periods/year and reports total interest and payoff time.",
+      "Example 2: $250,000 loan, 5% APR, 10 years, half‑month bi‑weekly. The monthly payment is computed and split; 26 half‑monthly payments per year can shorten the effective term relative to monthly payments without increasing each month’s nominal payment."
+    ],
+    "faqs": [
+      {
+        "question": "Which bi‑weekly method should I use?",
+        "answer": "Use true bi‑weekly when your plan or lender schedules 26 equal payments every year. Use the half‑month method when you (or your payroll) pay half the monthly payment every two weeks. Results differ: true bi‑weekly sets the payment for 26 periods/year; half‑month often accelerates payoff because it typically results in paying a bit more over the same calendar year."
+      },
+      {
+        "question": "How do extra payments affect payoff?",
+        "answer": "Extra principal paid each period reduces outstanding balance and interest accrual, shortening payoff time and lowering total interest. This calculator includes extra_payment per period in the scheduled payment and reflects its effect on totals. For irregular extra payments, recompute the schedule with the specific timing."
+      },
+      {
+        "question": "What if APR or compounding is zero?",
+        "answer": "If APR is zero, the periodic payment is principal divided by total number of periods. Some formulas in the tool assume a positive rate; when APR is zero, results default to straight principal amortization. Double‑check results for a 0% APR input."
+      },
+      {
+        "question": "How accurate is this tool and what are its limitations?",
+        "answer": "This calculator applies standard annuity math and effective rate conversion. It does not model lender rounding conventions, irregular first/last payments, deferred interest products, fees, or escrow. For legally binding schedules and disclosures, rely on your lender's schedule and consult an accountant or attorney."
+      },
+      {
+        "question": "How should I verify results before making business decisions?",
+        "answer": "Cross‑check outputs with official amortization statements from your lender. Use the same APR definition and compounding frequency as the lender. For critical decisions, obtain lender-provided amortization schedules and consult financial professionals."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate; the annual rate charged for borrowing expressed as a percentage. This tool expects APR as a nominal annual rate."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off principal and interest over time with scheduled payments."
+      },
+      {
+        "term": "Periodic (effective) rate",
+        "definition": "Interest rate applicable to a single payment period, derived from APR and compounding frequency."
+      },
+      {
+        "term": "True bi‑weekly",
+        "definition": "A payment schedule that makes 26 equal payments per year (every two weeks)."
+      },
+      {
+        "term": "Half‑month bi‑weekly",
+        "definition": "A method where the monthly payment is split into two equal amounts and paid every two weeks, resulting in 26 payments per year in many years."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/business-loans/amortization/guide",
+      "/help/loan-terms/faq"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

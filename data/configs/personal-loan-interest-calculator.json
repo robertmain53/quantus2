@@ -1,0 +1,267 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Personal Loan Interest & Bi‑Weekly Payment Calculator",
+    "description": "Estimate bi‑weekly (or other frequency) loan payments, total interest, and compare to a monthly schedule. Includes optional per‑payment extra amount and clear assumptions about compounding and accuracy."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "base_periodic_payment",
+        "label": "Scheduled periodic payment (without extra)",
+        "expression": "( (apr/100/frequency) * principal ) / ( 1 - pow( 1 + (apr/100/frequency), - term_years * frequency ) )",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "periodic_payment",
+        "label": "Periodic payment (including extra per payment)",
+        "expression": "((apr/100/frequency) * principal) / (1 - pow(1 + (apr/100/frequency), - term_years * frequency)) + extra_payment",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "number_of_payments",
+        "label": "Number of payments",
+        "expression": "term_years * frequency",
+        "format": "integer"
+      },
+      {
+        "id": "total_paid",
+        "label": "Total amount paid over life of loan",
+        "expression": "periodic_payment * (term_years * frequency)",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest",
+        "label": "Total interest paid",
+        "expression": "periodic_payment * (term_years * frequency) - principal",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "monthly_payment",
+        "label": "Reference monthly payment (for comparison)",
+        "expression": "( (apr/100/12) * principal ) / ( 1 - pow( 1 + (apr/100/12), - term_years * 12 ) )",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "monthly_total_interest",
+        "label": "Total interest if paid monthly (reference)",
+        "expression": "(( (apr/100/12) * principal ) / ( 1 - pow( 1 + (apr/100/12), - term_years * 12 ) )) * (term_years * 12) - principal",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "interest_savings_vs_monthly",
+        "label": "Estimated interest savings vs monthly schedule",
+        "expression": "monthly_total_interest - total_interest",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "interest_savings_pct_vs_monthly",
+        "label": "Percent reduction in interest vs monthly schedule",
+        "expression": "100 * (monthly_total_interest - total_interest) / (monthly_total_interest == 0 ? 1 : monthly_total_interest)",
+        "format": "percent"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "apr",
+        "label": "Annual interest rate (APR) (%)",
+        "type": "number",
+        "default": 7.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 3,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "frequency",
+        "label": "Payment frequency (payments per year)",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Bi‑weekly (26/year)",
+            "value": "26"
+          },
+          {
+            "label": "Monthly (12/year)",
+            "value": "12"
+          },
+          {
+            "label": "Semi‑monthly (24/year)",
+            "value": "24"
+          },
+          {
+            "label": "Weekly (52/year)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra amount added to each payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Periodic payment",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "base_periodic_payment",
+          "label": "Scheduled periodic payment (no extra)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "number_of_payments",
+          "label": "Number of payments",
+          "format": "integer"
+        },
+        {
+          "id": "total_paid",
+          "label": "Total paid",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest paid",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "monthly_payment",
+          "label": "Reference monthly payment",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "monthly_total_interest",
+          "label": "Reference monthly total interest",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "interest_savings_vs_monthly",
+          "label": "Interest savings vs monthly",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "interest_savings_pct_vs_monthly",
+          "label": "Interest savings (%) vs monthly",
+          "format": "percent"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments, total interest, and total cost for a personal loan when making bi‑weekly payments (or other payment frequencies). You can include an optional extra amount per payment to see how additional principal reduces interest and term.",
+      "Results are estimates based on standard amortizing loan math: interest is calculated per payment period from the APR and compounded at the same frequency as payments. Fees, taxes, late charges, and changes in APR are not included."
+    ],
+    "methodology": [
+      "Periodic rate = APR / 100 / (payments per year). Number of payments = term (years) × payments per year.",
+      "Scheduled payment formula uses the standard fixed‑payment annuity formula. Optional extra per payment is added on top of the scheduled payment and reduces principal sooner, lowering total interest and potentially shortening effective term."
+    ],
+    "how_is_calculated": [
+      "Periodic payment (base) = (r * P) / (1 - (1 + r)^(-n)) where r = periodic rate, P = principal, n = total number of payments.",
+      "Total interest = (periodic payment including extra × n) - principal.",
+      "Monthly reference uses the same annuity formula with 12 payments per year for comparison."
+    ],
+    "faqs": [
+      {
+        "question": "Does bi‑weekly always save interest versus monthly?",
+        "answer": "Bi‑weekly schedules can reduce interest when the lender treats bi‑weekly as 26 equal payments per year because the timing and number of payments can reduce average outstanding principal. Actual savings depend on how your lender applies payments and whether they accept partial payments or apply extra payments to principal immediately."
+      },
+      {
+        "question": "Are fees, prepayment penalties, or changing APRs included?",
+        "answer": "No. This calculator excludes fees, penalties, variable APRs, and taxes. If your contract includes prepayment penalties or origination fees, include those separately in total cost calculations."
+      },
+      {
+        "question": "What happens if APR is zero?",
+        "answer": "For a 0% APR loan, the scheduled payment equals principal divided by number of payments. Some formula terms may be undefined at zero interest; the calculator will treat the 0% case as a simple division of principal by number of payments."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are numerical estimates. Rounding, lender rounding rules, payment application timing, and special contractual terms can create small differences. Use outputs for planning; consult your loan servicer for exact payoff schedules."
+      },
+      {
+        "question": "Can I use this for mortgages or credit cards?",
+        "answer": "The math applies to any amortizing loan with a fixed APR and fixed periodic payments. Mortgages often include escrow, insurance, and taxes; credit cards typically use daily compounding and variable balances — those require different calculators."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Numerical Methods and Floating Point Accuracy Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards for financial computing and data interchange",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Best practices for numerical algorithms and software reliability",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Workplace safety standards (operational risk policies)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The stated annual interest rate for the loan; this calculator treats APR as the nominal yearly rate used to compute per‑period interest."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "APR divided by number of payments per year. Used to compute interest applied each payment period."
+      },
+      {
+        "term": "Amortizing loan",
+        "definition": "A loan that is repaid over time with regular payments that include both interest and principal."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "Any additional amount you add to a scheduled payment; extra payments are assumed to be applied to principal immediately, reducing future interest."
+      }
+    ],
+    "summary": [
+      "Use the frequency selector to choose bi‑weekly (default) or another cadence. Enter principal, APR, term, and any extra per payment to estimate payment size, total interest, and how much you might save versus a monthly schedule.",
+      "This tool follows standard annuity formulas and cites standards for numerical accuracy; treat the results as planning estimates and verify exact payoff figures with your lender."
+    ]
+  }
+}

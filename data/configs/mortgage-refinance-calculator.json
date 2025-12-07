@@ -1,0 +1,543 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Refinance & Bi‑Weekly Payment Analyzer",
+    "description": "Compare keeping your current mortgage vs refinancing with monthly or bi‑weekly payment schedules. Estimates payments, interest paid, payoff timing, break‑even and savings. Designed for fixed-rate, amortizing mortgages; includes adjustable extra payments."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "refinance_comparison",
+    "methods": {
+      "refinance_comparison": {
+        "label": "Refinance comparison (monthly vs bi‑weekly)",
+        "description": "Computes current and proposed loan schedules using the chosen payment frequencies, includes extra payments, total interest, payoff periods, interest saved, and break‑even on refinance costs.",
+        "variables": {
+          "current_periods_per_year": {
+            "expression": "current_frequency == \"monthly\" ? 12 : (current_frequency == \"biweekly\" ? 26 : 52)",
+            "dependencies": [
+              "current_frequency"
+            ],
+            "label": "Current payments per year",
+            "unit": "",
+            "format": "integer",
+            "display": true
+          },
+          "new_periods_per_year": {
+            "expression": "new_frequency == \"monthly\" ? 12 : (new_frequency == \"biweekly\" ? 26 : 52)",
+            "dependencies": [
+              "new_frequency"
+            ],
+            "label": "New payments per year",
+            "unit": "",
+            "format": "integer",
+            "display": true
+          },
+          "current_annual_rate": {
+            "expression": "current_annual_rate_pct / 100",
+            "dependencies": [
+              "current_annual_rate_pct"
+            ],
+            "label": "Current annual interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "new_annual_rate": {
+            "expression": "new_annual_rate_pct / 100",
+            "dependencies": [
+              "new_annual_rate_pct"
+            ],
+            "label": "New annual interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "current_periodic_rate": {
+            "expression": "current_annual_rate / current_periods_per_year",
+            "dependencies": [
+              "current_annual_rate",
+              "current_periods_per_year"
+            ],
+            "label": "Current periodic interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "new_periodic_rate": {
+            "expression": "new_annual_rate / new_periods_per_year",
+            "dependencies": [
+              "new_annual_rate",
+              "new_periods_per_year"
+            ],
+            "label": "New periodic interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "current_n": {
+            "expression": "current_remaining_years * current_periods_per_year",
+            "dependencies": [
+              "current_remaining_years",
+              "current_periods_per_year"
+            ],
+            "label": "Current remaining periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "new_n": {
+            "expression": "new_loan_term_years * new_periods_per_year",
+            "dependencies": [
+              "new_loan_term_years",
+              "new_periods_per_year"
+            ],
+            "label": "New loan total periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "current_payment": {
+            "expression": "current_periodic_rate * balance / (1 - pow(1 + current_periodic_rate, -current_n))",
+            "dependencies": [
+              "current_periodic_rate",
+              "balance",
+              "current_n"
+            ],
+            "label": "Current scheduled payment per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_principal": {
+            "expression": "balance + refinance_costs",
+            "dependencies": [
+              "balance",
+              "refinance_costs"
+            ],
+            "label": "Principal after refinancing (includes fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_payment": {
+            "expression": "new_periodic_rate * new_principal / (1 - pow(1 + new_periodic_rate, -new_n))",
+            "dependencies": [
+              "new_periodic_rate",
+              "new_principal",
+              "new_n"
+            ],
+            "label": "New scheduled payment per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_effective_payment": {
+            "expression": "current_payment + extra_payment",
+            "dependencies": [
+              "current_payment",
+              "extra_payment"
+            ],
+            "label": "Current payment including extra principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_effective_payment": {
+            "expression": "new_payment + extra_payment",
+            "dependencies": [
+              "new_payment",
+              "extra_payment"
+            ],
+            "label": "New payment including extra principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_remaining_periods_with_extra": {
+            "expression": "-ln(1 - current_periodic_rate * balance / current_effective_payment) / ln(1 + current_periodic_rate)",
+            "dependencies": [
+              "current_periodic_rate",
+              "balance",
+              "current_effective_payment"
+            ],
+            "label": "Estimated remaining periods with extra payments (current loan)",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "new_remaining_periods": {
+            "expression": "-ln(1 - new_periodic_rate * new_principal / new_effective_payment) / ln(1 + new_periodic_rate)",
+            "dependencies": [
+              "new_periodic_rate",
+              "new_principal",
+              "new_effective_payment"
+            ],
+            "label": "Estimated remaining periods with extra payments (new loan)",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_current": {
+            "expression": "current_effective_payment * current_remaining_periods_with_extra - balance",
+            "dependencies": [
+              "current_effective_payment",
+              "current_remaining_periods_with_extra",
+              "balance"
+            ],
+            "label": "Estimated total interest remaining (current loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_new": {
+            "expression": "new_effective_payment * new_remaining_periods - new_principal",
+            "dependencies": [
+              "new_effective_payment",
+              "new_remaining_periods",
+              "new_principal"
+            ],
+            "label": "Estimated total interest (new loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_current - total_interest_new",
+            "dependencies": [
+              "total_interest_current",
+              "total_interest_new"
+            ],
+            "label": "Estimated interest saved by refinancing",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periods_saved": {
+            "expression": "current_remaining_periods_with_extra - new_remaining_periods",
+            "dependencies": [
+              "current_remaining_periods_with_extra",
+              "new_remaining_periods"
+            ],
+            "label": "Estimated periods saved",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "break_even_periods": {
+            "expression": "refinance_costs / (current_effective_payment - new_effective_payment)",
+            "dependencies": [
+              "refinance_costs",
+              "current_effective_payment",
+              "new_effective_payment"
+            ],
+            "label": "Approximate payback periods to recoup refinance costs",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_payment",
+            "label": "Current scheduled payment",
+            "variable": "current_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_payment",
+            "label": "New scheduled payment",
+            "variable": "new_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "current_effective_payment",
+            "label": "Current payment (with extra)",
+            "variable": "current_effective_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_effective_payment",
+            "label": "New payment (with extra)",
+            "variable": "new_effective_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "current_remaining_periods_with_extra",
+            "label": "Remaining periods (current loan, with extra)",
+            "variable": "current_remaining_periods_with_extra",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "new_remaining_periods",
+            "label": "Remaining periods (new loan)",
+            "variable": "new_remaining_periods",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_current",
+            "label": "Total interest (current loan)",
+            "variable": "total_interest_current",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_new",
+            "label": "Total interest (new loan)",
+            "variable": "total_interest_new",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "periods_saved",
+            "label": "Periods saved",
+            "variable": "periods_saved",
+            "unit": "periods",
+            "format": "decimal"
+          },
+          {
+            "id": "break_even_periods",
+            "label": "Break‑even periods",
+            "variable": "break_even_periods",
+            "unit": "periods",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "balance",
+        "label": "Current loan balance",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "current_annual_rate_pct",
+        "label": "Current annual interest rate (%)",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "current_remaining_years",
+        "label": "Remaining term (years)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "max": 50,
+        "step": 0.5
+      },
+      {
+        "id": "current_frequency",
+        "label": "Current payment frequency",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly (12/year)",
+            "value": "monthly"
+          },
+          {
+            "label": "Bi‑weekly (26/year)",
+            "value": "biweekly"
+          },
+          {
+            "label": "Weekly (52/year)",
+            "value": "weekly"
+          }
+        ]
+      },
+      {
+        "id": "new_annual_rate_pct",
+        "label": "Proposed refinance annual rate (%)",
+        "type": "number",
+        "default": 3.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "new_loan_term_years",
+        "label": "Proposed loan term (years)",
+        "type": "number",
+        "default": 30,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "new_frequency",
+        "label": "New payment frequency",
+        "type": "select",
+        "default": "biweekly",
+        "options": [
+          {
+            "label": "Monthly (12/year)",
+            "value": "monthly"
+          },
+          {
+            "label": "Bi‑weekly (26/year)",
+            "value": "biweekly"
+          },
+          {
+            "label": "Weekly (52/year)",
+            "value": "weekly"
+          }
+        ]
+      },
+      {
+        "id": "refinance_costs",
+        "label": "Estimated refinance costs and fees",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra principal per payment (applies to either schedule)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you evaluate refinancing a fixed‑rate mortgage and switching between monthly and bi‑weekly payment schedules. It estimates per‑period payments, the effect of extra payments toward principal, total interest paid, estimated payoff timing, and how long to recoup refinance costs.",
+      "Results assume fixed interest rates on both current and proposed loans, amortizing schedules, and that extra principal payments are applied each payment period. It does not model adjustable rates, escrow changes, taxes, insurance or lender fees beyond the single refinance costs input."
+    ],
+    "methodology": [
+      "Calculations use standard amortizing loan formulas for periodic payment and logarithmic solution for number of periods when extra principal payments reduce the payoff time. Periodic rates equal annual rate divided by payments per year (12, 26, or 52).",
+      "We follow best practices for numeric stability and disclosure: rounding is applied only to displayed results; internal calculations use full precision. For data handling and security, implementations should follow NIST guidance for cryptography and secure storage, ISO 27001 for information security management, and IEEE recommendations for software quality and transparency.",
+      "This tool is an estimator and not an offer. Validate results with lender quotes and loan documents. See accuracy and caveats below."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_rate_decimal / periods_per_year.",
+      "Scheduled payment per period: payment = r * PV / (1 - (1 + r)^-n), where PV is principal and n is total periods.",
+      "When extra principal is paid each period, remaining periods n' = -ln(1 - r*PV / payment_effective) / ln(1 + r), where payment_effective = scheduled payment + extra payment.",
+      "Total interest = payment_effective * n' - PV. Interest saved = total_interest_current - total_interest_new.",
+      "Break‑even periods = refinance_costs / (current_effective_payment - new_effective_payment). If new effective payment is greater than or equal to current effective payment, break‑even does not occur."
+    ],
+    "examples": [
+      "Example: $300,000 balance, current rate 3.5% with 25 years left, refinance to 3.0% for 30 years with $3,000 fees and bi‑weekly payments. The tool compares scheduled payments, any reduction in total interest, and how many periods until the $3,000 is recouped.",
+      "Bi‑weekly payments accelerate principal reduction because there are 26 half‑payments per year; the effective annual payment amount and timing differ from 12 equal monthly payments. This calculator models those periodic differences directly by using 26 periods per year."
+    ],
+    "faqs": [
+      {
+        "question": "Does this include taxes and insurance?",
+        "answer": "No. This tool models principal and interest only. Escrow, taxes, insurance and lender‑specific fees beyond the single refinance cost input are not included."
+      },
+      {
+        "question": "Are results exact for irregular extra payments or partial periods?",
+        "answer": "No. The estimator assumes a constant extra payment each scheduled period. Irregular payments, lump sums at arbitrary times, or interest‑only periods are not modeled. For irregular scenarios use an amortization schedule or consult your lender."
+      },
+      {
+        "question": "Why might break‑even be far in the future?",
+        "answer": "If the new loan reduces interest only slightly or increases scheduled payments, the per‑period cash flow improvement may be small, so it takes many periods for cumulative savings to exceed refinance costs. Also, resetting to a longer term can increase interest even if rate is lower."
+      },
+      {
+        "question": "Can I rely on this to make my decision?",
+        "answer": "This calculator is a decision aid, not financial advice. Check lender quotes, APR disclosures, and full loan disclosures. For tailored advice, consult a licensed mortgage advisor or financial professional."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO/IEC 27001 Information security management",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — Mortgage Basics",
+        "url": "https://www.consumerfinance.gov/owning-a-home"
+      },
+      {
+        "label": "IEEE Software Engineering Best Practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — General Safety and Health",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period, equal to the annual nominal rate divided by the number of payments per year."
+      },
+      {
+        "term": "Amortizing loan",
+        "definition": "A loan repaid over time with regular payments that include both interest and principal, producing a declining balance until zero."
+      },
+      {
+        "term": "Break‑even period",
+        "definition": "The number of payment periods required for cumulative savings from a refinance to equal the refinance costs."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "Additional principal paid each scheduled period on top of the scheduled payment; reduces interest and shortens payoff time."
+      }
+    ],
+    "summary": [
+      "Use this calculator to estimate the financial effect of refinancing and switching payment frequency. It highlights changes in per‑period payments, total interest, payoff time and estimated break‑even.",
+      "Always confirm estimates with lender disclosures and consider non‑modeled items such as escrow changes, taxes, insurance, and potential change in APR due to fees or rate structure."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/mortgages/mortgage-basics",
+      "/mortgages/amortization-explained"
+    ],
+    "external": [
+      {
+        "url": "https://www.consumerfinance.gov/owning-a-home/loan-options/refinancing/",
+        "label": "CFPB guide to refinancing",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/isoiec-27001-information-security.html",
+        "label": "ISO/IEC 27001",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

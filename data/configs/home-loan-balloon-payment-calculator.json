@@ -1,0 +1,478 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Balloon & Bi‑Weekly Payment Calculator (Advanced)",
+    "description": "Compare balloon outcomes and bi‑weekly vs monthly schedules. Supports: calculate balloon due at a specified term, compare total interest for monthly vs bi‑weekly schedules, and model balloon at a custom payment frequency with optional extra periodic payments. Assumptions and limits are stated in the methodology."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "balloon_payment",
+    "methods": {
+      "balloon_payment": {
+        "label": "Balloon payment at a specified term (monthly or custom frequency)",
+        "description": "Compute the remaining principal (balloon due) after a given number of years of regular payments on an amortizing schedule. Payments are computed from the amortization schedule; a shorter balloon term than amortization produces a remaining balance due as the balloon.",
+        "variables": {
+          "periodic_rate": {
+            "expression": "annual_rate_percent/100/payments_per_year",
+            "dependencies": [
+              "annual_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate (per payment period)",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments_amort": {
+            "expression": "amort_years*payments_per_year",
+            "dependencies": [
+              "amort_years",
+              "payments_per_year"
+            ],
+            "label": "Total payments in full amortization",
+            "format": "integer",
+            "display": false
+          },
+          "payments_until_balloon": {
+            "expression": "balloon_term_years*payments_per_year",
+            "dependencies": [
+              "balloon_term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments made before balloon due",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "loan_amount*periodic_rate/(1-(1+periodic_rate)**(-total_payments_amort))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "total_payments_amort"
+            ],
+            "label": "Scheduled payment per period (based on full amortization)",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment_effective": {
+            "expression": "periodic_payment + extra_payment_per_period",
+            "dependencies": [
+              "periodic_payment",
+              "extra_payment_per_period"
+            ],
+            "label": "Payment applied each period (scheduled + extra)",
+            "format": "currency",
+            "display": true
+          },
+          "balance_before_balloon": {
+            "expression": "loan_amount*(1+periodic_rate)**payments_until_balloon - periodic_payment_effective*(((1+periodic_rate)**payments_until_balloon - 1)/periodic_rate)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "payments_until_balloon",
+              "periodic_payment_effective"
+            ],
+            "label": "Outstanding principal (balloon) after specified term",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Payment applied per period",
+            "variable": "periodic_payment_effective",
+            "unit": null,
+            "format": "currency"
+          },
+          {
+            "id": "balloon_due",
+            "label": "Balloon (remaining principal) due at term end",
+            "variable": "balance_before_balloon",
+            "unit": null,
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_vs_monthly": {
+        "label": "Compare Monthly vs Bi‑Weekly Schedules",
+        "description": "Compute per‑period payments for standard monthly (12/year) and bi‑weekly (26/year) schedules, estimate total interest over the amortization, and show estimated savings from switching to bi‑weekly payments assuming the same annual rate and same amortization length.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate_percent/100/12",
+            "dependencies": [
+              "annual_rate_percent"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "loan_amount*monthly_rate/(1-(1+monthly_rate)**(-amort_years*12))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "amort_years"
+            ],
+            "label": "Monthly payment",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_rate": {
+            "expression": "annual_rate_percent/100/26",
+            "dependencies": [
+              "annual_rate_percent"
+            ],
+            "label": "Bi‑weekly periodic rate",
+            "format": "decimal",
+            "display": false
+          },
+          "biweekly_payment": {
+            "expression": "loan_amount*biweekly_rate/(1-(1+biweekly_rate)**(-amort_years*26))",
+            "dependencies": [
+              "loan_amount",
+              "biweekly_rate",
+              "amort_years"
+            ],
+            "label": "Bi‑weekly payment",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_total_paid": {
+            "expression": "monthly_payment*amort_years*12",
+            "dependencies": [
+              "monthly_payment",
+              "amort_years"
+            ],
+            "label": "Total paid under monthly schedule",
+            "format": "currency",
+            "display": false
+          },
+          "biweekly_total_paid": {
+            "expression": "biweekly_payment*amort_years*26",
+            "dependencies": [
+              "biweekly_payment",
+              "amort_years"
+            ],
+            "label": "Total paid under bi‑weekly schedule",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_interest": {
+            "expression": "monthly_total_paid - loan_amount",
+            "dependencies": [
+              "monthly_total_paid",
+              "loan_amount"
+            ],
+            "label": "Total interest paid (monthly)",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_interest": {
+            "expression": "biweekly_total_paid - loan_amount",
+            "dependencies": [
+              "biweekly_total_paid",
+              "loan_amount"
+            ],
+            "label": "Total interest paid (bi‑weekly)",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings": {
+            "expression": "monthly_interest - biweekly_interest",
+            "dependencies": [
+              "monthly_interest",
+              "biweekly_interest"
+            ],
+            "label": "Estimated interest savings switching to bi‑weekly",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_payment",
+            "label": "Bi‑weekly payment",
+            "variable": "biweekly_payment",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_interest",
+            "label": "Total interest (monthly schedule)",
+            "variable": "monthly_interest",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_interest",
+            "label": "Total interest (bi‑weekly schedule)",
+            "variable": "biweekly_interest",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings",
+            "label": "Estimated interest savings (monthly − bi‑weekly)",
+            "variable": "interest_savings",
+            "format": "currency"
+          }
+        ]
+      },
+      "combined_biweekly_balloon": {
+        "label": "Balloon with custom payment frequency (e.g., bi‑weekly)",
+        "description": "Model a balloon due after a chosen term while payments are made at a custom frequency (e.g., 26 for bi‑weekly). Includes optional extra payments per period.",
+        "variables": {
+          "periodic_rate": {
+            "expression": "annual_rate_percent/100/payments_per_year",
+            "dependencies": [
+              "annual_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic rate based on selected frequency",
+            "format": "decimal",
+            "display": false
+          },
+          "total_payments_amort": {
+            "expression": "amort_years*payments_per_year",
+            "dependencies": [
+              "amort_years",
+              "payments_per_year"
+            ],
+            "label": "Payments in full amortization (frequency adjusted)",
+            "format": "integer",
+            "display": false
+          },
+          "payments_until_balloon": {
+            "expression": "balloon_term_years*payments_per_year",
+            "dependencies": [
+              "balloon_term_years",
+              "payments_per_year"
+            ],
+            "label": "Payments made before balloon (frequency adjusted)",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "loan_amount*periodic_rate/(1-(1+periodic_rate)**(-total_payments_amort))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "total_payments_amort"
+            ],
+            "label": "Scheduled periodic payment (frequency adjusted)",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_payment_effective": {
+            "expression": "periodic_payment + extra_payment_per_period",
+            "dependencies": [
+              "periodic_payment",
+              "extra_payment_per_period"
+            ],
+            "label": "Applied payment each period",
+            "format": "currency",
+            "display": true
+          },
+          "balance_before_balloon": {
+            "expression": "loan_amount*(1+periodic_rate)**payments_until_balloon - periodic_payment_effective*(((1+periodic_rate)**payments_until_balloon - 1)/periodic_rate)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "payments_until_balloon",
+              "periodic_payment_effective"
+            ],
+            "label": "Remaining principal due at balloon",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment_custom",
+            "label": "Payment applied per period (custom frequency)",
+            "variable": "periodic_payment_effective",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_due_custom",
+            "label": "Balloon due at end of selected term",
+            "variable": "balance_before_balloon",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_percent",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 4.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amort_years",
+        "label": "Amortization length (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "balloon_term_years",
+        "label": "Balloon term (years until balloon due)",
+        "type": "number",
+        "default": 5,
+        "min": 0.01,
+        "max": 50,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (frequency; e.g., 12 = monthly, 26 = bi‑weekly)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_per_period",
+        "label": "Extra payment each period (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool helps you model balloon payments and the impact of switching to bi‑weekly payments. Use it to estimate the remaining principal (balloon) at a chosen term, compare total interest for monthly vs bi‑weekly schedules, and model any extra payments per period.",
+      "Results assume interest compounds per payment period and do not include escrow, taxes, insurance, fees, or prepayment penalties. Use the fields to set loan amount, APR, amortization length, payment frequency, and balloon term."
+    ],
+    "methodology": [
+      "Periodic interest rate is computed as APR divided by payments per year. Scheduled payments for an amortizing loan are computed from the standard annuity formula: payment = r*L / (1 - (1+r)^-N). Remaining principal after n payments is derived from the closed‑form amortization balance formula.",
+      "Bi‑weekly schedules are modeled as 26 payments/year. The calculator compares total paid under each schedule for the same amortization length to estimate interest savings. Adding an extra payment per period reduces the outstanding balance and therefore the balloon and total interest accordingly.",
+      "Accuracy and data handling follow recognized best practices. Calculations use deterministic formulas; results are subject to rounding and input validity. See the citations for standards on numerical reproducibility and software reliability."
+    ],
+    "how_is_calculated": [
+      "Convert APR to periodic rate: r = APR / 100 / payments_per_year.",
+      "Scheduled periodic payment (annuity): payment = loan_amount * r / (1 - (1 + r)^-N) where N = amort_years * payments_per_year.",
+      "Remaining balance after n payments: balance = loan_amount*(1+r)^n - payment * (( (1+r)^n - 1 ) / r). If extra payments are included, payment is increased by extra_payment_per_period for balance reduction calculations.",
+      "Total interest = total payments over amortization − original principal."
+    ],
+    "faqs": [
+      {
+        "question": "What is a balloon payment?",
+        "answer": "A balloon payment is the remaining principal due at the end of a loan term when the scheduled payments do not fully amortize the loan. It is calculated as the outstanding principal after the specified number of payments."
+      },
+      {
+        "question": "How do bi‑weekly payments reduce interest?",
+        "answer": "Bi‑weekly schedules increase the number of compounding periods per year (26 vs 12). If payments are sized so the equivalent annualized payment is the same, more frequent compounding and extra effective payments (26 payments ≈ 13 monthly payments) can shorten amortization and reduce total interest."
+      },
+      {
+        "question": "Are these results guaranteed to match my lender's statement?",
+        "answer": "No. This calculator provides estimates based on standard amortization formulas and the inputs you provide. Lenders may use different day‑count conventions, rounding, or fees. Always confirm final figures with your lender or loan servicer."
+      },
+      {
+        "question": "How precise are the calculations and what are the limits?",
+        "answer": "Calculations use closed‑form formulas and typical floating‑point arithmetic. They assume constant APR, no fees, and on‑time payments. Very large inputs, nonstandard compounding, or bespoke loan features (negative amortization, interest‑only periods, prepayment penalties) are outside the scope."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Numerical Software Guidelines",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) — Software and financial data quality principles",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) — Software reliability and testing recommendations",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — Organizational risk and quality management (guidance applicable to process controls)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "Outstanding principal remaining at a specified time when scheduled payments do not fully amortize the loan."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down loan principal and interest over a set period through regular payments."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate applied for each payment period: APR / payments per year."
+      },
+      {
+        "term": "Bi‑weekly payment",
+        "definition": "A payment schedule with 26 payments per year (every two weeks)."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

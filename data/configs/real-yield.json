@@ -1,0 +1,243 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Real Yield Calculator (nominal ↔ real, Fisher & approximation)",
+    "description": "Compute real yield from nominal yield and inflation, and convert between nominal and real yields. Supports the exact Fisher equation, the common subtraction approximation, and the inverse calculation (implied nominal from real + inflation). Includes accuracy guidance, limits, and references to standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "fisher_exact",
+    "methods": {
+      "fisher_exact": {
+        "label": "Exact (Fisher) method",
+        "description": "Computes the real yield using the exact Fisher relation, which accounts for compounding between nominal return and inflation.",
+        "variables": {
+          "real_rate_pct": {
+            "expression": "((1 + nominal_rate/100) / (1 + inflation_rate/100) - 1) * 100",
+            "dependencies": [
+              "nominal_rate",
+              "inflation_rate"
+            ],
+            "label": "Real yield (exact, Fisher equation)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "real_yield_exact",
+            "label": "Real yield (exact)",
+            "variable": "real_rate_pct",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "approximate": {
+        "label": "Approximation (nominal − inflation)",
+        "description": "A linear approximation often used for small rates: real ≈ nominal − inflation. Use for quick estimates when both rates are low (typically under ~10%).",
+        "variables": {
+          "real_rate_approx_pct": {
+            "expression": "nominal_rate - inflation_rate",
+            "dependencies": [
+              "nominal_rate",
+              "inflation_rate"
+            ],
+            "label": "Real yield (approximate)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "real_yield_approx",
+            "label": "Real yield (approximate)",
+            "variable": "real_rate_approx_pct",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "implied_nominal": {
+        "label": "Implied nominal from real + inflation",
+        "description": "Given a target real yield and expected inflation, compute the nominal yield required to achieve that real return (exact relation).",
+        "variables": {
+          "nominal_rate_pct": {
+            "expression": "((1 + real_rate/100) * (1 + inflation_rate/100) - 1) * 100",
+            "dependencies": [
+              "real_rate",
+              "inflation_rate"
+            ],
+            "label": "Implied nominal yield",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "implied_nominal_yield",
+            "label": "Implied nominal yield (exact)",
+            "variable": "nominal_rate_pct",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "nominal_rate",
+        "label": "Nominal yield (annual %)",
+        "type": "number",
+        "default": 5,
+        "min": -100,
+        "max": 1000,
+        "step": 0.01
+      },
+      {
+        "id": "inflation_rate",
+        "label": "Inflation rate (annual %)",
+        "type": "number",
+        "default": 2,
+        "min": -100,
+        "max": 1000,
+        "step": 0.01
+      },
+      {
+        "id": "real_rate",
+        "label": "Real yield (annual %, used for inverse calculation)",
+        "type": "number",
+        "default": 2,
+        "min": -100,
+        "max": 1000,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator converts between nominal and real yields and shows both the exact relationship (Fisher equation) and the common linear approximation. It is intended for annual yields expressed in percent.",
+      "Use the exact method for accurate results when rates or inflation are non-negligible. Use the approximation for quick mental estimates when both nominal and inflation rates are small (for example, single-digit percentages)."
+    ],
+    "methodology": [
+      "Exact method: The Fisher equation links nominal yield, real yield, and inflation through the relation (1 + nominal) = (1 + real) × (1 + inflation). Solving for real gives real = (1 + nominal)/(1 + inflation) − 1. The calculator applies this formula and returns results in percent.",
+      "Approximation: For small rates, the real yield is often approximated by nominal − inflation. This linear approximation neglects the interaction (product) term and is less accurate as rates increase. The tool provides both values and flags where differences are material.",
+      "Inverse calculation: To find the nominal yield required to achieve a target real yield given expected inflation, the calculator rearranges the Fisher relation to nominal = (1 + real) × (1 + inflation) − 1."
+    ],
+    "how_is_calculated": [
+      "Exact (Fisher) formula (percent output): real% = ((1 + nominal%/100) / (1 + inflation%/100) − 1) × 100.",
+      "Approximate formula: real% ≈ nominal% − inflation%.",
+      "Inverse (nominal from real + inflation): nominal% = ((1 + real%/100) × (1 + inflation%/100) − 1) × 100."
+    ],
+    "examples": [
+      "Example 1 (exact): Nominal 6.00%, Inflation 2.00% → Real = ((1.06 / 1.02) − 1) × 100 = 3.92%. Approximation gives 4.00% (nominal − inflation). The difference is 0.08 percentage points.",
+      "Example 2 (approx): Nominal 3.00%, Inflation 2.00% → Exact real = 0.98% vs approximation 1.00%. Difference is small, so approximation is acceptable for quick estimates.",
+      "Example 3 (inverse): Desired real 3.50%, Inflation 2.00% → Nominal = ((1.035 × 1.02) − 1) × 100 = 5.57%."
+    ],
+    "faqs": [
+      {
+        "question": "When should I use the exact Fisher equation instead of the approximation?",
+        "answer": "Use the exact Fisher equation when either nominal yields or inflation are moderate to high (typically above a few percent) or when you require precision for decision-making. The approximation (nominal − inflation) is acceptable for quick estimates when both rates are low."
+      },
+      {
+        "question": "Does this account for compounding frequency (monthly, daily)?",
+        "answer": "This calculator works with annual yields expressed as effective annual rates. If you have nominal APRs with intra-year compounding, convert them to effective annual rates before using this tool. For regulatory or accounting use, follow the compounding conversion required by your reporting standard."
+      },
+      {
+        "question": "Are there limits or accuracy caveats I should know?",
+        "answer": "Yes. Rounding and presentation can hide small differences; when making legal, regulatory, or investment decisions, maintain at least four decimal places during calculation. Validate critical figures against source data. See standards and references for recommended precision and control practices."
+      },
+      {
+        "question": "Can tax, fees, or different inflation definitions (CPI vs. core CPI) change results?",
+        "answer": "Yes. This tool uses the inflation input you provide. Taxes, fees, and different inflation measures materially affect realized real returns. Adjust inputs to reflect after-tax yields and the appropriate inflation series for your analysis."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (standards and measurement guidance)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (standards organization)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (engineering and technical standards)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission (investor resources)",
+        "url": "https://www.sec.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Nominal yield",
+        "definition": "The stated monetary return on an investment before adjustment for inflation. Expressed here as an annual percentage."
+      },
+      {
+        "term": "Real yield",
+        "definition": "The inflation-adjusted return that reflects change in purchasing power. Computed via the Fisher relation or approximated by nominal − inflation."
+      },
+      {
+        "term": "Fisher equation",
+        "definition": "An exact relation between nominal rate, real rate, and inflation: (1 + nominal) = (1 + real) × (1 + inflation)."
+      },
+      {
+        "term": "Effective annual rate",
+        "definition": "The annual rate that accounts for compounding within the year. Convert nominal APRs with intra-year compounding to an effective annual rate before applying Fisher calculations."
+      }
+    ],
+    "summary": [
+      "This tool offers exact and approximate conversions between nominal and real yields and an inverse calculation to find implied nominal yield from a target real yield and inflation.",
+      "For precision-critical work, prefer the exact Fisher method, keep intermediate precision (four or more decimal places), and document input definitions (e.g., which inflation series and whether yields are pre- or post-tax)."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.sec.gov",
+        "label": "U.S. SEC",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

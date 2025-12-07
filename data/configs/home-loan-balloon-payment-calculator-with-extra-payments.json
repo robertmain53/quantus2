@@ -1,0 +1,514 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Balloon Payment Calculator with Extra Payments",
+    "description": "Estimate the balloon amount due at a specified balloon date and compare outcomes when making recurring extra principal payments. Includes careful caveats about rounding, compounding conventions, and limits of closed-form approximations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_balloon",
+    "methods": {
+      "standard_balloon": {
+        "label": "Standard balloon (no extra payments)",
+        "description": "Compute the periodic payment assuming full amortization over the loan term and the remaining principal (balloon) at the balloon date, without extra principal prepayments.",
+        "variables": {
+          "r": {
+            "expression": "annual_interest_rate/100/payment_frequency_per_year",
+            "dependencies": [
+              "annual_interest_rate",
+              "payment_frequency_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "decimal",
+            "display": true,
+            "unit": ""
+          },
+          "n_total": {
+            "expression": "loan_term_years * payment_frequency_per_year",
+            "dependencies": [
+              "loan_term_years",
+              "payment_frequency_per_year"
+            ],
+            "label": "Total number of scheduled payments",
+            "format": "integer",
+            "display": true,
+            "unit": ""
+          },
+          "n_balloon": {
+            "expression": "balloon_after_years * payment_frequency_per_year",
+            "dependencies": [
+              "balloon_after_years",
+              "payment_frequency_per_year"
+            ],
+            "label": "Number of payments before balloon",
+            "format": "integer",
+            "display": true,
+            "unit": ""
+          },
+          "scheduled_payment": {
+            "expression": "loan_amount * r / (1 - (1 + r) ** (-n_total))",
+            "dependencies": [
+              "loan_amount",
+              "r",
+              "n_total"
+            ],
+            "label": "Scheduled periodic payment (no extras)",
+            "format": "currency",
+            "display": true,
+            "unit": ""
+          },
+          "balloon_balance": {
+            "expression": "loan_amount * (1 + r) ** n_balloon - scheduled_payment * (((1 + r) ** n_balloon - 1) / r)",
+            "dependencies": [
+              "loan_amount",
+              "r",
+              "n_balloon",
+              "scheduled_payment"
+            ],
+            "label": "Balloon balance at balloon date",
+            "format": "currency",
+            "display": true,
+            "unit": ""
+          },
+          "total_interest_to_balloon": {
+            "expression": "scheduled_payment * n_balloon - (loan_amount - balloon_balance)",
+            "dependencies": [
+              "scheduled_payment",
+              "n_balloon",
+              "loan_amount",
+              "balloon_balance"
+            ],
+            "label": "Total interest paid up to balloon",
+            "format": "currency",
+            "display": true,
+            "unit": ""
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Regular periodic payment",
+            "variable": "scheduled_payment",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_balance",
+            "label": "Balloon amount due",
+            "variable": "balloon_balance",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_to_balloon",
+            "label": "Interest paid through balloon date",
+            "variable": "total_interest_to_balloon",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      },
+      "balloon_with_extras": {
+        "label": "Balloon with recurring extra principal payments",
+        "description": "Estimate the balloon amount when you add a recurring extra principal payment each payment period. Uses an adjusted-payment closed-form approximation (see accuracy notes).",
+        "variables": {
+          "r": {
+            "expression": "annual_interest_rate/100/payment_frequency_per_year",
+            "dependencies": [
+              "annual_interest_rate",
+              "payment_frequency_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "decimal",
+            "display": true,
+            "unit": ""
+          },
+          "n_total": {
+            "expression": "loan_term_years * payment_frequency_per_year",
+            "dependencies": [
+              "loan_term_years",
+              "payment_frequency_per_year"
+            ],
+            "label": "Total number of scheduled payments",
+            "format": "integer",
+            "display": true,
+            "unit": ""
+          },
+          "n_balloon": {
+            "expression": "balloon_after_years * payment_frequency_per_year",
+            "dependencies": [
+              "balloon_after_years",
+              "payment_frequency_per_year"
+            ],
+            "label": "Number of payments before balloon",
+            "format": "integer",
+            "display": true,
+            "unit": ""
+          },
+          "std_payment": {
+            "expression": "loan_amount * r / (1 - (1 + r) ** (-n_total))",
+            "dependencies": [
+              "loan_amount",
+              "r",
+              "n_total"
+            ],
+            "label": "Scheduled periodic payment if no override",
+            "format": "currency",
+            "display": false,
+            "unit": ""
+          },
+          "payment_base": {
+            "expression": "regular_payment > 0 ? regular_payment : std_payment",
+            "dependencies": [
+              "regular_payment",
+              "std_payment"
+            ],
+            "label": "Base periodic payment (user override allowed)",
+            "format": "currency",
+            "display": true,
+            "unit": ""
+          },
+          "adjusted_payment": {
+            "expression": "payment_base + extra_payment_amount",
+            "dependencies": [
+              "payment_base",
+              "extra_payment_amount"
+            ],
+            "label": "Periodic payment including recurring extra principal",
+            "format": "currency",
+            "display": true,
+            "unit": ""
+          },
+          "balloon_balance_with_extras": {
+            "expression": "loan_amount * (1 + r) ** n_balloon - adjusted_payment * (((1 + r) ** n_balloon - 1) / r)",
+            "dependencies": [
+              "loan_amount",
+              "r",
+              "n_balloon",
+              "adjusted_payment"
+            ],
+            "label": "Estimated balloon balance with extras (approx)",
+            "format": "currency",
+            "display": true,
+            "unit": ""
+          },
+          "total_interest_with_extras": {
+            "expression": "adjusted_payment * n_balloon - (loan_amount - balloon_balance_with_extras)",
+            "dependencies": [
+              "adjusted_payment",
+              "n_balloon",
+              "loan_amount",
+              "balloon_balance_with_extras"
+            ],
+            "label": "Total interest paid up to balloon with extras",
+            "format": "currency",
+            "display": true,
+            "unit": ""
+          },
+          "std_balloon_balance_for_comparison": {
+            "expression": "loan_amount * (1 + r) ** n_balloon - std_payment * (((1 + r) ** n_balloon - 1) / r)",
+            "dependencies": [
+              "loan_amount",
+              "r",
+              "n_balloon",
+              "std_payment"
+            ],
+            "label": "Standard balloon balance for comparison",
+            "format": "currency",
+            "display": false,
+            "unit": ""
+          },
+          "standard_total_interest": {
+            "expression": "std_payment * n_balloon - (loan_amount - std_balloon_balance_for_comparison)",
+            "dependencies": [
+              "std_payment",
+              "n_balloon",
+              "loan_amount",
+              "std_balloon_balance_for_comparison"
+            ],
+            "label": "Standard interest to balloon for comparison",
+            "format": "currency",
+            "display": false,
+            "unit": ""
+          },
+          "estimated_savings_in_interest": {
+            "expression": "standard_total_interest - total_interest_with_extras",
+            "dependencies": [
+              "standard_total_interest",
+              "total_interest_with_extras"
+            ],
+            "label": "Estimated interest savings up to balloon",
+            "format": "currency",
+            "display": true,
+            "unit": ""
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_payment",
+            "label": "Periodic payment including extras",
+            "variable": "adjusted_payment",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_balance_with_extras",
+            "label": "Estimated balloon due with extras",
+            "variable": "balloon_balance_with_extras",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_with_extras",
+            "label": "Interest paid through balloon with extras",
+            "variable": "total_interest_with_extras",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_savings_in_interest",
+            "label": "Estimated interest saved vs no extras",
+            "variable": "estimated_savings_in_interest",
+            "unit": "",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 4.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "loan_term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payment_frequency_per_year",
+        "label": "Payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          },
+          {
+            "label": "Annually (1)",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "balloon_after_years",
+        "label": "Balloon due after (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.25,
+        "max": 50,
+        "step": 0.25
+      },
+      {
+        "id": "regular_payment",
+        "label": "Enter regular periodic payment (leave 0 to auto-calc)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "extra_payment_amount",
+        "label": "Extra principal per payment (recurring)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_start_period",
+        "label": "Start extra payments at payment number",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "scheduled_payment",
+          "label": "Scheduled periodic payment"
+        },
+        {
+          "id": "balloon_balance",
+          "label": "Balloon amount (no extras)"
+        },
+        {
+          "id": "total_interest_to_balloon",
+          "label": "Interest to balloon date (no extras)"
+        },
+        {
+          "id": "adjusted_payment",
+          "label": "Periodic payment including extras"
+        },
+        {
+          "id": "balloon_balance_with_extras",
+          "label": "Estimated balloon with extras"
+        },
+        {
+          "id": "total_interest_with_extras",
+          "label": "Interest to balloon with extras"
+        },
+        {
+          "id": "estimated_savings_in_interest",
+          "label": "Estimated interest savings vs no extras"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the amount due at a balloon date for a home loan and shows how recurring extra principal payments change that balance. It supports common payment frequencies and allows you to override the scheduled payment if your loan has a nonstandard payment amount.",
+      "Results are produced using closed-form amortization formulas and an adjusted-payment approximation when recurring extras are included. Because servicer rules, compounding conventions, and rounding can vary, consider the output an estimate for planning; always confirm exact payoffs with your lender."
+    ],
+    "methodology": [
+      "Periodic interest rate is computed as APR divided by payment frequency. The scheduled payment uses the standard level-payment amortization formula for the chosen amortization term. The balloon balance after N payments is calculated from the remaining principal formula: principal grown by periodic compounding minus the accumulated effect of payments.",
+      "For recurring extra principal payments we use an adjusted-payment closed-form approximation by treating the extra principal as an additional fixed payment each period. This produces a close estimate in typical consumer scenarios but does not model complex conditional start/stop schedules, escrow advances, payment holidays, or servicer rounding rules."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_interest_rate / 100 / payments_per_year",
+      "Scheduled payment P = L * r / (1 - (1 + r)^-N) where L is loan amount and N is total payments",
+      "Balloon balance after k payments B = L*(1+r)^k - P * (((1+r)^k - 1) / r)",
+      "With recurring extra E per period, approximate adjusted payment P' = P + E and compute B' substituting P' for P in the remaining-balance formula"
+    ],
+    "examples": [
+      "Example 1: $300,000 loan, 4.0% APR, 30-year amortization, balloon at 5 years (monthly). The calculator shows the scheduled monthly payment, the remaining principal after 60 payments, and interest paid to that date.",
+      "Example 2: Same loan but adding $200 extra principal each month; the calculator provides an estimated lower balloon balance and estimated interest savings relative to no extras."
+    ],
+    "faqs": [
+      {
+        "question": "Does this exact payoff match my lender's payoff statement?",
+        "answer": "Not always. This tool uses standard amortization math and a closed-form approximation for recurring extra payments. Lenders apply their own rounding, interest accrual day-count conventions, escrow advances, fees, and prepayment application order. Always request a formal payoff from your servicer before making final arrangements."
+      },
+      {
+        "question": "Are one-time extra payments modeled?",
+        "answer": "This version focuses on recurring extra principal applied each payment. A one-time extra reduces principal immediately and will reduce subsequent interest; for precise one-time impacts, use the extra amount as a recurring extra for one period and consult your servicer for exact posting rules."
+      },
+      {
+        "question": "Why might results differ when I change payment frequency?",
+        "answer": "Payment frequency changes the periodic interest rate and compounding intervals. Equivalent APRs produce slightly different periodic accruals depending on frequency; comparison should use the same frequency used by your loan contract."
+      },
+      {
+        "question": "What are the limits and accuracy considerations?",
+        "answer": "This tool is accurate for standard fixed-rate, level-payment amortization and for recurring fixed extras. It is an approximation when extras start after a delay or stop before the balloon, or when loans have negative amortization features, variable rates, or nonstandard compounding. See citations for standards on numeric accuracy and testing."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Guidelines for Evaluating Numerical Software",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Financial services standards overview",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Recommended practices for numerical software",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau - Mortgage basics",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at a specified future date representing the remaining principal on a loan that is not fully amortized by scheduled payments."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down loan principal over time using periodic payments composed of interest and principal portions."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate; the nominal yearly interest rate expressed as a percentage, not including all fees unless specified as an APR with fees."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period, equal to APR divided by the number of payment periods per year."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

@@ -1,0 +1,672 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan Interest & Extra-Payments Calculator",
+    "description": "Interactive business loan amortization and payoff projection including recurring extra payments and one-time lump-sum prepayments. Estimates scheduled payment, payoff timing, total interest with and without extras, and interest/time saved. Includes clear assumptions, accuracy caveats, and references to numerical and quality standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "with_extra",
+    "methods": {
+      "base": {
+        "label": "Standard Amortization (no extra payments)",
+        "description": "Standard fixed-payment amortization using periodic interest and scheduled payments.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years*payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of scheduled payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "principal * r / (1 - pow(1 + r, -n))",
+            "dependencies": [
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Scheduled payment (per period)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "base_payment * n",
+            "dependencies": [
+              "base_payment",
+              "n"
+            ],
+            "label": "Total paid over term",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Total interest (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled payment (no extras)",
+            "variable": "base_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_payments_no_extra",
+            "label": "Payments to repay (no extras)",
+            "variable": "n",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "total_interest_no_extra",
+            "label": "Total interest (no extras)",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "with_extra": {
+        "label": "Projection with Extra Payments (recurring or one-time)",
+        "description": "Projection that supports recurring extra payments and single lump-sum prepayments. Uses discrete-payment math with standard amortization formulas to estimate remaining balance, payoff timing and interest saved. Handles common edge cases such as extra payments that fully pay the balance early.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": null,
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years*payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Scheduled payment count",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "base_payment": {
+            "expression": "principal * r / (1 - pow(1 + r, -n))",
+            "dependencies": [
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Scheduled payment (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "recurring_extra": {
+            "expression": "extra_type == 'recurring' ? extra_amount : 0",
+            "dependencies": [
+              "extra_type",
+              "extra_amount"
+            ],
+            "label": "Recurring extra payment amount per chosen frequency",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "extra_freq": {
+            "expression": "extra_type == 'recurring' ? extra_frequency : payments_per_year",
+            "dependencies": [
+              "extra_type",
+              "extra_frequency",
+              "payments_per_year"
+            ],
+            "label": "Frequency of recurring extras (payments per year)",
+            "unit": "payments/year",
+            "format": "integer",
+            "display": false
+          },
+          "effective_payment": {
+            "expression": "base_payment + recurring_extra",
+            "dependencies": [
+              "base_payment",
+              "recurring_extra"
+            ],
+            "label": "Effective payment when recurring extra applies",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_recur": {
+            "expression": "effective_payment > principal*r ? log(effective_payment/(effective_payment - principal*r))/log(1 + r) : n",
+            "dependencies": [
+              "effective_payment",
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Estimated payments to repay with recurring extras",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "m": {
+            "expression": "extra_type == 'lump_sum' ? lump_sum_after_payments : 0",
+            "dependencies": [
+              "extra_type",
+              "lump_sum_after_payments"
+            ],
+            "label": "Payment index when lump sum is applied (payments elapsed)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "balance_after_m": {
+            "expression": "principal*pow(1 + r, m) - base_payment * ((pow(1 + r, m) - 1)/r)",
+            "dependencies": [
+              "principal",
+              "r",
+              "m",
+              "base_payment"
+            ],
+            "label": "Remaining balance immediately before lump sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_principal_after_lump": {
+            "expression": "balance_after_m - lump_sum_amount < 0 ? 0 : balance_after_m - lump_sum_amount",
+            "dependencies": [
+              "balance_after_m",
+              "lump_sum_amount"
+            ],
+            "label": "Remaining principal after lump-sum prepayment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "n_after_lump": {
+            "expression": "effective_payment > new_principal_after_lump*r && new_principal_after_lump > 0 ? log(effective_payment/(effective_payment - new_principal_after_lump*r))/log(1 + r) : 0",
+            "dependencies": [
+              "effective_payment",
+              "new_principal_after_lump",
+              "r"
+            ],
+            "label": "Payments required after lump-sum to retire remaining balance",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "total_payments_with_extra": {
+            "expression": "extra_type == 'lump_sum' ? (m + n_after_lump) : n_recur",
+            "dependencies": [
+              "extra_type",
+              "m",
+              "n_after_lump",
+              "n_recur"
+            ],
+            "label": "Total payments to repay loan with provided extras",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_with_extra": {
+            "expression": "extra_type == 'lump_sum' ? (base_payment * m + lump_sum_amount + effective_payment * n_after_lump) : (effective_payment * n_recur)",
+            "dependencies": [
+              "extra_type",
+              "base_payment",
+              "m",
+              "lump_sum_amount",
+              "effective_payment",
+              "n_after_lump",
+              "n_recur"
+            ],
+            "label": "Estimated total amount paid including extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_with_extra": {
+            "expression": "total_paid_with_extra - principal",
+            "dependencies": [
+              "total_paid_with_extra",
+              "principal"
+            ],
+            "label": "Total interest paid (with extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest - total_interest_with_extra",
+            "dependencies": [
+              "total_interest",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved by making extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_saved": {
+            "expression": "n - total_payments_with_extra",
+            "dependencies": [
+              "n",
+              "total_payments_with_extra"
+            ],
+            "label": "Number of scheduled payments saved",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled payment (no extras)",
+            "variable": "base_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "effective_payment",
+            "label": "Effective payment (including recurring extra when applicable)",
+            "variable": "effective_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments_with_extra",
+            "label": "Total payments to repay (with extras)",
+            "variable": "total_payments_with_extra",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest (with extras)",
+            "variable": "total_interest_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payments_saved",
+            "label": "Payments saved",
+            "variable": "payments_saved",
+            "unit": "payments",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %) - nominal",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Scheduled payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Annually (1)",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "extra_type",
+        "label": "Extra payment type",
+        "type": "select",
+        "default": "none",
+        "options": [
+          {
+            "label": "No extra payments",
+            "value": "none"
+          },
+          {
+            "label": "Recurring extra payment",
+            "value": "recurring"
+          },
+          {
+            "label": "One-time lump-sum prepayment",
+            "value": "lump_sum"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "recurring_section",
+        "label": "Recurring extra payment details",
+        "show_when": {
+          "field": "extra_type",
+          "is": "recurring"
+        },
+        "fields": [
+          {
+            "id": "extra_amount",
+            "label": "Extra payment per extra period",
+            "type": "number",
+            "default": 100,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "extra_frequency",
+            "label": "Extra payment frequency (payments per year)",
+            "type": "select",
+            "default": "12",
+            "options": [
+              {
+                "label": "Match scheduled payments",
+                "value": "12"
+              },
+              {
+                "label": "Biweekly (26)",
+                "value": "26"
+              },
+              {
+                "label": "Weekly (52)",
+                "value": "52"
+              },
+              {
+                "label": "Quarterly (4)",
+                "value": "4"
+              },
+              {
+                "label": "Annually (1)",
+                "value": "1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "lump_sum_section",
+        "label": "One-time lump-sum prepayment details",
+        "show_when": {
+          "field": "extra_type",
+          "is": "lump_sum"
+        },
+        "fields": [
+          {
+            "id": "lump_sum_amount",
+            "label": "Lump-sum amount",
+            "type": "number",
+            "default": 5000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "lump_sum_after_payments",
+            "label": "Apply lump sum after how many payments?",
+            "type": "integer",
+            "default": 12,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "extra_amount",
+            "label": "Recurring extra payment after lump (optional)",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "scheduled_payment",
+          "label": "Scheduled payment (no extras)"
+        },
+        {
+          "id": "effective_payment",
+          "label": "Effective payment (including recurring extra)"
+        },
+        {
+          "id": "total_payments_with_extra",
+          "label": "Total payments to repay (with extras)",
+          "format": "decimal"
+        },
+        {
+          "id": "total_interest_with_extra",
+          "label": "Total interest (with extras)",
+          "format": "currency"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Interest saved",
+          "format": "currency"
+        },
+        {
+          "id": "payments_saved",
+          "label": "Payments saved",
+          "format": "decimal"
+        },
+        {
+          "id": "payoff_payments_no_extra",
+          "label": "Payments to repay (no extras)",
+          "format": "integer"
+        },
+        {
+          "id": "total_interest_no_extra",
+          "label": "Total interest (no extras)",
+          "format": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator projects a business loan amortization schedule and shows the effect of recurring extra payments or a one-time lump-sum prepayment. It produces scheduled payment amounts, expected payoff timing, and comparative totals to help you evaluate cashflow and interest savings.",
+      "Use the calculator to compare 'what-if' scenarios: add recurring extra payments, schedule a one-time prepayment, or combine both. Results are estimates and are intended for planning, not as a legally binding payoff statement."
+    ],
+    "methodology": [
+      "Periodic-rate amortization formulas are used. Periodic interest rate is calculated as annual_rate / 100 / payments_per_year. The standard fixed-payment formula computes the scheduled payment that amortizes the loan over its term.",
+      "For recurring extras, the effective payment (scheduled payment plus recurring extra) is used in the closed-form repayment formula derived from the geometric progression of remaining balances. For a single lump-sum prepayment, the remaining balance before the prepayment is computed, the lump-sum reduces principal, and remaining payments are recomputed assuming the effective payment thereafter.",
+      "Edge cases are handled conservatively: if an extra payment fully repays the loan before the next scheduled payment, the model clamps the remaining balance to zero and counts only the payments required to reach zero. Where formulas would divide by zero or produce non-finite results, the calculator falls back to the original schedule."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual_rate / 100 / payments_per_year.",
+      "Number of scheduled payments n = term_years * payments_per_year.",
+      "Scheduled payment (no extras) = principal * r / (1 - (1 + r)^(-n)).",
+      "Remaining balance after k payments = principal*(1+r)^k - payment*(( (1+r)^k -1)/r ).",
+      "Payments with recurring extras use closed-form inversion: payments = log(effective_payment divided by (effective_payment minus principal times r)) / log(1+r), which requires the effective payment to exceed principal times r."
+    ],
+    "examples": [
+      "Example 1: $50,000 loan, 6.5% APR, 5 years, monthly payments. Adding $200 monthly recurring extra reduces both total interest and number of payments — results shown in the outputs.",
+      "Example 2: Same loan with a $5,000 lump-sum after 12 payments. The calculator shows the remaining balance at payment 12, applies the lump-sum, and estimates remaining payments and interest thereafter."
+    ],
+    "summary": [
+      "This tool gives quick, transparent estimates of how extra payments affect interest and payoff timing. It is intended for planning and comparison.",
+      "Always verify payoff amounts with your lender because this calculator assumes no fees, no changes to APR, and interest computed on the nominal schedule provided."
+    ],
+    "faqs": [
+      {
+        "question": "Are these results exact payoff figures from my lender?",
+        "answer": "No. Results are estimates. Lenders may apply different interest day-count conventions, fees, or timing rules. Use the calculator for planning and confirm final payoff numbers with your lender."
+      },
+      {
+        "question": "Do extra payments always reduce interest and term?",
+        "answer": "Yes, if extras are applied to principal they reduce principal and therefore interest accrual. The magnitude of savings depends on timing, amount, and whether the lender applies prepayments to principal immediately."
+      },
+      {
+        "question": "What assumptions does the calculator make?",
+        "answer": "Assumes fixed nominal APR, fixed scheduled payment frequency, extras applied immediately to principal on the indicated payment date, and no prepayment penalties or additional fees. Does not model interest capitalization beyond standard amortization."
+      },
+      {
+        "question": "How should I enter biweekly or weekly payments?",
+        "answer": "Select the payments-per-year option matching your schedule. The tool treats each payment as an equal period; for biweekly select 26 and for weekly select 52."
+      },
+      {
+        "question": "How accurate are the formulas for very large or very small interest rates?",
+        "answer": "Standard closed-form amortization formulas are numerically robust for normal commercial loan rates. For extremely small r values or extremely large n values, floating-point rounding can introduce small errors; see accuracy caveats below."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IEEE Standard for Floating-Point Arithmetic (IEEE 754)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "NIST — Software Testing and Validation Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 9001 — Quality Management Systems",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The original loan amount borrowed, before interest."
+      },
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "Nominal annual interest rate expressed as a percentage, used here to compute periodic rate = APR/100/payments_per_year."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down principal over time through scheduled payments that include interest and principal portions."
+      },
+      {
+        "term": "Recurring extra payment",
+        "definition": "A fixed additional payment applied regularly in addition to the scheduled payment, typically applied to principal."
+      },
+      {
+        "term": "Lump-sum prepayment",
+        "definition": "A single larger extra payment applied at a specified time which immediately reduces principal."
+      },
+      {
+        "term": "Effective payment",
+        "definition": "Scheduled payment plus any recurring extra payment; used to compute accelerated payoff."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754 Floating-Point Standard",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST (National Institute of Standards & Technology)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 Quality Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

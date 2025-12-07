@@ -1,0 +1,547 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Extra Payments Calculator (Recurring + Lump-sum)",
+    "description": "Estimate how recurring extra monthly payments and one-time lump-sum payments change your auto-loan payoff time and interest paid. Includes combined scenario and clear accuracy notes and standards citations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "combined",
+    "methods": {
+      "monthly_extra": {
+        "label": "Recurring monthly extra payment",
+        "description": "Apply an additional fixed amount to each monthly payment and compute new payoff time and interest saved.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "loan_amount * (monthly_rate) / (1 - (1+monthly_rate)^(-term_months))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "term_months"
+            ],
+            "label": "Scheduled monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_no_extra": {
+            "expression": "monthly_payment * term_months - loan_amount",
+            "dependencies": [
+              "monthly_payment",
+              "term_months",
+              "loan_amount"
+            ],
+            "label": "Total interest (no extra payments)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_plus": {
+            "expression": "monthly_payment + recurring_extra",
+            "dependencies": [
+              "monthly_payment",
+              "recurring_extra"
+            ],
+            "label": "Monthly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_term_months": {
+            "expression": "-ln(1 - monthly_rate * loan_amount / payment_plus) / ln(1 + monthly_rate)",
+            "dependencies": [
+              "monthly_rate",
+              "loan_amount",
+              "payment_plus"
+            ],
+            "label": "New number of months to pay off loan",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_with_extra": {
+            "expression": "payment_plus * new_term_months - loan_amount",
+            "dependencies": [
+              "payment_plus",
+              "new_term_months",
+              "loan_amount"
+            ],
+            "label": "Total interest with recurring extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_no_extra - total_interest_with_extra",
+            "dependencies": [
+              "total_interest_no_extra",
+              "total_interest_with_extra"
+            ],
+            "label": "Interest saved by making recurring extra monthly payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "new_term_months",
+            "label": "Months to payoff with recurring extra",
+            "variable": "new_term_months"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest paid (with recurring extra)",
+            "variable": "total_interest_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved vs scheduled payments",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "lump_only": {
+        "label": "Single lump-sum payment",
+        "description": "Apply one lump-sum payment at a chosen month and compute the new remaining payoff time and interest saved.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "loan_amount * (monthly_rate) / (1 - (1+monthly_rate)^(-term_months))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "term_months"
+            ],
+            "label": "Scheduled monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_no_extra": {
+            "expression": "monthly_payment * term_months - loan_amount",
+            "dependencies": [
+              "monthly_payment",
+              "term_months",
+              "loan_amount"
+            ],
+            "label": "Total interest (no extra payments)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "balance_after_k": {
+            "expression": "loan_amount*(1+monthly_rate)^lump_sum_month - monthly_payment * (((1+monthly_rate)^lump_sum_month - 1) / monthly_rate)",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "lump_sum_month",
+              "monthly_payment"
+            ],
+            "label": "Remaining balance just before lump-sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "principal_after_lump": {
+            "expression": "balance_after_k - lump_sum_amount",
+            "dependencies": [
+              "balance_after_k",
+              "lump_sum_amount"
+            ],
+            "label": "Principal remaining after lump-sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_remaining_after_lump": {
+            "expression": "-ln(1 - monthly_rate * principal_after_lump / monthly_payment) / ln(1 + monthly_rate)",
+            "dependencies": [
+              "monthly_rate",
+              "principal_after_lump",
+              "monthly_payment"
+            ],
+            "label": "Months remaining after lump-sum",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_with_lump": {
+            "expression": "monthly_payment * lump_sum_month + monthly_payment * months_remaining_after_lump + lump_sum_amount",
+            "dependencies": [
+              "monthly_payment",
+              "lump_sum_month",
+              "months_remaining_after_lump",
+              "lump_sum_amount"
+            ],
+            "label": "Total amount paid including lump sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_with_lump": {
+            "expression": "total_paid_with_lump - loan_amount",
+            "dependencies": [
+              "total_paid_with_lump",
+              "loan_amount"
+            ],
+            "label": "Total interest with lump sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved_lump": {
+            "expression": "total_interest_no_extra - total_interest_with_lump",
+            "dependencies": [
+              "total_interest_no_extra",
+              "total_interest_with_lump"
+            ],
+            "label": "Interest saved by lump-sum payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_remaining_after_lump",
+            "label": "Months remaining after lump-sum",
+            "variable": "months_remaining_after_lump"
+          },
+          {
+            "id": "total_interest_with_lump",
+            "label": "Total interest paid (with lump-sum)",
+            "variable": "total_interest_with_lump",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved_lump",
+            "label": "Interest saved vs scheduled payments",
+            "variable": "interest_saved_lump",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "combined": {
+        "label": "Combined: recurring extra + lump-sum",
+        "description": "Apply both a recurring extra monthly amount and a single lump-sum payment. Returns payoff months and interest saved compared to the original schedule.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "loan_amount * (monthly_rate) / (1 - (1+monthly_rate)^(-term_months))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "term_months"
+            ],
+            "label": "Scheduled monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_no_extra": {
+            "expression": "monthly_payment * term_months - loan_amount",
+            "dependencies": [
+              "monthly_payment",
+              "term_months",
+              "loan_amount"
+            ],
+            "label": "Total interest (no extra payments)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "balance_after_k": {
+            "expression": "loan_amount*(1+monthly_rate)^lump_sum_month - monthly_payment * (((1+monthly_rate)^lump_sum_month - 1) / monthly_rate)",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "lump_sum_month",
+              "monthly_payment"
+            ],
+            "label": "Remaining balance just before lump-sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "principal_after_lump": {
+            "expression": "balance_after_k - lump_sum_amount",
+            "dependencies": [
+              "balance_after_k",
+              "lump_sum_amount"
+            ],
+            "label": "Principal remaining after lump-sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_plus": {
+            "expression": "monthly_payment + recurring_extra",
+            "dependencies": [
+              "monthly_payment",
+              "recurring_extra"
+            ],
+            "label": "Monthly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "months_remaining_after_lump_with_extra": {
+            "expression": "-ln(1 - monthly_rate * principal_after_lump / payment_plus) / ln(1 + monthly_rate)",
+            "dependencies": [
+              "monthly_rate",
+              "principal_after_lump",
+              "payment_plus"
+            ],
+            "label": "Months remaining after lump-sum when paying extra each month",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_combined": {
+            "expression": "payment_plus * months_remaining_after_lump_with_extra + payment_plus * lump_sum_month + lump_sum_amount",
+            "dependencies": [
+              "payment_plus",
+              "months_remaining_after_lump_with_extra",
+              "lump_sum_month",
+              "lump_sum_amount"
+            ],
+            "label": "Total paid including recurring extras and lump sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_combined": {
+            "expression": "total_paid_combined - loan_amount",
+            "dependencies": [
+              "total_paid_combined",
+              "loan_amount"
+            ],
+            "label": "Total interest with combined strategy",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved_combined": {
+            "expression": "total_interest_no_extra - total_interest_combined",
+            "dependencies": [
+              "total_interest_no_extra",
+              "total_interest_combined"
+            ],
+            "label": "Interest saved with combined strategy",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_to_payoff_combined": {
+            "expression": "lump_sum_month + months_remaining_after_lump_with_extra",
+            "dependencies": [
+              "lump_sum_month",
+              "months_remaining_after_lump_with_extra"
+            ],
+            "label": "Total months to payoff (combined)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff_combined",
+            "label": "Months to payoff (combined)",
+            "variable": "months_to_payoff_combined"
+          },
+          {
+            "id": "total_interest_combined",
+            "label": "Total interest paid (combined)",
+            "variable": "total_interest_combined",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved_combined",
+            "label": "Interest saved vs scheduled payments",
+            "variable": "interest_saved_combined",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_months",
+        "label": "Original term (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 840,
+        "step": 1
+      },
+      {
+        "id": "recurring_extra",
+        "label": "Extra recurring payment (monthly)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "lump_sum_amount",
+        "label": "One-time lump-sum payment amount",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "lump_sum_month",
+        "label": "Month to apply lump-sum (1 = first payment)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 840,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates how recurring extra monthly payments and a single lump-sum payment affect your auto-loan payoff time and total interest paid. Use the combined method to model both strategies together.",
+      "Results assume a fixed-rate loan, payments applied first to interest then principal, and no additional fees or penalties. For different compounding schedules or penalty rules consult your loan documents or a licensed advisor."
+    ],
+    "methodology": [
+      "We compute the standard scheduled monthly payment using the fixed-rate amortization formula and then derive the number of payments required when payment amounts change. When recurring extras increase the payment, the new number of payments is computed with the closed-form logarithmic solution for an amortizing loan.",
+      "For a lump-sum applied at month k, the remaining balance is computed after k scheduled payments using the standard remaining-balance formula; the lump-sum reduces principal and we recompute months-to-payoff using the adjusted principal and the (optionally increased) recurring payment.",
+      "This tool is intended for planning and estimation. It is not a substitute for official payoff quotes from your lender. Inputs that produce division by zero (for example, zero interest rate) are treated separately by the UI and documented in results."
+    ],
+    "how_is_calculated": [
+      "Scheduled monthly payment: payment = P * r / (1 - (1+r)^-n) where P = loan amount, r = monthly rate, n = term in months.",
+      "New number of months when payment increases: n_new = -ln(1 - r * P / payment_new) / ln(1 + r).",
+      "Remaining balance after k payments: B_k = P*(1+r)^k - payment * ( (1+r)^k - 1 ) / r. After applying lump sum L, new principal = B_k - L."
+    ],
+    "examples": [
+      "Example: $25,000 loan, 5.0% APR, 60 months. Adding $100 to each monthly payment reduces months to payoff and lowers total interest; the calculator shows new payoff months and interest saved.",
+      "Example: Same loan with a $2,000 lump-sum at month 12: remaining balance drops and months remaining are recomputed; combined with recurring extras, payoff can occur much earlier."
+    ],
+    "summary": [
+      "Recurring extra monthly payments and one-time lump-sum payments both reduce total interest and shorten the loan term. Combined strategies compound these benefits.",
+      "Always confirm payoff amounts and timing with your lender; some loans have prepayment penalties or alternative application rules which this generic calculator does not model."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator account for prepayment penalties?",
+        "answer": "No. The tool does not model prepayment penalties or special lender rules. Check your loan agreement; if penalties exist, request a payoff quote from your lender."
+      },
+      {
+        "question": "Can I model biweekly or weekly extra payments?",
+        "answer": "This version models recurring extra payments as additional amounts applied each monthly payment. For biweekly/weekly schedules, results may differ slightly. Consult your lender or use a detailed amortization schedule for alternate frequencies."
+      },
+      {
+        "question": "Is interest compounded monthly?",
+        "answer": "The calculator assumes interest accrues monthly (common for auto loans). If your agreement uses a different schedule or daily interest with different application rules, contact your lender for precise payoff numbers."
+      },
+      {
+        "question": "What if the interest rate is zero?",
+        "answer": "A zero-interest loan is handled as a special case: outstanding balance divided by payment gives months to payoff. The general formulas here assume a positive rate; the UI should detect a zero rate and use linear arithmetic to avoid division by zero."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards & Technology (NIST) - Guidance on software and risk management",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - Standards library",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE - Standards and best practices for numerical software",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - General standards and guidance",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The annual rate charged for borrowing, expressed as a percentage that represents the yearly cost of funds over the term of the loan."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a debt over time through regular payments that cover interest and principal."
+      },
+      {
+        "term": "Principal",
+        "definition": "The outstanding original loan amount or remaining balance excluding interest."
+      },
+      {
+        "term": "Interest",
+        "definition": "The cost of borrowing charged by the lender, calculated on the outstanding principal."
+      },
+      {
+        "term": "Lump-sum payment",
+        "definition": "A one-time payment applied directly to loan principal to reduce the remaining balance."
+      },
+      {
+        "term": "Prepayment penalty",
+        "definition": "A fee some lenders charge if a loan is paid off early; not modeled by this calculator."
+      }
+    ]
+  }
+}

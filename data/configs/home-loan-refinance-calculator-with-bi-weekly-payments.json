@@ -1,0 +1,622 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Refinance Calculator — Bi‑Weekly Payments",
+    "description": "Compare refinancing into a bi‑weekly payment schedule or converting your existing mortgage to bi‑weekly payments. Estimates include periodic payment amounts, total cost, interest paid, net savings, and time-to-payoff under each scenario."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "refinance_biweekly",
+    "methods": {
+      "refinance_biweekly": {
+        "label": "Refinance and switch to bi‑weekly payments",
+        "description": "Refinance your current mortgage at a new rate/term and make bi‑weekly payments. Optionally roll closing costs into the new loan amount.",
+        "variables": {
+          "closing_roll": {
+            "expression": "(roll_closing_costs == \"yes\") ? closing_costs : 0",
+            "dependencies": [
+              "roll_closing_costs",
+              "closing_costs"
+            ],
+            "label": "Closing costs rolled into loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "loan_amount": {
+            "expression": "principal + closing_roll",
+            "dependencies": [
+              "principal",
+              "closing_roll"
+            ],
+            "label": "Refinance loan amount",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "refinance_rate_percent/100/26",
+            "dependencies": [
+              "refinance_rate_percent"
+            ],
+            "label": "Bi‑weekly periodic rate (refinance)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "total_payments": {
+            "expression": "refinance_term_years*26",
+            "dependencies": [
+              "refinance_term_years"
+            ],
+            "label": "Number of bi‑weekly payments (refinance)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "biweekly_payment": {
+            "expression": "loan_amount * periodic_rate / (1 - (1 + periodic_rate)^(-total_payments))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "total_payments"
+            ],
+            "label": "Bi‑weekly payment (refinance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_refinance": {
+            "expression": "biweekly_payment * total_payments",
+            "dependencies": [
+              "biweekly_payment",
+              "total_payments"
+            ],
+            "label": "Total amount paid over refinance term",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_refinance": {
+            "expression": "total_cost_refinance - loan_amount",
+            "dependencies": [
+              "total_cost_refinance",
+              "loan_amount"
+            ],
+            "label": "Total interest paid (refinance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_periodic_rate": {
+            "expression": "(current_frequency == \"monthly\") ? current_rate_percent/100/12 : current_rate_percent/100/26",
+            "dependencies": [
+              "current_frequency",
+              "current_rate_percent"
+            ],
+            "label": "Current periodic rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "current_total_payments_count": {
+            "expression": "(current_frequency == \"monthly\") ? remaining_term_years*12 : remaining_term_years*26",
+            "dependencies": [
+              "current_frequency",
+              "remaining_term_years"
+            ],
+            "label": "Number of remaining payments (current loan)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "current_payment": {
+            "expression": "principal * current_periodic_rate / (1 - (1 + current_periodic_rate)^(-current_total_payments_count))",
+            "dependencies": [
+              "principal",
+              "current_periodic_rate",
+              "current_total_payments_count"
+            ],
+            "label": "Current periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_current": {
+            "expression": "current_payment * current_total_payments_count",
+            "dependencies": [
+              "current_payment",
+              "current_total_payments_count"
+            ],
+            "label": "Total amount remaining under current schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "net_saving": {
+            "expression": "total_cost_current - total_cost_refinance - ((roll_closing_costs == \"no\") ? closing_costs : 0)",
+            "dependencies": [
+              "total_cost_current",
+              "total_cost_refinance",
+              "roll_closing_costs",
+              "closing_costs"
+            ],
+            "label": "Net savings (current vs refinance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "time_until_paid_refinance_years": {
+            "expression": "refinance_term_years",
+            "dependencies": [
+              "refinance_term_years"
+            ],
+            "label": "Years to pay under refinance",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "time_saved_years": {
+            "expression": "remaining_term_years - refinance_term_years",
+            "dependencies": [
+              "remaining_term_years",
+              "refinance_term_years"
+            ],
+            "label": "Difference in years until payoff",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "loan_amount",
+            "label": "Refinanced loan amount",
+            "variable": "loan_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_payment",
+            "label": "Bi‑weekly payment (refinance)",
+            "variable": "biweekly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_refinance",
+            "label": "Total interest paid (refinance)",
+            "variable": "total_interest_refinance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_refinance",
+            "label": "Total amount paid (refinance)",
+            "variable": "total_cost_refinance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "current_payment",
+            "label": "Current periodic payment",
+            "variable": "current_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_current",
+            "label": "Total remaining under current schedule",
+            "variable": "total_cost_current",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_saving",
+            "label": "Estimated net savings (one‑time closing costs considered)",
+            "variable": "net_saving",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "time_saved_years",
+            "label": "Difference in years until payoff (current − refinance)",
+            "variable": "time_saved_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "convert_biweekly": {
+        "label": "Convert existing mortgage to bi‑weekly payments (no refinance)",
+        "description": "Keep your current rate and remaining term but switch to 26 payments per year. Shows direct interest and time savings from more frequent payments.",
+        "variables": {
+          "conversion_periodic_rate": {
+            "expression": "current_rate_percent/100/26",
+            "dependencies": [
+              "current_rate_percent"
+            ],
+            "label": "Bi‑weekly periodic rate (conversion)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "conversion_total_payments": {
+            "expression": "remaining_term_years*26",
+            "dependencies": [
+              "remaining_term_years"
+            ],
+            "label": "Number of bi‑weekly payments (conversion)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "biweekly_payment_conversion": {
+            "expression": "principal * conversion_periodic_rate / (1 - (1 + conversion_periodic_rate)^(-conversion_total_payments))",
+            "dependencies": [
+              "principal",
+              "conversion_periodic_rate",
+              "conversion_total_payments"
+            ],
+            "label": "Bi‑weekly payment (conversion)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_periodic_rate_conv": {
+            "expression": "current_periodic_rate",
+            "dependencies": [
+              "current_periodic_rate"
+            ],
+            "label": "Current periodic rate (reuse)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "current_total_payments_conv": {
+            "expression": "current_total_payments_count",
+            "dependencies": [
+              "current_total_payments_count"
+            ],
+            "label": "Remaining payments count (current)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "current_payment_conv": {
+            "expression": "current_payment",
+            "dependencies": [
+              "current_payment"
+            ],
+            "label": "Current periodic payment (reuse)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_conversion": {
+            "expression": "biweekly_payment_conversion * conversion_total_payments",
+            "dependencies": [
+              "biweekly_payment_conversion",
+              "conversion_total_payments"
+            ],
+            "label": "Total amount paid after conversion",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_current_conv": {
+            "expression": "current_payment_conv * current_total_payments_conv",
+            "dependencies": [
+              "current_payment_conv",
+              "current_total_payments_conv"
+            ],
+            "label": "Total remaining under current schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "conversion_saving": {
+            "expression": "total_cost_current_conv - total_cost_conversion",
+            "dependencies": [
+              "total_cost_current_conv",
+              "total_cost_conversion"
+            ],
+            "label": "Estimated interest saving by converting",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_time_saved_years": {
+            "expression": "remaining_term_years - (conversion_total_payments / 26)",
+            "dependencies": [
+              "remaining_term_years",
+              "conversion_total_payments"
+            ],
+            "label": "Effect on years to payoff (approximate)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment_conversion",
+            "label": "Bi‑weekly payment (conversion)",
+            "variable": "biweekly_payment_conversion",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_conversion",
+            "label": "Total amount paid (after conversion)",
+            "variable": "total_cost_conversion",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_current_conv",
+            "label": "Total remaining under current schedule",
+            "variable": "total_cost_current_conv",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "conversion_saving",
+            "label": "Estimated saving from conversion",
+            "variable": "conversion_saving",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_time_saved_years",
+            "label": "Approximate change in years until payoff",
+            "variable": "effective_time_saved_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Current loan balance",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_rate_percent",
+        "label": "Current interest rate (APR, %)",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "remaining_term_years",
+        "label": "Remaining term (years)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "max": 40,
+        "step": 0.25
+      },
+      {
+        "id": "current_frequency",
+        "label": "Current payment frequency",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly (12/year)",
+            "value": "monthly"
+          },
+          {
+            "label": "Bi‑weekly (26/year)",
+            "value": "biweekly"
+          }
+        ]
+      },
+      {
+        "id": "refinance_rate_percent",
+        "label": "Refinance interest rate (APR, %)",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "refinance_term_years",
+        "label": "Refinance term (years)",
+        "type": "number",
+        "default": 30,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "closing_costs",
+        "label": "Estimated closing costs (USD)",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "roll_closing_costs",
+        "label": "Roll closing costs into new loan?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "Yes, add to loan",
+            "value": "yes"
+          },
+          {
+            "label": "No, pay upfront",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "start_in_months",
+        "label": "Start payments after (months)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 12,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "loan_amount",
+          "label": "Refinanced loan amount",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "biweekly_payment",
+          "label": "Bi‑weekly payment (refinance)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest_refinance",
+          "label": "Total interest paid (refinance)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "net_saving",
+          "label": "Estimated net savings",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "biweekly_payment_conversion",
+          "label": "Bi‑weekly payment (conversion)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "conversion_saving",
+          "label": "Estimated saving from conversion",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you evaluate switching to bi‑weekly payments either by refinancing into a bi‑weekly loan or by converting your existing mortgage schedule to bi‑weekly payments. It estimates periodic payments, total paid over the life of the loan, interest paid, and net savings after closing costs.",
+      "Results are estimates for planning purposes only. Inputs must be reviewed with your lender; real loan offers can differ due to fees, rounding, payment timing, local regulations, and credit underwriting."
+    ],
+    "methodology": [
+      "We model each scenario using standard amortizing loan formulas. For any schedule with payments per year m and nominal APR r, the periodic rate is r/m and the periodic payment solves P = A * r_periodic / (1 - (1 + r_periodic)^(-n)), where n is the total number of remaining periodic payments.",
+      "When comparing scenarios we compute the total amount paid over the relevant schedule (periodic payment × number of payments) and subtract principal to estimate total interest. Net savings subtract upfront closing costs if you choose not to roll them into the loan."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = APR / payments_per_year (e.g., bi‑weekly uses 26).",
+      "Periodic payment = LoanAmount × periodic_rate / (1 − (1 + periodic_rate)^(−total_payments)).",
+      "Total paid = periodic payment × total_payments. Total interest = Total paid − LoanAmount.",
+      "Net saving = Total remaining (current) − Total (new) − upfront closing costs (if not rolled in)."
+    ],
+    "examples": [
+      "Example 1: $300,000 balance, 4.5% APR, 25 years remaining. Converting to bi‑weekly at same APR reduces interest slightly and may shorten payoff by a few years depending on schedule.",
+      "Example 2: Refinancing to 3.5% APR for 30 years and switching to bi‑weekly could lower periodic payments and reduce long‑term interest compared to staying at a higher rate, but include closing costs when assessing net benefit."
+    ],
+    "faqs": [
+      {
+        "question": "Why does switching to bi‑weekly payments save interest?",
+        "answer": "Bi‑weekly schedules make more frequent payments (26 vs 12) which reduces average outstanding principal faster. This reduces interest accrual between payments and can shorten total payoff time."
+      },
+      {
+        "question": "Does this calculator include taxes and insurance?",
+        "answer": "No. This tool models principal and interest only. Escrowed taxes, insurance, PMI, and lender fees are outside this calculation unless entered as closing costs."
+      },
+      {
+        "question": "Should I roll closing costs into the new loan?",
+        "answer": "Rolling closing costs increases the financed amount and will increase the interest you pay over time. Paying closing costs upfront reduces financed amount and may increase short‑term cost but lower long‑term interest. The calculator shows both effects depending on your selection."
+      },
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates are mathematically precise for the amortization model used but depend on accurate inputs. Actual loan offers can vary due to payment timing, lender rounding, compounding conventions, prepayment penalties, or changes in rate. See accuracy caveats and disclaimers below."
+      },
+      {
+        "question": "What if my lender charges a fee to setup bi‑weekly payments?",
+        "answer": "Include any setup or administrative fees in the 'closing costs' input if they are paid upfront, or account for them in decision‑making if charged separately."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate: the annualized interest rate for the loan excluding some fees; used here as the nominal rate for amortization calculations."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The APR divided by the number of payments per year (e.g., 26 for bi‑weekly)."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of spreading loan payments over multiple periods where each payment covers interest then principal."
+      },
+      {
+        "term": "Rolling closing costs",
+        "definition": "Adding closing costs to the financed principal so they are paid over the new loan term rather than paid upfront."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

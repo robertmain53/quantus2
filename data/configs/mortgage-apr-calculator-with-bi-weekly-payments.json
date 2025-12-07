@@ -1,0 +1,484 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage APR & Bi‑Weekly Payment Calculator (Advanced)",
+    "description": "Estimate bi‑weekly payments, effective payoff time, interest paid, and a conservative APR approximation including one‑time fees. Compare monthly vs bi‑weekly schedules and add recurring extra payments."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "biweekly_schedule",
+    "methods": {
+      "biweekly_schedule": {
+        "label": "Bi‑weekly payment and cost",
+        "description": "Calculate standard bi‑weekly payment, effective number of payments given an optional extra payment per bi‑weekly period, total interest paid, and a conservative APR estimate that includes one‑time fees.",
+        "variables": {
+          "payments_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_interest_rate_percent / 100 / payments_per_year",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "n_payments": {
+            "expression": "loan_term_years * payments_per_year",
+            "dependencies": [
+              "loan_term_years",
+              "payments_per_year"
+            ],
+            "label": "Nominal number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "base_payment": {
+            "expression": "principal * periodic_rate / (1 - pow(1 + periodic_rate, -n_payments))",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "n_payments"
+            ],
+            "label": "Bi‑weekly payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "base_payment + extra_payment_per_period",
+            "dependencies": [
+              "base_payment",
+              "extra_payment_per_period"
+            ],
+            "label": "Bi‑weekly payment (with extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_n": {
+            "expression": "-log(1 - (principal * periodic_rate) / payment_with_extra) / log(1 + periodic_rate)",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "payment_with_extra"
+            ],
+            "label": "Estimated number of payments until payoff",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "effective_n / payments_per_year",
+            "dependencies": [
+              "effective_n",
+              "payments_per_year"
+            ],
+            "label": "Estimated years to payoff",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment_with_extra * effective_n + one_time_fees",
+            "dependencies": [
+              "payment_with_extra",
+              "effective_n",
+              "one_time_fees"
+            ],
+            "label": "Estimated total paid (principal + interest + fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal - one_time_fees",
+            "dependencies": [
+              "total_paid",
+              "principal",
+              "one_time_fees"
+            ],
+            "label": "Estimated total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "apr_estimate": {
+            "expression": "annual_interest_rate_percent + (one_time_fees / principal) * (100 / loan_term_years)",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "one_time_fees",
+              "principal",
+              "loan_term_years"
+            ],
+            "label": "Conservative APR estimate (includes one‑time fees)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "base_payment",
+            "label": "Bi‑weekly payment (no extra)",
+            "variable": "base_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Bi‑weekly payment (with extra)",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_n",
+            "label": "Estimated number of payments until payoff",
+            "variable": "effective_n",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Estimated years to payoff",
+            "variable": "payoff_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_paid",
+            "label": "Estimated total paid",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest paid",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "apr_estimate",
+            "label": "Conservative APR estimate",
+            "variable": "apr_estimate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "compare_monthly_vs_biweekly": {
+        "label": "Monthly vs Bi‑weekly comparison",
+        "description": "Compute monthly schedule totals alongside bi‑weekly totals to show interest and time savings when switching to bi‑weekly payments without changing the nominal annual rate.",
+        "variables": {
+          "monthly_payments_per_year": {
+            "expression": "12",
+            "dependencies": [],
+            "label": "Monthly payments per year",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate_monthly": {
+            "expression": "annual_interest_rate_percent / 100 / monthly_payments_per_year",
+            "dependencies": [
+              "annual_interest_rate_percent",
+              "monthly_payments_per_year"
+            ],
+            "label": "Monthly periodic rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "n_monthly": {
+            "expression": "loan_term_years * monthly_payments_per_year",
+            "dependencies": [
+              "loan_term_years",
+              "monthly_payments_per_year"
+            ],
+            "label": "Number of monthly payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "principal * periodic_rate_monthly / (1 - pow(1 + periodic_rate_monthly, -n_monthly))",
+            "dependencies": [
+              "principal",
+              "periodic_rate_monthly",
+              "n_monthly"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_total_paid": {
+            "expression": "monthly_payment * n_monthly + one_time_fees",
+            "dependencies": [
+              "monthly_payment",
+              "n_monthly",
+              "one_time_fees"
+            ],
+            "label": "Total paid under monthly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_total_interest": {
+            "expression": "monthly_total_paid - principal - one_time_fees",
+            "dependencies": [
+              "monthly_total_paid",
+              "principal",
+              "one_time_fees"
+            ],
+            "label": "Total interest (monthly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_base_payment": {
+            "expression": "principal * (annual_interest_rate_percent / 100 / 26) / (1 - pow(1 + (annual_interest_rate_percent / 100 / 26), -(loan_term_years * 26)))",
+            "dependencies": [
+              "principal",
+              "annual_interest_rate_percent",
+              "loan_term_years"
+            ],
+            "label": "Bi‑weekly payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_total_paid": {
+            "expression": "biweekly_base_payment * loan_term_years * 26 + one_time_fees",
+            "dependencies": [
+              "biweekly_base_payment",
+              "loan_term_years",
+              "one_time_fees"
+            ],
+            "label": "Total paid under bi‑weekly schedule (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_total_interest": {
+            "expression": "biweekly_total_paid - principal - one_time_fees",
+            "dependencies": [
+              "biweekly_total_paid",
+              "principal",
+              "one_time_fees"
+            ],
+            "label": "Total interest (bi‑weekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "monthly_total_interest - biweekly_total_interest",
+            "dependencies": [
+              "monthly_total_interest",
+              "biweekly_total_interest"
+            ],
+            "label": "Estimated interest saved (monthly vs bi‑weekly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "years_saved_estimate": {
+            "expression": "(loan_term_years) - ( -log(1 - (principal * (annual_interest_rate_percent/100/26)) / biweekly_base_payment) / log(1 + (annual_interest_rate_percent/100/26)) ) / 26",
+            "dependencies": [
+              "loan_term_years",
+              "principal",
+              "annual_interest_rate_percent",
+              "biweekly_base_payment"
+            ],
+            "label": "Estimated years saved by switching to bi‑weekly",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_total_interest",
+            "label": "Total interest (monthly)",
+            "variable": "monthly_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_base_payment",
+            "label": "Bi‑weekly payment (no extra)",
+            "variable": "biweekly_base_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_total_interest",
+            "label": "Total interest (bi‑weekly)",
+            "variable": "biweekly_total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_saved_estimate",
+            "label": "Estimated years saved",
+            "variable": "years_saved_estimate",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate_percent",
+        "label": "Nominal annual interest rate (APR nominal %) as quoted by lender",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "loan_term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "one_time_fees",
+        "label": "One‑time fees financed or paid at closing (total)",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_per_period",
+        "label": "Additional bi‑weekly payment (per bi‑weekly period)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates bi‑weekly mortgage payments, the likely time to payoff if you add recurring extra payments, and a conservative APR approximation that factors in one‑time fees. It also compares monthly and bi‑weekly schedules to show potential interest and time savings.",
+      "Results are estimates produced from standard amortization formulas. They are provided for planning and comparison only and are not a substitute for a formal Truth‑in‑Lending APR disclosure from a lender."
+    ],
+    "methodology": [
+      "Bi‑weekly payment calculations use the standard amortizing loan payment formula applied to 26 periods per year. Where extra payments are entered, the calculator estimates the effective number of payments using the closed‑form relationship between payment, principal, and periodic rate.",
+      "APR is approximated by adding the per‑yearized impact of one‑time fees to the nominal annual rate. This gives a conservative, easy‑to‑understand approximation but is not a substitute for a lender's legally required APR calculation under applicable disclosure laws."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = annual_interest_rate_percent / 100 / payments_per_year (payments_per_year = 26 for bi‑weekly).",
+      "Base payment = principal * periodic_rate / (1 - (1 + periodic_rate)^-n) where n = loan_term_years * payments_per_year.",
+      "Effective number of payments with extra = -ln(1 - principal * periodic_rate / payment_with_extra) / ln(1 + periodic_rate).",
+      "Conservative APR estimate = nominal annual rate + (one_time_fees / principal) * (100 / loan_term_years). This is an approximation for planning purposes."
+    ],
+    "examples": [
+      "Example 1: $300,000 principal, 4.5% annual rate, 30 years, no extra payments. The calculator returns the bi‑weekly payment and the total interest paid under a standard schedule.",
+      "Example 2: Add $50 extra bi‑weekly. The calculator estimates a reduced payoff time and lower total interest using the effective number of payments formula."
+    ],
+    "faqs": [
+      {
+        "question": "Is this APR exact and legally binding?",
+        "answer": "No. The APR value shown is a conservative estimate intended for comparison and planning. Lenders calculate APR according to regulatory rules and may include different finance charges and timing assumptions. For a legally binding APR, rely on the lender's Truth‑in‑Lending disclosure."
+      },
+      {
+        "question": "Why do bi‑weekly payments save interest?",
+        "answer": "Bi‑weekly schedules create more frequent payments (26 per year) compared with monthly schedules (12 per year). Paying more frequently reduces the principal slightly faster between compounding periods, which can lower total interest and shorten the loan term when payment totals are comparable."
+      },
+      {
+        "question": "How accurate are payoff estimates when I enter extra payments?",
+        "answer": "Payoff estimates use a closed‑form mathematical formula that assumes payments are applied immediately at each period and interest compounds at the specified periodic rate. These estimates are accurate under those assumptions, but real‑world timing, escrow changes, or lender processing can alter results."
+      },
+      {
+        "question": "Should I rely solely on this calculator to make a refinancing decision?",
+        "answer": "No. Use this tool for quick comparisons and planning. For decisions involving refinancing or legal commitments, obtain written estimates and disclosures from lenders and consult a financial advisor if needed."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (International Organization for Standardization)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (Institute of Electrical and Electronics Engineers)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA (Occupational Safety and Health Administration)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "A standardized annual rate that attempts to capture the cost of borrowing, including interest and certain fees. This tool provides a conservative approximation; lenders provide the official APR disclosure."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied to each payment period. For bi‑weekly schedules this is the annual rate divided by 26."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of spreading loan principal and interest payments over time according to a schedule."
+      },
+      {
+        "term": "One‑time fees",
+        "definition": "Up‑front charges such as origination fees or closing costs that may be financed or paid separately. These can affect the effective cost of credit."
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

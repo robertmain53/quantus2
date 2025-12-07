@@ -1,0 +1,445 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Balance Transfer Calculator (Advanced)",
+    "description": "Estimate costs and payoff timeline for a credit card balance transfer offer. Supports promo period math, transfer fees, and post-promo amortization so you can compare total cost and months to payoff."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "single_transfer",
+    "methods": {
+      "single_transfer": {
+        "label": "Single balance transfer (promo then regular APR)",
+        "description": "Calculate payment and cost when transferring a single balance into a promotional APR for a fixed number of months, then repaying at your regular APR.",
+        "variables": {
+          "r_current": {
+            "expression": "current_apr / 12 / 100",
+            "dependencies": [
+              "current_apr"
+            ],
+            "label": "Monthly regular interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "r_promo": {
+            "expression": "promo_apr / 12 / 100",
+            "dependencies": [
+              "promo_apr"
+            ],
+            "label": "Monthly promotional interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "transfer_fee": {
+            "expression": "balance * transfer_fee_pct / 100",
+            "dependencies": [
+              "balance",
+              "transfer_fee_pct"
+            ],
+            "label": "Balance transfer fee",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "principal": {
+            "expression": "balance + transfer_fee + other_fees",
+            "dependencies": [
+              "balance",
+              "transfer_fee",
+              "other_fees"
+            ],
+            "label": "Principal after fees (amount to repay)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_during_promo": {
+            "expression": "monthly_payment * promo_months",
+            "dependencies": [
+              "monthly_payment",
+              "promo_months"
+            ],
+            "label": "Total paid during promo period",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "paid_during_promo": {
+            "expression": "min(principal, payment_during_promo)",
+            "dependencies": [
+              "principal",
+              "payment_during_promo"
+            ],
+            "label": "Amount of principal paid during promo",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_balance": {
+            "expression": "max(0, principal - paid_during_promo)",
+            "dependencies": [
+              "principal",
+              "paid_during_promo"
+            ],
+            "label": "Remaining balance after promo",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_after_promo": {
+            "expression": "if(remaining_balance <= 0, 0, if(r_current <= 0, ceil(remaining_balance / monthly_payment), ceil(-log(1 - r_current * remaining_balance / monthly_payment) / log(1 + r_current))))",
+            "dependencies": [
+              "remaining_balance",
+              "r_current",
+              "monthly_payment"
+            ],
+            "label": "Months to pay after promo ends",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_months": {
+            "expression": "promo_months + months_after_promo",
+            "dependencies": [
+              "promo_months",
+              "months_after_promo"
+            ],
+            "label": "Total months to pay off",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "paid_during_promo + months_after_promo * monthly_payment",
+            "dependencies": [
+              "paid_during_promo",
+              "months_after_promo",
+              "monthly_payment"
+            ],
+            "label": "Total paid over life of payoff (includes fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - balance - transfer_fee - other_fees",
+            "dependencies": [
+              "total_paid",
+              "balance",
+              "transfer_fee",
+              "other_fees"
+            ],
+            "label": "Estimated total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "transfer_fee",
+            "label": "Transfer fee",
+            "variable": "transfer_fee",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "remaining_balance",
+            "label": "Remaining balance after promo",
+            "variable": "remaining_balance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "months_after_promo",
+            "label": "Months after promo",
+            "variable": "months_after_promo",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "total_months",
+            "label": "Total months to payoff",
+            "variable": "total_months",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (includes fees)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Estimated total interest",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "no_transfer_baseline": {
+        "label": "Baseline: keep current card and pay current APR",
+        "description": "Estimate months and total cost if you do not transfer the balance and continue paying the same monthly amount under your current APR.",
+        "variables": {
+          "r_current": {
+            "expression": "current_apr / 12 / 100",
+            "dependencies": [
+              "current_apr"
+            ],
+            "label": "Monthly regular interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "months_to_payoff_baseline": {
+            "expression": "if(balance <= 0, 0, if(r_current <= 0, ceil(balance / monthly_payment), ceil(-log(1 - r_current * balance / monthly_payment) / log(1 + r_current))))",
+            "dependencies": [
+              "balance",
+              "r_current",
+              "monthly_payment"
+            ],
+            "label": "Months to pay off without transfer",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_paid_baseline": {
+            "expression": "months_to_payoff_baseline * monthly_payment",
+            "dependencies": [
+              "months_to_payoff_baseline",
+              "monthly_payment"
+            ],
+            "label": "Total paid without transfer",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_baseline": {
+            "expression": "total_paid_baseline - balance",
+            "dependencies": [
+              "total_paid_baseline",
+              "balance"
+            ],
+            "label": "Estimated interest without transfer",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff_baseline",
+            "label": "Months to payoff (no transfer)",
+            "variable": "months_to_payoff_baseline",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "total_paid_baseline",
+            "label": "Total paid (no transfer)",
+            "variable": "total_paid_baseline",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_baseline",
+            "label": "Estimated interest (no transfer)",
+            "variable": "total_interest_baseline",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "balance",
+        "label": "Current balance to transfer",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_apr",
+        "label": "Current card APR (annual %)",
+        "type": "number",
+        "default": 18,
+        "min": 0,
+        "max": 200,
+        "step": 0.01
+      },
+      {
+        "id": "transfer_fee_pct",
+        "label": "Balance transfer fee (%)",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      },
+      {
+        "id": "promo_apr",
+        "label": "Promotional APR (annual % during promo)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "promo_months",
+        "label": "Length of promotional APR (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 0,
+        "max": 60,
+        "step": 1
+      },
+      {
+        "id": "monthly_payment",
+        "label": "Planned monthly payment",
+        "type": "number",
+        "default": 150,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "other_fees",
+        "label": "Any other fees added at transfer",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the timeline and total cost when moving a credit card balance into a promotional APR and then repaying at your regular APR after the promo. It includes the common balance transfer fee and optional other fees so you can compare the transfer scenario to keeping your current balance.",
+      "Results are estimates based on standard amortization math and numeric rounding conventions. Use the monthly payment you realistically expect to make; a lower payment increases time and interest. For compliance and reproducibility, the tool follows established numeric practices and documents assumptions below."
+    ],
+    "methodology": [
+      "We model the transfer as: new principal = original balance + transfer fee + other one-time fees. During the promotional period we apply the promotional monthly rate to any outstanding balance and subtract monthly payments. After the promo ends, remaining balance is amortized at the regular monthly rate using the standard loan amortization relationship.",
+      "To avoid misleading outputs the calculator: uses monthly compounding consistent with typical credit card practice, handles zero-interest promo or zero regular APR as a special case (simple division), and rounds months up to the next whole month when partial months remain."
+    ],
+    "how_is_calculated": [
+      "Transfer fee = balance × (transfer_fee_pct ÷ 100).",
+      "Monthly interest rate = (APR ÷ 12) ÷ 100.",
+      "Amount paid during promo = monthly_payment × promo_months (capped at principal).",
+      "Remaining balance after promo = max(0, principal - paid_during_promo).",
+      "Months after promo (if any) = ceil of the amortization solution: n = -ln(1 - r × B / A) / ln(1 + r), where r is monthly rate, B is remaining balance, and A is monthly payment. If r = 0, months = ceil(B / A).",
+      "Total paid = amount paid during promo + months_after_promo × monthly_payment. Total interest = total paid - original balance - fees."
+    ],
+    "examples": [
+      "Example: $5,000 balance, 3% transfer fee, 0% promo for 12 months, $150 monthly payment. The transfer fee adds $150 to the principal; payments during the promo reduce principal and any remaining balance is amortized at your regular APR.",
+      "Example: If your promotional APR is 0% and your monthly payment equals the minimum, you may still owe a remaining balance after the promo which will then accrue interest at the regular APR."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator guarantee exact results my bank will show?",
+        "answer": "No. This calculator provides estimates. Individual statements can differ due to daily interest conventions, minimum payment rules, rounding differences, billing cycles, grace periods, backdated fees, late fees, or promotional terms not captured here. Use values from your card agreement for best accuracy."
+      },
+      {
+        "question": "How does the tool handle a 0% promotional APR?",
+        "answer": "If the promotional APR is 0%, the calculator treats interest during the promo as zero and simply subtracts your monthly payments from principal. Any remaining balance at the end of the promo is amortized at the regular APR."
+      },
+      {
+        "question": "What if my monthly payment is less than the interest charged?",
+        "answer": "If the monthly payment is insufficient to cover interest after the promo, the model's amortization formula will produce very large or undefined payoff months. The calculator will show a high month count; increase the monthly payment to a level that covers accrued interest plus some principal to ensure payoff."
+      },
+      {
+        "question": "Are fees included in the totals?",
+        "answer": "Yes. Transfer fee and any other one-time fees entered are added to principal and included in total paid and total interest calculations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Numeric rounding and floating-point considerations (IEEE 754)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "Information security and data integrity guidance (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "Information security management standard (ISO/IEC 27001)",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "Workplace and operational safety guidance (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The annual cost of borrowing expressed as a percentage. This tool converts APR to a monthly rate by dividing by 12."
+      },
+      {
+        "term": "Promotional APR",
+        "definition": "A temporary interest rate (often 0%) offered for a set number of months on transferred balances."
+      },
+      {
+        "term": "Balance transfer fee",
+        "definition": "A one-time fee charged when moving a balance, typically a percentage of the amount transferred. It is added to the principal in these estimates."
+      },
+      {
+        "term": "Amortization formula",
+        "definition": "The mathematical relationship used to compute the number of payments required to pay off a loan given interest rate, principal, and payment size."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/credit-cards/balance-transfer-guide"
+    ],
+    "external": [
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754 standard (floating point)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST (National Institute of Standards and Technology)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/isoiec-27001-information-security.html",
+        "label": "ISO/IEC 27001 information security",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

@@ -1,0 +1,723 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Amortization Calculator with Extra Payments (Advanced)",
+    "description": "Multi-mode amortization tool that models standard amortization plus recurring extra payments, one-time extra payments, and biweekly schedules. Provides payment amounts, payoff timing, total interest, and interest savings estimates. Includes accuracy notes, limits, and references to standards for data handling and testing."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "recurring_extra",
+    "methods": {
+      "standard": {
+        "label": "Standard monthly amortization",
+        "description": "Conventional monthly payment schedule without extra principal payments.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_interest_rate / 12 / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total monthly payments",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment": {
+            "expression": "loan_amount * monthly_rate / (1 - pow(1 + monthly_rate, -total_payments))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "total_payments"
+            ],
+            "label": "Monthly payment (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "monthly_payment * total_payments",
+            "dependencies": [
+              "monthly_payment",
+              "total_payments"
+            ],
+            "label": "Total amount paid over life of loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - loan_amount",
+            "dependencies": [
+              "total_paid",
+              "loan_amount"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid",
+            "variable": "total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments",
+            "label": "Payments (months)",
+            "variable": "total_payments",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      },
+      "recurring_extra": {
+        "label": "Monthly payment with recurring extra principal",
+        "description": "Add a fixed extra amount to each monthly payment and estimate accelerated payoff and interest savings.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_interest_rate / 12 / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Original total monthly payments",
+            "format": "integer",
+            "display": false
+          },
+          "base_monthly_payment": {
+            "expression": "loan_amount * monthly_rate / (1 - pow(1 + monthly_rate, -total_payments))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "total_payments"
+            ],
+            "label": "Base monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "extra": {
+            "expression": "extra_payment_amount",
+            "dependencies": [
+              "extra_payment_amount"
+            ],
+            "label": "Recurring extra payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_payment": {
+            "expression": "base_monthly_payment + extra",
+            "dependencies": [
+              "base_monthly_payment",
+              "extra"
+            ],
+            "label": "Adjusted monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_to_payoff": {
+            "expression": "log(adjusted_payment / (adjusted_payment - loan_amount * monthly_rate)) / log(1 + monthly_rate)",
+            "dependencies": [
+              "adjusted_payment",
+              "loan_amount",
+              "monthly_rate"
+            ],
+            "label": "Estimated months to payoff with recurring extra",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_with_extra": {
+            "expression": "adjusted_payment * months_to_payoff",
+            "dependencies": [
+              "adjusted_payment",
+              "months_to_payoff"
+            ],
+            "label": "Total paid with recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_with_extra": {
+            "expression": "total_paid_with_extra - loan_amount",
+            "dependencies": [
+              "total_paid_with_extra",
+              "loan_amount"
+            ],
+            "label": "Total interest paid with recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": " (loan_amount * monthly_rate / (1 - pow(1 + monthly_rate, -total_payments)) * total_payments - loan_amount) - total_interest_with_extra",
+            "dependencies": [
+              "monthly_rate",
+              "total_payments",
+              "total_payments",
+              "total_interest_with_extra",
+              "loan_amount"
+            ],
+            "label": "Estimated interest saved vs standard schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_payment",
+            "label": "Adjusted monthly payment",
+            "variable": "adjusted_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "months_to_payoff",
+            "label": "Months to payoff",
+            "variable": "months_to_payoff",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest (with extra)",
+            "variable": "total_interest_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "one_time_extra": {
+        "label": "One-time extra payment",
+        "description": "Apply a single extra principal payment at a chosen month to see new payoff date and interest savings.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_interest_rate / 12 / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Original total monthly payments",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "loan_amount * monthly_rate / (1 - pow(1 + monthly_rate, -total_payments))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "total_payments"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "k": {
+            "expression": "one_time_month",
+            "dependencies": [
+              "one_time_month"
+            ],
+            "label": "Month at which one-time payment is applied",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "balance_at_k": {
+            "expression": "loan_amount * pow(1 + monthly_rate, k) - monthly_payment * ( (pow(1 + monthly_rate, k) - 1) / monthly_rate )",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "k",
+              "monthly_payment"
+            ],
+            "label": "Outstanding balance just before one-time payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_after_one_time": {
+            "expression": "max(0, balance_at_k - extra_payment_amount)",
+            "dependencies": [
+              "balance_at_k",
+              "extra_payment_amount"
+            ],
+            "label": "Balance after one-time extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "months_after_k_to_payoff": {
+            "expression": "log(monthly_payment / (monthly_payment - balance_after_one_time * monthly_rate)) / log(1 + monthly_rate)",
+            "dependencies": [
+              "monthly_payment",
+              "balance_after_one_time",
+              "monthly_rate"
+            ],
+            "label": "Months remaining after one-time payment",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_months_to_payoff": {
+            "expression": "k + months_after_k_to_payoff",
+            "dependencies": [
+              "k",
+              "months_after_k_to_payoff"
+            ],
+            "label": "Total months to payoff after one-time payment",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_after_one_time": {
+            "expression": "monthly_payment * months_after_k_to_payoff + monthly_payment * (k - 1) + extra_payment_amount - loan_amount",
+            "dependencies": [
+              "monthly_payment",
+              "months_after_k_to_payoff",
+              "k",
+              "extra_payment_amount",
+              "loan_amount"
+            ],
+            "label": "Estimated total interest after one-time payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "(monthly_payment * total_payments - loan_amount) - total_interest_after_one_time",
+            "dependencies": [
+              "monthly_payment",
+              "total_payments",
+              "loan_amount",
+              "total_interest_after_one_time"
+            ],
+            "label": "Estimated interest saved vs original schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balance_after_one_time",
+            "label": "Balance after one-time payment",
+            "variable": "balance_after_one_time",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_months_to_payoff",
+            "label": "Months to payoff (total)",
+            "variable": "total_months_to_payoff",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_after_one_time",
+            "label": "Total interest (after one-time)",
+            "variable": "total_interest_after_one_time",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly": {
+        "label": "Biweekly payments (26 per year) approximation",
+        "description": "Approximate effect of switching to biweekly payments (26 payments/year). Uses a separate amortization formula at the biweekly frequency to estimate payoff and interest differences.",
+        "variables": {
+          "biweekly_rate": {
+            "expression": "annual_interest_rate / 26 / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Biweekly interest rate (decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "total_biweekly_payments": {
+            "expression": "term_years * 26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total biweekly payments",
+            "format": "integer",
+            "display": true
+          },
+          "biweekly_payment": {
+            "expression": "loan_amount * biweekly_rate / (1 - pow(1 + biweekly_rate, -total_biweekly_payments))",
+            "dependencies": [
+              "loan_amount",
+              "biweekly_rate",
+              "total_biweekly_payments"
+            ],
+            "label": "Biweekly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_biweekly": {
+            "expression": "biweekly_payment * total_biweekly_payments",
+            "dependencies": [
+              "biweekly_payment",
+              "total_biweekly_payments"
+            ],
+            "label": "Total paid under biweekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_biweekly": {
+            "expression": "total_paid_biweekly - loan_amount",
+            "dependencies": [
+              "total_paid_biweekly",
+              "loan_amount"
+            ],
+            "label": "Total interest under biweekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equivalent_months_to_payoff": {
+            "expression": "total_biweekly_payments / (26/12)",
+            "dependencies": [
+              "total_biweekly_payments"
+            ],
+            "label": "Approximate months to payoff (equivalent)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "(loan_amount * (annual_interest_rate/12/100) / (1 - pow(1 + (annual_interest_rate/12/100), -term_years*12)) * term_years * 12 - loan_amount) - total_interest_biweekly",
+            "dependencies": [
+              "annual_interest_rate",
+              "term_years",
+              "total_interest_biweekly",
+              "loan_amount"
+            ],
+            "label": "Estimated interest saved vs standard monthly",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment",
+            "label": "Biweekly payment",
+            "variable": "biweekly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equivalent_months_to_payoff",
+            "label": "Approx months to payoff",
+            "variable": "equivalent_months_to_payoff",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_biweekly",
+            "label": "Total interest (biweekly)",
+            "variable": "total_interest_biweekly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_type",
+        "label": "Extra payment mode",
+        "type": "select",
+        "default": "none",
+        "options": [
+          {
+            "label": "None (standard)",
+            "value": "none"
+          },
+          {
+            "label": "Recurring monthly extra",
+            "value": "recurring_monthly"
+          },
+          {
+            "label": "One-time extra",
+            "value": "one_time"
+          },
+          {
+            "label": "Biweekly payments",
+            "value": "biweekly"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment_amount",
+        "label": "Extra payment amount (currency)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "one_time_month",
+        "label": "Month for one-time payment (1 = first month)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "monthly_payment",
+          "label": "Monthly payment (standard)"
+        },
+        {
+          "id": "adjusted_payment",
+          "label": "Adjusted monthly payment"
+        },
+        {
+          "id": "months_to_payoff",
+          "label": "Months to payoff"
+        },
+        {
+          "id": "total_interest_with_extra",
+          "label": "Total interest (with extra)"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest (standard)"
+        },
+        {
+          "id": "total_months_to_payoff",
+          "label": "Total months to payoff (one-time)"
+        },
+        {
+          "id": "biweekly_payment",
+          "label": "Biweekly payment"
+        },
+        {
+          "id": "total_interest_biweekly",
+          "label": "Total interest (biweekly)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models home loan amortization under multiple scenarios: standard monthly amortization, recurring extra monthly payments, a one-time extra principal payment, and an approximate biweekly payment schedule. Use it to estimate monthly amounts, payoff timing, and interest saved.",
+      "Outputs are estimates based on the inputs and assumptions shown below. This tool is for planning and educational purposes and does not replace loan documents, lender payoff quotes, or professional financial advice."
+    ],
+    "methodology": [
+      "Monthly compounding and standard amortization formulas are used unless a biweekly model is selected. Recurring extras are assumed to be applied to principal at each scheduled payment; a closed-form logarithmic solution is used to estimate the reduced payoff period. One-time extras reduce principal at the selected payment date and remaining months are recomputed.",
+      "Biweekly simulations convert the loan to the biweekly frequency (26 payments per year) and compute payments with the equivalent periodic rate. This produces an approximation of acceleration; exact schedules depend on lender application of partial payments and posting rules."
+    ],
+    "how_is_calculated": [
+      "Monthly interest rate = annual interest rate / 12 / 100.",
+      "Standard monthly payment M = P * r / (1 - (1 + r)^-n), where P = loan amount, r = monthly rate, n = number of monthly payments.",
+      "With recurring extras, new payoff months n' = log(A / (A - P * r)) / log(1 + r), where A = monthly payment + extra.",
+      "Remaining balance after k payments (before one-time extra) B_k = P*(1+r)^k - M*(( (1+r)^k - 1)/r )."
+    ],
+    "examples": [
+      "If you add $200/month extra on a $300,000, 30-year, 3.5% loan, the calculator shows the new months to payoff and the approximate interest saved versus the standard schedule.",
+      "A one-time extra of $5,000 applied at month 12 reduces the principal; the tool estimates the new remaining months and interest paid after that payment."
+    ],
+    "summary": [
+      "Use the recurring extra mode to understand steady extra contributions. Use the one-time mode to evaluate tactical lump-sum payments. Use the biweekly mode as an approximation of accelerated payoff from more frequent payments.",
+      "Results are estimates. Lender posting conventions, escrow, fees, or prepayment penalties are not modeled."
+    ],
+    "faqs": [
+      {
+        "question": "Are results exact?",
+        "answer": "Results are estimates produced by standard amortization formulas. Actual payoff dates and interest may differ due to lender posting rules, rounding, escrow, fees, or prepayment penalties. Always confirm payoff figures with your lender."
+      },
+      {
+        "question": "Does the calculator include taxes and insurance?",
+        "answer": "No. This tool models principal and interest only. Taxes, insurance, HOA fees, and other escrow items are excluded."
+      },
+      {
+        "question": "What if my lender applies extra payments differently?",
+        "answer": "Some lenders apply extra payments to future payments or hold them in escrow rather than to principal immediately. The calculator assumes extras are applied directly to principal at each payment; contact your lender to confirm how extras are handled."
+      },
+      {
+        "question": "Is biweekly exact?",
+        "answer": "The biweekly mode is an approximation converting to 26 payment periods per year. Exact results depend on lender-specific implementation of biweekly plans."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Guidance for software assurance and testing",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) — Information security and software quality standards",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE — Recommendations for numerical accuracy and floating-point practices",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — General guidance on testing environments (operational safety context)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The original loan amount on which interest is calculated."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate expressed as a percentage; this tool uses the APR input as the nominal annual interest rate for amortization calculations."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down a loan over time through scheduled payments of principal and interest."
+      },
+      {
+        "term": "Payoff months",
+        "definition": "Estimated number of months required to fully repay the loan under the modeled schedule."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/mortgage/basic-amortization",
+      "/guides/mortgage/prepayment-strategies"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculation"
+    ]
+  }
+}

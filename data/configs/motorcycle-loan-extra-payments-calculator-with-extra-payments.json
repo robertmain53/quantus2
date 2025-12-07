@@ -1,0 +1,692 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan Extra Payments Calculator",
+    "description": "Estimate how regular extra payments, one-time lump sums, or biweekly schedules change payoff time, total interest, and monthly/periodic payments for a motorcycle loan. Provides conservative, documented calculations and clear caveats about rounding and lender policies."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_extra_each",
+    "methods": {
+      "standard_extra_each": {
+        "label": "Regular extra each payment",
+        "description": "Applies a consistent additional payment each scheduled period (e.g., add $50 to every monthly payment). Estimates reduced payoff time and interest.",
+        "variables": {
+          "r_period": {
+            "expression": "apr/100/payments_per_year",
+            "dependencies": [
+              "apr",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments (original)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "principal * (r_period) / (1 - (1 + r_period) ** (-n))",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "n"
+            ],
+            "label": "Scheduled payment (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "scheduled_payment + extra_each_period",
+            "dependencies": [
+              "scheduled_payment",
+              "extra_each_period"
+            ],
+            "label": "Payment with regular extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_payments": {
+            "expression": "log(payment_with_extra / (payment_with_extra - principal * r_period)) / log(1 + r_period)",
+            "dependencies": [
+              "payment_with_extra",
+              "principal",
+              "r_period"
+            ],
+            "label": "Number of payments until payoff with extras",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "payoff_payments / payments_per_year",
+            "dependencies": [
+              "payoff_payments",
+              "payments_per_year"
+            ],
+            "label": "Time to payoff (years) with extras",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid_no_extra": {
+            "expression": "scheduled_payment * n",
+            "dependencies": [
+              "scheduled_payment",
+              "n"
+            ],
+            "label": "Total paid (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_paid_with_extra": {
+            "expression": "payment_with_extra * payoff_payments",
+            "dependencies": [
+              "payment_with_extra",
+              "payoff_payments"
+            ],
+            "label": "Total paid (with regular extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_no_extra": {
+            "expression": "total_paid_no_extra - principal",
+            "dependencies": [
+              "total_paid_no_extra",
+              "principal"
+            ],
+            "label": "Total interest (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_with_extra": {
+            "expression": "total_paid_with_extra - principal",
+            "dependencies": [
+              "total_paid_with_extra",
+              "principal"
+            ],
+            "label": "Total interest (with extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_no_extra - total_interest_with_extra",
+            "dependencies": [
+              "total_interest_no_extra",
+              "total_interest_with_extra"
+            ],
+            "label": "Estimated interest saved",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_saved": {
+            "expression": "n - payoff_payments",
+            "dependencies": [
+              "n",
+              "payoff_payments"
+            ],
+            "label": "Number of payments saved",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled payment (no extras)",
+            "variable": "scheduled_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra",
+            "label": "Payment with extra each period",
+            "variable": "payment_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_payments",
+            "label": "Payments until payoff (with extras)",
+            "variable": "payoff_payments",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Time to payoff (years)",
+            "variable": "payoff_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest paid (with extras)",
+            "variable": "total_interest_with_extra",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payments_saved",
+            "label": "Payments saved",
+            "variable": "payments_saved",
+            "unit": "payments",
+            "format": "decimal"
+          }
+        ]
+      },
+      "one_time_lump": {
+        "label": "One-time lump-sum paydown",
+        "description": "Apply a single extra payment at a specified payment number to reduce principal and recalculate the remaining amortization.",
+        "variables": {
+          "r_period": {
+            "expression": "apr/100/payments_per_year",
+            "dependencies": [
+              "apr",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments (original)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "principal * (r_period) / (1 - (1 + r_period) ** (-n))",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "n"
+            ],
+            "label": "Scheduled payment (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "remaining_balance_before_lump": {
+            "expression": "principal * (1 + r_period) ** (lump_at_payment - 1) - scheduled_payment * (((1 + r_period) ** (lump_at_payment - 1) - 1) / r_period)",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "lump_at_payment",
+              "scheduled_payment"
+            ],
+            "label": "Estimated balance just before lump payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_principal_after_lump": {
+            "expression": "remaining_balance_before_lump - lump_sum",
+            "dependencies": [
+              "remaining_balance_before_lump",
+              "lump_sum"
+            ],
+            "label": "Remaining principal after lump",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_payments_after": {
+            "expression": "log(scheduled_payment / (scheduled_payment - new_principal_after_lump * r_period)) / log(1 + r_period)",
+            "dependencies": [
+              "scheduled_payment",
+              "new_principal_after_lump",
+              "r_period"
+            ],
+            "label": "Payments remaining after lump",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_payments_required": {
+            "expression": "lump_at_payment - 1 + payoff_payments_after",
+            "dependencies": [
+              "lump_at_payment",
+              "payoff_payments_after"
+            ],
+            "label": "Total payments required until payoff",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_with_lump": {
+            "expression": "scheduled_payment * (lump_at_payment - 1) + lump_sum + scheduled_payment * payoff_payments_after - principal",
+            "dependencies": [
+              "scheduled_payment",
+              "lump_at_payment",
+              "lump_sum",
+              "payoff_payments_after",
+              "principal"
+            ],
+            "label": "Estimated total interest paid (with lump)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "remaining_balance_before_lump",
+            "label": "Balance before lump payment",
+            "variable": "remaining_balance_before_lump",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "new_principal_after_lump",
+            "label": "Balance after lump payment",
+            "variable": "new_principal_after_lump",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_payments_after",
+            "label": "Payments remaining after lump",
+            "variable": "payoff_payments_after",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_payments_required",
+            "label": "Total payments until payoff",
+            "variable": "total_payments_required",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_with_lump",
+            "label": "Estimated total interest (with lump)",
+            "variable": "total_interest_with_lump",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "equivalent_biweekly": {
+        "label": "Biweekly payments (equivalent schedule)",
+        "description": "Estimates outcome when switching to biweekly payments by treating the schedule as 26 equal periods per year. Useful to compare how more frequent payments shorten amortization.",
+        "variables": {
+          "effective_payments_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Biweekly payments per year",
+            "unit": "payments/year",
+            "format": "integer",
+            "display": false
+          },
+          "r_period": {
+            "expression": "apr/100/effective_payments_per_year",
+            "dependencies": [
+              "apr",
+              "effective_payments_per_year"
+            ],
+            "label": "Periodic interest rate (biweekly)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "n_biweekly": {
+            "expression": "term_years * effective_payments_per_year",
+            "dependencies": [
+              "term_years",
+              "effective_payments_per_year"
+            ],
+            "label": "Number of biweekly payments (original term)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment_biweekly": {
+            "expression": "principal * (r_period) / (1 - (1 + r_period) ** (-n_biweekly))",
+            "dependencies": [
+              "principal",
+              "r_period",
+              "n_biweekly"
+            ],
+            "label": "Biweekly scheduled payment (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra_biweekly": {
+            "expression": "scheduled_payment_biweekly + extra_each_period",
+            "dependencies": [
+              "scheduled_payment_biweekly",
+              "extra_each_period"
+            ],
+            "label": "Biweekly payment with regular extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_payments_biweekly": {
+            "expression": "log(payment_with_extra_biweekly / (payment_with_extra_biweekly - principal * r_period)) / log(1 + r_period)",
+            "dependencies": [
+              "payment_with_extra_biweekly",
+              "principal",
+              "r_period"
+            ],
+            "label": "Number of biweekly payments until payoff with extras",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years_biweekly": {
+            "expression": "payoff_payments_biweekly / effective_payments_per_year",
+            "dependencies": [
+              "payoff_payments_biweekly",
+              "effective_payments_per_year"
+            ],
+            "label": "Time to payoff (years) biweekly with extras",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_biweekly": {
+            "expression": "payment_with_extra_biweekly * payoff_payments_biweekly - principal",
+            "dependencies": [
+              "payment_with_extra_biweekly",
+              "payoff_payments_biweekly",
+              "principal"
+            ],
+            "label": "Total interest paid (biweekly with extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment_biweekly",
+            "label": "Biweekly scheduled payment (no extras)",
+            "variable": "scheduled_payment_biweekly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_with_extra_biweekly",
+            "label": "Biweekly payment with extra",
+            "variable": "payment_with_extra_biweekly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_payments_biweekly",
+            "label": "Biweekly payments until payoff",
+            "variable": "payoff_payments_biweekly",
+            "unit": "payments",
+            "format": "decimal"
+          },
+          {
+            "id": "payoff_years_biweekly",
+            "label": "Time to payoff (years) biweekly",
+            "variable": "payoff_years_biweekly",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_interest_biweekly",
+            "label": "Estimated total interest (biweekly)",
+            "variable": "total_interest_biweekly",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "apr",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 52,
+        "step": 1
+      },
+      {
+        "id": "extra_each_period",
+        "label": "Extra payment applied each period (enter 0 if none)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "apply_lump",
+        "label": "Apply a one-time lump-sum payment?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "lump_details",
+        "label": "Lump payment details",
+        "show_when": {
+          "field": "apply_lump",
+          "is": "yes"
+        },
+        "fields": [
+          {
+            "id": "lump_sum",
+            "label": "Lump-sum amount",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "lump_at_payment",
+            "label": "Apply lump at which scheduled payment number (1 = first payment)",
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates how making extra payments on a motorcycle loan—either a fixed additional amount each scheduled payment, a one-time lump-sum, or switching to a more frequent schedule—affects total interest paid and time to payoff.",
+      "Results are indicative estimates based on standard amortization mathematics. They are useful for planning and comparing strategies but do not replace lender-provided payoff quotes or legally binding figures."
+    ],
+    "methodology": [
+      "Calculations use standard fixed-rate amortization formulas: the periodic rate is APR divided by the number of payments per year, and scheduled payments solve the annuity formula for level payments. Extra-amount scenarios recalculate remaining term by solving the amortization recurrence for the new payment amount.",
+      "When a lump-sum is applied, the tool estimates the balance immediately before the lump payment using the closed-form amortization balance formula, subtracts the lump amount, then recalculates remaining payments using the original scheduled payment amount unless otherwise changed."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = APR / 100 / payments_per_year.",
+      "Scheduled payment = principal * r / (1 - (1 + r)^(-n)), where n = term_years × payments_per_year.",
+      "For regular extras, solve payoff_payments = ln(payment / (payment - principal × r)) / ln(1 + r) where payment = scheduled + extra.",
+      "For a lump sum at payment k, remaining balance before lump uses the closed-form balance formula, then remaining payments are solved with the reduced principal."
+    ],
+    "examples": [
+      "Example: $10,000 loan, 6% APR, 5 years (60 monthly payments). A $50 extra per month reduces payoff time and may save several hundred dollars in interest.",
+      "Example: Applying a $2,000 lump-sum after 12 payments reduces remaining principal immediately; the calculator estimates new remaining term and total interest using the unchanged scheduled payment."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates follow standard amortization math and IEEE/NIST-consistent numeric practices, but are subject to rounding and do not account for lender-specific rules (daily interest accrual, minimum payment application order, or prepayment penalties). Use results for planning and confirm actual payoff amounts with your lender."
+      },
+      {
+        "question": "What if APR is zero?",
+        "answer": "When APR is zero, scheduled payment equals principal divided by number of payments and extra payments shorten the term linearly. The calculator uses the same formulas; results simplify in the zero-interest case."
+      },
+      {
+        "question": "Do extra payments always reduce interest?",
+        "answer": "Yes—when extra payments are applied directly to principal they reduce the outstanding balance and therefore future interest. Confirm with your loan agreement that extra amounts are applied to principal and not treated as early future payments."
+      },
+      {
+        "question": "Does the calculator include prepayment penalties or fees?",
+        "answer": "No. It does not model contractual prepayment penalties or administrative fees. Check your loan contract and consult your lender for penalty details."
+      },
+      {
+        "question": "Why are biweekly payments sometimes better?",
+        "answer": "Switching to 26 biweekly payments increases payment frequency, which reduces average daily principal faster and shortens the amortization. The tool models this by treating the schedule as 26 equal periods per year; actual lender treatments can differ."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration (data governance and quality guidance)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The original loan amount borrowed, excluding interest."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate: the nominal yearly interest rate used to compute periodic interest."
+      },
+      {
+        "term": "Scheduled payment",
+        "definition": "The level periodic payment required by the original amortization schedule (before extras)."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "Any payment amount paid in addition to the scheduled payment; when applied to principal, it reduces future interest and shortens the loan term."
+      },
+      {
+        "term": "Lump sum",
+        "definition": "A single large additional payment made at a specific payment number to reduce principal."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off debt over time through scheduled payments that include principal and interest."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

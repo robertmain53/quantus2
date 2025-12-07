@@ -1,0 +1,457 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Earnings Per Share (EPS) Calculator — Multi‑Method",
+    "description": "Calculate Basic EPS, Diluted EPS and EPS growth using standard reporting inputs. Includes weighted average share handling, dilutive securities, and an EPS growth method with validation notes and regulatory/accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "basic_eps",
+    "methods": {
+      "basic_eps": {
+        "label": "Basic EPS",
+        "description": "Computes earnings per share using net income available to common shareholders divided by the weighted average number of common shares outstanding for the period.",
+        "variables": {
+          "net_income_available": {
+            "expression": "net_income - preferred_dividends",
+            "dependencies": [
+              "net_income",
+              "preferred_dividends"
+            ],
+            "label": "Net income available to common shareholders",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "avg_shares_from_start_end": {
+            "expression": "(shares_outstanding_start + shares_outstanding_end) / 2",
+            "dependencies": [
+              "shares_outstanding_start",
+              "shares_outstanding_end"
+            ],
+            "label": "Average shares (start/end)",
+            "unit": "shares",
+            "format": "decimal",
+            "display": false
+          },
+          "effective_shares": {
+            "expression": "weighted_avg_shares > 0 ? weighted_avg_shares : avg_shares_from_start_end",
+            "dependencies": [
+              "weighted_avg_shares",
+              "avg_shares_from_start_end"
+            ],
+            "label": "Weighted average shares (effective)",
+            "unit": "shares",
+            "format": "decimal",
+            "display": true
+          },
+          "eps_basic": {
+            "expression": "net_income_available / effective_shares",
+            "dependencies": [
+              "net_income_available",
+              "effective_shares"
+            ],
+            "label": "Basic EPS",
+            "unit": "currency per share",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "eps",
+            "label": "Basic EPS",
+            "variable": "eps_basic",
+            "unit": "currency per share",
+            "format": "currency"
+          },
+          {
+            "id": "shares_used",
+            "label": "Weighted average shares used",
+            "variable": "effective_shares",
+            "unit": "shares",
+            "format": "decimal"
+          }
+        ]
+      },
+      "diluted_eps": {
+        "label": "Diluted EPS",
+        "description": "Estimates EPS after assuming conversion of all potentially dilutive instruments. Uses incremental dilutive shares added to effective weighted average shares.",
+        "variables": {
+          "net_income_available_diluted": {
+            "expression": "net_income - preferred_dividends",
+            "dependencies": [
+              "net_income",
+              "preferred_dividends"
+            ],
+            "label": "Net income available to common shareholders (diluted)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "avg_shares_from_start_end_d": {
+            "expression": "(shares_outstanding_start + shares_outstanding_end) / 2",
+            "dependencies": [
+              "shares_outstanding_start",
+              "shares_outstanding_end"
+            ],
+            "label": "Average shares (start/end) for diluted",
+            "unit": "shares",
+            "format": "decimal",
+            "display": false
+          },
+          "effective_shares_diluted": {
+            "expression": "weighted_avg_shares > 0 ? weighted_avg_shares : avg_shares_from_start_end_d",
+            "dependencies": [
+              "weighted_avg_shares",
+              "avg_shares_from_start_end_d"
+            ],
+            "label": "Weighted average shares used (diluted base)",
+            "unit": "shares",
+            "format": "decimal",
+            "display": true
+          },
+          "incremental_dilutive_shares": {
+            "expression": "convertible_securities + stock_options_dilutive + treasury_stock_method_shares",
+            "dependencies": [
+              "convertible_securities",
+              "stock_options_dilutive",
+              "treasury_stock_method_shares"
+            ],
+            "label": "Incremental dilutive shares assumed",
+            "unit": "shares",
+            "format": "decimal",
+            "display": true
+          },
+          "diluted_shares_total": {
+            "expression": "effective_shares_diluted + incremental_dilutive_shares",
+            "dependencies": [
+              "effective_shares_diluted",
+              "incremental_dilutive_shares"
+            ],
+            "label": "Total shares after dilution assumption",
+            "unit": "shares",
+            "format": "decimal",
+            "display": false
+          },
+          "eps_diluted": {
+            "expression": "net_income_available_diluted / diluted_shares_total",
+            "dependencies": [
+              "net_income_available_diluted",
+              "diluted_shares_total"
+            ],
+            "label": "Diluted EPS",
+            "unit": "currency per share",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "eps_diluted",
+            "label": "Diluted EPS",
+            "variable": "eps_diluted",
+            "unit": "currency per share",
+            "format": "currency"
+          },
+          {
+            "id": "dilutive_shares",
+            "label": "Incremental dilutive shares assumed",
+            "variable": "incremental_dilutive_shares",
+            "unit": "shares",
+            "format": "decimal"
+          }
+        ]
+      },
+      "eps_growth": {
+        "label": "EPS Growth Rate",
+        "description": "Calculates percentage growth in EPS between a prior and current period. Use consistent EPS definitions (basic or diluted) across periods.",
+        "variables": {
+          "prior_net_income_available": {
+            "expression": "prior_net_income - prior_preferred_dividends",
+            "dependencies": [
+              "prior_net_income",
+              "prior_preferred_dividends"
+            ],
+            "label": "Prior period net income available",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "prior_eps": {
+            "expression": "prior_net_income_available / prior_weighted_shares",
+            "dependencies": [
+              "prior_net_income_available",
+              "prior_weighted_shares"
+            ],
+            "label": "Prior period EPS",
+            "unit": "currency per share",
+            "format": "currency",
+            "display": true
+          },
+          "current_net_income_available": {
+            "expression": "current_net_income - current_preferred_dividends",
+            "dependencies": [
+              "current_net_income",
+              "current_preferred_dividends"
+            ],
+            "label": "Current period net income available",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "current_eps": {
+            "expression": "current_net_income_available / current_weighted_shares",
+            "dependencies": [
+              "current_net_income_available",
+              "current_weighted_shares"
+            ],
+            "label": "Current period EPS",
+            "unit": "currency per share",
+            "format": "currency",
+            "display": true
+          },
+          "eps_growth_pct": {
+            "expression": "(current_eps - prior_eps) / (abs(prior_eps) < 1e-12 ? 1e-12 : abs(prior_eps)) * 100",
+            "dependencies": [
+              "current_eps",
+              "prior_eps"
+            ],
+            "label": "EPS growth rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "eps_growth",
+            "label": "EPS Growth Rate (%)",
+            "variable": "eps_growth_pct",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "prior_eps_out",
+            "label": "Prior period EPS",
+            "variable": "prior_eps",
+            "unit": "currency per share",
+            "format": "currency"
+          },
+          {
+            "id": "current_eps_out",
+            "label": "Current period EPS",
+            "variable": "current_eps",
+            "unit": "currency per share",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "net_income",
+        "label": "Net income (current period)",
+        "type": "number",
+        "default": 1000000,
+        "min": -100000000000,
+        "step": 1
+      },
+      {
+        "id": "preferred_dividends",
+        "label": "Preferred dividends (during period)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "shares_outstanding_start",
+        "label": "Shares outstanding at period start",
+        "type": "number",
+        "default": 1000000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "shares_outstanding_end",
+        "label": "Shares outstanding at period end",
+        "type": "number",
+        "default": 1000000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "weighted_avg_shares",
+        "label": "Weighted average shares outstanding (enter 0 to compute from start/end)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "convertible_securities",
+        "label": "Convertible securities (assumed converted)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "stock_options_dilutive",
+        "label": "Dilutive stock options (incremental shares)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "treasury_stock_method_shares",
+        "label": "Shares from treasury stock method (options/warrants)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "prior_net_income",
+        "label": "Prior period net income",
+        "type": "number",
+        "default": 900000,
+        "min": -100000000000,
+        "step": 1
+      },
+      {
+        "id": "prior_preferred_dividends",
+        "label": "Prior period preferred dividends",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "prior_weighted_shares",
+        "label": "Prior period weighted average shares",
+        "type": "number",
+        "default": 1000000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "current_net_income",
+        "label": "Current period net income (for growth calc)",
+        "type": "number",
+        "default": 1000000,
+        "min": -100000000000,
+        "step": 1
+      },
+      {
+        "id": "current_preferred_dividends",
+        "label": "Current period preferred dividends (for growth calc)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_weighted_shares",
+        "label": "Current period weighted average shares (for growth calc)",
+        "type": "number",
+        "default": 1000000,
+        "min": 1,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This multi‑method EPS calculator provides Basic EPS, Diluted EPS and an EPS growth rate between two periods. It accepts standard reporting inputs including net income, preferred dividends, weighted average shares (or start/end shares) and common potentially dilutive instruments.",
+      "Use the Basic EPS method for the most conservative reported EPS. Use Diluted EPS when you need to model the effect of convertible instruments and options. Use EPS Growth to compare consistent EPS definitions across periods."
+    ],
+    "methodology": [
+      "Calculations follow common financial reporting conventions: Basic EPS = (Net income – Preferred dividends) / Weighted average common shares; Diluted EPS adds dilutive incremental shares to the denominator. Users must choose consistent definitions (basic vs diluted) when comparing periods.",
+      "This tool is built with reproducibility and numerical safety in mind. Rounding, zero‑division guards, and validation follow best practices consistent with IEEE recommendations for floating point operations and general validation principles. Operational testing and result verification should align with guidance from NIST and ISO for software testing and numeric accuracy. Users are responsible for ensuring inputs reflect the reporting standard they use (for example, US GAAP or IFRS). OSHA is referenced for general operational compliance and safety in workplace data processes, not for calculation logic."
+    ],
+    "how_is_calculated": [
+      "Basic EPS: 1) Compute net income available = net_income - preferred_dividends. 2) Determine weighted average shares: use weighted_avg_shares if it is a positive value; otherwise compute (shares_outstanding_start + shares_outstanding_end)/2. 3) Basic EPS = net income available / weighted average shares.",
+      "Diluted EPS: 1) Start with net income available to common. 2) Estimate incremental dilutive shares from convertible securities, stock options (treasury stock method), and other dilutive instruments. 3) Diluted EPS = net income available / (weighted average shares + incremental dilutive shares).",
+      "EPS Growth: Compute EPS for prior and current periods using the same EPS definition, then growth % = (current_eps - prior_eps) / |prior_eps| * 100. The calculator uses a small safe denominator to avoid division by zero in edge cases."
+    ],
+    "examples": [
+      "Example 1 (Basic): Net income 1,000,000; preferred dividends 0; start shares 1,000,000; end shares 1,000,000 → Basic EPS = 1.00 per share.",
+      "Example 2 (Diluted): Net income 1,000,000; preferred dividends 0; weighted average shares 1,000,000; convertible securities 100,000; options dilutive 50,000 → Diluted EPS = 1,000,000 / 1,150,000 ≈ 0.8696 per share."
+    ],
+    "faqs": [
+      {
+        "question": "Should I use basic or diluted EPS?",
+        "answer": "Use basic EPS for the standard per‑share profit excluding potential dilution. Use diluted EPS when you need to reflect the effect of convertible securities and options on per‑share results. Report and compare using the same basis across periods."
+      },
+      {
+        "question": "What do I enter if I do not have weighted average shares?",
+        "answer": "Enter 0 for weighted average shares to let the calculator approximate the weighted average as (shares outstanding at start + shares outstanding at end) / 2. For precise reporting, provide the actual weighted average shares figure from your accounting records."
+      },
+      {
+        "question": "How does the calculator handle zero or negative prior EPS in growth?",
+        "answer": "To avoid misleading infinite or undefined growth rates, the tool uses a safe denominator guard when prior EPS is zero or very close to zero and reports the percentage accordingly. Interpret large percentage changes with caution and consider absolute EPS changes as well."
+      },
+      {
+        "question": "Are these calculations compliant with reporting standards?",
+        "answer": "The calculator implements commonly used formulas consistent with financial reporting practice, but it does not replace formal accounting advice. For regulatory filings, follow the applicable standards and guidance under US GAAP, IFRS or local regulation and consult your auditor."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission (SEC)",
+        "url": "https://www.sec.gov"
+      },
+      {
+        "label": "IFRS Foundation",
+        "url": "https://www.ifrs.org"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Earnings Per Share (EPS)",
+        "definition": "Net income available to common shareholders divided by the weighted average number of common shares outstanding during the period."
+      },
+      {
+        "term": "Basic EPS",
+        "definition": "EPS calculated without assuming conversion of dilutive securities; uses actual weighted average shares outstanding."
+      },
+      {
+        "term": "Diluted EPS",
+        "definition": "EPS calculated assuming conversion of all potentially dilutive securities, increasing the denominator to reflect a worst‑case dilution scenario."
+      },
+      {
+        "term": "Weighted average shares",
+        "definition": "Average number of common shares outstanding during the reporting period, weighted by time outstanding."
+      },
+      {
+        "term": "Preferred dividends",
+        "definition": "Dividends payable to preferred shareholders that are subtracted from net income when computing income available to common shareholders."
+      },
+      {
+        "term": "Dilutive securities",
+        "definition": "Instruments such as convertible bonds, convertible preferred shares, stock options and warrants that can increase the number of common shares outstanding if converted or exercised."
+      }
+    ]
+  }
+}

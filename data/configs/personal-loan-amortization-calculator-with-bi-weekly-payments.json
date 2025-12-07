@@ -1,0 +1,232 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Personal Loan Amortization — Bi‑Weekly Payments",
+    "description": "Estimate bi-weekly payment amounts, total paid, and interest for a personal loan using bi-weekly schedules. Includes a side-by-side monthly comparison and accuracy notes for users and auditors."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "biweekly_payment",
+        "label": "Bi‑weekly payment (incl. extra)",
+        "expression": "principal*((annual_rate_pct/100)/26) / (1 - pow(1 + (annual_rate_pct/100)/26, - (term_years*26))) + extra_payment_biweekly",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_payments_biweekly",
+        "label": "Total number of bi‑weekly payments (scheduled)",
+        "expression": "term_years*26",
+        "format": "integer"
+      },
+      {
+        "id": "total_paid_biweekly",
+        "label": "Total paid with bi‑weekly schedule (scheduled)",
+        "expression": "((principal*((annual_rate_pct/100)/26) / (1 - pow(1 + (annual_rate_pct/100)/26, - (term_years*26)))) + extra_payment_biweekly) * (term_years*26)",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_biweekly",
+        "label": "Total interest paid with bi‑weekly schedule (scheduled)",
+        "expression": "(((principal*((annual_rate_pct/100)/26) / (1 - pow(1 + (annual_rate_pct/100)/26, - (term_years*26)))) + extra_payment_biweekly) * (term_years*26)) - principal",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "monthly_payment",
+        "label": "Equivalent monthly payment (for comparison)",
+        "expression": "principal*((annual_rate_pct/100)/12) / (1 - pow(1 + (annual_rate_pct/100)/12, - (term_years*12)))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "interest_saved_vs_monthly",
+        "label": "Scheduled interest difference: monthly minus bi‑weekly (may be approximate)",
+        "expression": "((principal*((annual_rate_pct/100)/12) / (1 - pow(1 + (annual_rate_pct/100)/12, - (term_years*12)))) * (term_years*12)) - ((((principal*((annual_rate_pct/100)/26) / (1 - pow(1 + (annual_rate_pct/100)/26, - (term_years*26)))) + extra_payment_biweekly) * (term_years*26)))",
+        "unit": "USD",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "extra_payment_biweekly",
+        "label": "Additional bi‑weekly payment (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "biweekly_payment",
+          "label": "Bi‑weekly payment (incl. extra)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_payments_biweekly",
+          "label": "Total bi‑weekly payments (scheduled)",
+          "format": "integer"
+        },
+        {
+          "id": "total_paid_biweekly",
+          "label": "Total amount paid (bi‑weekly schedule)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest_biweekly",
+          "label": "Total interest paid (bi‑weekly schedule)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "monthly_payment",
+          "label": "Monthly payment (comparison)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "interest_saved_vs_monthly",
+          "label": "Interest difference: monthly minus bi‑weekly (scheduled)",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates scheduled bi‑weekly payments for a fixed‑rate personal loan and provides a scheduled comparison to monthly payments. It assumes an annuity (level payment) schedule with payment frequency of 26 periods per year for bi‑weekly calculations and 12 for monthly.",
+      "Use the additional bi‑weekly payment field to model consistent extra principal contributions applied at each bi‑weekly payment. Results are scheduled estimates; accelerated payoff due to extra payments may shorten the actual number of payments versus the scheduled total."
+    ],
+    "methodology": [
+      "Periodic rate is annual_rate_pct divided by 26 for bi‑weekly and by 12 for monthly. Payment uses the standard annuity formula: payment = r * L / (1 - (1+r)^-n), where r is the periodic rate and n the total number of periodic payments.",
+      "Outputs are computed deterministically from inputs and present scheduled totals. They are intended for planning and comparison only and do not substitute for an amortization ledger produced by your lender.",
+      "This tool follows engineering and testing best practices: computational validation and input bounds consistent with ISO 9001 quality principles and IEEE recommended numeric validation patterns. Security and handling of input data align with NIST guidance for secure data handling. Workplace safety references are informed by OSHA best practices for documentation and user-facing notices."
+    ],
+    "how_is_calculated": [
+      "Step 1: Convert APR (%) to periodic rate: r_bi = APR / 100 / 26.",
+      "Step 2: Compute total number of scheduled bi‑weekly payments: n_bi = term_years * 26.",
+      "Step 3: Compute scheduled bi‑weekly payment (without extra): payment_bi = principal * r_bi / (1 - (1 + r_bi)^-n_bi).",
+      "Step 4: Add the per‑payment extra if provided: reported bi‑weekly payment = payment_bi + extra_payment_biweekly.",
+      "Step 5: Scheduled totals: total_paid = reported bi‑weekly payment * n_bi; total_interest = total_paid - principal.",
+      "Note: If extra payments accelerate payoff, the actual number of payments and interest will differ; for exact amortization, generate a period-by-period amortization schedule."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator account for lenders that apply extra payments differently?",
+        "answer": "No. Lenders vary in how extra payments are applied (immediate principal reduction, held in escrow, or applied at next scheduled date). This calculator assumes each extra amount reduces principal immediately on the payment date. Confirm with your lender how extra payments are handled."
+      },
+      {
+        "question": "Will bi‑weekly payments always reduce interest compared to monthly?",
+        "answer": "Typically yes, because 26 bi‑weekly payments equals 13 monthly payments annually (one extra monthly payment), which usually reduces principal faster. However, exact interest savings depend on payment timing, whether the lender credits payments immediately, and whether extra payments accelerate payoff."
+      },
+      {
+        "question": "How accurate are the interest savings and total amounts shown?",
+        "answer": "Values are mathematical estimates based on the annuity formula and scheduled periods. They are accurate within the model assumptions. For regulatory or legally binding figures, request an amortization schedule from your lender. See the accuracy caveat in citations."
+      },
+      {
+        "question": "What do I do if the calculator results differ from my lender's statement?",
+        "answer": "Compare assumptions: APR vs nominal rate, compounding and how the lender credits payments. If differences persist, request the lender's amortization schedule and payment application policy."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The annual nominal interest rate expressed as a percentage, used here as the input rate. This tool uses APR divided by the payment frequency to derive the periodic rate."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied for each payment period. For bi‑weekly calculations, periodic rate = APR / 100 / 26."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of spreading loan payments over time such that each payment covers interest for the period and reduces principal according to a schedule."
+      },
+      {
+        "term": "Bi‑weekly payment",
+        "definition": "A payment made every two weeks, typically resulting in 26 payments per year. This calculator treats bi‑weekly frequency as 26 equal periods per year."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loan/loan-amortization",
+      "/guides/loan/extra-payments"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

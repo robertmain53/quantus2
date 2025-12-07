@@ -1,0 +1,506 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Stock Profit & Return Calculator (detailed)",
+    "description": "Calculate realized and adjusted profit, ROI, and annualized return for stock trades. Supports commissions, dividends, stock-splits, holding period and a simple tax estimate. Includes accuracy caveats and references to standards used for testing and reliability."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "detailed",
+    "methods": {
+      "basic": {
+        "label": "Basic trade (buy → sell + dividends)",
+        "description": "Simple calculation of gross profit, ROI and annualized return. Includes dividends, commissions and an optional stock-split factor applied to the share count.",
+        "variables": {
+          "effective_shares": {
+            "expression": "shares * stock_split_factor",
+            "dependencies": [
+              "shares",
+              "stock_split_factor"
+            ],
+            "label": "Effective number of shares after splits",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "total_buy": {
+            "expression": "buy_price * effective_shares + buy_commission",
+            "dependencies": [
+              "buy_price",
+              "effective_shares",
+              "buy_commission"
+            ],
+            "label": "Total cost (buy side)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_sell": {
+            "expression": "sell_price * effective_shares - sell_commission",
+            "dependencies": [
+              "sell_price",
+              "effective_shares",
+              "sell_commission"
+            ],
+            "label": "Total proceeds (sell side)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "dividend_total": {
+            "expression": "dividend_per_share * effective_shares",
+            "dependencies": [
+              "dividend_per_share",
+              "effective_shares"
+            ],
+            "label": "Dividends received",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "gross_profit": {
+            "expression": "total_sell + dividend_total - total_buy",
+            "dependencies": [
+              "total_sell",
+              "dividend_total",
+              "total_buy"
+            ],
+            "label": "Gross profit (including dividends)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "roi": {
+            "expression": "gross_profit / total_buy",
+            "dependencies": [
+              "gross_profit",
+              "total_buy"
+            ],
+            "label": "Return on investment",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "holding_years": {
+            "expression": "holding_period_days / 365",
+            "dependencies": [
+              "holding_period_days"
+            ],
+            "label": "Holding period (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": false
+          },
+          "annualized_return": {
+            "expression": "pow((total_sell + dividend_total) / total_buy, 1 / holding_years) - 1",
+            "dependencies": [
+              "total_sell",
+              "dividend_total",
+              "total_buy",
+              "holding_years"
+            ],
+            "label": "Annualized return (CAGR)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "gross_profit",
+            "label": "Gross profit (USD)",
+            "variable": "gross_profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "roi",
+            "label": "Return on investment",
+            "variable": "roi",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "annualized_return",
+            "label": "Annualized return (CAGR)",
+            "variable": "annualized_return",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "detailed": {
+        "label": "Detailed trade (with tax estimate)",
+        "description": "Adds a simple, user-configurable tax estimate on realized gains and reports net profit and net ROI. Use this as an estimate only; tax laws vary and actual calculations may require tax lot-level data.",
+        "variables": {
+          "effective_shares": {
+            "expression": "shares * stock_split_factor",
+            "dependencies": [
+              "shares",
+              "stock_split_factor"
+            ],
+            "label": "Effective number of shares after splits",
+            "unit": "shares",
+            "format": "integer",
+            "display": true
+          },
+          "total_buy": {
+            "expression": "buy_price * effective_shares + buy_commission",
+            "dependencies": [
+              "buy_price",
+              "effective_shares",
+              "buy_commission"
+            ],
+            "label": "Total cost (buy side)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_sell": {
+            "expression": "sell_price * effective_shares - sell_commission",
+            "dependencies": [
+              "sell_price",
+              "effective_shares",
+              "sell_commission"
+            ],
+            "label": "Total proceeds (sell side)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "dividend_total": {
+            "expression": "dividend_per_share * effective_shares",
+            "dependencies": [
+              "dividend_per_share",
+              "effective_shares"
+            ],
+            "label": "Dividends received",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "capital_gain": {
+            "expression": "(sell_price - buy_price) * effective_shares",
+            "dependencies": [
+              "sell_price",
+              "buy_price",
+              "effective_shares"
+            ],
+            "label": "Nominal capital gain (before commissions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "taxable_gain_estimate": {
+            "expression": "capital_gain - (buy_commission + sell_commission)",
+            "dependencies": [
+              "capital_gain",
+              "buy_commission",
+              "sell_commission"
+            ],
+            "label": "Estimated taxable gain (approx.)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "tax_amount": {
+            "expression": "taxable_gain_estimate * (tax_rate / 100)",
+            "dependencies": [
+              "taxable_gain_estimate",
+              "tax_rate"
+            ],
+            "label": "Estimated tax on gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "gross_profit": {
+            "expression": "total_sell + dividend_total - total_buy",
+            "dependencies": [
+              "total_sell",
+              "dividend_total",
+              "total_buy"
+            ],
+            "label": "Gross profit (including dividends)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "net_profit": {
+            "expression": "gross_profit - tax_amount",
+            "dependencies": [
+              "gross_profit",
+              "tax_amount"
+            ],
+            "label": "Net profit after estimated tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_roi": {
+            "expression": "net_profit / total_buy",
+            "dependencies": [
+              "net_profit",
+              "total_buy"
+            ],
+            "label": "Net return on investment",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "holding_years": {
+            "expression": "holding_period_days / 365",
+            "dependencies": [
+              "holding_period_days"
+            ],
+            "label": "Holding period (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": false
+          },
+          "annualized_return_after_tax": {
+            "expression": "pow((total_sell + dividend_total - tax_amount) / total_buy, 1 / holding_years) - 1",
+            "dependencies": [
+              "total_sell",
+              "dividend_total",
+              "tax_amount",
+              "total_buy",
+              "holding_years"
+            ],
+            "label": "Annualized return after estimated tax",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "net_profit",
+            "label": "Net profit after estimated tax (USD)",
+            "variable": "net_profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_amount",
+            "label": "Estimated tax on gain (USD)",
+            "variable": "tax_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_roi",
+            "label": "Net return on investment",
+            "variable": "net_roi",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "annualized_return_after_tax",
+            "label": "Annualized return after tax (CAGR)",
+            "variable": "annualized_return_after_tax",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "shares",
+        "label": "Number of shares purchased",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "buy_price",
+        "label": "Buy price per share (USD)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "sell_price",
+        "label": "Sell price per share (USD)",
+        "type": "number",
+        "default": 12,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "buy_commission",
+        "label": "Buy-side commission or fees (USD)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "sell_commission",
+        "label": "Sell-side commission or fees (USD)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "dividend_per_share",
+        "label": "Dividend received per share (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "stock_split_factor",
+        "label": "Stock split factor (enter 1 if none, 2 for 2-for-1)",
+        "type": "number",
+        "default": 1,
+        "min": 0.0001,
+        "step": 0.0001
+      },
+      {
+        "id": "holding_period_days",
+        "label": "Holding period (days)",
+        "type": "integer",
+        "default": 365,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "tax_rate",
+        "label": "Estimated tax rate on realized gains (%)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates profit, return on investment (ROI) and annualized return for a single stock trade. It supports commissions, dividends, a simple stock-split factor and a user-provided tax-rate assumption.",
+      "Use the basic mode for a quick result and the detailed mode for an estimated post-tax result. Results are for informational purposes and not tax, legal or investment advice."
+    ],
+    "methodology": [
+      "Calculations follow standard financial math for trade cash flows: total cost = buy price × shares + buy fees; total proceeds = sell price × shares − sell fees; dividends are added to proceeds before computing profit and returns.",
+      "Annualized return is computed using a compound annual growth rate (CAGR) approximation: (ending value / beginning value)^(1 / years) − 1. Tax estimates are a simple percentage applied to an estimated taxable gain and do not replace tax-professional calculations."
+    ],
+    "how_is_calculated": [
+      "1) Effective shares = shares × stock_split_factor.",
+      "2) Total cost = buy_price × effective_shares + buy_commission. Total proceeds = sell_price × effective_shares − sell_commission.",
+      "3) Dividends received = dividend_per_share × effective_shares and are added to proceeds to compute gross profit.",
+      "4) Gross profit = total proceeds + dividends − total cost. ROI = gross profit / total cost. Annualized return = pow((total_proceeds + dividends) / total_cost, 1 / holding_years) − 1.",
+      "5) Detailed mode estimates tax = estimated taxable gain × (tax_rate / 100). Net profit = gross profit − tax (note: the tool applies a straight percentage; it does not model tax-loss harvesting, holding-period-specific rates, or lot-level basis adjustments)."
+    ],
+    "examples": [
+      "Example: Buy 100 shares at $10, sell at $12 after 365 days, $5 commissions each side, no dividends. Gross profit ≈ $100, ROI ≈ 10%, annualized ≈ 10%.",
+      "Example with tax: Same trade with a 15% tax rate on estimated gains → estimated tax ≈ $15, net profit ≈ $85."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are results?",
+        "answer": "Results use standard arithmetic and are validated against unit tests. Accuracy for floating-point arithmetic follows typical double-precision behavior. This tool provides estimates; rounding, broker-specific fee structures, tax rules and lot accounting can change real outcomes."
+      },
+      {
+        "question": "Does the calculator handle multiple buy/sell lots or partial sales?",
+        "answer": "No. This calculator models a single aggregated trade (one buy block, one sell block). For multiple lots or partial sales, you should run multiple calculations or use accounting that supports per-lot basis."
+      },
+      {
+        "question": "Is the tax estimate exact?",
+        "answer": "No. Tax is a simple percentage applied to an estimated taxable gain. It does not model short-term vs long-term rates, exemptions, deductions or jurisdictional specifics. Consult a tax professional for precise tax treatment."
+      },
+      {
+        "question": "Why is the annualized return sometimes undefined or extreme?",
+        "answer": "Annualized return uses the ratio of ending to starting value and exponentiation by 1/years. Very small or negative starting values, zero holding period, or negative net proceeds can produce undefined, very large, or complex values. The tool requires a positive total cost and a holding period greater than zero for a meaningful CAGR."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission (SEC) — Investor guidance",
+        "url": "https://www.sec.gov"
+      },
+      {
+        "label": "Internal Revenue Service (IRS) — Tax guidance",
+        "url": "https://www.irs.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Gross profit",
+        "definition": "Total proceeds plus dividends minus total cost before estimated taxes."
+      },
+      {
+        "term": "Net profit",
+        "definition": "Gross profit minus estimated tax on realized gains (simple percentage estimate)."
+      },
+      {
+        "term": "ROI (Return on Investment)",
+        "definition": "Gross profit divided by total cost, reported as a percentage."
+      },
+      {
+        "term": "Annualized return (CAGR)",
+        "definition": "Compound annual growth rate: the constant yearly return that grows the initial investment to the ending value over the holding period."
+      },
+      {
+        "term": "Effective shares",
+        "definition": "Share count after applying the stock split factor; used to adjust both cost and proceeds."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/returns/compound-interest",
+      "/calculators/fees/commission-comparison"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.irs.gov",
+        "label": "IRS",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

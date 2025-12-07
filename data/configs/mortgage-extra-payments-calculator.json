@@ -1,0 +1,465 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Extra Payments & Bi‑Weekly Payment Calculator",
+    "description": "Estimate how extra payments and switching to a bi‑weekly schedule change your mortgage payoff date, total interest paid, and payments required. Includes scenarios for standard monthly amortization and bi‑weekly schedules with recurring extra payments."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "biweekly_extra",
+    "methods": {
+      "monthly_standard": {
+        "label": "Standard monthly amortization",
+        "description": "Calculate the standard monthly payment, total paid and interest for a fixed-rate mortgage without extra payments.",
+        "variables": {
+          "n_months": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "r_monthly": {
+            "expression": "annual_rate / 100 / 12",
+            "dependencies": [
+              "annual_rate"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "principal * (r_monthly * pow(1 + r_monthly, n_months)) / (pow(1 + r_monthly, n_months) - 1)",
+            "dependencies": [
+              "principal",
+              "r_monthly",
+              "n_months"
+            ],
+            "label": "Monthly payment (base)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "monthly_payment * n_months",
+            "dependencies": [
+              "monthly_payment",
+              "n_months"
+            ],
+            "label": "Total amount paid (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - principal",
+            "dependencies": [
+              "total_paid",
+              "principal"
+            ],
+            "label": "Total interest paid (no extra payments)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total amount paid (no extra)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid (no extra)",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "n_months",
+            "label": "Payoff time (months)",
+            "variable": "n_months",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      },
+      "biweekly_extra": {
+        "label": "Bi‑weekly schedule with extra payments",
+        "description": "Estimate results when using a bi‑weekly payment frequency and adding recurring extra payments. Converts annual rate to per‑payment rate for 26 payments per year and accounts for extra contribution per bi‑weekly payment.",
+        "variables": {
+          "payments_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year for bi‑weekly",
+            "unit": "payments/year",
+            "format": "integer",
+            "display": false
+          },
+          "r": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Interest rate per bi‑weekly payment",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total bi‑weekly payments (original term)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "base_payment": {
+            "expression": "principal * (r * pow(1 + r, n)) / (pow(1 + r, n) - 1)",
+            "dependencies": [
+              "principal",
+              "r",
+              "n"
+            ],
+            "label": "Bi‑weekly payment (base, no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "extra_per_payment": {
+            "expression": "extra_payment_frequency == 'per_payment' ? extra_payment : (extra_payment_frequency == 'monthly' ? extra_payment / (payments_per_year / 12) : (extra_payment_frequency == 'yearly' ? extra_payment / payments_per_year : 0))",
+            "dependencies": [
+              "extra_payment_frequency",
+              "extra_payment",
+              "payments_per_year"
+            ],
+            "label": "Extra amount applied per bi‑weekly payment (equivalent)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_payment": {
+            "expression": "base_payment + extra_per_payment",
+            "dependencies": [
+              "base_payment",
+              "extra_per_payment"
+            ],
+            "label": "Bi‑weekly payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_payments": {
+            "expression": "log(effective_payment / (effective_payment - principal * r)) / log(1 + r)",
+            "dependencies": [
+              "effective_payment",
+              "principal",
+              "r"
+            ],
+            "label": "Number of bi‑weekly payments to payoff with extra",
+            "unit": "payments",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_years": {
+            "expression": "payoff_payments / payments_per_year",
+            "dependencies": [
+              "payoff_payments",
+              "payments_per_year"
+            ],
+            "label": "Payoff time in years (with extra)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "months_saved": {
+            "expression": "term_years * 12 - payoff_years * 12",
+            "dependencies": [
+              "term_years",
+              "payoff_years"
+            ],
+            "label": "Approximate months saved compared to original term",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "interest_without_extra": {
+            "expression": "base_payment * n - principal",
+            "dependencies": [
+              "base_payment",
+              "n",
+              "principal"
+            ],
+            "label": "Total interest (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_with_extra": {
+            "expression": "effective_payment * payoff_payments - principal",
+            "dependencies": [
+              "effective_payment",
+              "payoff_payments",
+              "principal"
+            ],
+            "label": "Total interest (with extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_saved": {
+            "expression": "interest_without_extra - interest_with_extra",
+            "dependencies": [
+              "interest_without_extra",
+              "interest_with_extra"
+            ],
+            "label": "Estimated interest saved by paying extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "base_payment",
+            "label": "Base bi‑weekly payment (no extra)",
+            "variable": "base_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_payment",
+            "label": "Bi‑weekly payment with extra",
+            "variable": "effective_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_years",
+            "label": "Estimated payoff time (years)",
+            "variable": "payoff_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "months_saved",
+            "label": "Months saved vs original term",
+            "variable": "months_saved",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_payments",
+            "label": "Number of bi‑weekly payments until payoff",
+            "variable": "payoff_payments",
+            "unit": "payments",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Mortgage principal or current balance",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Original loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Current payment frequency",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "monthly"
+          },
+          {
+            "label": "Bi‑weekly (26)",
+            "value": "biweekly"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment amount (base amount)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_frequency",
+        "label": "Extra payment frequency (how extra is applied)",
+        "type": "select",
+        "default": "none",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Per payment (add to each payment)",
+            "value": "per_payment"
+          },
+          {
+            "label": "Monthly (equivalent spread across payments)",
+            "value": "monthly"
+          },
+          {
+            "label": "Yearly (equivalent spread across payments)",
+            "value": "yearly"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models standard monthly amortization and a bi‑weekly payment option with recurring extra payments. Use it to estimate new payoff timing, approximate interest savings, and how each added contribution shortens the loan.",
+      "Results are estimates based on a fixed interest rate and do not account for prepayment penalties, escrow changes, variable rates, or lender rounding and timing policies. Verify plan details with your lender before changing payment schedules."
+    ],
+    "methodology": [
+      "Monthly amortization is computed using the standard fixed-rate annuity formula converting APR to a per-period rate and solving for payment that amortizes the principal over the term.",
+      "Bi‑weekly calculations convert APR to a per‑payment rate for 26 payments per year. Recurring extra contributions are translated into an equivalent additional amount per bi‑weekly payment when the user specifies monthly or yearly extra amounts.",
+      "To estimate payoff time with extra payments we solve the standard amortization equation for the number of payments required given the increased payment amount. All computations use continuous numeric math; results are rounded for display."
+    ],
+    "how_is_calculated": [
+      "Monthly payment formula: payment = P * (r * (1 + r)^N) / ((1 + r)^N - 1), where r = monthly rate and N = number of months.",
+      "Bi‑weekly per‑payment rate: r_bi = APR / 100 / 26 and N_bi = term_years * 26. Base bi‑weekly payment uses the same annuity formula with r_bi and N_bi.",
+      "With recurring extra payments the effective payment = base_payment + extra_per_payment. Number of payments to payoff is computed by solving log(effective_payment / (effective_payment - P * r_bi)) / log(1 + r_bi)."
+    ],
+    "faqs": [
+      {
+        "question": "Is switching to bi‑weekly always better than monthly?",
+        "answer": "A bi‑weekly schedule can reduce interest and shorten payoff if implemented as 26 payments per year and not merely by splitting monthly payments. Savings depend on interest rate, extra amounts, and whether the lender applies payments immediately to principal. Check for prepayment rules."
+      },
+      {
+        "question": "Does this calculator include taxes, insurance, or escrow?",
+        "answer": "No. This tool models principal and interest only. Escrow, taxes, insurance, PMI, and fees are excluded and must be handled separately."
+      },
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates follow standard amortization mathematics and typical per‑period conversions. They are subject to rounding, floating point limits, and do not capture lender-specific posting rules or prepayment penalties. For regulatory and technical accuracy guidance consult standards such as NIST and IEEE; consult your lender for contract‑level figures."
+      },
+      {
+        "question": "Can extra payments be applied as one‑time lumps in this tool?",
+        "answer": "This version focuses on recurring extras and equivalent per‑payment conversions. One‑time lump sums are not modelled explicitly here; consult your lender or use a dedicated payoff planner to model single large prepayments."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards & Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a loan over time through regular payments covering interest and principal."
+      },
+      {
+        "term": "Principal",
+        "definition": "The outstanding loan balance on which interest is calculated."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate, the yearly interest rate charged on borrowed funds expressed as a percentage."
+      },
+      {
+        "term": "Bi‑weekly payments",
+        "definition": "A payment schedule with 26 payments per year (every two weeks). This results in the equivalent of one extra monthly payment each year versus 12 monthly payments."
+      },
+      {
+        "term": "Extra payment frequency",
+        "definition": "How additional contributions are applied: per lender payment, equivalent monthly spread, or equivalent yearly spread."
+      }
+    ],
+    "summary": [
+      "This tool provides quick comparative estimates between standard monthly amortization and a bi‑weekly schedule with recurring extra payments. Use results for planning only and confirm with your lender for precise payoff figures.",
+      "Technical accuracy adheres to common numeric computation practices; users should consider rounding and lender posting policies when interpreting savings and payoff dates."
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

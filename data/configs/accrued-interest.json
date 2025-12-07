@@ -1,0 +1,336 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Accrued Interest Calculator (multi-method)",
+    "description": "Calculate accrued interest for bonds and loans using common day-count conventions. Supports bond coupon accrual, simple loan interest, and daily-interest scenarios with configurable day-count denominator and user-supplied days."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "bond_accrued",
+    "methods": {
+      "bond_accrued": {
+        "label": "Bond accrued interest (clean/dirty pricing basis)",
+        "description": "Calculates accrued coupon interest on a bond between the last coupon payment and settlement date using a user-specified day-count denominator.",
+        "variables": {
+          "annual_coupon": {
+            "expression": "coupon_rate_pct/100 * face_value",
+            "dependencies": [
+              "coupon_rate_pct",
+              "face_value"
+            ],
+            "label": "Annual coupon amount",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "accrual_factor": {
+            "expression": "days_accrued / day_count_den",
+            "dependencies": [
+              "days_accrued",
+              "day_count_den"
+            ],
+            "label": "Accrual fraction (days / denominator)",
+            "format": "decimal",
+            "display": true
+          },
+          "accrued_interest": {
+            "expression": "annual_coupon * accrual_factor",
+            "dependencies": [
+              "annual_coupon",
+              "accrual_factor"
+            ],
+            "label": "Accrued interest",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "accrued_interest",
+            "label": "Accrued interest (bond)",
+            "variable": "accrued_interest",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "loan_simple": {
+        "label": "Simple loan interest (period-based)",
+        "description": "Computes interest on a loan principal for a given number of days using a conventional day-count denominator (user-supplied).",
+        "variables": {
+          "accrual_factor_loan": {
+            "expression": "days / day_count_den",
+            "dependencies": [
+              "days",
+              "day_count_den"
+            ],
+            "label": "Accrual fraction for loan (days / denominator)",
+            "format": "decimal",
+            "display": true
+          },
+          "interest": {
+            "expression": "principal * (annual_rate_pct/100) * accrual_factor_loan",
+            "dependencies": [
+              "principal",
+              "annual_rate_pct",
+              "accrual_factor_loan"
+            ],
+            "label": "Accrued interest (loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "interest",
+            "label": "Accrued interest (loan)",
+            "variable": "interest",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "daily_interest": {
+        "label": "Daily interest (simple daily rate)",
+        "description": "Uses a daily rate (annual rate / 365) to compute interest for a number of days. Use for daily-compounded or daily-accrual approximations.",
+        "variables": {
+          "daily_rate": {
+            "expression": "annual_rate_pct/100 / 365",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Daily rate",
+            "format": "decimal",
+            "display": true
+          },
+          "interest_daily": {
+            "expression": "principal * daily_rate * days",
+            "dependencies": [
+              "principal",
+              "daily_rate",
+              "days"
+            ],
+            "label": "Accrued interest (daily)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "interest_daily",
+            "label": "Accrued interest (daily)",
+            "variable": "interest_daily",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "face_value",
+        "label": "Face value / Notional (used for bonds)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "principal",
+        "label": "Principal / Loan amount",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "coupon_rate_pct",
+        "label": "Annual coupon rate (percent)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (percent)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "days_accrued",
+        "label": "Days since last coupon (or days accrued)",
+        "type": "integer",
+        "default": 30,
+        "min": 0,
+        "max": 366,
+        "step": 1
+      },
+      {
+        "id": "days",
+        "label": "Days (loan or daily interest period)",
+        "type": "integer",
+        "default": 30,
+        "min": 0,
+        "max": 366,
+        "step": 1
+      },
+      {
+        "id": "day_count_den",
+        "label": "Day-count denominator (use 360 or 365 depending on convention)",
+        "type": "integer",
+        "default": 360,
+        "min": 360,
+        "max": 365,
+        "step": 5
+      },
+      {
+        "id": "coupon_frequency",
+        "label": "Coupon payments per year (for reference)",
+        "type": "integer",
+        "default": 2,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes accrued interest for common financial scenarios: bond coupon accrual, simple loan interest for a defined period, and daily-interest calculations using a daily rate. It requires user-supplied values for days accrued or days in period and a day-count denominator that matches the convention you intend to use.",
+      "Results are presented as monetary amounts (currency). The tool uses straightforward arithmetic formulas and user inputs; for legally binding or settlement-accurate figures, reconcile outputs with your broker, issuer documentation, or settlement system."
+    ],
+    "methodology": [
+      "The calculator implements three methods so users can match the workflow used by an issuer or market practice: periodic bond coupon accrual (annual coupon × fraction of period), simple loan accrual (principal × annual rate × fraction of year), and a daily-rate method (annual rate / 365 × days).",
+      "Day-count conventions are implemented by a user-supplied denominator (commonly 360 or 365). Where exact legal definitions are required (for example, 30/360 variants or Actual/Actual ISMA), use a dedicated day-count conversion with calendar dates; this tool accepts days as input to keep the core arithmetic explicit and transparent.",
+      "Accuracy and numerical behavior follow best practices for reproducible finance calculations. For computational integrity and auditability, developers and integrators should follow guidance issued by standards organizations (NIST, ISO) and use appropriate numeric types (IEEE floating point vs decimal fixed-point) depending on rounding requirements."
+    ],
+    "how_is_calculated": [
+      "Bond accrued interest = Face Value × (Coupon Rate ÷ 100) × (Days Accrued ÷ Day‑Count Denominator). Example denominator values: 360 (30/360 or ACT/360 approximations) or 365 (ACT/365).",
+      "Simple loan interest = Principal × (Annual Rate ÷ 100) × (Days ÷ Day‑Count Denominator).",
+      "Daily interest (approximate) = Principal × (Annual Rate ÷ 100 ÷ 365) × Days."
+    ],
+    "examples": [
+      "Bond example: Face Value 1,000, Coupon 6% annually, Days accrued 45, Denominator 360 → Accrued interest = 1000 × 0.06 × (45/360) = 7.50.",
+      "Loan example: Principal 5,000, Annual rate 4%, Days 30, Denominator 365 → Interest = 5000 × 0.04 × (30/365) ≈ 16.44.",
+      "Daily example: Principal 10,000, Annual rate 3%, Days 10 → Interest = 10000 × (0.03/365) × 10 ≈ 8.22."
+    ],
+    "summary": [
+      "Select the method that matches the instrument you are valuing (bond coupon vs loan vs daily accrual).",
+      "Provide days explicitly or compute them with a dedicated date-to-days helper that applies the exact legal day-count rule when necessary.",
+      "This tool performs arithmetic approximations; adopt fixed-point decimal arithmetic and institution-specific rounding when integrating into accounting or trading systems."
+    ],
+    "faqs": [
+      {
+        "question": "Which day-count denominator should I use?",
+        "answer": "Use the denominator that matches the contract or market convention. Common choices are 360 (used in many money-market and bond conventions) or 365 (used in ACT/365). For exact 30/360 or Actual/Actual rules you must convert calendar dates to a day count according to the legal convention."
+      },
+      {
+        "question": "Does this calculator handle date-to-day conversions automatically?",
+        "answer": "No. To avoid ambiguity between multiple day-count rule variants, this tool requires days as an input and a day-count denominator. For precise date-based conversion use a dedicated date-daycount helper that implements the exact legal rule."
+      },
+      {
+        "question": "Are results final for settlement or taxation?",
+        "answer": "No. Results are informational and approximate. For settlement, tax reporting, or regulatory compliance, reconcile with the issuer/broker and use official settlement calculations and rounding rules."
+      },
+      {
+        "question": "How accurate are the numeric results?",
+        "answer": "Arithmetic follows standard floating-point arithmetic. For final accounting use decimal fixed-point arithmetic to control rounding. See citations for numeric and procedural standards."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Accrued interest",
+        "definition": "Interest that has accumulated on a debt instrument since the last coupon or interest payment up to, but not including, the settlement date."
+      },
+      {
+        "term": "Day-count convention",
+        "definition": "A rule for counting the number of days between two dates and for determining the denominator used to convert days to a fraction of a year (for example, 360 or 365)."
+      },
+      {
+        "term": "Clean price",
+        "definition": "The price of a bond excluding accrued interest."
+      },
+      {
+        "term": "Dirty price",
+        "definition": "The price of a bond including accrued interest (clean price + accrued interest)."
+      },
+      {
+        "term": "Coupon period",
+        "definition": "The interval between coupon payments, usually expressed in months or as payments per year (for example, semiannual = 2)."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — governance and controls guidance",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission (SEC) — market and disclosure guidance",
+        "url": "https://www.sec.gov"
+      },
+      {
+        "label": "Financial regulator guidance and market practice",
+        "url": "https://www.finra.org"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/day-count-converter",
+      "/calculators/bond-clean-dirty-price"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

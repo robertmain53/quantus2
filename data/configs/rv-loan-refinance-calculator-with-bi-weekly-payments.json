@@ -1,0 +1,514 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan Refinance with Bi-Weekly Payments — Comparison & Savings Calculator",
+    "description": "Compare your current RV loan to a refinance offer (supports monthly and bi-weekly schedules), estimate payments, total interest, break-even months and time saved. Includes balloon-payment handling and fee amortization."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "compare_refinance",
+    "methods": {
+      "compare_refinance": {
+        "label": "Compare current loan vs refinance (monthly or bi-weekly)",
+        "description": "Calculates period-level rates for monthly or bi-weekly schedules, computes amortizing payments (supports a final balloon), aggregates total paid and interest, then reports estimated savings, break-even and time saved.",
+        "variables": {
+          "curr_n": {
+            "expression": "current_remaining_months * current_periods_per_year / 12",
+            "dependencies": [
+              "current_remaining_months",
+              "current_periods_per_year"
+            ],
+            "label": "Current loan remaining payment count (periods)",
+            "unit": "periods",
+            "format": "decimal",
+            "display": false
+          },
+          "curr_r": {
+            "expression": "current_interest_rate_annual_pct / 100 / current_periods_per_year",
+            "dependencies": [
+              "current_interest_rate_annual_pct",
+              "current_periods_per_year"
+            ],
+            "label": "Current period interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "computed_current_payment": {
+            "expression": "(curr_r * current_balance) / (1 - pow(1 + curr_r, -curr_n))",
+            "dependencies": [
+              "curr_r",
+              "current_balance",
+              "curr_n"
+            ],
+            "label": "Implied current payment (per period) if not provided",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "current_payment": {
+            "expression": "current_payment_amount > 0 ? current_payment_amount : computed_current_payment",
+            "dependencies": [
+              "current_payment_amount",
+              "computed_current_payment"
+            ],
+            "label": "Current payment (per period)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "curr_total_paid": {
+            "expression": "current_payment * curr_n + current_balloon_amount",
+            "dependencies": [
+              "current_payment",
+              "curr_n",
+              "current_balloon_amount"
+            ],
+            "label": "Total amount paid remaining on current loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "curr_total_interest": {
+            "expression": "curr_total_paid - current_balance",
+            "dependencies": [
+              "curr_total_paid",
+              "current_balance"
+            ],
+            "label": "Total interest remaining on current loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_n": {
+            "expression": "new_term_months * new_periods_per_year / 12",
+            "dependencies": [
+              "new_term_months",
+              "new_periods_per_year"
+            ],
+            "label": "Refinance payment count (periods)",
+            "unit": "periods",
+            "format": "decimal",
+            "display": false
+          },
+          "new_r": {
+            "expression": "new_interest_rate_annual_pct / 100 / new_periods_per_year",
+            "dependencies": [
+              "new_interest_rate_annual_pct",
+              "new_periods_per_year"
+            ],
+            "label": "Refinance period interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "new_effective_principal": {
+            "expression": "current_balance + refinance_fees - new_balloon_amount / pow(1 + new_r, new_n)",
+            "dependencies": [
+              "current_balance",
+              "refinance_fees",
+              "new_balloon_amount",
+              "new_r",
+              "new_n"
+            ],
+            "label": "Present value for amortizing portion of refinance (accounts for balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_payment": {
+            "expression": "new_r == 0 ? new_effective_principal / new_n : (new_r * new_effective_principal) / (1 - pow(1 + new_r, -new_n))",
+            "dependencies": [
+              "new_r",
+              "new_effective_principal",
+              "new_n"
+            ],
+            "label": "Refinance payment (per period)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_total_paid": {
+            "expression": "new_payment * new_n + new_balloon_amount",
+            "dependencies": [
+              "new_payment",
+              "new_n",
+              "new_balloon_amount"
+            ],
+            "label": "Total amount paid under refinance",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_total_interest": {
+            "expression": "new_total_paid - (current_balance + refinance_fees)",
+            "dependencies": [
+              "new_total_paid",
+              "current_balance",
+              "refinance_fees"
+            ],
+            "label": "Total interest paid under refinance",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "curr_total_interest - new_total_interest",
+            "dependencies": [
+              "curr_total_interest",
+              "new_total_interest"
+            ],
+            "label": "Estimated interest savings (positive = savings)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "per_month_current": {
+            "expression": "current_payment * current_periods_per_year / 12",
+            "dependencies": [
+              "current_payment",
+              "current_periods_per_year"
+            ],
+            "label": "Equivalent monthly cost of current payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "per_month_new": {
+            "expression": "new_payment * new_periods_per_year / 12",
+            "dependencies": [
+              "new_payment",
+              "new_periods_per_year"
+            ],
+            "label": "Equivalent monthly cost of refinance payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_savings": {
+            "expression": "per_month_current - per_month_new",
+            "dependencies": [
+              "per_month_current",
+              "per_month_new"
+            ],
+            "label": "Estimated monthly cash savings (positive = saves cash each month)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "break_even_months": {
+            "expression": "monthly_savings > 0 ? refinance_fees / monthly_savings : 1e9",
+            "dependencies": [
+              "monthly_savings",
+              "refinance_fees"
+            ],
+            "label": "Months to recover refinance fees (large value indicates no payback with given inputs)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "time_saved_months": {
+            "expression": "(curr_n / current_periods_per_year - new_n / new_periods_per_year) * 12",
+            "dependencies": [
+              "curr_n",
+              "current_periods_per_year",
+              "new_n",
+              "new_periods_per_year"
+            ],
+            "label": "Difference in remaining time to payoff (months)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_payment",
+            "label": "Current payment (per period)",
+            "variable": "current_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_payment",
+            "label": "Refinance payment (per period)",
+            "variable": "new_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "curr_total_paid",
+            "label": "Total remaining to pay now",
+            "variable": "curr_total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_total_paid",
+            "label": "Total to pay after refinance",
+            "variable": "new_total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_savings",
+            "label": "Estimated monthly cash savings",
+            "variable": "monthly_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "break_even_months",
+            "label": "Estimated break-even (months)",
+            "variable": "break_even_months",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "time_saved_months",
+            "label": "Estimated time saved until payoff (months)",
+            "variable": "time_saved_months",
+            "unit": "months",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_balance",
+        "label": "Current remaining loan balance",
+        "type": "number",
+        "default": 35000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_interest_rate_annual_pct",
+        "label": "Current nominal annual interest rate (APR %) — e.g. 5.5",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "current_remaining_months",
+        "label": "Remaining term of current loan (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 840,
+        "step": 1
+      },
+      {
+        "id": "current_periods_per_year",
+        "label": "Current payment schedule (periods per year)",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12 per year)",
+            "value": "12"
+          },
+          {
+            "label": "Bi-weekly (26 per year)",
+            "value": "26"
+          }
+        ]
+      },
+      {
+        "id": "current_payment_amount",
+        "label": "Current payment (enter 0 to compute from balance/rate/term)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "current_balloon_amount",
+        "label": "Current balloon or final lump sum remaining (if none enter 0)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "new_interest_rate_annual_pct",
+        "label": "Refinance nominal annual interest rate (APR %)",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "new_term_months",
+        "label": "Refinance term (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 840,
+        "step": 1
+      },
+      {
+        "id": "new_periods_per_year",
+        "label": "Refinance payment schedule (periods per year)",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Monthly (12 per year)",
+            "value": "12"
+          },
+          {
+            "label": "Bi-weekly (26 per year)",
+            "value": "26"
+          }
+        ]
+      },
+      {
+        "id": "refinance_fees",
+        "label": "Total refinance fees (origination, title, etc.)",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "new_balloon_amount",
+        "label": "Refinance balloon (final lump) amount (if none enter 0)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares your existing RV loan to a refinance offer, supporting monthly and bi-weekly payment schedules and optional balloon payments. It estimates per-period payments, total paid, estimated interest saved, monthly cash flow impact, break-even months for fees, and change in payoff time.",
+      "Use the bi-weekly option to estimate the effect of switching from a monthly schedule to a bi-weekly schedule (26 payments per year). Enter 0 for current payment to auto-calculate the implied payment from your balance, rate and remaining term."
+    ],
+    "methodology": [
+      "Calculations convert annual nominal rates (entered as APR%) to period rates by dividing by periods per year (12 for monthly, 26 for bi-weekly). The amortizing payment formula is used for fixed payments: payment = r * PV / (1 - (1+r)^-n).",
+      "Balloon (final lump) amounts are modelled as a future value; the amortizing portion of the loan is reduced by the present value of the balloon so the periodic payment only amortizes the remainder. Refinance fees are added to the principal before computing the new amortizing schedule."
+    ],
+    "how_is_calculated": [
+      "Period rate = annual_rate_pct / 100 / periods_per_year",
+      "Number of periods = term_months * periods_per_year / 12",
+      "Amortizing payment (period) = r * PV / (1 - (1+r)^-n) ; if r == 0 then payment = PV / n",
+      "Present value reduced by balloon: PV_amort = PV + fees - balloon / (1+r)^n",
+      "Monthly savings = (current payment * current_periods_per_year / 12) - (new payment * new_periods_per_year / 12)",
+      "Break-even months = refinance_fees divided by monthly_savings; if monthly_savings is zero or negative there is no meaningful break-even with the given inputs"
+    ],
+    "examples": [
+      "Example: $35,000 remaining at 6.5% with 60 months left vs refinance at 4.5% for 60 months with $500 fees and bi-weekly payments. The tool will estimate the new bi-weekly payment, total interest difference and how many months to recover the $500 in fees based on monthly-equivalent cash savings.",
+      "If your refinance includes a balloon, the calculator treats that amount as a future lump sum and computes a smaller periodic payment for the amortizing remainder; total paid includes the balloon at the end."
+    ],
+    "summary": [
+      "Results are estimates for comparison and planning. Small differences in how institutions apply interest, rounding, payment posting dates, compounding conventions, and daily interest accrual can cause differences from lender schedules.",
+      "Inputs must reflect nominal APR% and true fees. For best accuracy, use the exact APR and fee amounts provided by the lender and confirm any balloon or prepayment conditions with the lender."
+    ],
+    "faqs": [
+      {
+        "question": "Does bi-weekly mean paying half of a monthly payment every two weeks?",
+        "answer": "Bi-weekly in this calculator uses 26 payments per year (every two weeks). That is not exactly 24 half-month payments; it results in two extra half-payments per year and slightly faster amortization compared to strictly halving a monthly payment."
+      },
+      {
+        "question": "How should I enter fees and balloon amounts?",
+        "answer": "Enter fees as the total upfront amount added to the refinance principal. Enter balloon amounts as the final lump sum expected at loan maturity. If none, enter 0."
+      },
+      {
+        "question": "Why might the calculator differ from my lender's payoff schedule?",
+        "answer": "Lenders may use different day-count conventions, post payments on different dates, apply daily interest, or round per-period interest differently. Use outputs here for comparison and ask the lender for an exact payoff schedule."
+      },
+      {
+        "question": "What should I do if monthly savings are zero or negative?",
+        "answer": "If monthly savings are zero or negative, the refinance fees are not recovered by monthly cashflow savings under the provided inputs. Consider different terms, rates, or fee negotiation."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Digital and computation standards, general reference",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards for financial instrument terminology and testing",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Numerical methods and best practices for computation",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Safety and operational guidance (contextual reference)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "Nominal annual interest rate expressed as a percentage. This calculator converts APR to period rates by dividing by the number of periods per year."
+      },
+      {
+        "term": "Bi-weekly",
+        "definition": "A payment schedule of 26 payments per year (every two weeks). Leads to slightly faster principal reduction compared with 12 monthly payments."
+      },
+      {
+        "term": "Amortizing payment",
+        "definition": "A periodic payment that covers interest and principal such that the loan is paid off after a fixed number of periods, excluding any balloon."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A final large lump-sum payment due at maturity. The calculator reduces the amortizing principal by the present value of the balloon when computing periodic payments."
+      },
+      {
+        "term": "Break-even",
+        "definition": "Number of months required for the monthly-equivalent cash savings to recoup the refinance fees."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

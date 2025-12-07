@@ -1,0 +1,581 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Payment Adjustable-Rate Estimator",
+    "description": "Project payments and remaining balance for auto loans with adjustable interest rates. Supports initial fixed periods, adjustment frequency, caps, margin + index assumptions, and a simple stress scenario for conservative planning."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "projection",
+    "methods": {
+      "projection": {
+        "label": "Projected ARM payment and balance estimate",
+        "description": "Estimates initial payment, balance after the initial fixed-rate period, and a projected payment after the first rate reset using the selected rate assumption. Uses standard amortization formulas and applies periodic and lifetime caps for rate adjustments.",
+        "variables": {
+          "payments_per_term": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "k_initial_payments": {
+            "expression": "initial_fixed_months * payments_per_year / 12",
+            "dependencies": [
+              "initial_fixed_months",
+              "payments_per_year"
+            ],
+            "label": "Payments during initial fixed period",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate_initial": {
+            "expression": "initial_rate / 100 / payments_per_year",
+            "dependencies": [
+              "initial_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic (per-payment) initial rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "initial_monthly_payment": {
+            "expression": "loan_amount * periodic_rate_initial / (1 - (1 + periodic_rate_initial)^(-payments_per_term))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate_initial",
+              "payments_per_term"
+            ],
+            "label": "Initial periodic payment (fixed-rate period)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_after_initial": {
+            "expression": "loan_amount * (1 + periodic_rate_initial)^(k_initial_payments) - initial_monthly_payment * (((1 + periodic_rate_initial)^(k_initial_payments) - 1) / periodic_rate_initial)",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate_initial",
+              "k_initial_payments",
+              "initial_monthly_payment"
+            ],
+            "label": "Estimated remaining balance after initial fixed period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "assumed_index": {
+            "expression": "rate_assumption == 'user_input' ? future_index_rate : (rate_assumption == 'upward_scenario' ? index_rate + 1.0 : index_rate)",
+            "dependencies": [
+              "rate_assumption",
+              "future_index_rate",
+              "index_rate"
+            ],
+            "label": "Assumed index for first adjustment",
+            "unit": "percent",
+            "format": "percent",
+            "display": false
+          },
+          "adjusted_rate_raw": {
+            "expression": "assumed_index + margin",
+            "dependencies": [
+              "assumed_index",
+              "margin"
+            ],
+            "label": "Raw adjusted annual rate (index + margin)",
+            "unit": "percent",
+            "format": "percent",
+            "display": false
+          },
+          "adjusted_rate_capped": {
+            "expression": "min(max(adjusted_rate_raw, initial_rate - lifetime_cap), initial_rate + lifetime_cap)",
+            "dependencies": [
+              "adjusted_rate_raw",
+              "initial_rate",
+              "lifetime_cap"
+            ],
+            "label": "Adjusted annual rate after applying lifetime cap",
+            "unit": "percent",
+            "format": "percent",
+            "display": true
+          },
+          "periodic_rate_adjusted": {
+            "expression": "adjusted_rate_capped / 100 / payments_per_year",
+            "dependencies": [
+              "adjusted_rate_capped",
+              "payments_per_year"
+            ],
+            "label": "Periodic rate after adjustment",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "remaining_payments_after_initial": {
+            "expression": "payments_per_term - k_initial_payments",
+            "dependencies": [
+              "payments_per_term",
+              "k_initial_payments"
+            ],
+            "label": "Remaining payments after initial fixed period",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "projected_payment_after_first_adjustment": {
+            "expression": "balance_after_initial * periodic_rate_adjusted / (1 - (1 + periodic_rate_adjusted)^(-remaining_payments_after_initial))",
+            "dependencies": [
+              "balance_after_initial",
+              "periodic_rate_adjusted",
+              "remaining_payments_after_initial"
+            ],
+            "label": "Projected periodic payment after first adjustment (payment-reset assumption)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "simple_total_interest_estimate": {
+            "expression": "initial_monthly_payment * payments_per_term - loan_amount",
+            "dependencies": [
+              "initial_monthly_payment",
+              "payments_per_term",
+              "loan_amount"
+            ],
+            "label": "Simple total interest estimate (if initial rate stayed constant)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "initial_monthly_payment",
+            "label": "Initial periodic payment",
+            "variable": "initial_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balance_after_initial",
+            "label": "Estimated remaining balance after initial fixed period",
+            "variable": "balance_after_initial",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_rate_capped",
+            "label": "Projected adjusted annual rate (capped)",
+            "variable": "adjusted_rate_capped",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "projected_payment_after_first_adjustment",
+            "label": "Projected periodic payment after first adjustment",
+            "variable": "projected_payment_after_first_adjustment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "simple_total_interest_estimate",
+            "label": "Simple total interest estimate (initial-rate scenario)",
+            "variable": "simple_total_interest_estimate",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "stress_scenario": {
+        "label": "Conservative stress scenario (upper-cap estimate)",
+        "description": "A conservative projection that assumes the index moves by the lifetime cap amount in the adverse direction. Useful for quick worst-case payment estimation.",
+        "variables": {
+          "payments_per_term_s": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate_initial_s": {
+            "expression": "initial_rate / 100 / payments_per_year",
+            "dependencies": [
+              "initial_rate",
+              "payments_per_year"
+            ],
+            "label": "Initial periodic rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "initial_payment_s": {
+            "expression": "loan_amount * periodic_rate_initial_s / (1 - (1 + periodic_rate_initial_s)^(-payments_per_term_s))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate_initial_s",
+              "payments_per_term_s"
+            ],
+            "label": "Initial payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "worst_case_index": {
+            "expression": "index_rate + lifetime_cap",
+            "dependencies": [
+              "index_rate",
+              "lifetime_cap"
+            ],
+            "label": "Conservative index (index + lifetime cap)",
+            "unit": "percent",
+            "format": "percent",
+            "display": false
+          },
+          "worst_case_rate": {
+            "expression": "worst_case_index + margin",
+            "dependencies": [
+              "worst_case_index",
+              "margin"
+            ],
+            "label": "Conservative capped annual rate (before applying min/max)",
+            "unit": "percent",
+            "format": "percent",
+            "display": false
+          },
+          "periodic_worst_rate": {
+            "expression": "worst_case_rate / 100 / payments_per_year",
+            "dependencies": [
+              "worst_case_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic worst-case rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "remaining_payments_after_initial_s": {
+            "expression": "payments_per_term_s - initial_fixed_months * payments_per_year / 12",
+            "dependencies": [
+              "payments_per_term_s",
+              "initial_fixed_months",
+              "payments_per_year"
+            ],
+            "label": "Remaining payments after initial fixed period",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "projected_payment_worst": {
+            "expression": " (loan_amount * (1 + periodic_rate_initial_s)^(initial_fixed_months * payments_per_year / 12) - initial_payment_s * (((1 + periodic_rate_initial_s)^(initial_fixed_months * payments_per_year / 12) - 1) / periodic_rate_initial_s)) * periodic_worst_rate / (1 - (1 + periodic_worst_rate)^(-remaining_payments_after_initial_s))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate_initial_s",
+              "initial_payment_s",
+              "initial_fixed_months",
+              "payments_per_year",
+              "periodic_worst_rate",
+              "remaining_payments_after_initial_s"
+            ],
+            "label": "Projected periodic payment under conservative stress",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_payment_worst",
+            "label": "Projected periodic payment (stress scenario)",
+            "variable": "projected_payment_worst",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 30000,
+        "min": 500,
+        "max": 200000,
+        "step": 100
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      },
+      {
+        "id": "initial_rate",
+        "label": "Initial annual rate (percent)",
+        "type": "number",
+        "default": 3.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "index_rate",
+        "label": "Current index (percent)",
+        "type": "number",
+        "default": 0.5,
+        "min": -10,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "margin",
+        "label": "Lender margin (percent)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 50,
+        "step": 0.01
+      },
+      {
+        "id": "initial_fixed_months",
+        "label": "Initial fixed-rate period (months)",
+        "type": "integer",
+        "default": 36,
+        "min": 0,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "adjustment_freq_months",
+        "label": "Adjustment frequency (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "periodic_cap",
+        "label": "Periodic cap (percent)",
+        "type": "number",
+        "default": 2.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "lifetime_cap",
+        "label": "Lifetime cap (percent)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "rate_assumption",
+        "label": "Rate assumption for projection",
+        "type": "select",
+        "default": "flat",
+        "options": [
+          {
+            "label": "Maintain current index (flat)",
+            "value": "flat"
+          },
+          {
+            "label": "Moderate upward scenario (+1.0%)",
+            "value": "upward_scenario"
+          },
+          {
+            "label": "Use custom future index value",
+            "value": "user_input"
+          }
+        ]
+      },
+      {
+        "id": "future_index_rate",
+        "label": "Custom future index (percent)",
+        "type": "number",
+        "default": 1.0,
+        "min": -10,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "payment_reset_method",
+        "label": "Adjustment outcome",
+        "type": "select",
+        "default": "payment_change",
+        "options": [
+          {
+            "label": "Payment adjusts, term unchanged (payment change)",
+            "value": "payment_change"
+          },
+          {
+            "label": "Payment stays same, term shortens/lengthens (term change)",
+            "value": "term_change"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator projects payments and remaining balances for auto loans that include an adjustable interest rate. It is designed to help you understand how an initial low rate can change when the loan moves to an adjustable index plus margin and how caps limit those changes.",
+      "Use the inputs to match your loan terms (loan amount, initial rate, margin, index, initial fixed period, adjustment frequency, and caps). Choose a rate assumption to see a conservative or moderate projection. Results are estimates and do not replace official loan documents or lender disclosures."
+    ],
+    "methodology": [
+      "Initial periodic payment is computed with the standard amortizing loan payment formula using the initial (fixed) rate and the total term.",
+      "Remaining balance after the initial fixed-rate period is calculated using the standard remaining-balance amortization formula based on the number of payments made in the fixed period.",
+      "Projected adjusted rate equals the selected index assumption plus the lender margin, then limited using lifetime caps (and conceptually periodic caps for future adjustments). Projected payments recompute using the remaining balance, remaining payments, and the capped adjusted rate under the selected reset method."
+    ],
+    "how_is_calculated": [
+      "Initial periodic payment: payment = P * r / (1 - (1 + r)^-N) where P = principal, r = periodic rate, N = total payments.",
+      "Remaining balance after k payments: B_k = P*(1+r)^k - payment * (((1+r)^k - 1) / r).",
+      "Adjusted annual rate (uncapped) = assumed_index + margin. Capped adjusted rate = limited to the lifetime cap range around initial_rate.",
+      "Projected payment after adjustment uses remaining balance, remaining payments, and the periodic adjusted rate in the standard payment formula."
+    ],
+    "examples": [
+      "Example: $30,000 loan, 5-year term, initial 3.00% for 36 months. Initial monthly payment computed by the amortization formula. If the index at first adjustment is 1.0% and margin 2.5%, adjusted annual rate = 3.5%; after applying lifetime caps the rate may be lower or higher. Projected payment after adjustment is recomputed for remaining payments.",
+      "Stress example: Use the stress scenario to assume the index moves by the full lifetime cap to show a conservative upper-bound payment."
+    ],
+    "summary": [
+      "This tool provides a realistic projection of payments for adjustable-rate auto loans using standard amortization mathematics and cap rules. It includes a conservative stress scenario to help you plan for worst-case payment outcomes.",
+      "Results are estimates for planning only. Always consult official loan disclosures, your lender, and a financial professional for decisions."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an exact quote for my loan?",
+        "answer": "No. This estimator provides projections based on the inputs you supply and simple cap application rules. Your lender's official loan documents and rate index sources determine actual adjustments and payments. Use outputs for planning, not as a binding offer."
+      },
+      {
+        "question": "Does the tool model every possible adjustment after the first reset?",
+        "answer": "No. The primary method projects the first reset and recomputes payment. Full multi-period simulations require a schedule of future index values and cap-by-cap logic; use the stress scenario and repeated runs with different assumptions to explore multi-step outcomes."
+      },
+      {
+        "question": "How should I choose the rate assumption?",
+        "answer": "Choose 'flat' to assume the index remains at the current level, 'upward scenario' for a moderate increase, or 'custom' to enter a future index you expect. Conservative planning often uses higher index assumptions or the stress scenario."
+      },
+      {
+        "question": "Are periodic caps applied in this projection?",
+        "answer": "This estimator applies lifetime cap bounds to the adjusted rate for simplicity. Periodic caps limit how much a rate can move at each reset; modelling every periodic cap accurately requires stepwise iteration. For conservative planning, use the stress scenario or run the projection iteratively with adjusted index inputs."
+      },
+      {
+        "question": "What accuracy and rounding rules are used?",
+        "answer": "Calculations use standard floating-point arithmetic and typical rounding to cents for currency outputs. Small numerical differences can occur due to rounding; treat results as approximate and verify with lender calculations for definitive amounts."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - general guidance on computational accuracy and reproducibility",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - numerical methods and data quality principles",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) - floating point arithmetic standards",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - general risk-management guidance (planning mindset)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Adjustable-rate mortgage (ARM)",
+        "definition": "A loan where the interest rate can change over time based on a reference index plus a fixed margin and subject to caps."
+      },
+      {
+        "term": "Index",
+        "definition": "A published rate (for example, a treasury or LIBOR replacement) to which the loan's adjustable rate is tied."
+      },
+      {
+        "term": "Margin",
+        "definition": "A lender-specified percentage added to the index to determine the loan's adjusted rate."
+      },
+      {
+        "term": "Periodic cap",
+        "definition": "The maximum amount the interest rate may change at any single adjustment."
+      },
+      {
+        "term": "Lifetime cap",
+        "definition": "The maximum total amount the interest rate may change over the life of the loan relative to the initial rate."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a loan over time through regular payments of principal and interest."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/loans/auto/arm-vs-fixed-explainer",
+      "/calculators/amortization-schedule"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

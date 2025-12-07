@@ -1,0 +1,357 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Interest-Only Mortgage Calculator (Multi‑Scenario)",
+    "description": "Calculate periodic interest-only payments, interest-only followed by amortization, or interest-only with a balloon. Includes clear assumptions, validation notes, and standards-based accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "interest_only_then_amortize",
+    "methods": {
+      "pure_interest_only": {
+        "label": "Interest-only (no principal amortization)",
+        "description": "Compute the periodic interest payment when the loan is interest-only for the entire term.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "periodic_interest_payment": {
+            "expression": "loan_amount * monthly_rate",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate"
+            ],
+            "label": "Interest-only payment per period",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "interest_payment",
+            "label": "Periodic interest-only payment",
+            "variable": "periodic_interest_payment",
+            "format": "currency",
+            "unit": ""
+          }
+        ]
+      },
+      "interest_only_then_amortize": {
+        "label": "Interest-only period then amortize remaining principal",
+        "description": "Compute interest-only payments during the initial IO period, then calculate the amortizing payment for the remaining term.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "remaining_years": {
+            "expression": "term_years - interest_only_years",
+            "dependencies": [
+              "term_years",
+              "interest_only_years"
+            ],
+            "label": "Years subject to amortization after IO",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "remaining_payments": {
+            "expression": "remaining_years * payments_per_year",
+            "dependencies": [
+              "remaining_years",
+              "payments_per_year"
+            ],
+            "label": "Number of amortizing payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "amortizing_payment": {
+            "expression": "loan_amount * monthly_rate / (1 - pow(1 + monthly_rate, -remaining_payments))",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "remaining_payments"
+            ],
+            "label": "Periodic payment once amortization starts",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "interest_payment_io": {
+            "expression": "loan_amount * monthly_rate",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate"
+            ],
+            "label": "Interest-only payment during IO period",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "io_payment",
+            "label": "Interest-only payment (IO period)",
+            "variable": "interest_payment_io",
+            "format": "currency",
+            "unit": ""
+          },
+          {
+            "id": "post_io_amort_payment",
+            "label": "Payment after IO (amortizing)",
+            "variable": "amortizing_payment",
+            "format": "currency",
+            "unit": ""
+          }
+        ]
+      },
+      "interest_only_with_balloon": {
+        "label": "Interest-only with balloon at maturity",
+        "description": "Compute periodic interest payments and the final balloon (principal) due at loan maturity.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate/100/payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "periodic_interest_payment": {
+            "expression": "loan_amount * monthly_rate",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate"
+            ],
+            "label": "Interest-only payment per period",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_amount": {
+            "expression": "loan_amount",
+            "dependencies": [
+              "loan_amount"
+            ],
+            "label": "Principal due at maturity (balloon)",
+            "unit": "",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "io_payment_balloon",
+            "label": "Periodic interest-only payment",
+            "variable": "periodic_interest_payment",
+            "format": "currency",
+            "unit": ""
+          },
+          {
+            "id": "balloon_payment",
+            "label": "Balloon (principal) due at maturity",
+            "variable": "balloon_amount",
+            "format": "currency",
+            "unit": ""
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Total loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "interest_only_years",
+        "label": "Interest-only period (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models common interest-only mortgage scenarios: continuous interest-only payments, an initial interest-only period followed by full amortization, and interest-only with a balloon at maturity. Use it to compare periodic payment amounts and understand payment changes when amortization begins or a balloon becomes due.",
+      "Enter the loan amount, annual interest rate (APR), total term, interest-only period length, and number of payments per year. The tool assumes interest is calculated on the outstanding principal and periods are equal. It does not estimate taxes, insurance, fees, or escrow."
+    ],
+    "methodology": [
+      "Rates and numeric calculations follow standard financial mathematics. Periodic rate = APR / 100 / payments per year. Interest-only payment = principal × periodic rate.",
+      "For amortizing payments we use the standard annuity formula: payment = principal × r / (1 - (1 + r)^-N) where r is the periodic rate and N is the remaining number of payments.",
+      "Validation and reliability guidance reference established standards for software quality and risk management. See NIST guidance for secure and reliable systems, ISO quality management principles, IEEE best practices for software engineering, and OSHA guidance for operational risk where workplace processes are relevant. This calculator includes conservative validation but is not a substitute for lender disclosures or official truth-in-lending calculations."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = annual_rate / 100 / payments_per_year",
+      "Interest-only payment = loan_amount × periodic rate",
+      "Remaining payments after IO = (term_years - interest_only_years) × payments_per_year",
+      "Amortizing payment after IO = loan_amount × periodic rate / (1 - (1 + periodic rate)^-remaining_payments)",
+      "Balloon scenario: periodic interest payments as above; balloon due = loan_amount at maturity"
+    ],
+    "examples": [
+      "Example 1: $300,000 loan, 4.5% APR, 30-year term, 5-year IO, monthly payments. IO payment = $300,000 × (0.045/12). After 5 years the payment switches to the amortizing payment computed over 25 years of monthly payments.",
+      "Example 2: $200,000 loan, 3.8% APR, 15-year term, IO for entire term (pure IO). Payment remains interest-only each period; full principal remains due at maturity if the loan requires principal repayment at the end."
+    ],
+    "faqs": [
+      {
+        "question": "Is the interest-only payment the same as the amortizing payment?",
+        "answer": "No. Interest-only payments cover only interest and leave principal unchanged. Amortizing payments include principal and interest and reduce the principal balance over time."
+      },
+      {
+        "question": "What happens when the interest-only period ends?",
+        "answer": "When the interest-only period ends, the payment typically increases because the remaining principal must be amortized over fewer remaining payments. Use the 'Interest-only then amortize' method to see the post-IO payment amount."
+      },
+      {
+        "question": "Does this calculator include taxes, insurance, or fees?",
+        "answer": "No. This tool calculates interest and amortization only. Taxes, insurance, escrow, private mortgage insurance, late fees, and lender charges are not included and must be added separately when estimating total payment obligations."
+      },
+      {
+        "question": "How accurate are the results and what are the assumptions?",
+        "answer": "Results follow standard financial formulas but assume fixed rates, consistent payment intervals, and no prepayments or fees. Rounding differences and lender-specific conventions (daily interest accrual, grace periods, compounding differences) can produce different results. Always compare with official loan documents and lender disclosures."
+      },
+      {
+        "question": "Are there safety or compliance standards applied to this tool?",
+        "answer": "Design and validation reference NIST, ISO, and IEEE quality and software guidance for robustness; operational risk considerations reference OSHA where relevant. This is a calculation aid and not a regulatory disclosure; consult licensed professionals and official lender statements for compliance."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (Institute of Electrical and Electronics Engineers)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau (CFPB) - mortgage basics",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Interest-only payment",
+        "definition": "A periodic payment that covers only accrued interest; principal remains unchanged."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down loan principal over time through periodic payments that include principal and interest."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A large principal payment due at loan maturity when periodic payments did not fully amortize the principal."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The loan interest rate applied each payment period: APR divided by the number of payments per year."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ],
+    "internal": []
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

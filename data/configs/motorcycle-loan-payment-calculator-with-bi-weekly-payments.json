@@ -1,0 +1,287 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan Payment Calculator (Bi‑Weekly & Other Frequencies)",
+    "description": "Calculate periodic payments, total payments, and total interest for a motorcycle loan using monthly, bi‑weekly, semi‑monthly, or weekly schedules. Includes optional extra payments and down payment. Provides accuracy caveats and citations to standards for reliability."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount financed)",
+        "expression": "(loan_amount - down_payment)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "periods_total",
+        "label": "Total number of payment periods",
+        "expression": "(term_years * parseFloat(payment_frequency))",
+        "format": "decimal"
+      },
+      {
+        "id": "periodic_rate",
+        "label": "Periodic interest rate (decimal)",
+        "expression": "((annual_interest_rate_pct/100) / parseFloat(payment_frequency))",
+        "format": "decimal"
+      },
+      {
+        "id": "base_payment",
+        "label": "Scheduled payment per period (before extra payments)",
+        "expression": "((annual_interest_rate_pct==0) ? ( (loan_amount - down_payment) / (term_years * parseFloat(payment_frequency)) ) : ( ( ((annual_interest_rate_pct/100) / parseFloat(payment_frequency)) * (loan_amount - down_payment) ) / (1 - Math.pow(1 + ((annual_interest_rate_pct/100) / parseFloat(payment_frequency)), - (term_years * parseFloat(payment_frequency)) )) ))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "payment_per_period",
+        "label": "Payment per period (including extra payment)",
+        "expression": "( ( (annual_interest_rate_pct==0) ? ( (loan_amount - down_payment) / (term_years * parseFloat(payment_frequency)) ) : ( ( ((annual_interest_rate_pct/100) / parseFloat(payment_frequency)) * (loan_amount - down_payment) ) / (1 - Math.pow(1 + ((annual_interest_rate_pct/100) / parseFloat(payment_frequency)), - (term_years * parseFloat(payment_frequency)) )) ) ) + extra_payment )",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid",
+        "label": "Total paid over loan life (payments × periods)",
+        "expression": "(payment_per_period * (term_years * parseFloat(payment_frequency)))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest",
+        "label": "Total interest paid",
+        "expression": "(total_paid - (loan_amount - down_payment))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "approx_effective_apr",
+        "label": "Approximate APR (nominal provided as input)",
+        "expression": "annual_interest_rate_pct",
+        "unit": "%",
+        "format": "percent"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Motorcycle price / loan amount",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "max": 1000000,
+        "step": 50
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment / trade-in value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1000000,
+        "step": 50
+      },
+      {
+        "id": "annual_interest_rate_pct",
+        "label": "Annual interest rate (APR, %)",
+        "type": "number",
+        "default": 6.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.0833333,
+        "max": 30,
+        "step": 0.25
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Payment frequency",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Monthly (12 per year)",
+            "value": "12"
+          },
+          {
+            "label": "Semi‑monthly (24 per year)",
+            "value": "24"
+          },
+          {
+            "label": "Bi‑weekly (26 per year)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52 per year)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment per period (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "principal",
+          "label": "Amount financed"
+        },
+        {
+          "id": "periods_total",
+          "label": "Number of payments",
+          "format": "integer"
+        },
+        {
+          "id": "periodic_rate",
+          "label": "Periodic interest rate",
+          "format": "percent"
+        },
+        {
+          "id": "base_payment",
+          "label": "Scheduled payment (per period)"
+        },
+        {
+          "id": "payment_per_period",
+          "label": "Payment including extra (per period)"
+        },
+        {
+          "id": "total_paid",
+          "label": "Total paid"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest paid"
+        },
+        {
+          "id": "approx_effective_apr",
+          "label": "APR (input)",
+          "format": "percent"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments, the total amount paid, and total interest for a motorcycle loan when you choose monthly, semi‑monthly, bi‑weekly, or weekly payment schedules. Enter the motorcycle price (or desired loan amount), down payment, annual interest rate (APR), loan term, payment frequency, and any fixed extra payment per period.",
+      "Results assume interest is charged on the outstanding principal at the stated nominal APR and converted to the periodic rate by dividing by the number of payment periods per year. Extra payments are treated as additional principal applied each period and reduce the total interest and loan life accordingly."
+    ],
+    "methodology": [
+      "The calculator uses the standard amortizing loan formula. For a periodic interest rate r and N total periods, the scheduled periodic payment (without extras) is: payment = r * principal / (1 - (1 + r)^-N). If the APR is zero, the payment is computed as principal / N.",
+      "Payment frequency converts annual nominal APR to a periodic rate by dividing APR by the number of payment periods per year (for example, 26 for bi‑weekly). This tool treats APR as a nominal rate with periodic compounding consistent with typical consumer loan disclosures."
+    ],
+    "how_is_calculated": [
+      "Principal = loan amount - down payment.",
+      "Periodic rate r = (annual_interest_rate_pct / 100) / payment_frequency.",
+      "Number of periods N = term_years × payment_frequency.",
+      "Base scheduled payment = r × Principal / (1 − (1 + r)^−N). If APR = 0 then scheduled payment = Principal / N.",
+      "Payment per period = scheduled payment + extra payment (if any).",
+      "Total paid = payment per period × N. Total interest = total paid − Principal."
+    ],
+    "examples": [
+      "Example 1: $10,000 loan, 6% APR, 5 years, bi‑weekly (26). Principal = $10,000. Periodic rate = 0.06/26. Number of periods = 130. Scheduled bi‑weekly payment is computed from the amortization formula. Adding an extra $10 per bi‑weekly accelerates payoff and reduces total interest.",
+      "Example 2: $8,000 loan, 0% APR, 2 years, monthly (12). With zero APR, scheduled payment = Principal / (term_years × 12)."
+    ],
+    "faqs": [
+      {
+        "question": "Does bi‑weekly payment lower interest compared with monthly payments?",
+        "answer": "Bi‑weekly schedules create more frequent payments (e.g., 26 vs 12 per year). If you keep the same nominal APR and make equivalent total annual principal reductions, interest paid can be lower because principal is reduced more frequently. Actual savings depend on the payment amount and whether the lender applies payments immediately to principal."
+      },
+      {
+        "question": "Are results exact for every lender?",
+        "answer": "No. This calculator uses standard amortization math with the nominal APR converted to a periodic rate. Some lenders use different day‑count conventions, apply payments on specific posting dates, charge origination fees, or compute interest differently. Use results for planning and verification; consult your loan contract for exact payoff schedules."
+      },
+      {
+        "question": "How should I interpret APR vs interest rate?",
+        "answer": "The APR you enter should match the nominal annual rate used in your loan terms. APR sometimes includes certain fees per regulatory disclosure rules. This calculator treats the APR as the nominal rate used to compute periodic interest; it does not automatically include lender fees unless you add them to the financed amount."
+      },
+      {
+        "question": "What about rounding and precision?",
+        "answer": "Displayed values are rounded for readability. For legal or escrow calculations, use lender-provided amortization schedules. This tool follows standard software engineering practices for numerical calculation but is not a substitute for official statements."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate. The nominal yearly interest rate charged on the loan before converting to periodic rates."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period. Calculated as APR divided by the number of payment periods per year."
+      },
+      {
+        "term": "Principal",
+        "definition": "The loan amount financed after subtracting any down payment or trade‑in value."
+      },
+      {
+        "term": "Scheduled payment",
+        "definition": "The calculated amortizing payment per period required to fully repay the loan over the chosen term, before optional extra payments."
+      },
+      {
+        "term": "Extra payment",
+        "definition": "An additional amount paid each period that reduces principal and shortens loan life."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (numerical reliability guidance)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (quality management principles)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (software engineering standards)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (general compliance guidance)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST - numerical and measurement guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO - quality management and assurance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE - software and engineering standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

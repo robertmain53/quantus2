@@ -1,0 +1,238 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Student Loan APR Calculator (Bi‑Weekly & Other Frequencies)",
+    "description": "Estimate periodic payments, total paid, total interest, and effective annual rate for student loans using monthly, bi‑weekly, or weekly schedules. Includes optional extra payments per period and clear accuracy caveats."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Payment per period",
+        "expression": "if(apr_percent==0, principal/(term_years*freq_per_year) + extra_per_period, ((apr_percent/100)/freq_per_year*principal)/(1-pow(1+(apr_percent/100)/freq_per_year, -term_years*freq_per_year)) + extra_per_period)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid",
+        "label": "Total amount paid",
+        "expression": "if(apr_percent==0, (principal/(term_years*freq_per_year) + extra_per_period) * term_years * freq_per_year, (((apr_percent/100)/freq_per_year*principal)/(1-pow(1+(apr_percent/100)/freq_per_year, -term_years*freq_per_year)) + extra_per_period) * term_years * freq_per_year)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest",
+        "label": "Total interest paid",
+        "expression": "if(apr_percent==0, ((principal/(term_years*freq_per_year) + extra_per_period) * term_years * freq_per_year) - principal, ((((apr_percent/100)/freq_per_year*principal)/(1-pow(1+(apr_percent/100)/freq_per_year, -term_years*freq_per_year)) + extra_per_period) * term_years * freq_per_year) - principal)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "payments_count",
+        "label": "Number of payments",
+        "expression": "term_years * freq_per_year",
+        "format": "integer"
+      },
+      {
+        "id": "effective_annual_rate",
+        "label": "Effective annual rate (EAR)",
+        "expression": "(pow(1 + (apr_percent/100)/freq_per_year, freq_per_year) - 1) * 100",
+        "unit": "%",
+        "format": "percent"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "apr_percent",
+        "label": "Nominal APR (annual percentage rate)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "number",
+        "default": 10,
+        "min": 0.1,
+        "max": 50,
+        "step": 0.25
+      },
+      {
+        "id": "freq_per_year",
+        "label": "Payment frequency",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Monthly (12 per year)",
+            "value": "12"
+          },
+          {
+            "label": "Bi‑weekly (26 per year)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52 per year)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_per_period",
+        "label": "Extra payment per period (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Payment per period",
+          "format": "currency"
+        },
+        {
+          "id": "total_paid",
+          "label": "Total amount paid",
+          "format": "currency"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest paid",
+          "format": "currency"
+        },
+        {
+          "id": "payments_count",
+          "label": "Number of payments",
+          "format": "integer"
+        },
+        {
+          "id": "effective_annual_rate",
+          "label": "Effective annual rate (EAR)",
+          "format": "percent"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the periodic payment, total paid, total interest, number of payments, and the effective annual rate for a student loan given a nominal APR and a payment frequency (monthly, bi‑weekly, or weekly). It supports adding a fixed extra payment each period to show its impact on interest and payoff time.",
+      "Use this tool for planning and comparison. Results are estimates produced by standard amortization formulas and should be compared to your lender's schedule or statement for final values."
+    ],
+    "methodology": [
+      "Calculations use the standard amortization formula for fixed-rate installment loans applied to the selected payment frequency (periodic interest rate = nominal APR / frequency).",
+      "When APR is zero, the calculator uses a simple division of principal across the number of scheduled payments. For nonzero APR the periodic payment is computed with a geometric annuity formula.",
+      "Effective annual rate (EAR) is derived from compounding the periodic rate over the year: EAR = (1 + r_period)^(periods_per_year) − 1."
+    ],
+    "how_is_calculated": [
+      "1) Convert nominal APR to periodic rate: r_period = (APR / 100) / payments_per_year.",
+      "2) Number of payments: n = term_years * payments_per_year.",
+      "3) Periodic payment (no extra): payment = (r_period * principal) / (1 - (1 + r_period)^-n). If APR = 0 use payment = principal / n.",
+      "4) If you enter extra_per_period, it is added to each scheduled payment and reduces total interest and may shorten the payoff time.",
+      "5) Total paid = payment_with_extra * n. Total interest = total paid − principal. EAR = (1 + r_period)^(payments_per_year) − 1."
+    ],
+    "faqs": [
+      {
+        "question": "Does switching to bi‑weekly payments always save interest?",
+        "answer": "Bi‑weekly schedules create more frequent compounding intervals compared with monthly schedules and can reduce interest if the payment structure increases the amount applied to principal sooner. Savings depend on whether your lender applies payments immediately and whether you actually make the extra amount required to match a true bi‑weekly plan."
+      },
+      {
+        "question": "Is the calculator precise for legal or billing disputes?",
+        "answer": "No. This calculator produces estimates based on standard formulas. For legal, tax, or billing disputes rely on official loan statements and lender amortization schedules. The tool includes accuracy caveats and is not a substitute for lender disclosures."
+      },
+      {
+        "question": "What if my loan has fees, changing rates, or capitalization?",
+        "answer": "This tool assumes a fixed nominal APR and fixed periodic payments. Loans with origination fees, variable rates, capitalization events, grace periods, or income‑driven repayment plans require specialized modeling and are not fully supported here."
+      },
+      {
+        "question": "Why is effective annual rate (EAR) different from APR?",
+        "answer": "APR is typically a nominal annual rate that does not reflect intra‑year compounding. EAR accounts for compounding within the year and therefore may be higher than the nominal APR for the same rate when payments compound multiple times each year."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov/"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — Loan and repayment information",
+        "url": "https://www.consumerfinance.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The nominal annual interest rate charged on a loan, expressed as a percentage. APR may not reflect compounding periods."
+      },
+      {
+        "term": "Effective annual rate (EAR)",
+        "definition": "The annual rate that accounts for intra‑year compounding: EAR = (1 + periodic_rate)^(periods_per_year) − 1."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of spreading loan payments over time where each payment covers interest first and then principal."
+      },
+      {
+        "term": "Payment frequency",
+        "definition": "How often payments are scheduled each year (e.g., monthly = 12, bi‑weekly = 26, weekly = 52). Affects periodic rate and number of payments."
+      }
+    ],
+    "summary": [
+      "This estimator applies standard fixed‑rate amortization formulas to the chosen payment frequency and includes optional per‑period extra payments.",
+      "Use lender statements for final billing values. The tool follows best practices for display of inputs and derived metrics and includes references to measurement and software standards for transparency."
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

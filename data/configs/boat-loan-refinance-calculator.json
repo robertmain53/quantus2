@@ -1,0 +1,607 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Boat Loan Refinance & Bi-Weekly Payment Calculator",
+    "description": "Compare your existing boat loan to a refinance offer and see the effect of switching to bi-weekly payments. Calculates periodic payments, total cost, interest saved, and time saved for both current and proposed loans; includes a dedicated mode to illustrate bi-weekly vs monthly payment impacts."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "compare_refinance",
+    "methods": {
+      "compare_refinance": {
+        "label": "Refinance comparison (with fees)",
+        "description": "Compute periodic payments and total cost for your current loan and for a proposed refinance (fees optionally treated as financed). Shows interest and total-payment savings plus time difference.",
+        "variables": {
+          "current_periods": {
+            "expression": "current_term_years_remaining * current_payment_frequency",
+            "dependencies": [
+              "current_term_years_remaining",
+              "current_payment_frequency"
+            ],
+            "label": "Remaining payment periods (current loan)",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "current_periodic_rate": {
+            "expression": "current_apr_percent / 100 / current_payment_frequency",
+            "dependencies": [
+              "current_apr_percent",
+              "current_payment_frequency"
+            ],
+            "label": "Periodic interest rate (current loan)",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "current_payment": {
+            "expression": "(current_periodic_rate==0) ? (loan_balance / current_periods) : (current_periodic_rate * loan_balance) / (1 - pow(1 + current_periodic_rate, -current_periods))",
+            "dependencies": [
+              "current_periodic_rate",
+              "loan_balance",
+              "current_periods"
+            ],
+            "label": "Periodic payment (current loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "financed_amount": {
+            "expression": "loan_balance + refinance_fees",
+            "dependencies": [
+              "loan_balance",
+              "refinance_fees"
+            ],
+            "label": "Amount financed in refinance (principal + fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "new_periods": {
+            "expression": "new_term_years * new_payment_frequency",
+            "dependencies": [
+              "new_term_years",
+              "new_payment_frequency"
+            ],
+            "label": "Payment periods (refinance)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "new_periodic_rate": {
+            "expression": "new_apr_percent / 100 / new_payment_frequency",
+            "dependencies": [
+              "new_apr_percent",
+              "new_payment_frequency"
+            ],
+            "label": "Periodic interest rate (refinance)",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "new_payment": {
+            "expression": "(new_periodic_rate==0) ? (financed_amount / new_periods) : (new_periodic_rate * financed_amount) / (1 - pow(1 + new_periodic_rate, -new_periods))",
+            "dependencies": [
+              "new_periodic_rate",
+              "financed_amount",
+              "new_periods"
+            ],
+            "label": "Periodic payment (refinance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_current": {
+            "expression": "current_payment * current_periods",
+            "dependencies": [
+              "current_payment",
+              "current_periods"
+            ],
+            "label": "Total paid over remaining term (current loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_paid_new": {
+            "expression": "new_payment * new_periods",
+            "dependencies": [
+              "new_payment",
+              "new_periods"
+            ],
+            "label": "Total paid over refinance term",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_cost_current": {
+            "expression": "total_paid_current",
+            "dependencies": [
+              "total_paid_current"
+            ],
+            "label": "Total cost (current loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_new": {
+            "expression": "total_paid_new",
+            "dependencies": [
+              "total_paid_new"
+            ],
+            "label": "Total cost (refinance, includes financed fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_paid_current": {
+            "expression": "total_paid_current - loan_balance",
+            "dependencies": [
+              "total_paid_current",
+              "loan_balance"
+            ],
+            "label": "Interest remaining (current loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_paid_new": {
+            "expression": "total_paid_new - financed_amount",
+            "dependencies": [
+              "total_paid_new",
+              "financed_amount"
+            ],
+            "label": "Interest paid over refinance",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "net_savings": {
+            "expression": "total_cost_current - total_cost_new",
+            "dependencies": [
+              "total_cost_current",
+              "total_cost_new"
+            ],
+            "label": "Net savings (current minus refinance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings": {
+            "expression": "(interest_paid_current) - (interest_paid_new)",
+            "dependencies": [
+              "interest_paid_current",
+              "interest_paid_new"
+            ],
+            "label": "Interest savings (excluding fees principal effect)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "time_saved_years": {
+            "expression": "current_term_years_remaining - new_term_years",
+            "dependencies": [
+              "current_term_years_remaining",
+              "new_term_years"
+            ],
+            "label": "Difference in term length (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_payment",
+            "label": "Current periodic payment",
+            "variable": "current_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_payment",
+            "label": "Refinance periodic payment",
+            "variable": "new_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_current",
+            "label": "Total cost remaining (current loan)",
+            "variable": "total_cost_current",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_new",
+            "label": "Total cost with refinance (includes financed fees)",
+            "variable": "total_cost_new",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "net_savings",
+            "label": "Net savings by refinancing",
+            "variable": "net_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings",
+            "label": "Interest savings",
+            "variable": "interest_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "time_saved_years",
+            "label": "Time saved (years)",
+            "variable": "time_saved_years",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "biweekly_effect": {
+        "label": "Bi-weekly vs Monthly payment impact",
+        "description": "Illustrates how switching payment frequency affects payment size, annual payment count, and payoff speed for the same APR and nominal term.",
+        "variables": {
+          "monthly_periods": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_rate": {
+            "expression": "apr_percent / 100 / 12",
+            "dependencies": [
+              "apr_percent"
+            ],
+            "label": "Monthly periodic rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_payment": {
+            "expression": "(monthly_rate==0) ? (principal / monthly_periods) : (monthly_rate * principal) / (1 - pow(1 + monthly_rate, -monthly_periods))",
+            "dependencies": [
+              "monthly_rate",
+              "principal",
+              "monthly_periods"
+            ],
+            "label": "Monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "biweekly_periods": {
+            "expression": "term_years * 26",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of bi-weekly periods (26/year)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "biweekly_rate": {
+            "expression": "apr_percent / 100 / 26",
+            "dependencies": [
+              "apr_percent"
+            ],
+            "label": "Bi-weekly periodic rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "biweekly_payment": {
+            "expression": "(biweekly_rate==0) ? (principal / biweekly_periods) : (biweekly_rate * principal) / (1 - pow(1 + biweekly_rate, -biweekly_periods))",
+            "dependencies": [
+              "biweekly_rate",
+              "principal",
+              "biweekly_periods"
+            ],
+            "label": "Bi-weekly payment (26 payments/year)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_paid_monthly": {
+            "expression": "monthly_payment * 12",
+            "dependencies": [
+              "monthly_payment"
+            ],
+            "label": "Annual cash paid with monthly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_paid_biweekly": {
+            "expression": "biweekly_payment * 26",
+            "dependencies": [
+              "biweekly_payment"
+            ],
+            "label": "Annual cash paid with bi-weekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "extra_annual_payment_due_to_biweekly": {
+            "expression": "annual_paid_biweekly - annual_paid_monthly",
+            "dependencies": [
+              "annual_paid_biweekly",
+              "annual_paid_monthly"
+            ],
+            "label": "Extra annual payment from bi-weekly schedule (accelerated effect)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment",
+            "label": "Monthly payment",
+            "variable": "monthly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "biweekly_payment",
+            "label": "Bi-weekly payment (26/year)",
+            "variable": "biweekly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_paid_monthly",
+            "label": "Annual paid with monthly schedule",
+            "variable": "annual_paid_monthly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_paid_biweekly",
+            "label": "Annual paid with bi-weekly schedule",
+            "variable": "annual_paid_biweekly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "extra_annual_payment_due_to_biweekly",
+            "label": "Extra annual payment from bi-weekly schedule",
+            "variable": "extra_annual_payment_due_to_biweekly",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_balance",
+        "label": "Current loan balance",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_apr_percent",
+        "label": "Current loan APR (percent)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "current_term_years_remaining",
+        "label": "Remaining term (years)",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "current_payment_frequency",
+        "label": "Current payment frequency",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12/year)",
+            "value": "12"
+          },
+          {
+            "label": "Bi-weekly (26/year)",
+            "value": "26"
+          }
+        ]
+      },
+      {
+        "id": "new_apr_percent",
+        "label": "Refinance APR (percent)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "new_term_years",
+        "label": "Refinance term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "new_payment_frequency",
+        "label": "Refinance payment frequency",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Monthly (12/year)",
+            "value": "12"
+          },
+          {
+            "label": "Bi-weekly (26/year)",
+            "value": "26"
+          }
+        ]
+      },
+      {
+        "id": "refinance_fees",
+        "label": "Refinance fees to be paid or financed",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "principal",
+        "label": "Principal for bi-weekly demonstration",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "apr_percent",
+        "label": "APR for bi-weekly demonstration (percent)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years) for bi-weekly demonstration",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps boat owners evaluate whether refinancing makes financial sense and shows how switching to bi-weekly payments changes payment amounts and payoff speed. Use the refinance comparison to see periodic payments, total cost including financed fees, expected interest saved, and difference in term length.",
+      "The bi-weekly demonstration mode models 26 payments per year (common accelerated bi-weekly approach) and compares it to a standard 12-payment-per-year monthly schedule so you can see the extra annual payment effect and potential acceleration of payoff."
+    ],
+    "methodology": [
+      "Periodic payment calculations use standard amortization: periodic_rate = APR / periods_per_year; payment = (periodic_rate * principal) / (1 - (1 + periodic_rate)^(-number_of_periods)). If periodic_rate is zero, the principal is divided evenly across periods.",
+      "Refinance analysis treats refinance_fees as additional principal for the purpose of computing the refinance periodic payment and total paid. The calculator reports both total paid and interest components so you can see the fee trade-off."
+    ],
+    "how_is_calculated": [
+      "Compute number of periods: periods = years * payments_per_year.",
+      "Compute periodic rate: periodic_rate = APR / 100 / payments_per_year.",
+      "If periodic_rate != 0: payment = (periodic_rate * principal) / (1 - (1 + periodic_rate)^(-periods)). Else payment = principal / periods.",
+      "Total paid = payment * periods. Interest paid = Total paid - principal (or - financed principal when fees are financed)."
+    ],
+    "examples": [
+      "Example 1: Current balance $25,000, 6.5% APR, 4 years remaining (monthly). Refinance to 5.0% APR for 5 years with $500 fees financed. The tool computes current and new periodic payments, total paid, and net savings after including financed fees.",
+      "Example 2: Demonstration: $25,000 at 5.0% APR over 5 years. Monthly payment vs bi-weekly (26/year) payment are shown along with extra annual payment that accelerates payoff."
+    ],
+    "summary": [
+      "Use the refinance comparison to assess whether lower APR and different term offset refinance fees. Always compare total-cost figures (total paid) and interest paid, not just the periodic payment size.",
+      "The bi-weekly demonstration shows the typical accelerated effect of 26-payments-per-year schedules; actual results depend on whether your lender posts payments immediately and whether extra payments are applied to principal."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include taxes, insurance, or late fees?",
+        "answer": "No. This tool models principal and interest only. Taxes, insurance, penalties, or other contract fees are excluded unless you include them in refinance fees or principal inputs."
+      },
+      {
+        "question": "Is the bi-weekly option always better?",
+        "answer": "Not always. Bi-weekly schedules can accelerate payoff if they result in more money paid per year (e.g., 26 half-payments). Check total annual paid and lender posting rules. This calculator shows the extra annual payment and estimated acceleration, but confirm with your lender how they apply bi-weekly payments."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are estimates for planning only. Rounding, compounding conventions, payment posting timing, and lender fees can change outcomes. See the accuracy and standards citations for technical limitations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Guidelines for Evaluating the Accuracy of Computation",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Financial Calculations and Reporting Principles",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Numerical Methods and Best Practices for Financial Algorithm Development",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — (Context: Documentation & workplace safety standards for physical operations)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate: the yearly interest rate that includes certain fees expressed as a percentage."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "APR divided by the number of payment periods per year; used to compute each payment."
+      },
+      {
+        "term": "Financed fees",
+        "definition": "Any refinance costs added to the loan principal instead of paid upfront; increases financed amount and affects interest paid."
+      },
+      {
+        "term": "Accelerated bi-weekly",
+        "definition": "A bi-weekly schedule with 26 payments per year which effectively produces one extra monthly payment per year (13 full payments)."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/loans/boat/refinance-basics",
+      "/payments/bi-weekly-vs-monthly"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

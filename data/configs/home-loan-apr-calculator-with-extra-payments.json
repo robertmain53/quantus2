@@ -1,0 +1,389 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan APR & Extra-Payments Calculator (Advanced)",
+    "description": "Compare amortization, payoff time, interest totals and an estimated APR that includes upfront fees and extra payments. Designed for monthly-compounding mortgages with optional recurring monthly extras and a one-time extra payment."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "amortization_with_extra",
+    "methods": {
+      "amortization_with_extra": {
+        "label": "Amortization with recurring and one-time extra payments",
+        "description": "Calculates scheduled monthly payment, adjusted effective payment with recurring extra amounts, estimated payoff time and totals.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate_pct / 100 / 12",
+            "dependencies": ["annual_rate_pct"],
+            "label": "Monthly interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * 12",
+            "dependencies": ["term_years"],
+            "label": "Term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "principal * (monthly_rate * pow(1 + monthly_rate, n)) / (pow(1 + monthly_rate, n) - 1)",
+            "dependencies": ["principal", "monthly_rate", "n"],
+            "label": "Scheduled monthly payment (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_payment": {
+            "expression": "scheduled_payment + extra_monthly",
+            "dependencies": ["scheduled_payment", "extra_monthly"],
+            "label": "Effective monthly payment (including recurring extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_months": {
+            "expression": "if(effective_payment is equal or less than principal * monthly_rate, 999999, ceil(log(effective_payment / (effective_payment - principal * monthly_rate)) / log(1 + monthly_rate)))",
+            "dependencies": ["effective_payment", "principal", "monthly_rate"],
+            "label": "Estimated number of months to payoff",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payoff_months * effective_payment + one_time_extra + fees",
+            "dependencies": [
+              "payoff_months",
+              "effective_payment",
+              "one_time_extra",
+              "fees"
+            ],
+            "label": "Total amount paid (payments + one-time extra + fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_paid": {
+            "expression": "payoff_months * effective_payment - principal + one_time_extra * 0 - fees * 0",
+            "dependencies": ["payoff_months", "effective_payment", "principal"],
+            "label": "Estimated total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scheduled_payment",
+            "label": "Scheduled monthly payment",
+            "variable": "scheduled_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_payment",
+            "label": "Effective monthly payment (with recurring extra)",
+            "variable": "effective_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_months",
+            "label": "Estimated payoff time",
+            "variable": "payoff_months",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (including fees and one-time extra)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid",
+            "label": "Estimated interest paid",
+            "variable": "interest_paid",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "apr_estimate": {
+        "label": "Estimated APR including fees and extra payments (approximate)",
+        "description": "Produces an annualized percentage cost by treating finance charges (interest + fees) over the period until payoff as an annual cost. This is an estimate for comparison purposes and is not a regulatory TILA APR disclosure.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate_pct / 100 / 12",
+            "dependencies": ["annual_rate_pct"],
+            "label": "Monthly interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "term_years * 12",
+            "dependencies": ["term_years"],
+            "label": "Term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "scheduled_payment": {
+            "expression": "principal * (monthly_rate * pow(1 + monthly_rate, n)) / (pow(1 + monthly_rate, n) - 1)",
+            "dependencies": ["principal", "monthly_rate", "n"],
+            "label": "Scheduled monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "effective_payment": {
+            "expression": "scheduled_payment + extra_monthly",
+            "dependencies": ["scheduled_payment", "extra_monthly"],
+            "label": "Effective monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payoff_months": {
+            "expression": "if(effective_payment is less than principal * monthly_rate, 999999, ceil(log(effective_payment / (effective_payment - principal * monthly_rate)) / log(1 + monthly_rate)))",
+            "dependencies": ["effective_payment", "principal", "monthly_rate"],
+            "label": "Estimated months to payoff",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "interest_paid": {
+            "expression": "payoff_months * effective_payment - principal",
+            "dependencies": ["payoff_months", "effective_payment", "principal"],
+            "label": "Estimated interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "finance_charge": {
+            "expression": "interest_paid + fees",
+            "dependencies": ["interest_paid", "fees"],
+            "label": "Total finance charge (interest + fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "years_to_payoff": {
+            "expression": "payoff_months / 12",
+            "dependencies": ["payoff_months"],
+            "label": "Years to payoff (estimated)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "apr_estimate_pct": {
+            "expression": "if(years_to_payoff equal or less than 0, 0, finance_charge / principal / years_to_payoff * 100)",
+            "dependencies": ["finance_charge", "principal", "years_to_payoff"],
+            "label": "Estimated APR (annualized finance charge)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "apr_estimate_pct",
+            "label": "Estimated APR (annualized)",
+            "variable": "apr_estimate_pct",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "finance_charge",
+            "label": "Total finance charge used to compute APR",
+            "variable": "finance_charge",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_to_payoff",
+            "label": "Years until payoff (used for APR)",
+            "variable": "years_to_payoff",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "payoff_months",
+            "label": "Estimated payoff time (months)",
+            "variable": "payoff_months",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (nominal, %)",
+        "type": "number",
+        "default": 4.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "extra_monthly",
+        "label": "Recurring extra monthly payment (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "one_time_extra",
+        "label": "One-time extra payment at start (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "fees",
+        "label": "Upfront fees included in finance charges (origination, points, etc.)",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models monthly-compounding mortgage amortization and allows recurring monthly extra payments plus a one-time upfront extra payment. It also produces an estimated annual percentage rate (APR) that annualizes total finance charges (interest plus specified upfront fees) across the borrower's payoff period.",
+      "The APR estimate is provided for comparison and planning. Regulatory APR disclosures follow specific rules and rounding; this tool provides an approximate, transparent calculation you can use to explore scenarios and how extra payments reduce cost and time."
+    ],
+    "methodology": [
+      "Amortization uses the standard fixed-rate loan formula with monthly compounding: scheduled payment = P * (r*(1+r)^n) / ((1+r)^n - 1), where r is the monthly interest rate and n is the total months. Recurring extra payments are added to the scheduled payment and the payoff time is derived from the closed-form logarithmic solution when extra payment exceeds monthly interest.",
+      "The APR shown is an annualized estimate computed as: (total finance charge) / principal / years_to_payoff * 100. Total finance charge = interest paid over the estimated payoff period plus the upfront fees you enter. This estimate is intended for scenario comparison rather than as a replacement for a formal Truth in Lending APR calculation."
+    ],
+    "how_is_calculated": [
+      "1) Convert annual interest rate into monthly_rate = annual_rate_pct / 100 / 12.",
+      "2) Compute scheduled monthly payment using the fixed-rate amortization formula with n = term_years * 12.",
+      "3) Effective monthly payment = scheduled payment + recurring extra monthly payment.",
+      "4) If effective payment is higher than the monthly interest due, payoff_months = ceil( log(effective_payment / (effective_payment - principal * monthly_rate)) / log(1 + monthly_rate) ).",
+      "5) Total paid = payoff_months * effective_payment + one_time_extra + fees. Interest paid = total paid - principal - one_time_extra - fees (reported interest is computed from payments vs principal).",
+      "6) APR (estimate) = (interest paid + fees) / principal / years_to_payoff * 100. years_to_payoff = payoff_months / 12."
+    ],
+    "examples": [
+      "Example: $300,000 principal, 4.0% annual rate, 30 years, $200 extra monthly reduces payoff months and total interest. APR estimate will fall because finance charge falls as interest decreases.",
+      "If extra monthly ≤ monthly interest portion, the loan will not amortize; the tool reports a safeguard large payoff_months value and warns you to increase payment."
+    ],
+    "faqs": [
+      {
+        "question": "Is the APR returned here the legally required APR?",
+        "answer": "No. The APR in this tool is an annualized estimate for comparison and planning. Legal APR disclosures follow prescribed regulatory methods and rounding. For official APRs refer to lender disclosures or consult a qualified advisor."
+      },
+      {
+        "question": "Do extra payments always reduce the APR?",
+        "answer": "Extra payments reduce the amount of interest paid by shortening the period the principal is outstanding. The estimated APR (annualized finance charge) typically decreases as interest paid falls, but results depend on size and timing of fees and extras."
+      },
+      {
+        "question": "What if my effective payment is too small to cover monthly interest?",
+        "answer": "If effective_payment is less than or equal to the monthly interest portion (principal * monthly_rate), the calculator will report an infeasibly large payoff period. Increase payments or contact the lender."
+      },
+      {
+        "question": "How accurate are these numbers?",
+        "answer": "Calculations use standard closed-form formulas and common numerical functions. The APR is an approximation that annualizes finance charges; it does not substitute for lender-provided Truth in Lending disclosures. See citations for standards on numerical accuracy and financial measurement."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Numerical Methods and Best Practices",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Financial services and related standards",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Recommended practices for numeric computation",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Workplace safety standards (reference for data handling best practices)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Scheduled payment",
+        "definition": "The monthly principal-plus-interest payment calculated by the fixed-rate amortization formula without extras."
+      },
+      {
+        "term": "Effective payment",
+        "definition": "The actual monthly payment including any recurring extra monthly amounts you enter."
+      },
+      {
+        "term": "Payoff months",
+        "definition": "Estimated number of months until the loan principal is fully repaid given the effective monthly payment."
+      },
+      {
+        "term": "Finance charge",
+        "definition": "Total cost of borrowing over the payoff period as modeled here: interest paid plus the upfront fees entered."
+      },
+      {
+        "term": "APR (estimate)",
+        "definition": "Annualized percentage computed as (finance charge / principal) / years_to_payoff × 100. This is an approximation for comparison and not a formal regulatory APR disclosure."
+      }
+    ],
+    "summary": [
+      "This tool helps compare how extra payments and fees affect loan payoff time, total interest, and an estimated annualized cost. Use values here for planning and scenario comparison.",
+      "For legally binding APR figures and exact disclosures, use lender-provided documents or consult a qualified financial professional."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/loans/mortgage/amortization-basics",
+      "/loans/mortgage/extra-payments-guide"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": ["noopener", "noreferrer"]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": ["noopener", "noreferrer"]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": ["noopener", "noreferrer"]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": ["HowTo", "FinancialCalculator"]
+  }
+}

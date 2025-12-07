@@ -1,0 +1,417 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Boat Loan Amortization Calculator with Extra Payments",
+    "description": "Estimate payments, payoff timing, interest paid, and savings when adding recurring or one-time extra payments to a boat loan. Supports common payment frequencies and a target-payoff calculation."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard",
+    "methods": {
+      "standard": {
+        "label": "Standard amortization with recurring extras",
+        "description": "Calculate the regular periodic payment for the loan and then estimate the reduced payoff time and interest when making recurring extra payments and a single one-time principal reduction.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_percent / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "N": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of scheduled payments",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "regular_payment": {
+            "expression": "principal * r / (1 - (1 + r) ^ (-N))",
+            "dependencies": [
+              "principal",
+              "r",
+              "N"
+            ],
+            "label": "Scheduled periodic payment (no extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_no_extra": {
+            "expression": "regular_payment * N - principal",
+            "dependencies": [
+              "regular_payment",
+              "N",
+              "principal"
+            ],
+            "label": "Total interest without extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "regular_payment + extra_recurring",
+            "dependencies": [
+              "regular_payment",
+              "extra_recurring"
+            ],
+            "label": "Total periodic payment including recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_with_extra": {
+            "expression": "-ln(1 - r * principal / payment_with_extra) / ln(1 + r)",
+            "dependencies": [
+              "r",
+              "principal",
+              "payment_with_extra"
+            ],
+            "label": "Estimated number of payments until payoff with recurring extra (continuous math)",
+            "unit": "payments",
+            "format": "decimal",
+            "display": false
+          },
+          "n_with_extra_rounded": {
+            "expression": "ceil(n_with_extra)",
+            "dependencies": [
+              "n_with_extra"
+            ],
+            "label": "Estimated number of payments until payoff (rounded up)",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "total_interest_with_extra": {
+            "expression": "payment_with_extra * n_with_extra_rounded - principal - one_time_extra",
+            "dependencies": [
+              "payment_with_extra",
+              "n_with_extra_rounded",
+              "principal",
+              "one_time_extra"
+            ],
+            "label": "Estimated total interest with extras (one-time extra applied as immediate principal reduction)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "total_interest_no_extra - total_interest_with_extra",
+            "dependencies": [
+              "total_interest_no_extra",
+              "total_interest_with_extra"
+            ],
+            "label": "Estimated interest saved by using extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "regular_payment",
+            "label": "Scheduled periodic payment (no extras)",
+            "variable": "regular_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_no_extra",
+            "label": "Total interest without extras",
+            "variable": "total_interest_no_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_with_extra_rounded",
+            "label": "Payments until paid off (with recurring extras)",
+            "variable": "n_with_extra_rounded",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "total_interest_with_extra",
+            "label": "Total interest with extras",
+            "variable": "total_interest_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "target_payoff": {
+        "label": "Required payment to meet a target payoff time",
+        "description": "Compute the periodic payment needed (accounting for recurring extra payments) to pay the loan in a user-specified number of years.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_percent / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "N_target": {
+            "expression": "desired_payoff_years * payments_per_year",
+            "dependencies": [
+              "desired_payoff_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments for target payoff",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "required_payment_gross": {
+            "expression": "principal * r / (1 - (1 + r) ^ (-N_target))",
+            "dependencies": [
+              "principal",
+              "r",
+              "N_target"
+            ],
+            "label": "Gross periodic payment needed (before subtracting recurring extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "required_payment_net": {
+            "expression": "required_payment_gross - extra_recurring",
+            "dependencies": [
+              "required_payment_gross",
+              "extra_recurring"
+            ],
+            "label": "Required periodic payment from scheduled payment (after recurring extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_required": {
+            "expression": "(required_payment_gross) * N_target - principal - one_time_extra",
+            "dependencies": [
+              "required_payment_gross",
+              "N_target",
+              "principal",
+              "one_time_extra"
+            ],
+            "label": "Estimated total interest to meet target payoff (one-time extra applied as immediate principal reduction)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_payment_net",
+            "label": "Required periodic payment (after recurring extra)",
+            "variable": "required_payment_net",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "required_payment_gross",
+            "label": "Required periodic payment (total, before recurring extra)",
+            "variable": "required_payment_gross",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_required",
+            "label": "Estimated total interest to meet target payoff",
+            "variable": "total_interest_required",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_percent",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Original loan term in years",
+        "type": "number",
+        "default": 10,
+        "min": 0.1,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (frequency)",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "extra_recurring",
+        "label": "Recurring extra payment per period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_start_payment",
+        "label": "Start recurring extra at which payment number",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "one_time_extra",
+        "label": "One-time extra payment (applied immediately in this estimate)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "one_time_extra_at_payment",
+        "label": "One-time extra payment applied at which payment number",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "desired_payoff_years",
+        "label": "Desired payoff time in years (for 'target payoff' method)",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models boat loan amortization and the effect of adding recurring or one-time extra payments. It estimates periodic payment amounts, the number of payments to payoff, total interest paid, and interest savings from extra payments.",
+      "Use the standard method to see a direct comparison of scheduled payments versus making recurring extras. Use the target-payoff method to find the periodic payment needed to retire the loan in a specified time."
+    ],
+    "methodology": [
+      "We compute periodic interest as the nominal annual rate divided by the number of payments per year and use the standard fixed-payment amortization formula to derive the base periodic payment.",
+      "To estimate the payoff time with recurring extras we apply the closed-form inverse of the capital recovery formula to approximate the reduced number of payments. One-time extras are treated as an immediate principal reduction in the estimate; detailed schedules with time-specific one-time reductions require an amortization table and iterative application."
+    ],
+    "how_is_calculated": [
+      "Periodic rate: r = annual_rate_percent / 100 / payments_per_year",
+      "Scheduled payment (no extras): payment = P * r / (1 - (1 + r)^(-N)) where N = term_years * payments_per_year",
+      "Estimated payments with recurring extra: solve N' from principal = payment_total * (1 - (1 + r)^(-N')) / r, where payment_total = scheduled payment + recurring extra; then round up to the next whole payment",
+      "One-time extra payments in these summary outputs are applied as an immediate principal reduction for simplicity; a precise schedule with a time-indexed one-time payment requires stepwise amortization"
+    ],
+    "examples": [
+      "Example 1: $30,000 principal, 6% APR, 10 years, monthly. Recurring extra $100 reduces the number of payments and saves interest shown in the outputs.",
+      "Example 2: To pay off a $20,000 loan in 5 years at 5% APR with biweekly payments, use the target-payoff method to determine the required periodic payment before/after recurring extras."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are the payoff and interest savings estimates?",
+        "answer": "Estimates use closed-form amortization formulas and simple adjustments for recurring extras. They are accurate for recurring extras applied each payment period. Because one-time extras are applied as an immediate principal reduction for summary outputs, exact schedules may differ slightly; for transaction-level accuracy, generate a full amortization schedule and apply extras at the exact payment index."
+      },
+      {
+        "question": "Do you calculate APR, fees, or balloon payments?",
+        "answer": "This tool models standard fixed-rate amortization and extra principal payments. It does not compute lender fees rolled into APR, balloon structures, interest-only periods, or changing interest rates. For APR compliance or disclosures, consult your lender's statements."
+      },
+      {
+        "question": "What payment frequencies are supported?",
+        "answer": "Monthly (12), biweekly (26), and weekly (52) frequencies are supported. The periodic rate and number of periods are adjusted accordingly."
+      },
+      {
+        "question": "How should I treat one-time extra payments?",
+        "answer": "For a reliable summary, enter one-time extras as an immediate principal reduction. For precise timing (for example a one-time payment applied mid-loan), use a detailed amortization schedule that applies the one-time extra at the specific payment number."
+      },
+      {
+        "question": "What standards and practices guide the calculator's development?",
+        "answer": "This tool follows secure software and numeric handling guidance and documentation practices referenced from standards organizations for numerical reproducibility, testing, and user safety."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a debt over time through regular payments that include principal and interest."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period; calculated as the annual rate divided by the number of payments per year."
+      },
+      {
+        "term": "Recurring extra payment",
+        "definition": "An additional amount added to each scheduled payment to reduce principal and shorten payoff time."
+      },
+      {
+        "term": "One-time extra payment",
+        "definition": "A single additional payment applied to principal, typically reducing the remaining balance immediately."
+      },
+      {
+        "term": "Target payoff",
+        "definition": "A user-specified payoff time used to compute the periodic payment required to retire the loan within that time frame."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) general site",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  }
+}

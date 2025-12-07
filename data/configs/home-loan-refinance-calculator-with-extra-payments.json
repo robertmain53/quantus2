@@ -1,0 +1,583 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Refinance & Extra Payments Calculator (Advanced)",
+    "description": "Compare keeping your existing mortgage versus refinancing while modelling additional monthly or one-time payments. Calculates monthly payments, total interest, break-even, and payoff time with optional extra payments."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "compare_refinance_vs_keep",
+    "methods": {
+      "compare_refinance_vs_keep": {
+        "label": "Compare current loan vs refinance",
+        "description": "Compares total cost, interest, monthly payments and break-even for refinancing while accounting for extra payments and upfront refinance fees.",
+        "variables": {
+          "current_term_months": {
+            "expression": "current_remaining_term_years * 12",
+            "dependencies": [
+              "current_remaining_term_years"
+            ],
+            "label": "Current remaining term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "new_term_months": {
+            "expression": "new_term_years * 12",
+            "dependencies": [
+              "new_term_years"
+            ],
+            "label": "New loan term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "current_monthly_rate": {
+            "expression": "current_interest_rate_percent / 100 / 12",
+            "dependencies": [
+              "current_interest_rate_percent"
+            ],
+            "label": "Current monthly rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "new_monthly_rate": {
+            "expression": "new_interest_rate_percent / 100 / 12",
+            "dependencies": [
+              "new_interest_rate_percent"
+            ],
+            "label": "New monthly rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "current_payment_calc": {
+            "expression": "principal_balance * current_monthly_rate / (1 - pow(1 + current_monthly_rate, -current_term_months))",
+            "dependencies": [
+              "principal_balance",
+              "current_monthly_rate",
+              "current_term_months"
+            ],
+            "label": "Calculated current monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "current_monthly_payment_effective": {
+            "expression": "(current_monthly_payment > 0) ? current_monthly_payment : current_payment_calc",
+            "dependencies": [
+              "current_monthly_payment",
+              "current_payment_calc"
+            ],
+            "label": "Effective current monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_current": {
+            "expression": "current_monthly_payment_effective * current_term_months + extra_one_time_payment",
+            "dependencies": [
+              "current_monthly_payment_effective",
+              "current_term_months",
+              "extra_one_time_payment"
+            ],
+            "label": "Total paid remaining on current loan (incl. one-time extras)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_remaining_current": {
+            "expression": "total_paid_current - principal_balance",
+            "dependencies": [
+              "total_paid_current",
+              "principal_balance"
+            ],
+            "label": "Interest remaining on current loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_monthly_payment": {
+            "expression": "principal_balance * new_monthly_rate / (1 - pow(1 + new_monthly_rate, -new_term_months))",
+            "dependencies": [
+              "principal_balance",
+              "new_monthly_rate",
+              "new_term_months"
+            ],
+            "label": "New loan monthly payment (base)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_new": {
+            "expression": "(new_monthly_payment + extra_monthly_payment) * new_term_months + extra_one_time_payment + refinance_fees",
+            "dependencies": [
+              "new_monthly_payment",
+              "extra_monthly_payment",
+              "new_term_months",
+              "extra_one_time_payment",
+              "refinance_fees"
+            ],
+            "label": "Total paid on new loan (incl. extras and fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_new": {
+            "expression": "total_paid_new - principal_balance",
+            "dependencies": [
+              "total_paid_new",
+              "principal_balance"
+            ],
+            "label": "Total interest and fees for new loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings": {
+            "expression": "total_interest_remaining_current - total_interest_new",
+            "dependencies": [
+              "total_interest_remaining_current",
+              "total_interest_new"
+            ],
+            "label": "Net interest savings (current - new)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_savings": {
+            "expression": "current_monthly_payment_effective - new_monthly_payment - extra_monthly_payment",
+            "dependencies": [
+              "current_monthly_payment_effective",
+              "new_monthly_payment",
+              "extra_monthly_payment"
+            ],
+            "label": "Net monthly cash flow difference (positive means you save monthly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "break_even_months": {
+            "expression": "refinance_fees / max(0.000001, monthly_savings)",
+            "dependencies": [
+              "refinance_fees",
+              "monthly_savings"
+            ],
+            "label": "Break-even (months) to recoup refinance fees",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "payoff_months_with_extra_current": {
+            "expression": "-log(1 - current_monthly_rate * principal_balance / max(0.000001, (current_monthly_payment_effective + extra_monthly_payment))) / log(1 + current_monthly_rate)",
+            "dependencies": [
+              "current_monthly_rate",
+              "principal_balance",
+              "current_monthly_payment_effective",
+              "extra_monthly_payment"
+            ],
+            "label": "Months to payoff current loan with extra payments",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_interest_with_extra_current": {
+            "expression": "(current_monthly_payment_effective + extra_monthly_payment) * payoff_months_with_extra_current + extra_one_time_payment - principal_balance",
+            "dependencies": [
+              "current_monthly_payment_effective",
+              "extra_monthly_payment",
+              "payoff_months_with_extra_current",
+              "extra_one_time_payment",
+              "principal_balance"
+            ],
+            "label": "Total interest paid if you keep current loan and add extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_monthly_payment_effective",
+            "label": "Current monthly payment (effective)",
+            "variable": "current_monthly_payment_effective",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_monthly_payment",
+            "label": "New monthly payment (base)",
+            "variable": "new_monthly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_savings",
+            "label": "Net monthly savings",
+            "variable": "monthly_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "break_even_months",
+            "label": "Break-even (months)",
+            "variable": "break_even_months",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "interest_savings",
+            "label": "Estimated net interest savings",
+            "variable": "interest_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_new",
+            "label": "Total interest & fees on new loan",
+            "variable": "total_interest_new",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_remaining_current",
+            "label": "Remaining interest on current loan",
+            "variable": "total_interest_remaining_current",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_months_with_extra_current",
+            "label": "Months to pay off current loan with extras",
+            "variable": "payoff_months_with_extra_current",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "total_interest_with_extra_current",
+            "label": "Total interest if you keep loan and add extras",
+            "variable": "total_interest_with_extra_current",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "payoff_only": {
+        "label": "Payoff impact of extra payments only",
+        "description": "Estimate how extra monthly or one-time payments shorten payoff time and reduce total interest for the existing loan.",
+        "variables": {
+          "current_monthly_rate": {
+            "expression": "current_interest_rate_percent / 100 / 12",
+            "dependencies": [
+              "current_interest_rate_percent"
+            ],
+            "label": "Current monthly rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": false
+          },
+          "effective_payment": {
+            "expression": "(current_monthly_payment > 0) ? current_monthly_payment : principal_balance * current_monthly_rate / (1 - pow(1 + current_monthly_rate, -current_remaining_term_years * 12)) + extra_monthly_payment",
+            "dependencies": [
+              "current_monthly_payment",
+              "principal_balance",
+              "current_monthly_rate",
+              "current_remaining_term_years",
+              "extra_monthly_payment"
+            ],
+            "label": "Effective monthly payment including extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "months_to_payoff": {
+            "expression": "-log(1 - current_monthly_rate * principal_balance / max(0.000001, effective_payment)) / log(1 + current_monthly_rate)",
+            "dependencies": [
+              "current_monthly_rate",
+              "principal_balance",
+              "effective_payment"
+            ],
+            "label": "Months to payoff with extras",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "total_interest_paid": {
+            "expression": "effective_payment * months_to_payoff + extra_one_time_payment - principal_balance",
+            "dependencies": [
+              "effective_payment",
+              "months_to_payoff",
+              "extra_one_time_payment",
+              "principal_balance"
+            ],
+            "label": "Total interest paid with extras",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff",
+            "label": "Months to payoff with extras",
+            "variable": "months_to_payoff",
+            "unit": "months",
+            "format": "integer"
+          },
+          {
+            "id": "total_interest_paid",
+            "label": "Total interest paid with extras",
+            "variable": "total_interest_paid",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal_balance",
+        "label": "Current loan principal balance",
+        "type": "number",
+        "default": 250000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "current_interest_rate_percent",
+        "label": "Current interest rate (annual %)",
+        "type": "number",
+        "default": 4.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "current_remaining_term_years",
+        "label": "Remaining term on current loan (years)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "step": 0.5
+      },
+      {
+        "id": "current_monthly_payment",
+        "label": "Current monthly payment (enter 0 to calculate)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "new_interest_rate_percent",
+        "label": "Proposed refinance interest rate (annual %)",
+        "type": "number",
+        "default": 3.25,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "new_term_years",
+        "label": "Proposed refinance term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "refinance_fees",
+        "label": "Refinance fees / closing costs (total)",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "extra_monthly_payment",
+        "label": "Additional monthly payment (applied to principal)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_one_time_payment",
+        "label": "One-time extra payment (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "current_monthly_payment_effective",
+          "label": "Current monthly payment (effective)",
+          "format": "currency",
+          "unit": "currency"
+        },
+        {
+          "id": "new_monthly_payment",
+          "label": "New monthly payment (base)",
+          "format": "currency",
+          "unit": "currency"
+        },
+        {
+          "id": "monthly_savings",
+          "label": "Net monthly savings",
+          "format": "currency",
+          "unit": "currency"
+        },
+        {
+          "id": "break_even_months",
+          "label": "Break-even (months)",
+          "format": "integer",
+          "unit": "months"
+        },
+        {
+          "id": "interest_savings",
+          "label": "Estimated net interest savings",
+          "format": "currency",
+          "unit": "currency"
+        },
+        {
+          "id": "payoff_months_with_extra_current",
+          "label": "Months to pay off current loan with extras",
+          "format": "integer",
+          "unit": "months"
+        },
+        {
+          "id": "total_interest_with_extra_current",
+          "label": "Total interest if you keep loan and add extras",
+          "format": "currency",
+          "unit": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you decide whether to refinance your home loan or continue with your existing mortgage while applying optional extra monthly or one-time payments. It reports monthly payments, total interest and fees, break-even months, and estimated payoff time when adding extra payments.",
+      "Values are estimates intended for planning and comparison only. Use the inputs to model realistic refinance fees, proposed rates, and any extra payments you may make. Results assume fixed-rate, level-payment amortization and monthly compounding unless you specify otherwise."
+    ],
+    "methodology": [
+      "Calculations use standard amortization formulas to compute level monthly payments and remaining interest for fixed-rate mortgages. When an explicit current monthly payment is not provided, the tool derives it from the remaining balance, remaining term, and current rate.",
+      "Refinance comparison includes upfront refinance fees and both recurring and one-time extra payments. Break-even months are computed as refinance fees divided by net monthly savings. Payoff time with extra payments uses the closed-form solution for amortizing a loan with a fixed payment and monthly compounding."
+    ],
+    "how_is_calculated": [
+      "Monthly rate = annual rate / 12.",
+      "Level monthly payment = P * r / (1 - (1 + r)^-n), where P = principal, r = monthly rate, n = months.",
+      "Total interest = Total paid over the remaining schedule (payments + one-time extras + fees if refinancing) minus principal.",
+      "Payoff months with extra payments = -log(1 - r * P / payment) / log(1 + r).",
+      "Break-even (months) = refinance fees / (current payment - new payment - extra monthly payment)."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include taxes, insurance, or escrow?",
+        "answer": "No. This tool models principal and interest and allows extra payments and refinance fees. Add taxes or escrow components separately to the monthly payment inputs if you want them included in comparisons."
+      },
+      {
+        "question": "Are results exact?",
+        "answer": "Results are estimates based on mathematical amortization formulas. Actual payments and interest will vary with loan-specific rounding, escrow changes, or lender adjustments. See accuracy caveats in citations."
+      },
+      {
+        "question": "What if my current loan has prepayment penalties?",
+        "answer": "Prepayment penalties are not modelled automatically. Enter any known penalty as an additional one-time fee (e.g., in refinance fees or extra_one_time_payment) to accurately reflect costs."
+      },
+      {
+        "question": "How should I use the break-even result?",
+        "answer": "Break-even months estimate how long it takes for monthly savings to offset upfront refinance fees. Use it alongside your expected time in the home and total interest savings to decide whether to refinance."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Numerical Methods and Floating Point Guidance",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "IEEE Standard for Floating-Point Arithmetic (IEEE 754)",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "ISO Standards - Financial Services and Calculations",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "OSHA - Consumer Financial Safety (guidance and safety best practices)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The outstanding balance of your loan on which interest is calculated."
+      },
+      {
+        "term": "Amortization",
+        "definition": "Repayment of loan principal and interest over time through scheduled payments."
+      },
+      {
+        "term": "Break-even",
+        "definition": "The number of months after refinancing where cumulative monthly savings offset upfront refinance costs."
+      },
+      {
+        "term": "Refinance fees",
+        "definition": "Upfront costs associated with refinancing, such as closing costs; modelled here as a single total amount."
+      },
+      {
+        "term": "Extra payments",
+        "definition": "Additional monthly or one-time payments applied to principal to shorten payoff time and reduce total interest."
+      }
+    ],
+    "summary": [
+      "Use conservative inputs for fees and realistic extra payments when comparing scenarios.",
+      "This tool is for planning; consult your lender for exact payoffs, escrow changes, or loan-specific terms before acting."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

@@ -1,0 +1,448 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Motorcycle Loan — Balloon Payment Calculator (with extra payments)",
+    "description": "Interactive calculator to estimate periodic payments and final balloon due on a motorcycle loan, and to compare the effect of recurring extra principal payments. Designed for monthly or other periodic payment schedules; includes conservative accuracy notes and standards-based calibration guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_balloon",
+    "methods": {
+      "standard_balloon": {
+        "label": "Standard balloon payment calculation",
+        "description": "Compute the regular periodic payment when a fixed balloon is due at loan end and report total paid and interest over the contract term.",
+        "variables": {
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments (n)",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "r": {
+            "expression": "annual_rate_pct / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate (r)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "pv_balloon": {
+            "expression": "balloon_amount / pow(1 + r, n)",
+            "dependencies": [
+              "balloon_amount",
+              "r",
+              "n"
+            ],
+            "label": "Present value of balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_base": {
+            "expression": "r * (principal - pv_balloon) / (1 - pow(1 + r, -n))",
+            "dependencies": [
+              "r",
+              "principal",
+              "pv_balloon",
+              "n"
+            ],
+            "label": "Periodic payment (excluding balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_base": {
+            "expression": "(payment_base * n) + balloon_amount",
+            "dependencies": [
+              "payment_base",
+              "n",
+              "balloon_amount"
+            ],
+            "label": "Total paid (payments + balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_base": {
+            "expression": "total_paid_base - principal",
+            "dependencies": [
+              "total_paid_base",
+              "principal"
+            ],
+            "label": "Total interest paid (base)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_base",
+            "label": "Periodic payment",
+            "variable": "payment_base",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_amount",
+            "label": "Balloon due at end of term",
+            "variable": "balloon_amount",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_base",
+            "label": "Estimated total paid",
+            "variable": "total_paid_base",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_base",
+            "label": "Estimated total interest",
+            "variable": "total_interest_base",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "balloon_with_recurring_extra": {
+        "label": "Balloon with recurring extra monthly payments",
+        "description": "Estimates how steady extra principal payments reduce the final balloon and total cost. This is an analytical estimate assuming extra payments apply to principal on each scheduled payment date.",
+        "variables": {
+          "n": {
+            "expression": "term_years * payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments (n)",
+            "unit": "payments",
+            "format": "integer",
+            "display": false
+          },
+          "r": {
+            "expression": "annual_rate_pct / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate (r)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "pv_balloon": {
+            "expression": "balloon_amount / pow(1 + r, n)",
+            "dependencies": [
+              "balloon_amount",
+              "r",
+              "n"
+            ],
+            "label": "Present value of balloon (used to derive base payment)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_base": {
+            "expression": "r * (principal - pv_balloon) / (1 - pow(1 + r, -n))",
+            "dependencies": [
+              "r",
+              "principal",
+              "pv_balloon",
+              "n"
+            ],
+            "label": "Scheduled periodic payment (base)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_with_extra": {
+            "expression": "payment_base + extra_payment_monthly",
+            "dependencies": [
+              "payment_base",
+              "extra_payment_monthly"
+            ],
+            "label": "Periodic payment including recurring extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_after_n_with_extra": {
+            "expression": "principal * pow(1 + r, n) - payment_with_extra * ((pow(1 + r, n) - 1) / r)",
+            "dependencies": [
+              "principal",
+              "r",
+              "n",
+              "payment_with_extra"
+            ],
+            "label": "Estimated remaining balance at term end after extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "adjusted_balloon_due": {
+            "expression": "balance_after_n_with_extra < 0 ? 0 : balance_after_n_with_extra",
+            "dependencies": [
+              "balance_after_n_with_extra"
+            ],
+            "label": "Adjusted balloon due after extra payments (clamped at 0)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_with_extra": {
+            "expression": "(payment_with_extra * n) + adjusted_balloon_due",
+            "dependencies": [
+              "payment_with_extra",
+              "n",
+              "adjusted_balloon_due"
+            ],
+            "label": "Estimated total paid (with recurring extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_base": {
+            "expression": "(payment_base * n) + balloon_amount",
+            "dependencies": [
+              "payment_base",
+              "n",
+              "balloon_amount"
+            ],
+            "label": "Estimated total paid (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_saved": {
+            "expression": "total_paid_base - total_paid_with_extra",
+            "dependencies": [
+              "total_paid_base",
+              "total_paid_with_extra"
+            ],
+            "label": "Estimated interest and fees reduced by extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_with_extra",
+            "label": "Periodic payment (with recurring extra)",
+            "variable": "payment_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_balloon_due",
+            "label": "Estimated balloon due after extra payments",
+            "variable": "adjusted_balloon_due",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_with_extra",
+            "label": "Estimated total paid (with extra)",
+            "variable": "total_paid_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated reduction in total cost vs scheduled (approx.)",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (percent, nominal)",
+        "type": "number",
+        "default": 6.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.0833333,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "balloon_amount",
+        "label": "Contractual balloon amount due at end of term",
+        "type": "number",
+        "default": 2000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_monthly",
+        "label": "Recurring extra principal per period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_payment_one_time",
+        "label": "One-time extra principal (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_one_time_month",
+        "label": "Month number to apply one-time extra (0 = ignore)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool estimates the recurring periodic payment on a motorcycle loan that includes a contractual balloon payment at the end of the term, and compares the effect of steady extra principal payments on the final balloon and total cost.",
+      "Two calculation modes are provided: the standard scheduled balloon calculation and an analytical estimate that shows how recurring extra principal payments reduce the terminal balloon and overall cost. Use the fields to model your contract; results are estimates and intended for planning and comparison."
+    ],
+    "methodology": [
+      "The calculator models fixed-rate installment schedules with a contractual balloon due at the end of the term. The base periodic payment is derived by discounting the balloon to present value and computing the level payment that amortizes the remaining principal over the term.",
+      "For recurring extra payments the tool applies an analytical formula to estimate the outstanding balance after the scheduled number of payments when the larger periodic payment (scheduled + extra) is applied each period. The adjusted balloon equals that estimated remaining balance (clamped at zero)."
+    ],
+    "how_is_calculated": [
+      "Periodic rate r = annual interest rate (decimal) ÷ payments per year.",
+      "Number of payments n = term (years) × payments per year.",
+      "Present value of balloon = balloon_amount ÷ (1 + r)^n.",
+      "Base periodic payment = r × (principal − present value of balloon) ÷ (1 − (1 + r)^−n).",
+      "With recurring extra payment, new periodic payment = base periodic payment + extra_payment_monthly. Remaining balance after n periods is estimated by principal × (1 + r)^n − payment_with_extra × (( (1 + r)^n − 1) ÷ r). Adjusted balloon = max(remaining balance, 0)."
+    ],
+    "examples": [
+      "Example: $10,000 loan, 6% APR, 5 years, monthly payments (12/year), $2,000 balloon. The calculator returns the monthly payment excluding the $2,000 balloon and the total paid over the contract.",
+      "Example: Same loan with $100 recurring extra per month. The tool shows the higher monthly outlay, a reduced balloon at term, and an estimated reduction in total cost versus the scheduled plan."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include fees, taxes, or insurance?",
+        "answer": "No. This calculator models interest and principal flows only. It does not include dealer fees, taxes, insurance, or late fees. Add those amounts separately when comparing offers."
+      },
+      {
+        "question": "How accurate is the adjusted balloon estimate when I make extra payments?",
+        "answer": "The adjusted balloon is an analytical estimate assuming extra payments are applied to principal on each scheduled payment date. It does not simulate irregular payment timing, fee capitalization, or lender-specific posting rules. For legally binding payoff numbers, request a payoff statement from your lender."
+      },
+      {
+        "question": "What happens if the interest rate is zero?",
+        "answer": "At a zero periodic rate the scheduled payment simplifies to (principal − balloon) ÷ n. The calculator uses the algebraic formula above; consult the methodology notes for the zero-rate simplification."
+      },
+      {
+        "question": "Are one-time extra payments modelled?",
+        "answer": "A one-time extra payment input is provided for planning, but the current analytical method focuses on recurring extra payments. One-time extras may be approximated by reducing principal by that amount at the indicated month; for precise schedules use a detailed amortization simulation or request lender payoff figures."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Cybersecurity Framework overview",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO standardization and financial services overview",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE guidance on numerical accuracy and software testing",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "U.S. Consumer Financial Protection Bureau — Loan shopping and disclosures",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "A lump-sum payment contractually due at the end of a loan term after smaller periodic payments were made; often used to lower periodic payments."
+      },
+      {
+        "term": "Periodic payment",
+        "definition": "The regular payment amount due each period (for example, monthly) excluding any terminal balloon."
+      },
+      {
+        "term": "Present value of balloon",
+        "definition": "The discounted value of the future balloon payment at the periodic interest rate; used to compute the level periodic payment."
+      },
+      {
+        "term": "Adjusted balloon (with extra payments)",
+        "definition": "Estimated remaining balance at term end after applying recurring extra principal payments each period; clamped at zero in this tool."
+      }
+    ],
+    "summary": [
+      "This calculator provides quick, conservative estimates to compare scheduled balloon commitments with scenarios that include recurring extra principal payments. It is intended for planning and comparison, not as a substitute for lender payoff statements.",
+      "For regulatory compliance and high-assurance calculations use lender-provided payoff figures and consult the referenced standards for secure numeric processing and auditability."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loan/motorcycle-loan",
+      "/help/loan-amortization-explained"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

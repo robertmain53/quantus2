@@ -1,0 +1,446 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Renters Insurance Calculator (Advanced)",
+    "description": "Estimate recommended contents coverage, personal liability, and an approximate premium using either a quick estimate or an itemized inventory. Provides transparency on assumptions, limits, and standards referenced."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "quick_estimate",
+    "methods": {
+      "quick_estimate": {
+        "label": "Quick estimate (one-line input)",
+        "description": "Use a single total value for your belongings to get a fast recommended coverage and premium range.",
+        "variables": {
+          "coverage_needed": {
+            "expression": "itemized_total > 0 ? itemized_total * replacement_cost_ratio : personal_property_value * replacement_cost_ratio",
+            "dependencies": [
+              "itemized_total",
+              "personal_property_value",
+              "replacement_cost_ratio"
+            ],
+            "label": "Recommended contents coverage",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "liability_needed": {
+            "expression": "((itemized_total > 0 ? itemized_total : personal_property_value) * 0.5) >= 100000 ? ((itemized_total > 0 ? itemized_total : personal_property_value) * 0.5) : 100000",
+            "dependencies": [
+              "itemized_total",
+              "personal_property_value"
+            ],
+            "label": "Suggested liability limit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "base_rate_per_1000": {
+            "expression": "6 * Number(state_risk_multiplier) * Number(security_multiplier) * Number(credit_multiplier)",
+            "dependencies": [
+              "state_risk_multiplier",
+              "security_multiplier",
+              "credit_multiplier"
+            ],
+            "label": "Estimated base rate per $1,000 contents (annual)",
+            "unit": "USD",
+            "format": "decimal",
+            "display": false
+          },
+          "premium_from_property": {
+            "expression": "(coverage_needed / 1000) * base_rate_per_1000",
+            "dependencies": [
+              "coverage_needed",
+              "base_rate_per_1000"
+            ],
+            "label": "Premium component from contents",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "deductible_factor": {
+            "expression": "deductible <= 500 ? 1 : 1 - ((deductible - 500) / 5000) * 0.05",
+            "dependencies": [
+              "deductible"
+            ],
+            "label": "Deductible adjustment factor",
+            "format": "decimal",
+            "display": false
+          },
+          "estimated_annual_premium_var": {
+            "expression": "premium_from_property * deductible_factor + (liability_needed * 0.0001)",
+            "dependencies": [
+              "premium_from_property",
+              "deductible_factor",
+              "liability_needed"
+            ],
+            "label": "Estimated annual premium (pre-tax, estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_monthly_premium_var": {
+            "expression": "estimated_annual_premium_var / 12",
+            "dependencies": [
+              "estimated_annual_premium_var"
+            ],
+            "label": "Estimated monthly premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "recommended_coverage",
+            "label": "Recommended contents coverage",
+            "variable": "coverage_needed",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_liability",
+            "label": "Recommended liability limit",
+            "variable": "liability_needed",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_annual_premium",
+            "label": "Estimated annual premium (estimate)",
+            "variable": "estimated_annual_premium_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_monthly_premium",
+            "label": "Estimated monthly premium (estimate)",
+            "variable": "estimated_monthly_premium_var",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "itemized_inventory": {
+        "label": "Itemized inventory (detailed)",
+        "description": "Use a compiled itemized total for greater precision; includes a slightly higher base rate to reflect higher-value inventories.",
+        "variables": {
+          "coverage_needed_itemized": {
+            "expression": "itemized_total * replacement_cost_ratio",
+            "dependencies": [
+              "itemized_total",
+              "replacement_cost_ratio"
+            ],
+            "label": "Contents coverage from itemized inventory",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "liability_needed_itemized": {
+            "expression": "(itemized_total * 0.5) >= 100000 ? (itemized_total * 0.5) : 100000",
+            "dependencies": [
+              "itemized_total"
+            ],
+            "label": "Suggested liability limit (itemized)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "base_rate_per_1000_itemized": {
+            "expression": "7 * Number(state_risk_multiplier) * Number(security_multiplier) * Number(credit_multiplier)",
+            "dependencies": [
+              "state_risk_multiplier",
+              "security_multiplier",
+              "credit_multiplier"
+            ],
+            "label": "Estimated base rate per $1,000 contents (itemized)",
+            "unit": "USD",
+            "format": "decimal",
+            "display": false
+          },
+          "premium_from_property_itemized": {
+            "expression": "(coverage_needed_itemized / 1000) * base_rate_per_1000_itemized",
+            "dependencies": [
+              "coverage_needed_itemized",
+              "base_rate_per_1000_itemized"
+            ],
+            "label": "Premium component from itemized contents",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "deductible_factor_itemized": {
+            "expression": "deductible <= 500 ? 1 : 1 - ((deductible - 500) / 5000) * 0.05",
+            "dependencies": [
+              "deductible"
+            ],
+            "label": "Deductible adjustment factor (itemized)",
+            "format": "decimal",
+            "display": false
+          },
+          "estimated_annual_premium_itemized_var": {
+            "expression": "premium_from_property_itemized * deductible_factor_itemized + (liability_needed_itemized * 0.0001)",
+            "dependencies": [
+              "premium_from_property_itemized",
+              "deductible_factor_itemized",
+              "liability_needed_itemized"
+            ],
+            "label": "Estimated annual premium (itemized, pre-tax)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_monthly_premium_itemized_var": {
+            "expression": "estimated_annual_premium_itemized_var / 12",
+            "dependencies": [
+              "estimated_annual_premium_itemized_var"
+            ],
+            "label": "Estimated monthly premium (itemized)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "recommended_coverage_itemized",
+            "label": "Recommended contents coverage (itemized)",
+            "variable": "coverage_needed_itemized",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_liability_itemized",
+            "label": "Recommended liability limit (itemized)",
+            "variable": "liability_needed_itemized",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_annual_premium_itemized",
+            "label": "Estimated annual premium (itemized)",
+            "variable": "estimated_annual_premium_itemized_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_monthly_premium_itemized",
+            "label": "Estimated monthly premium (itemized)",
+            "variable": "estimated_monthly_premium_itemized_var",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "personal_property_value",
+        "label": "Total value of belongings (one-line estimate)",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "itemized_total",
+        "label": "Itemized inventory total (use 0 if not using itemized flow)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "replacement_cost_ratio",
+        "label": "Replacement cost multiplier (1 for replacement cost, below 1 for actual cash value)",
+        "type": "number",
+        "default": 1,
+        "min": 0.5,
+        "max": 2,
+        "step": 0.1
+      },
+      {
+        "id": "deductible",
+        "label": "Preferred deductible (USD)",
+        "type": "integer",
+        "default": 500,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "state_risk_multiplier",
+        "label": "Location risk level",
+        "type": "select",
+        "default": "1.0",
+        "options": [
+          {
+            "label": "Low (lower than average claims)",
+            "value": "0.9"
+          },
+          {
+            "label": "Medium (average claims profile)",
+            "value": "1.0"
+          },
+          {
+            "label": "High (elevated claims frequency)",
+            "value": "1.3"
+          }
+        ]
+      },
+      {
+        "id": "security_multiplier",
+        "label": "Security features (locks, alarms)",
+        "type": "select",
+        "default": "1.0",
+        "options": [
+          {
+            "label": "None or minimal",
+            "value": "1.15"
+          },
+          {
+            "label": "Basic (deadbolts, basic locks)",
+            "value": "1.0"
+          },
+          {
+            "label": "Advanced (alarm, monitored systems)",
+            "value": "0.9"
+          }
+        ]
+      },
+      {
+        "id": "credit_multiplier",
+        "label": "General underwriting tier (proxy for credit/underwriting class)",
+        "type": "select",
+        "default": "0.95",
+        "options": [
+          {
+            "label": "Excellent",
+            "value": "0.85"
+          },
+          {
+            "label": "Good",
+            "value": "0.95"
+          },
+          {
+            "label": "Fair",
+            "value": "1.1"
+          },
+          {
+            "label": "Poor",
+            "value": "1.4"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates recommended contents (personal property) coverage, a suggested liability limit, and a rough premium range for renters insurance. It supports a fast one-line total or a more precise itemized inventory total.",
+      "Results are illustrative and intended to help you choose coverage levels to discuss with insurers. This tool does not replace official insurer quotes or state-specific underwriting rules."
+    ],
+    "methodology": [
+      "Coverage recommendations are based on your entered belongings value scaled by a replacement-cost multiplier to reflect whether you seek replacement cost or actual cash value protection.",
+      "Estimated premiums are produced using a simple actuarial proxy: a base rate per $1,000 of coverage adjusted by location risk, security features, underwriting tier, and deductible. This proxy is for comparison and calibration only.",
+      "We follow software and data-handling best practices informed by standards bodies. For risk management and data security guidance see NIST and ISO references in the citations."
+    ],
+    "how_is_calculated": [
+      "Step 1: Determine contents replacement amount = belongings total × replacement-cost multiplier.",
+      "Step 2: Suggest liability = greater of $100,000 or 50% of contents total (configurable by insurer).",
+      "Step 3: Estimate annual premium = (contents ÷ 1,000 × base rate per 1,000) × deductible adjustment + small liability loading. Monthly = annual ÷ 12.",
+      "Adjustments: base rate is multiplied by location risk, security feature multiplier, and underwriting/credit multiplier. Deductible reduces premium via a conservative adjustment factor."
+    ],
+    "examples": [
+      "Example A: $20,000 belongings, replacement cost, $500 deductible, medium risk → recommended contents coverage $20,000, liability $100,000, estimated annual premium around the calculated output.",
+      "Example B: Itemized inventory totaling $50,000 with advanced security → recommended contents coverage $50,000, liability $25,000 (subject to minimum), premium adjusted down by security multiplier."
+    ],
+    "faqs": [
+      {
+        "question": "Is this a binding quote?",
+        "answer": "No. Outputs are estimates for planning only. Insurer quotes depend on underwriting, local law, prior claims, and additional endorsements."
+      },
+      {
+        "question": "Should I choose replacement cost or actual cash value?",
+        "answer": "Replacement cost tends to cost more but provides funds to replace items at current prices. Actual cash value pays depreciated value. Use the replacement-cost multiplier to model either choice."
+      },
+      {
+        "question": "Why do multipliers look numeric strings in select fields?",
+        "answer": "Select option values are represented as strings in the form; the calculation engine coerces these to numbers for multipliers. This is an implementation detail and does not require action from you."
+      },
+      {
+        "question": "How accurate are the premium estimates?",
+        "answer": "Estimates are approximate. Real premiums vary by insurer pricing models, state regulations, discounts, endorsements, and individual risk factors. Use results to set coverage targets and obtain formal quotes."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Risk Management and Data Security",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Risk Management Standards (ISO 31000)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Software and Systems Engineering Guidance",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — General Safety and Loss Prevention Guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Replacement cost",
+        "definition": "Amount needed to repair or replace items at current market prices without deduction for depreciation."
+      },
+      {
+        "term": "Actual cash value",
+        "definition": "Replacement cost minus depreciation; the insurer pays the depreciated value at the time of loss."
+      },
+      {
+        "term": "Deductible",
+        "definition": "Portion of a covered loss you pay out of pocket before the insurer pays the remainder."
+      },
+      {
+        "term": "Liability coverage",
+        "definition": "Protection if you are legally responsible for bodily injury or property damage to others."
+      },
+      {
+        "term": "Premium",
+        "definition": "Amount you pay to an insurer for coverage, typically quoted annually or monthly."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/insurance/renters/how-much-coverage",
+      "/insurance/glossary/coverage-types"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

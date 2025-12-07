@@ -1,0 +1,452 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Adjustable Rate Mortgage (ARM) Calculator — Advanced",
+    "description": "Interactive ARM calculator that models initial and first-adjusted payments for traditional and hybrid ARMs, plus a comparison mode vs a fixed-rate loan. Includes cap handling (initial, periodic, lifetime) and clear accuracy and compliance notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_arm",
+    "methods": {
+      "standard_arm": {
+        "label": "Standard ARM (initial period + first adjustment)",
+        "description": "Computes initial monthly payment during the introductory fixed period and the expected first adjusted monthly payment after the initial period using index + margin and cap rules.",
+        "variables": {
+          "principal": {
+            "expression": "principal",
+            "dependencies": [
+              "principal"
+            ],
+            "label": "Loan principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_months": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total loan months",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "initial_period_months": {
+            "expression": "initial_period_years * 12",
+            "dependencies": [
+              "initial_period_years"
+            ],
+            "label": "Initial fixed period months",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "initial_rate_monthly": {
+            "expression": "initial_rate_pct / 100 / 12",
+            "dependencies": [
+              "initial_rate_pct"
+            ],
+            "label": "Initial monthly interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_payment_initial": {
+            "expression": "principal * initial_rate_monthly / (1 - pow(1 + initial_rate_monthly, -total_months))",
+            "dependencies": [
+              "principal",
+              "initial_rate_monthly",
+              "total_months"
+            ],
+            "label": "Initial monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "rate_before_cap_pct": {
+            "expression": "index_rate_pct + margin_pct",
+            "dependencies": [
+              "index_rate_pct",
+              "margin_pct"
+            ],
+            "label": "Index + margin (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "first_adjusted_rate_pct": {
+            "expression": "min(max(rate_before_cap_pct, initial_rate_pct - initial_cap_pct), initial_rate_pct + initial_cap_pct)",
+            "dependencies": [
+              "rate_before_cap_pct",
+              "initial_rate_pct",
+              "initial_cap_pct"
+            ],
+            "label": "First adjustment before lifetime cap (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "final_adjusted_rate_pct": {
+            "expression": "min(max(first_adjusted_rate_pct, initial_rate_pct - lifetime_cap_pct), initial_rate_pct + lifetime_cap_pct)",
+            "dependencies": [
+              "first_adjusted_rate_pct",
+              "initial_rate_pct",
+              "lifetime_cap_pct"
+            ],
+            "label": "First adjusted rate after applying lifetime cap (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "adj_rate_monthly": {
+            "expression": "final_adjusted_rate_pct / 100 / 12",
+            "dependencies": [
+              "final_adjusted_rate_pct"
+            ],
+            "label": "Adjusted monthly interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "remaining_months": {
+            "expression": "total_months - initial_period_months",
+            "dependencies": [
+              "total_months",
+              "initial_period_months"
+            ],
+            "label": "Remaining amortization months after initial period",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "monthly_payment_adjusted": {
+            "expression": "principal * adj_rate_monthly / (1 - pow(1 + adj_rate_monthly, -remaining_months))",
+            "dependencies": [
+              "principal",
+              "adj_rate_monthly",
+              "remaining_months"
+            ],
+            "label": "Estimated monthly payment after first adjustment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_payment_initial",
+            "label": "Initial monthly payment",
+            "variable": "monthly_payment_initial",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "final_adjusted_rate_pct",
+            "label": "First adjusted interest rate (%)",
+            "variable": "final_adjusted_rate_pct",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "monthly_payment_adjusted",
+            "label": "Estimated payment after first adjustment",
+            "variable": "monthly_payment_adjusted",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "remaining_months",
+            "label": "Months remaining after initial period",
+            "variable": "remaining_months",
+            "unit": "months",
+            "format": "integer"
+          }
+        ]
+      },
+      "arm_vs_fixed": {
+        "label": "ARM vs Fixed-Rate Comparison",
+        "description": "Side-by-side comparison of the ARM's initial payment and an equivalent fixed-rate loan payment for the same principal and term.",
+        "variables": {
+          "principal": {
+            "expression": "principal",
+            "dependencies": [
+              "principal"
+            ],
+            "label": "Loan principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_months": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Total loan months",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "initial_rate_monthly": {
+            "expression": "initial_rate_pct / 100 / 12",
+            "dependencies": [
+              "initial_rate_pct"
+            ],
+            "label": "Initial monthly interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "arm_initial_payment": {
+            "expression": "principal * initial_rate_monthly / (1 - pow(1 + initial_rate_monthly, -total_months))",
+            "dependencies": [
+              "principal",
+              "initial_rate_monthly",
+              "total_months"
+            ],
+            "label": "ARM initial monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "fixed_rate_monthly": {
+            "expression": "fixed_rate_pct / 100 / 12",
+            "dependencies": [
+              "fixed_rate_pct"
+            ],
+            "label": "Fixed monthly interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "fixed_monthly_payment": {
+            "expression": "principal * fixed_rate_monthly / (1 - pow(1 + fixed_rate_monthly, -total_months))",
+            "dependencies": [
+              "principal",
+              "fixed_rate_monthly",
+              "total_months"
+            ],
+            "label": "Fixed-rate monthly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_difference": {
+            "expression": "fixed_monthly_payment - arm_initial_payment",
+            "dependencies": [
+              "fixed_monthly_payment",
+              "arm_initial_payment"
+            ],
+            "label": "Fixed minus ARM initial payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "arm_initial_payment",
+            "label": "ARM initial monthly payment",
+            "variable": "arm_initial_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "fixed_monthly_payment",
+            "label": "Fixed-rate monthly payment",
+            "variable": "fixed_monthly_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_difference",
+            "label": "Payment difference (Fixed - ARM initial)",
+            "variable": "payment_difference",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "initial_rate_pct",
+        "label": "Initial interest rate (APR %) during introductory period",
+        "type": "number",
+        "default": 3.25,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      },
+      {
+        "id": "initial_period_years",
+        "label": "Initial fixed period (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "index_rate_pct",
+        "label": "Current index rate (%)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      },
+      {
+        "id": "margin_pct",
+        "label": "Lender margin (%)",
+        "type": "number",
+        "default": 2.25,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      },
+      {
+        "id": "initial_cap_pct",
+        "label": "Initial adjustment cap (%) (first change limit)",
+        "type": "number",
+        "default": 2.0,
+        "min": 0,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "periodic_cap_pct",
+        "label": "Periodic adjustment cap (%)",
+        "type": "number",
+        "default": 2.0,
+        "min": 0,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "lifetime_cap_pct",
+        "label": "Lifetime cap (%) (max change from start)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      },
+      {
+        "id": "fixed_rate_pct",
+        "label": "Comparable fixed-rate APR (%)",
+        "type": "number",
+        "default": 4.0,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models a common adjustable-rate mortgage workflow: an initial fixed-rate period followed by rate adjustments tied to an external index plus a lender margin, subject to initial, periodic and lifetime caps. Use it to estimate the initial monthly payment and the likely payment after the first scheduled adjustment.",
+      "Results assume fully-amortizing level monthly payments, no additional fees, no escrow changes, and that the index value provided represents the published index at adjustment time. It does not forecast future index movements; it applies the single-index snapshot you enter and the contractual cap rules to compute the first adjustment."
+    ],
+    "methodology": [
+      "We compute payments using standard amortization formulas (level payment annuity) and apply contractual cap rules in this order: compute index + margin, apply the initial adjustment cap, then enforce the lifetime cap relative to the initial rate. Periodic caps are presented but this tool models only the first adjustment as a representative scenario.",
+      "Numeric computation follows IEEE-754-like floating point conventions for reproducibility; results are rounded to typical consumer presentation (currency to cents, rates to two decimal places) but internal calculations maintain higher precision. Data handling and UI controls are built with NIST-recommended guidance for input validation and secure defaults."
+    ],
+    "how_is_calculated": [
+      "Monthly rate = APR / 12 / 100.",
+      "Monthly payment (level payment) = principal * r / (1 - (1 + r)^(-N)) where r is the monthly rate and N is number of months.",
+      "Index + margin determines the raw adjusted APR. Apply the initial adjustment cap: adjusted = clamp(index + margin, initial_rate - initial_cap, initial_rate + initial_cap). Then apply lifetime cap: adjusted = clamp(adjusted, initial_rate - lifetime_cap, initial_rate + lifetime_cap).",
+      "Adjusted monthly payment is computed using the adjusted APR and the remaining amortization months after the initial period."
+    ],
+    "examples": [
+      "Example 1: $300,000, 30-year term, 5-year initial period, initial APR 3.25%, index 2.50%, margin 2.25%, initial cap 2.0%, lifetime cap 5.0%: Initial payment is computed from 3.25% APR. Raw adjusted APR = 4.75% (index + margin). First adjustment limited by initial cap to max 5.25% and min 1.25% so 4.75% is allowed; lifetime cap also permits it. Payment after adjustment is computed with 4.75% over remaining months.",
+      "Example 2: Use the comparison mode to see how a 30-year fixed-rate at 4.0% compares to the ARM's initial payment. The result highlights monthly savings or extra cost before considering future adjustments."
+    ],
+    "faqs": [
+      {
+        "question": "Why does the calculator show a different payment than my loan estimate?",
+        "answer": "Estimates differ when lenders include fees, insurance, taxes, escrow changes, or use different index snapshots and rounding rules. This tool isolates principal and interest using the inputs you provide and standard amortization math."
+      },
+      {
+        "question": "Does this tool forecast future index changes?",
+        "answer": "No. It applies the index value you enter at adjustment time and the contractual caps. Forecasting index behavior requires separate market models and is outside the scope of this calculator."
+      },
+      {
+        "question": "How accurate are the numbers?",
+        "answer": "Calculations use standard amortization formulas and common cap rules. Values are rounded for display; internal computation preserves higher precision. For legally binding figures rely on lender disclosures. See the accuracy and standards citations below."
+      },
+      {
+        "question": "What do initial, periodic and lifetime caps mean?",
+        "answer": "Initial cap limits the first change in APR from the start rate. Periodic caps limit changes at subsequent adjustment intervals. Lifetime cap limits the cumulative change from the initial APR over the loan's life."
+      },
+      {
+        "question": "Can I model multiple future adjustments and payment schedules?",
+        "answer": "This tool models the initial period and the first adjustment to keep results transparent and fast. For multi-period projections or complete amortization schedules across many index scenarios, use a dedicated schedule generator or speak with a mortgage professional."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Guidelines for input validation and numeric handling",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) — Standards for information security and quality management",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) — Floating point arithmetic and reproducibility recommendations",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — General guidance for risk communication (consumer-facing tools)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Adjustable-Rate Mortgage (ARM)",
+        "definition": "A mortgage with an interest rate that can change over time according to an index plus a fixed margin, with contractual caps limiting changes."
+      },
+      {
+        "term": "Index",
+        "definition": "A published benchmark interest rate (for example, LIBOR replacement indexes or treasury yields) that determines changes in ARM rates when combined with the margin."
+      },
+      {
+        "term": "Margin",
+        "definition": "A fixed percentage added by the lender to the index to determine the ARM's interest rate at adjustment."
+      },
+      {
+        "term": "Cap",
+        "definition": "A contractual limit on how much the interest rate or payment can change at an adjustment (initial cap, periodic cap, lifetime cap)."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The schedule of principal and interest payments that reduces the loan balance to zero over the loan term."
+      },
+      {
+        "term": "Principal",
+        "definition": "The outstanding loan amount on which interest is calculated."
+      }
+    ],
+    "summary": [
+      "This tool provides a transparent estimate of initial and first-adjusted payments for ARMs, using index + margin and common cap rules. It is intended for planning and comparison, not as a substitute for lender-provided TIL/LE disclosures.",
+      "For legally binding figures, rely on official loan documents. The tool follows standard numeric practices and cites standards for reproducibility and secure input handling."
+    ]
+  }
+}

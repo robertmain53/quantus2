@@ -1,0 +1,399 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan APR & Bi‑Weekly Payment Calculator (Amortization + Balloon)",
+    "description": "Calculate periodic payments, total interest, and amortization details for an RV loan. Supports monthly, semi‑monthly, bi‑weekly and weekly schedules and an optional balloon payment. Includes conservative accuracy notes and standards references."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "amortized",
+    "methods": {
+      "amortized": {
+        "label": "Standard amortization (supports bi‑weekly)",
+        "description": "Computes periodic payment from APR using nominal APR converted to a periodic rate and a standard level‑payment amortization formula. An optional balloon payment is added to the final payment and shown separately.",
+        "variables": {
+          "financed_amount": {
+            "expression": "loan_price - down_payment - trade_in + fees",
+            "dependencies": [
+              "loan_price",
+              "down_payment",
+              "trade_in",
+              "fees"
+            ],
+            "label": "Amount financed",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payments_per_year": {
+            "expression": "payment_frequency",
+            "dependencies": [
+              "payment_frequency"
+            ],
+            "label": "Payments per year",
+            "format": "integer",
+            "display": true
+          },
+          "periods": {
+            "expression": "term_years * payment_frequency",
+            "dependencies": [
+              "term_years",
+              "payment_frequency"
+            ],
+            "label": "Total payments (periods)",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "apr / 100 / payment_frequency",
+            "dependencies": [
+              "apr",
+              "payment_frequency"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "payment": {
+            "expression": "periodic_rate == 0 ? financed_amount / periods : (financed_amount * periodic_rate) / (1 - pow(1 + periodic_rate, -periods))",
+            "dependencies": [
+              "financed_amount",
+              "periodic_rate",
+              "periods"
+            ],
+            "label": "Periodic payment (per schedule)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment": {
+            "expression": "payment * periods + balloon_amount",
+            "dependencies": [
+              "payment",
+              "periods",
+              "balloon_amount"
+            ],
+            "label": "Total paid (principal + interest + balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_payment - financed_amount",
+            "dependencies": [
+              "total_payment",
+              "financed_amount"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "financed_amount",
+            "label": "Amount financed",
+            "variable": "financed_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periodic_rate",
+            "label": "Periodic interest rate",
+            "variable": "periodic_rate",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "periods",
+            "label": "Number of payments",
+            "variable": "periods",
+            "format": "integer"
+          },
+          {
+            "id": "payment",
+            "label": "Periodic payment",
+            "variable": "payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_amount",
+            "label": "Balloon payment (final)",
+            "variable": "balloon_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payment",
+            "label": "Total amount paid",
+            "variable": "total_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_price",
+        "label": "RV purchase price",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "trade_in",
+        "label": "Trade‑in value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "fees",
+        "label": "Fees and taxes to finance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "apr",
+        "label": "APR (annual percentage rate)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Payment frequency",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Semi‑monthly (24)",
+            "value": "24"
+          },
+          {
+            "label": "Bi‑weekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "balloon_amount",
+        "label": "Balloon payment (final) — enter 0 if none",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "financed_amount",
+          "label": "Amount financed",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "payment",
+          "label": "Periodic payment",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "periodic_rate",
+          "label": "Periodic rate",
+          "format": "percent",
+          "unit": "%"
+        },
+        {
+          "id": "periods",
+          "label": "Total payments",
+          "format": "integer"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest paid",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_payment",
+          "label": "Total amount paid (incl. balloon)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "balloon_amount",
+          "label": "Balloon payment",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments and total interest for an RV loan using the APR you provide. It supports monthly, semi‑monthly, bi‑weekly and weekly payment schedules and allows an optional balloon (final lump sum) payment.",
+      "Results assume APR is the nominal annual rate expressed in percent and that payments are level and scheduled evenly by the selected frequency. Use the down payment and trade‑in fields to reduce the financed amount; include fees if they are rolled into the loan."
+    ],
+    "methodology": [
+      "We convert the annual percentage rate (APR) to a periodic rate by dividing APR by the number of payments per year, then apply the standard level‑payment amortization formula to compute each periodic payment. If a balloon amount is entered, it is added to the final period and shown separately.",
+      "Formulas are implemented to produce a single consistent amortization result for the chosen payment frequency. This tool does not estimate lender fees beyond those you enter, nor does it compute taxes or insurance.",
+      "Accuracy and security guidance: numerical accuracy follows common engineering practice for financial calculators and conservative rounding. For data handling and system security, follow NIST guidance for secure computations and ISO/IEC recommendations for quality management. The results are estimates only and not legal disclosures required by consumer finance regulations."
+    ],
+    "how_is_calculated": [
+      "Amount financed = purchase price − down payment − trade‑in + fees",
+      "Periodic rate = APR / 100 / (payments per year)",
+      "Payment = periodic_rate == 0 ? financed_amount / periods : (financed_amount * periodic_rate) / (1 − (1 + periodic_rate)^(−periods))",
+      "Total paid = payment × periods + balloon_amount",
+      "Total interest = total paid − financed amount"
+    ],
+    "examples": [
+      "Example 1: $50,000 RV, $5,000 down, 6.5% APR, 10 years, bi‑weekly (26). Calculator returns the bi‑weekly payment amount, total interest over the loan, and total amount paid including any balloon.",
+      "Example 2: Same loan but switch frequency to monthly (12) to compare payment sizes and total interest; bi‑weekly schedules often reduce interest slightly because of increased payment frequency for the same APR and term."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator compute the lender's disclosed APR under Truth in Lending?",
+        "answer": "This tool uses the APR you enter to compute periodic payments. It does not compute or certify the legally disclosed APR a lender must provide under Truth in Lending rules. For binding disclosures, rely on the lender's written statement."
+      },
+      {
+        "question": "Should I enter nominal APR, APR with compounding, or APR including fees?",
+        "answer": "Enter the APR as provided by your lender. If the lender has rolled fees into the financed amount, include them in the 'fees' field instead. This calculator treats APR as a nominal annual rate converted to a periodic rate; it does not perform separate effective APR conversions."
+      },
+      {
+        "question": "How does bi‑weekly reduce interest?",
+        "answer": "Bi‑weekly schedules double the number of payments per year (usually 26). For the same APR and term in years this increases payment frequency which can slightly reduce the outstanding principal sooner and therefore total interest. The exact effect depends on how the lender applies payments and interest; some lenders apply a bi‑weekly plan by splitting monthly payments instead."
+      },
+      {
+        "question": "Is the result exact for my loan?",
+        "answer": "Results are estimates. Lenders may use different day‑count conventions, compounding rules, rounding and apply payments on different schedules. Use this calculator for planning and comparison, and verify final numbers with your lender's amortization schedule."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate — the annual nominal interest rate expressed as a percentage. APR may not reflect compounding conventions or all finance charges."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period, calculated as APR divided by the number of payments per year."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a loan over time with a fixed schedule of payments that cover interest and principal."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at the end of the loan term that covers remaining principal. Enter 0 if none."
+      },
+      {
+        "term": "Payments per year",
+        "definition": "Number of scheduled payments in one year (e.g., 12 monthly, 26 bi‑weekly)."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loans/loan-amortization",
+      "/help/understanding-apr"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

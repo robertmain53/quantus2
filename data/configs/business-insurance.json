@@ -1,0 +1,417 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Insurance Cost Estimator",
+    "description": "Interactive estimator for common commercial insurance lines (General Liability, Workers' Compensation, Commercial Property, Professional Liability, and bundled Business Owner's Policy). Provides transparent calculation steps, assumptions, and regulatory accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "general_liability",
+    "methods": {
+      "general_liability": {
+        "label": "General Liability",
+        "description": "Estimate based on revenue exposure and per-employee exposure. Use industry risk factor to reflect class-specific rate differences.",
+        "variables": {
+          "base_premium": {
+            "expression": "annual_revenue / 1000 * industry_risk_rate",
+            "dependencies": [
+              "annual_revenue",
+              "industry_risk_rate"
+            ],
+            "label": "Revenue-based premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "employee_premium": {
+            "expression": "num_employees * per_employee_rate",
+            "dependencies": [
+              "num_employees",
+              "per_employee_rate"
+            ],
+            "label": "Per-employee premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "gl_total": {
+            "expression": "base_premium + employee_premium",
+            "dependencies": [
+              "base_premium",
+              "employee_premium"
+            ],
+            "label": "Estimated general liability premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "gl_premium",
+            "label": "Estimated General Liability Premium",
+            "variable": "gl_total",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "workers_comp": {
+        "label": "Workers' Compensation",
+        "description": "Estimate based on payroll exposure and a class/experience-adjusted rate per $1,000 payroll.",
+        "variables": {
+          "wc_premium": {
+            "expression": "payroll / 1000 * wc_rate_per_1000",
+            "dependencies": [
+              "payroll",
+              "wc_rate_per_1000"
+            ],
+            "label": "Estimated workers' compensation premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "wc_premium",
+            "label": "Estimated Workers' Compensation Premium",
+            "variable": "wc_premium",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "commercial_property": {
+        "label": "Commercial Property",
+        "description": "Estimate based on insurable property value and a market rate; deductible impacts premium but is shown separately.",
+        "variables": {
+          "property_premium": {
+            "expression": "property_value * property_rate",
+            "dependencies": [
+              "property_value",
+              "property_rate"
+            ],
+            "label": "Estimated property insurance premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "property_premium_after_deductible": {
+            "expression": "property_premium * (1 - deductible_discount_factor)",
+            "dependencies": [
+              "property_premium",
+              "deductible_discount_factor"
+            ],
+            "label": "Premium adjusted for deductible",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "property_premium",
+            "label": "Estimated Commercial Property Premium",
+            "variable": "property_premium_after_deductible",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "professional_liability": {
+        "label": "Professional Liability (Errors & Omissions)",
+        "description": "Estimate for firms where professional exposure is driven by revenue and service risk.",
+        "variables": {
+          "prof_premium": {
+            "expression": "annual_revenue * prof_rate",
+            "dependencies": [
+              "annual_revenue",
+              "prof_rate"
+            ],
+            "label": "Estimated professional liability premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "prof_premium",
+            "label": "Estimated Professional Liability Premium",
+            "variable": "prof_premium",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "bop": {
+        "label": "Business Owner's Policy (BOP) - Bundle estimate",
+        "description": "Bundled estimate combining General Liability and Property with a typical small-discount factor for packaged policies.",
+        "variables": {
+          "bop_gl": {
+            "expression": "annual_revenue / 1000 * industry_risk_rate * 0.90",
+            "dependencies": [
+              "annual_revenue",
+              "industry_risk_rate"
+            ],
+            "label": "BOP share: GL component",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "bop_property": {
+            "expression": "property_value * property_rate * 0.90",
+            "dependencies": [
+              "property_value",
+              "property_rate"
+            ],
+            "label": "BOP share: Property component",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "bop_total": {
+            "expression": "bop_gl + bop_property",
+            "dependencies": [
+              "bop_gl",
+              "bop_property"
+            ],
+            "label": "Estimated BOP premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "bop_premium",
+            "label": "Estimated BOP Premium",
+            "variable": "bop_total",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "annual_revenue",
+        "label": "Annual revenue (total gross receipts)",
+        "type": "number",
+        "default": 500000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "payroll",
+        "label": "Annual payroll (total wages)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "num_employees",
+        "label": "Number of employees",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "property_value",
+        "label": "Insurable property value",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "per_employee_rate",
+        "label": "Per-employee GL rate (USD per employee)",
+        "type": "number",
+        "default": 50,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "industry_risk_rate",
+        "label": "Industry risk factor (choose profile)",
+        "type": "select",
+        "default": "1.0",
+        "options": [
+          {
+            "label": "Low risk (e.g., office, retail)",
+            "value": "0.6"
+          },
+          {
+            "label": "Medium risk (general services)",
+            "value": "1.0"
+          },
+          {
+            "label": "High risk (construction, heavy trades)",
+            "value": "2.0"
+          }
+        ]
+      },
+      {
+        "id": "wc_rate_per_1000",
+        "label": "Workers' comp rate (per $1,000 payroll)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "property_rate",
+        "label": "Property insurance rate (fraction of property value)",
+        "type": "number",
+        "default": 0.005,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "prof_rate",
+        "label": "Professional liability rate (fraction of revenue)",
+        "type": "number",
+        "default": 0.001,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "deductible_discount_factor",
+        "label": "Deductible effect on premium (fractional reduction, e.g., 0.05 for 5%)",
+        "type": "number",
+        "default": 0.0,
+        "min": 0,
+        "max": 0.5,
+        "step": 0.01
+      },
+      {
+        "id": "location_state",
+        "label": "State / jurisdiction (affects regulatory requirements)",
+        "type": "text",
+        "default": "CA"
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator provides indicative annual premiums for common commercial insurance lines. It is intended for planning and budgeting and does not replace an insurer-issued quote or policy documentation.",
+      "Estimates are calculated from user-provided exposures (revenue, payroll, property value, employee count) and adjustable rate inputs. For final pricing, insurers apply class codes, experience modification, specific endorsements, and state-level regulatory adjustments."
+    ],
+    "methodology": [
+      "Each line uses a simplified, auditable model: premiums are calculated as exposure × rate or exposure/1000 × rate as appropriate. Rates used are representative market proxies and can be adjusted to reflect local market or class-specific differences.",
+      "This tool follows best practices for model transparency and traceability; assumptions, inputs, and intermediate variables are visible. For operational risk controls and data privacy considerations see NIST and ISO guidance cited below."
+    ],
+    "how_is_calculated": [
+      "General Liability: (Annual revenue / 1,000) × Industry risk factor + (Number of employees × Per-employee rate).",
+      "Workers' Compensation: (Payroll / 1,000) × Workers' comp rate per 1,000 payroll.",
+      "Commercial Property: Insurable property value × Property rate, adjusted by deductible discount factor.",
+      "Professional Liability: Annual revenue × Professional liability rate.",
+      "BOP (bundle): Discounted combination of General Liability and Property components (typical package discount applied)."
+    ],
+    "examples": [
+      "Example 1: Small retail store with $500,000 revenue, 5 employees, $100,000 property value. General Liability estimate shows revenue-based charge plus per-employee charge; property is a small separate premium.",
+      "Example 2: Small contractor with $1,000,000 revenue, high industry factor, and higher workers' comp rate—estimate illustrates how industry factor and payroll-driven workers' comp increase total cost."
+    ],
+    "summary": [
+      "Outputs are indicative annual premiums and are formatted as currency. Use the rate fields to align the estimator with broker or carrier-provided rates for closer approximation.",
+      "This tool is optimized for clarity: every intermediate variable is labeled so you can reconcile inputs and outputs before requesting formal quotes."
+    ],
+    "faqs": [
+      {
+        "question": "Is this a binding quote?",
+        "answer": "No. Results are estimates for planning and comparison only. A binding quote requires insurer underwriting, documentation, and may include additional adjustments such as class codes, EMR (experience modification), prior loss history, policy limits, endorsements, and state filings."
+      },
+      {
+        "question": "How accurate are the estimates?",
+        "answer": "Accuracy depends on the correctness of inputs and alignment of the proxy rates with actual carrier rates. Use the rate fields to align with carrier or broker data. Expect meaningful variation by industry class and jurisdiction. See regulatory and standards caveat below."
+      },
+      {
+        "question": "Why are standards like NIST or ISO referenced?",
+        "answer": "Standards are cited to support good practices for risk assessment, data handling, and model governance. They do not prescribe insurance pricing but help ensure the estimator is developed and deployed with appropriate controls (e.g., model validation and data security)."
+      },
+      {
+        "question": "Which inputs most affect the premium?",
+        "answer": "For GL and professional liability, annual revenue and industry risk factor drive the largest share. For workers' compensation, payroll and the class-specific rate drive the premium. For property, insurable value and property rate are primary."
+      },
+      {
+        "question": "How should I use this before talking to a broker or carrier?",
+        "answer": "Use results to identify expected budget range, choose coverage limits you can afford, and collect the exposures and loss history your broker will need to obtain comparative quotes."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Premium",
+        "definition": "The amount charged by an insurer for providing coverage for a specified period (usually annually)."
+      },
+      {
+        "term": "Deductible",
+        "definition": "The portion of a covered loss the insured is responsible for before the insurer pays."
+      },
+      {
+        "term": "Insurable value",
+        "definition": "Declared value of property or other exposure that serves as the base for property insurance pricing."
+      },
+      {
+        "term": "Exposure",
+        "definition": "Measure of risk used in pricing; examples include revenue for professional liability and payroll for workers' compensation."
+      },
+      {
+        "term": "Industry risk factor",
+        "definition": "A multiplier reflecting relative risk of loss by industry or activity; proxy for insurance class codes."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Risk Management and Frameworks",
+        "url": "https://www.nist.gov/topics/risk-management"
+      },
+      {
+        "label": "ISO 31000 - Risk management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "OSHA - Workplace safety guidance",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/business-insurance/overview",
+      "/guides/insurance-terms"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

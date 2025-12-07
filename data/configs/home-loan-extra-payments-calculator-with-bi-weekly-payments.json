@@ -1,0 +1,731 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Home Loan Extra Payments Calculator with Bi-Weekly Support (Advanced)",
+    "description": "Interactive amortization and payoff estimator that models monthly or bi-weekly payment schedules, recurring extra payments, and one-time principal reductions. Provides estimated payment amounts, payoff timing, interest saved, and sensitivity to payment frequency. For estimates only — always confirm with lender statements."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "amortization_standard",
+    "methods": {
+      "amortization_standard": {
+        "label": "Standard monthly/periodic amortization",
+        "description": "Calculates the regular payment, total paid and total interest for a level-payment amortizing loan using the entered payments per year.",
+        "variables": {
+          "n_periods": {
+            "expression": "form.term_years * form.payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "period_rate": {
+            "expression": "form.annual_rate/100/form.payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "form.principal * period_rate / (1 - (1 + period_rate) ^ (-n_periods))",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "n_periods"
+            ],
+            "label": "Scheduled payment (per period)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment": {
+            "expression": "base_payment * n_periods",
+            "dependencies": [
+              "base_payment",
+              "n_periods"
+            ],
+            "label": "Total amount paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_payment - form.principal",
+            "dependencies": [
+              "total_payment",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "base_payment",
+            "label": "Scheduled payment (per period)",
+            "variable": "base_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_periods",
+            "label": "Number of payments (periods)",
+            "variable": "n_periods",
+            "format": "integer",
+            "unit": "periods"
+          },
+          {
+            "id": "total_payment",
+            "label": "Total paid over life of loan",
+            "variable": "total_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_nominal26": {
+        "label": "Bi-weekly (26 payments/year) amortization",
+        "description": "Standard amortization when payments occur at the periodic rate corresponding to payments per year (enter 26 for bi-weekly). Shows periodic payment and total cost at that schedule.",
+        "variables": {
+          "n_periods": {
+            "expression": "form.term_years * form.payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "period_rate": {
+            "expression": "form.annual_rate/100/form.payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "form.principal * period_rate / (1 - (1 + period_rate) ^ (-n_periods))",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "n_periods"
+            ],
+            "label": "Payment amount per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equivalent_annualized": {
+            "expression": "periodic_payment * form.payments_per_year",
+            "dependencies": [
+              "periodic_payment",
+              "payments_per_year"
+            ],
+            "label": "Annual payment (sum)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "periodic_payment * n_periods - form.principal",
+            "dependencies": [
+              "periodic_payment",
+              "n_periods",
+              "principal"
+            ],
+            "label": "Total interest paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Payment per period",
+            "variable": "periodic_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equivalent_annualized",
+            "label": "Equivalent annual payment (sum)",
+            "variable": "equivalent_annualized",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest paid",
+            "variable": "total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_periods",
+            "label": "Number of payments",
+            "variable": "n_periods",
+            "unit": "periods",
+            "format": "integer"
+          }
+        ]
+      },
+      "extra_recurring": {
+        "label": "Recurring extra payment applied to each scheduled payment",
+        "description": "Models the effect of adding a fixed extra amount to every payment (same frequency as payments_per_year). Estimates shorter payoff and interest saved.",
+        "variables": {
+          "n_periods": {
+            "expression": "form.term_years * form.payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Original total number of payments",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "period_rate": {
+            "expression": "form.annual_rate/100/form.payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "form.principal * period_rate / (1 - (1 + period_rate) ^ (-n_periods))",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "n_periods"
+            ],
+            "label": "Scheduled payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_with_extra": {
+            "expression": "base_payment + form.extra_amount",
+            "dependencies": [
+              "base_payment",
+              "extra_amount"
+            ],
+            "label": "Scheduled payment including extra",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_new": {
+            "expression": "-ln(1 - period_rate * form.principal / payment_with_extra) / ln(1 + period_rate)",
+            "dependencies": [
+              "period_rate",
+              "principal",
+              "payment_with_extra"
+            ],
+            "label": "Estimated new number of periods to repay",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_time_years": {
+            "expression": "n_new / form.payments_per_year",
+            "dependencies": [
+              "n_new",
+              "payments_per_year"
+            ],
+            "label": "Estimated payoff time (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_new": {
+            "expression": "payment_with_extra * n_new - form.principal",
+            "dependencies": [
+              "payment_with_extra",
+              "n_new",
+              "principal"
+            ],
+            "label": "Total interest with extra payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": " (base_payment * n_periods - form.principal) - total_interest_new",
+            "dependencies": [
+              "base_payment",
+              "n_periods",
+              "principal",
+              "total_interest_new"
+            ],
+            "label": "Estimated interest saved versus base schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_with_extra",
+            "label": "Payment including recurring extra",
+            "variable": "payment_with_extra",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_new",
+            "label": "Estimated number of payments to repay",
+            "variable": "n_new",
+            "unit": "periods",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Estimated payoff time (years)",
+            "variable": "payoff_time_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_new",
+            "label": "Total interest with extra payments",
+            "variable": "total_interest_new",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "extra_one_time": {
+        "label": "One-time extra payment applied at a chosen period",
+        "description": "Computes remaining balance at the chosen period, applies a one-time principal reduction, then re-calculates remaining schedule and interest paid.",
+        "variables": {
+          "n_periods": {
+            "expression": "form.term_years * form.payments_per_year",
+            "dependencies": [
+              "term_years",
+              "payments_per_year"
+            ],
+            "label": "Original total number of payments",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "period_rate": {
+            "expression": "form.annual_rate/100/form.payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "base_payment": {
+            "expression": "form.principal * period_rate / (1 - (1 + period_rate) ^ (-n_periods))",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "n_periods"
+            ],
+            "label": "Scheduled payment (no extra)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "k": {
+            "expression": "form.extra_start_period",
+            "dependencies": [
+              "extra_start_period"
+            ],
+            "label": "Period when one-time payment occurs",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "balance_after_k": {
+            "expression": "form.principal*(1 + period_rate) ^ k - base_payment * ( ((1 + period_rate) ^ k - 1) / period_rate )",
+            "dependencies": [
+              "principal",
+              "period_rate",
+              "k",
+              "base_payment"
+            ],
+            "label": "Estimated outstanding balance just before one-time payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "new_principal": {
+            "expression": "balance_after_k - form.extra_amount",
+            "dependencies": [
+              "balance_after_k",
+              "extra_amount"
+            ],
+            "label": "Remaining principal after one-time reduction",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "n_remaining": {
+            "expression": "-ln(1 - period_rate * new_principal / base_payment) / ln(1 + period_rate)",
+            "dependencies": [
+              "period_rate",
+              "new_principal",
+              "base_payment"
+            ],
+            "label": "Estimated remaining number of periods after one-time payment",
+            "unit": "periods",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_time_years": {
+            "expression": " (k + n_remaining) / form.payments_per_year",
+            "dependencies": [
+              "k",
+              "n_remaining",
+              "payments_per_year"
+            ],
+            "label": "Estimated payoff time (years) after one-time payment",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_interest_after": {
+            "expression": " base_payment * k + form.extra_amount + base_payment * n_remaining - form.principal",
+            "dependencies": [
+              "base_payment",
+              "k",
+              "extra_amount",
+              "n_remaining",
+              "principal"
+            ],
+            "label": "Total interest paid after one-time payment strategy",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_saved": {
+            "expression": "(base_payment * n_periods - form.principal) - total_interest_after",
+            "dependencies": [
+              "base_payment",
+              "n_periods",
+              "principal",
+              "total_interest_after"
+            ],
+            "label": "Estimated interest saved versus base schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balance_after_k",
+            "label": "Balance before one-time payment",
+            "variable": "balance_after_k",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "new_principal",
+            "label": "Principal after one-time payment",
+            "variable": "new_principal",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_remaining",
+            "label": "Remaining number of payments",
+            "variable": "n_remaining",
+            "unit": "periods",
+            "format": "integer"
+          },
+          {
+            "id": "payoff_time_years",
+            "label": "Estimated payoff time (years)",
+            "variable": "payoff_time_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "interest_saved",
+            "label": "Estimated interest saved",
+            "variable": "interest_saved",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_after",
+            "label": "Total interest paid after one-time payment",
+            "variable": "total_interest_after",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 4.25,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (enter 12 for monthly, 26 for bi-weekly)",
+        "type": "integer",
+        "default": 26,
+        "min": 1,
+        "max": 52,
+        "step": 1
+      },
+      {
+        "id": "extra_type",
+        "label": "Extra payment type",
+        "type": "select",
+        "default": "none",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Recurring extra each payment",
+            "value": "recurring"
+          },
+          {
+            "label": "One-time extra at chosen period",
+            "value": "one-time"
+          }
+        ]
+      },
+      {
+        "id": "extra_amount",
+        "label": "Extra payment amount (currency)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "extra_start_period",
+        "label": "Start period for extra payment (1 = first payment)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "base_payment",
+          "label": "Scheduled payment (per period)"
+        },
+        {
+          "id": "periodic_payment",
+          "label": "Periodic payment (bi-weekly view)"
+        },
+        {
+          "id": "payment_with_extra",
+          "label": "Payment including extra (per period)",
+          "format": "currency",
+          "unit": "currency"
+        },
+        {
+          "id": "n_new",
+          "label": "Estimated number of payments to repay",
+          "format": "integer",
+          "unit": "periods"
+        },
+        {
+          "id": "payoff_time_years",
+          "label": "Estimated payoff time (years)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "interest_saved",
+          "label": "Estimated interest saved",
+          "format": "currency",
+          "unit": "currency"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest (base schedule)",
+          "format": "currency",
+          "unit": "currency"
+        },
+        {
+          "id": "total_interest_new",
+          "label": "Total interest (with extras)",
+          "format": "currency",
+          "unit": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides estimates for mortgage payments, payoff timing, and interest savings when making bi-weekly or other periodic payments and when adding extra principal payments (recurring or one-time). It models level-payment (fully amortizing) loans and assumes interest compounds per scheduled period.",
+      "Results are intended for planning and comparison only. Actual lender behavior, escrow, fees, prepayment penalties, and rounding can change exact outcomes. Verify final figures with loan documents or your lender."
+    ],
+    "methodology": [
+      "The tool computes a periodic interest rate by dividing the entered annual percentage rate by the number of payments per year. The base scheduled payment is derived from the level-payment amortization formula: payment = P * r / (1 - (1+r)^-N).",
+      "For recurring extras, the calculator increases the per-period payment and solves for the new number of periods using the closed-form logarithmic solution for an amortizing loan. For a one-time extra payment, the outstanding balance at the chosen period is computed and the reduced balance is re-amortized to estimate remaining payments.",
+      "Inputs must express payments per year explicitly (commonly 12 for monthly, 26 for bi-weekly). Using 26 models 26 identical periodic payments per year and the corresponding periodic rate; some lenders treat bi-weekly differently—check your loan terms."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = annual_rate / 100 / payments_per_year",
+      "Number of periods = term_years * payments_per_year",
+      "Base payment = principal * periodic_rate / (1 - (1 + periodic_rate) ^ (-number_of_periods))",
+      "With recurring extra: solve n_new = -ln(1 - periodic_rate * principal / (base_payment + extra)) / ln(1 + periodic_rate)",
+      "One-time extra: compute balance after k periods, subtract one-time principal, then solve remaining periods using the standard amortization relationship"
+    ],
+    "faqs": [
+      {
+        "question": "Does entering 26 payments/year always match my lender's bi-weekly program?",
+        "answer": "Not always. Entering 26 simulates 26 equal payments per year and the periodic interest rate that results. Some lenders accept accelerated bi-weekly plans differently or require enrollment. Check your loan documents for how payments are applied and whether extra payments reduce principal immediately."
+      },
+      {
+        "question": "Are results exact for legal or tax reporting?",
+        "answer": "No. This calculator provides estimates. For legal, tax, or closing figures rely on lender statements, official amortization schedules, or a licensed mortgage professional."
+      },
+      {
+        "question": "How accurate are the formulas?",
+        "answer": "Formulas implement standard amortizing loan mathematics (time value of money and closed-form solutions). They assume constant interest rate, no fees, and that extra payments are applied directly to principal at the stated period."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — timeliness and numerical methods guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) — software quality standards reference",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) — numeric stability and testing best practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau — mortgage basics and prepayment information",
+        "url": "https://www.consumerfinance.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The process of repaying a loan through scheduled payments that cover interest and principal over time."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period; calculated as annual rate divided by number of payments per year."
+      },
+      {
+        "term": "Bi-weekly payments",
+        "definition": "A schedule that typically makes 26 payments per year (every two weeks). Some implementations split a monthly payment in half; others treat bi-weekly as separate periodic payments with its own periodic rate."
+      },
+      {
+        "term": "One-time extra payment",
+        "definition": "A single additional principal payment applied at a chosen payment number, reducing the remaining principal immediately."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/mortgage/amortization-guide",
+      "/articles/biweekly-vs-monthly-payments"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST (standards & guidance)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO (quality standards)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

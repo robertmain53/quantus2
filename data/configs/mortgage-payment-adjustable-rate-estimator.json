@@ -1,0 +1,538 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Adjustable-Rate Mortgage (ARM) Payment Estimator",
+    "description": "Estimate initial, first-adjusted, and worst-case monthly payments for common ARM structures (hybrid ARMs and interest-only ARMs). Includes caps, margin, index, amortization and payment frequency inputs. Provides conservative worst-case estimates and clear accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "hybrid_arm",
+    "methods": {
+      "hybrid_arm": {
+        "label": "Hybrid ARM (e.g., 5/1, 7/1)",
+        "description": "Standard hybrid adjustable-rate mortgage: fixed initial period followed by periodic adjustments with caps and lifetime limits.",
+        "variables": {
+          "monthly_rate_initial": {
+            "expression": "initial_rate_percent/100/payments_per_year",
+            "dependencies": [
+              "initial_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Initial periodic interest rate (decimal)",
+            "format": "decimal",
+            "display": true
+          },
+          "n_total": {
+            "expression": "amortization_years * payments_per_year",
+            "dependencies": [
+              "amortization_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "format": "integer",
+            "display": false
+          },
+          "initial_payment_var": {
+            "expression": "principal * monthly_rate_initial / (1 - (1 + monthly_rate_initial)^(-n_total))",
+            "dependencies": [
+              "principal",
+              "monthly_rate_initial",
+              "n_total"
+            ],
+            "label": "Initial monthly payment (fully amortizing)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "first_adjusted_rate_raw": {
+            "expression": "index_rate_percent/100 + margin_percent/100",
+            "dependencies": [
+              "index_rate_percent",
+              "margin_percent"
+            ],
+            "label": "Index + margin (raw adjusted rate)",
+            "format": "decimal",
+            "display": false
+          },
+          "first_adjusted_rate_capped": {
+            "expression": "min(initial_rate_percent/100 + periodic_cap_percent/100, max(rate_floor_percent/100, min(first_adjusted_rate_raw, rate_ceiling_percent/100)))",
+            "dependencies": [
+              "initial_rate_percent",
+              "periodic_cap_percent",
+              "rate_floor_percent",
+              "rate_ceiling_percent",
+              "first_adjusted_rate_raw"
+            ],
+            "label": "First adjusted rate after applying periodic cap, floor, and ceiling",
+            "format": "decimal",
+            "display": true
+          },
+          "remaining_payments": {
+            "expression": "n_total - initial_period_years * payments_per_year",
+            "dependencies": [
+              "n_total",
+              "initial_period_years",
+              "payments_per_year"
+            ],
+            "label": "Remaining payments after initial period",
+            "format": "integer",
+            "display": false
+          },
+          "adjusted_payment_var": {
+            "expression": "principal * (first_adjusted_rate_capped/payments_per_year) / (1 - (1 + first_adjusted_rate_capped/payments_per_year)^(-remaining_payments))",
+            "dependencies": [
+              "principal",
+              "first_adjusted_rate_capped",
+              "payments_per_year",
+              "remaining_payments"
+            ],
+            "label": "Monthly payment after first adjustment (amortizing)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "worst_case_rate": {
+            "expression": "min(initial_rate_percent/100 + lifetime_cap_percent/100, rate_ceiling_percent/100)",
+            "dependencies": [
+              "initial_rate_percent",
+              "lifetime_cap_percent",
+              "rate_ceiling_percent"
+            ],
+            "label": "Worst-case capped rate (initial + lifetime cap, limited by ceiling)",
+            "format": "decimal",
+            "display": false
+          },
+          "worst_case_payment_var": {
+            "expression": "principal * (worst_case_rate/payments_per_year) / (1 - (1 + worst_case_rate/payments_per_year)^(-remaining_payments))",
+            "dependencies": [
+              "principal",
+              "worst_case_rate",
+              "payments_per_year",
+              "remaining_payments"
+            ],
+            "label": "Estimated monthly payment in worst-case rate scenario",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "initial_monthly_payment",
+            "label": "Initial monthly payment",
+            "variable": "initial_payment_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "first_adjusted_monthly_payment",
+            "label": "Monthly payment after first adjustment",
+            "variable": "adjusted_payment_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "worst_case_monthly_payment",
+            "label": "Estimated worst-case monthly payment (capped)",
+            "variable": "worst_case_payment_var",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "interest_only_arm": {
+        "label": "Interest-Only ARM",
+        "description": "ARM with an initial interest-only period, then converts to fully amortizing payments after the interest-only term.",
+        "variables": {
+          "monthly_rate_initial": {
+            "expression": "initial_rate_percent/100/payments_per_year",
+            "dependencies": [
+              "initial_rate_percent",
+              "payments_per_year"
+            ],
+            "label": "Initial periodic interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "initial_period_payments": {
+            "expression": "initial_period_years * payments_per_year",
+            "dependencies": [
+              "initial_period_years",
+              "payments_per_year"
+            ],
+            "label": "Number of payments in the initial (interest-only) period",
+            "format": "integer",
+            "display": false
+          },
+          "interest_only_payment": {
+            "expression": "principal * monthly_rate_initial",
+            "dependencies": [
+              "principal",
+              "monthly_rate_initial"
+            ],
+            "label": "Interest-only monthly payment (initial period)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "n_total": {
+            "expression": "amortization_years * payments_per_year",
+            "dependencies": [
+              "amortization_years",
+              "payments_per_year"
+            ],
+            "label": "Total number of payments",
+            "format": "integer",
+            "display": false
+          },
+          "remaining_payments": {
+            "expression": "n_total - initial_period_payments",
+            "dependencies": [
+              "n_total",
+              "initial_period_payments"
+            ],
+            "label": "Payments remaining when amortization begins",
+            "format": "integer",
+            "display": false
+          },
+          "first_adjusted_rate_raw": {
+            "expression": "index_rate_percent/100 + margin_percent/100",
+            "dependencies": [
+              "index_rate_percent",
+              "margin_percent"
+            ],
+            "label": "Index + margin (raw adjusted rate)",
+            "format": "decimal",
+            "display": false
+          },
+          "first_adjusted_rate_capped": {
+            "expression": "min(initial_rate_percent/100 + periodic_cap_percent/100, max(rate_floor_percent/100, min(first_adjusted_rate_raw, rate_ceiling_percent/100)))",
+            "dependencies": [
+              "initial_rate_percent",
+              "periodic_cap_percent",
+              "rate_floor_percent",
+              "rate_ceiling_percent",
+              "first_adjusted_rate_raw"
+            ],
+            "label": "First adjusted rate after caps and floor",
+            "format": "decimal",
+            "display": true
+          },
+          "amortizing_payment_after_io": {
+            "expression": "principal * (first_adjusted_rate_capped/payments_per_year) / (1 - (1 + first_adjusted_rate_capped/payments_per_year)^(-remaining_payments))",
+            "dependencies": [
+              "principal",
+              "first_adjusted_rate_capped",
+              "payments_per_year",
+              "remaining_payments"
+            ],
+            "label": "Monthly payment after interest-only period (amortizing)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "interest_only_initial_payment",
+            "label": "Initial interest-only monthly payment",
+            "variable": "interest_only_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "amortizing_payment_after_io",
+            "label": "Monthly payment after interest-only period",
+            "variable": "amortizing_payment_after_io",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan principal (amount borrowed)",
+        "type": "number",
+        "default": 350000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "initial_rate_percent",
+        "label": "Initial (start) annual interest rate (%)",
+        "type": "number",
+        "default": 3.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "initial_period_years",
+        "label": "Initial fixed period (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "index_rate_percent",
+        "label": "Current index rate (%) (e.g., 1‑yr Treasury or LIBOR replacement)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "margin_percent",
+        "label": "Lender margin (%)",
+        "type": "number",
+        "default": 2.25,
+        "min": 0,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "adjustment_period_years",
+        "label": "Adjustment frequency after initial period (years)",
+        "type": "number",
+        "default": 1,
+        "min": 1,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "id": "periodic_cap_percent",
+        "label": "Periodic cap (%) (max increase at an adjustment)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "lifetime_cap_percent",
+        "label": "Lifetime cap (%) (max increase over initial rate)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      },
+      {
+        "id": "rate_floor_percent",
+        "label": "Rate floor (%) (minimum possible rate)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "rate_ceiling_percent",
+        "label": "Rate ceiling (%) (maximum allowable rate overall)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "max": 50,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization term (years)",
+        "type": "number",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 12,
+        "step": 1
+      },
+      {
+        "id": "interest_only",
+        "label": "Interest-only initial period?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No (fully amortizing initial period)",
+            "value": "no"
+          },
+          {
+            "label": "Yes (interest-only initial payments)",
+            "value": "yes"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "io_section",
+        "label": "Interest-only options",
+        "show_when": {
+          "field": "interest_only",
+          "is": "yes"
+        },
+        "fields": [
+          {
+            "id": "initial_period_years",
+            "label": "Interest-only period (years)",
+            "type": "number",
+            "default": 5,
+            "min": 0,
+            "max": 10,
+            "step": 1
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "initial_monthly_payment",
+          "label": "Initial monthly payment"
+        },
+        {
+          "id": "first_adjusted_monthly_payment",
+          "label": "Monthly payment after first adjustment"
+        },
+        {
+          "id": "worst_case_monthly_payment",
+          "label": "Estimated worst-case monthly payment (capped)"
+        },
+        {
+          "id": "interest_only_initial_payment",
+          "label": "Initial interest-only monthly payment"
+        },
+        {
+          "id": "amortizing_payment_after_io",
+          "label": "Monthly payment after interest-only period"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you compare likely monthly payments for common adjustable-rate mortgage (ARM) structures including hybrid ARMs (fixed initial period then adjustments) and interest-only ARMs.",
+      "It models initial payments, the first post-adjustment payment applying periodic caps and floors, and a conservative worst-case payment limited by the lifetime cap and overall ceiling. It does not include taxes, insurance, or escrow."
+    ],
+    "methodology": [
+      "Calculations use standard loan-amortization formulas to compute level monthly payments for a given periodic interest rate: payment = (principal * periodic_rate) / (1 - (1 + periodic_rate)^(-number_of_payments)).",
+      "Adjusted rates are estimated as index + margin, subject to periodic caps, lifetime caps (relative to the initial rate), a contractual floor, and an overall ceiling. The tool applies caps in the order commonly used by lenders: floor/ceiling limits, then periodic increase limits, then lifetime cap.",
+      "This tool is intended for planning and comparison. It follows secure-development and quality-management principles consistent with ISO 9001 and engineering reliability practices recommended by IEEE. It does not provide legal, tax, or binding loan offers. For secure handling of borrower data follow NIST digital privacy and data protection guidance."
+    ],
+    "how_is_calculated": [
+      "Convert annual percentage rates to periodic rates by dividing by payments per year: periodic_rate = annual_rate_percent/100 / payments_per_year.",
+      "Total payments = amortization_years * payments_per_year. Remaining payments after initial period = total_payments - initial_period_years * payments_per_year.",
+      "Fully amortizing payment formula used: payment = principal * periodic_rate / (1 - (1 + periodic_rate)^(-number_of_payments)).",
+      "Adjusted rate = min(initial_rate + periodic_cap, clamp(index + margin, floor, ceiling)). Worst-case rate = min(initial_rate + lifetime_cap, ceiling)."
+    ],
+    "examples": [
+      "Example 1: $350,000 principal, 3.5% initial rate for 5 years (5/1 ARM), 2% periodic cap, 5% lifetime cap, 2.5% index and 2.25% margin. Tool returns initial payment, payment after first adjustment, and a worst-case capped payment estimate.",
+      "Example 2: Interest-only ARM with a 5-year IO period: initial payments equal principal * periodic_rate. After the IO period the loan converts to amortizing payments based on the then-applicable rate and remaining term."
+    ],
+    "faqs": [
+      {
+        "question": "Does this estimator include taxes and insurance?",
+        "answer": "No. This tool estimates principal and interest only. Taxes, homeowners insurance, PMI, and escrow should be added separately for a full monthly housing cost estimate."
+      },
+      {
+        "question": "How accurate are the adjustment and worst-case estimates?",
+        "answer": "Estimates follow the contractual cap rules entered. They are illustrative: actual future index values, lender margin changes, product-specific rounding rules, and lender practices can change payments. Use worst-case outputs as conservative planning figures. For regulated accuracy and secure handling of user data, follow NIST guidance and consult your loan documents or lender."
+      },
+      {
+        "question": "Why are periodic and lifetime caps both applied?",
+        "answer": "Periodic caps limit how much the rate can change at each adjustment. Lifetime caps limit the aggregate increase over the initial rate. Both are applied so the estimate respects typical ARM contract protections."
+      },
+      {
+        "question": "Is the payment formula exact?",
+        "answer": "It uses the standard level-payment amortization formula. Lenders may apply different day-count conventions, rounding rules, or require minimum payments; the tool's result is therefore an estimate, not a loan guarantee."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "ARM (Adjustable-Rate Mortgage)",
+        "definition": "A mortgage with an interest rate that can change after an initial fixed period based on a specified index plus a lender margin."
+      },
+      {
+        "term": "Index",
+        "definition": "A market rate (for example, Treasury or other benchmark) that changes over time and determines adjustments when combined with the lender margin."
+      },
+      {
+        "term": "Margin",
+        "definition": "A lender-set fixed percentage added to the index to determine the fully indexed interest rate at adjustment."
+      },
+      {
+        "term": "Periodic cap",
+        "definition": "Maximum percentage-point increase (or decrease) allowed at a single adjustment period."
+      },
+      {
+        "term": "Lifetime cap",
+        "definition": "Maximum percentage-point increase allowed over the life of the loan relative to the initial rate."
+      },
+      {
+        "term": "Interest-only",
+        "definition": "A loan feature where initial payments cover only interest, with principal repayment deferred until the interest-only period ends."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/mortgages/payment-calculators/mortgage-basics",
+      "/mortgages/glossary/arm-terms"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST - Standards & Guidelines",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO - Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

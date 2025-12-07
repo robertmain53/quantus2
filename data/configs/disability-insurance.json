@@ -1,0 +1,493 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Disability Insurance Needs Calculator (Advanced)",
+    "description": "Interactive multi-method estimator to approximate how much disability income protection you may need. Includes income-replacement, expense-based, and human-capital approaches with configurable employer/state offsets, waiting and benefit periods, and demographic inputs."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "income_replacement",
+    "methods": {
+      "income_replacement": {
+        "label": "Income replacement method",
+        "description": "Estimates monthly and annual policy need based on a target replacement ratio of pre-disability earnings, subtracting employer and state benefits and other income.",
+        "variables": {
+          "monthly_gross_income": {
+            "expression": "annual_income / 12",
+            "dependencies": [
+              "annual_income"
+            ],
+            "label": "Monthly gross income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "target_monthly_benefit": {
+            "expression": "monthly_gross_income * (desired_replacement_pct / 100)",
+            "dependencies": [
+              "monthly_gross_income",
+              "desired_replacement_pct"
+            ],
+            "label": "Target monthly benefit (replacement)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_employer_benefit": {
+            "expression": "monthly_gross_income * (employer_long_term_pct / 100)",
+            "dependencies": [
+              "monthly_gross_income",
+              "employer_long_term_pct"
+            ],
+            "label": "Estimated monthly employer-provided benefit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_state_benefit": {
+            "expression": "monthly_gross_income * (state_disability_pct / 100)",
+            "dependencies": [
+              "monthly_gross_income",
+              "state_disability_pct"
+            ],
+            "label": "Estimated monthly state disability benefit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_monthly_need": {
+            "expression": "target_monthly_benefit - monthly_employer_benefit - monthly_state_benefit - monthly_other_income",
+            "dependencies": [
+              "target_monthly_benefit",
+              "monthly_employer_benefit",
+              "monthly_state_benefit",
+              "monthly_other_income"
+            ],
+            "label": "Estimated monthly policy need (before tax treatment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_estimated_need": {
+            "expression": "estimated_monthly_need * 12",
+            "dependencies": [
+              "estimated_monthly_need"
+            ],
+            "label": "Estimated annual policy need (before tax treatment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "estimated_monthly_need",
+            "label": "Estimated monthly benefit you may need",
+            "variable": "estimated_monthly_need",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_estimated_need",
+            "label": "Estimated annual benefit you may need",
+            "variable": "annual_estimated_need",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "expense_based": {
+        "label": "Expense-based method",
+        "description": "Targets current monthly living expenses and applies employer/state offsets and other income to determine monthly shortfall and total coverage needed over the selected benefit period.",
+        "variables": {
+          "monthly_gross_income": {
+            "expression": "annual_income / 12",
+            "dependencies": [
+              "annual_income"
+            ],
+            "label": "Monthly gross income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_employer_benefit": {
+            "expression": "monthly_gross_income * (employer_long_term_pct / 100)",
+            "dependencies": [
+              "monthly_gross_income",
+              "employer_long_term_pct"
+            ],
+            "label": "Estimated monthly employer-provided benefit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_state_benefit": {
+            "expression": "monthly_gross_income * (state_disability_pct / 100)",
+            "dependencies": [
+              "monthly_gross_income",
+              "state_disability_pct"
+            ],
+            "label": "Estimated monthly state disability benefit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_replacement_required": {
+            "expression": "monthly_expenses - monthly_employer_benefit - monthly_state_benefit - monthly_other_income",
+            "dependencies": [
+              "monthly_expenses",
+              "monthly_employer_benefit",
+              "monthly_state_benefit",
+              "monthly_other_income"
+            ],
+            "label": "Monthly shortfall to cover expenses",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_coverage_needed": {
+            "expression": "monthly_replacement_required * benefit_period_months",
+            "dependencies": [
+              "monthly_replacement_required",
+              "benefit_period_months"
+            ],
+            "label": "Total coverage needed over benefit period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_replacement_required",
+            "label": "Monthly shortfall to cover expenses",
+            "variable": "monthly_replacement_required",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_coverage_needed",
+            "label": "Total coverage needed for selected benefit period",
+            "variable": "total_coverage_needed",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "human_capital": {
+        "label": "Human-capital (present-value) method",
+        "description": "Estimates the present value of lost pre-disability earnings until a chosen retirement age using a standard annuity present-value formula. Useful for high-level planning.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "pv_factor": {
+            "expression": "(1 - (1 + discount_rate_pct/100) ** (-years_to_retirement)) / (discount_rate_pct/100)",
+            "dependencies": [
+              "discount_rate_pct",
+              "years_to_retirement"
+            ],
+            "label": "Present value annuity factor",
+            "unit": "dimensionless",
+            "format": "decimal",
+            "display": true
+          },
+          "present_value_lost_earnings": {
+            "expression": "annual_income * pv_factor",
+            "dependencies": [
+              "annual_income",
+              "pv_factor"
+            ],
+            "label": "Present value of lost earnings until retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "present_value_lost_earnings",
+            "label": "Present value of lost pre-disability earnings",
+            "variable": "present_value_lost_earnings",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "annual_income",
+        "label": "Pre-disability gross annual income",
+        "type": "number",
+        "default": 80000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "monthly_expenses",
+        "label": "Current total monthly living expenses",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "current_savings",
+        "label": "Liquid savings you could use for shortfalls",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "employer_long_term_pct",
+        "label": "Employer long-term disability benefit (% of salary)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "employer_short_term_pct",
+        "label": "Employer short-term disability benefit (% of salary)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "monthly_other_income",
+        "label": "Expected monthly other disability income (state benefits, annuities)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "desired_replacement_pct",
+        "label": "Desired income replacement ratio (%)",
+        "type": "number",
+        "default": 60,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "state_disability_pct",
+        "label": "Typical state benefit estimate (% of salary)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "waiting_period_months",
+        "label": "Elimination / waiting period (months)",
+        "type": "integer",
+        "default": 90,
+        "min": 0,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "benefit_period_months",
+        "label": "Planned benefit period (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      },
+      {
+        "id": "inflation_rate",
+        "label": "Assumed annual inflation rate (%)",
+        "type": "number",
+        "default": 2,
+        "min": -5,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "tax_treatment",
+        "label": "Expected tax treatment of benefits",
+        "type": "select",
+        "default": "after-tax",
+        "options": [
+          {
+            "label": "Benefits received after tax (you paid premiums)",
+            "value": "after-tax"
+          },
+          {
+            "label": "Benefits received pre-tax (employer-paid premiums)",
+            "value": "pre-tax"
+          }
+        ]
+      },
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 35,
+        "min": 16,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Target retirement age",
+        "type": "integer",
+        "default": 67,
+        "min": 50,
+        "max": 80,
+        "step": 1
+      },
+      {
+        "id": "wage_growth_pct",
+        "label": "Expected annual wage growth (%)",
+        "type": "number",
+        "default": 2,
+        "min": -5,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "discount_rate_pct",
+        "label": "Discount rate for present-value calculation (%)",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "max": 15,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator offers multiple established approaches to estimate how much disability income protection you may need: income-replacement, expense-based, and a human-capital present-value approach. Results are high-level estimates to help you plan and compare scenarios.",
+      "Use the inputs to reflect your pre-disability earnings, employer benefits, other income sources, and your intended benefit period. The tool does not sell policies or guarantee pricing; it provides calibrated estimates to support conversations with licensed advisors."
+    ],
+    "methodology": [
+      "The tool implements three common methods: (1) income-replacement: target replacement ratio of pre-disability earnings less employer/state offsets; (2) expense-based: shortfall between monthly expenses and predictable income sources multiplied by the benefit period; (3) human-capital: present value of projected pre-disability earnings until a chosen retirement age using an annuity present-value factor.",
+      "To support trustworthy handling of user inputs and privacy this tool follows general guidance from NIST on data minimization and security controls. Model outputs are numeric estimates derived from algebraic formulas and do not use or infer protected medical information. For professional liability and compliance guidance consult applicable ISO, IEEE, and local regulatory standards."
+    ],
+    "how_is_calculated": [
+      "Income-replacement method steps: (1) compute monthly gross income = annual income / 12; (2) compute target monthly benefit = monthly gross income × desired replacement %; (3) subtract employer-provided benefits, state benefits, and other monthly income to find estimated monthly policy need; (4) annual need = monthly need × 12.",
+      "Expense-based method steps: (1) start from current monthly living expenses; (2) subtract employer/state/other income to get monthly shortfall; (3) total coverage needed = monthly shortfall × benefit period (months).",
+      "Human-capital method steps: (1) compute years to retirement = retirement age − current age; (2) compute present-value annuity factor = (1 − (1 + discount_rate)^(-n)) / discount_rate; (3) present value of lost earnings = annual income × PV factor."
+    ],
+    "examples": [
+      "Example 1 (income-replacement): $80,000 annual income, 60% replacement, no employer benefits → target monthly benefit = $4,000; estimated monthly need ≈ $4,000.",
+      "Example 2 (expense-based): $3,000 monthly expenses, employer long-term benefit of 40% salary converted to monthly amount reduces the monthly shortfall; total coverage is monthly shortfall × chosen benefit months.",
+      "Example 3 (human-capital): A 35-year-old with $80,000 annual income and retirement at 67 will see present-value lost earnings estimated by applying the discount-rate annuity factor across years to retirement."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are approximate and depend on correct inputs and assumptions. They do not replace policy wording or a licensed advisor's needs analysis. Use results as planning guidance only."
+      },
+      {
+        "question": "Does this calculator account for taxes?",
+        "answer": "The tool allows you to set expected tax treatment of benefits (pre-tax or after-tax). It does not compute detailed tax liabilities. Consult a tax professional for personalized tax treatment of benefits."
+      },
+      {
+        "question": "Are employer benefits and state benefits included?",
+        "answer": "Yes. Enter employer long-term/short-term benefit percentages and estimated state benefit percentage. Those reduce the estimated additional policy need."
+      },
+      {
+        "question": "Should I buy a policy equal to the calculator's recommendation?",
+        "answer": "Not automatically. Use the estimate to inform conversations with a licensed insurance professional who can review occupation-specific definitions, policy wording (own-occupation vs any-occupation), elimination periods, and indexing features."
+      },
+      {
+        "question": "What standards and safeguards were considered?",
+        "answer": "The tool follows data-handling guidance informed by NIST, cites ISO and IEEE best practices for method transparency, and recommends workplace safety considerations aligned with OSHA. These references are for governance and transparency and do not imply regulatory approval of estimates."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Social Security Administration — Disability benefits and calculators",
+        "url": "https://www.ssa.gov/benefits/disability/"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Replacement ratio",
+        "definition": "The percentage of pre-disability earnings you aim to replace with disability benefits."
+      },
+      {
+        "term": "Elimination period",
+        "definition": "The waiting period (in days or months) after a disability begins before benefits start."
+      },
+      {
+        "term": "Benefit period",
+        "definition": "The maximum length of time that benefits will be paid while you remain disabled."
+      },
+      {
+        "term": "Own-occupation",
+        "definition": "A policy definition requiring inability to perform the duties of your specific occupation to qualify for benefits."
+      },
+      {
+        "term": "Present value (PV)",
+        "definition": "A calculation that discounts future income to a single current value using a discount rate."
+      }
+    ],
+    "summary": [
+      "This advanced estimator supports three complementary approaches to disability insurance need. Enter accurate income, expense, and benefit details for meaningful results.",
+      "Always validate outputs with policy documents and a licensed insurance or tax professional. The calculator is an estimator and not an insurance policy or contractual quote."
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.ssa.gov/benefits/disability/",
+        "label": "Social Security Disability information",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST standards and guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

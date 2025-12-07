@@ -1,0 +1,502 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Insurance Premium Calculator (multi-line, estimate & regulatory-aware)",
+    "description": "Interactive estimator for common insurance premium types (auto, term life, individual health subsidy estimate, commercial equipment). Designed for clear inputs, transparent formulas, and regulatory & security guidance. Provides conservative, non-binding estimates and notes on calibration, limits, and data handling."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "auto_estimate",
+    "methods": {
+      "auto_estimate": {
+        "label": "Auto insurance — annual premium estimate",
+        "description": "Estimate annual premium using vehicle exposure, driving history, mileage, vehicle age, and local risk factor.",
+        "variables": {
+          "base_rate_per_1000": {
+            "expression": "8",
+            "dependencies": [],
+            "label": "Base rate per $1,000 of vehicle value (USD)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "exposure": {
+            "expression": "vehicle_value / 1000",
+            "dependencies": [
+              "vehicle_value"
+            ],
+            "label": "Exposure (units of $1,000)",
+            "format": "decimal",
+            "display": false
+          },
+          "risk_score": {
+            "expression": "1 + (driver_points * 0.05) + (annual_miles / 20000) * 0.1 + (vehicle_age / 20) * 0.1",
+            "dependencies": [
+              "driver_points",
+              "annual_miles",
+              "vehicle_age"
+            ],
+            "label": "Relative risk factor from driver and vehicle characteristics",
+            "format": "decimal",
+            "display": false
+          },
+          "raw_premium": {
+            "expression": "base_rate_per_1000 * exposure * risk_score * location_risk_factor",
+            "dependencies": [
+              "base_rate_per_1000",
+              "exposure",
+              "risk_score",
+              "location_risk_factor"
+            ],
+            "label": "Estimated annual premium (before discounts/fees)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "auto_annual_premium",
+            "label": "Estimated annual premium (auto)",
+            "variable": "raw_premium",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "life_term_estimate": {
+        "label": "Term life insurance — annual premium estimate",
+        "description": "Simple term-life annual premium estimate using face amount, age, smoker status, and term length. Intended for screening and budgeting only.",
+        "variables": {
+          "base_rate_per_1000_coverage": {
+            "expression": "0.5",
+            "dependencies": [],
+            "label": "Base rate per $1,000 of coverage (USD)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "age_factor": {
+            "expression": "1 + ((age - 30) * 0.02)",
+            "dependencies": [
+              "age"
+            ],
+            "label": "Age-based multiplier",
+            "format": "decimal",
+            "display": false
+          },
+          "smoker_multiplier": {
+            "expression": "smoker == 'yes' ? 2 : 1",
+            "dependencies": [
+              "smoker"
+            ],
+            "label": "Smoker status multiplier",
+            "format": "decimal",
+            "display": false
+          },
+          "risk_factor": {
+            "expression": "age_factor * smoker_multiplier",
+            "dependencies": [
+              "age_factor",
+              "smoker_multiplier"
+            ],
+            "label": "Combined risk factor",
+            "format": "decimal",
+            "display": false
+          },
+          "annual_premium": {
+            "expression": "(coverage_amount / 1000) * base_rate_per_1000_coverage * risk_factor / term_years",
+            "dependencies": [
+              "coverage_amount",
+              "base_rate_per_1000_coverage",
+              "risk_factor",
+              "term_years"
+            ],
+            "label": "Estimated annual premium (term life)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "life_annual_premium",
+            "label": "Estimated annual premium (term life)",
+            "variable": "annual_premium",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "health_subsidy_estimate": {
+        "label": "Individual health plan — subsidy-adjusted premium estimate",
+        "description": "Estimate monthly premium after a simple subsidy model. Uses household income, family size and a benchmark monthly premium. This is a high-level estimate — actual subsidies follow program rules and are state-specific.",
+        "variables": {
+          "annual_benchmark": {
+            "expression": "benchmark_premium * 12",
+            "dependencies": [
+              "benchmark_premium"
+            ],
+            "label": "Annual benchmark premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "raw_subsidy_share": {
+            "expression": "1 - (household_income / (40000 * family_size))",
+            "dependencies": [
+              "household_income",
+              "family_size"
+            ],
+            "label": "Raw subsidy share (unclamped)",
+            "format": "decimal",
+            "display": false
+          },
+          "subsidy_share_clamped": {
+            "expression": "raw_subsidy_share < 0 ? 0 : (raw_subsidy_share > 0.9 ? 0.9 : raw_subsidy_share)",
+            "dependencies": [
+              "raw_subsidy_share"
+            ],
+            "label": "Clamped subsidy share (0 to 0.9)",
+            "format": "decimal",
+            "display": false
+          },
+          "annual_premium_after_subsidy": {
+            "expression": "annual_benchmark * (1 - subsidy_share_clamped)",
+            "dependencies": [
+              "annual_benchmark",
+              "subsidy_share_clamped"
+            ],
+            "label": "Estimated annual premium after subsidy",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_premium_after_subsidy": {
+            "expression": "annual_premium_after_subsidy / 12",
+            "dependencies": [
+              "annual_premium_after_subsidy"
+            ],
+            "label": "Estimated monthly premium after subsidy",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "health_monthly_premium",
+            "label": "Estimated monthly premium after subsidy",
+            "variable": "monthly_premium_after_subsidy",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "equipment_commercial_estimate": {
+        "label": "Commercial equipment insurance — annual premium estimate",
+        "description": "Estimate for equipment/property insurance using a rate per $1,000 of value. Designed for quick budgeting; commercial underwriting may add location, usage and business-class loadings.",
+        "variables": {
+          "exposure": {
+            "expression": "equipment_value / 1000",
+            "dependencies": [
+              "equipment_value"
+            ],
+            "label": "Exposure (units of $1,000)",
+            "format": "decimal",
+            "display": false
+          },
+          "raw_premium": {
+            "expression": "exposure * rate_per_1000",
+            "dependencies": [
+              "exposure",
+              "rate_per_1000"
+            ],
+            "label": "Estimated annual premium (commercial equipment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "equipment_annual_premium",
+            "label": "Estimated annual premium (equipment)",
+            "variable": "raw_premium",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "vehicle_value",
+        "label": "Vehicle current market value (USD)",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "vehicle_age",
+        "label": "Vehicle age (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 0,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "annual_miles",
+        "label": "Annual miles driven",
+        "type": "integer",
+        "default": 12000,
+        "min": 0,
+        "max": 100000,
+        "step": 100
+      },
+      {
+        "id": "driver_points",
+        "label": "Driving record points (recent infractions)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 12,
+        "step": 1
+      },
+      {
+        "id": "location_risk_factor",
+        "label": "Location risk factor (local multiplier; 1 = average area)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0.5,
+        "max": 3.0,
+        "step": 0.01
+      },
+      {
+        "id": "coverage_amount",
+        "label": "Life coverage amount (USD)",
+        "type": "number",
+        "default": 250000,
+        "min": 10000,
+        "step": 1000
+      },
+      {
+        "id": "age",
+        "label": "Applicant age (years)",
+        "type": "integer",
+        "default": 35,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "smoker",
+        "label": "Smoker?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "term_years",
+        "label": "Term length (years)",
+        "type": "integer",
+        "default": 20,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "household_income",
+        "label": "Household annual income (USD)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "family_size",
+        "label": "Household size (persons)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "id": "benchmark_premium",
+        "label": "Benchmark monthly premium for plan (USD)",
+        "type": "number",
+        "default": 400,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "equipment_value",
+        "label": "Equipment insured value (USD)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "rate_per_1000",
+        "label": "Rate per $1,000 of value (USD)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "deductible",
+        "label": "Deductible (USD)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 100
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator provides non-binding premium estimates for common insurance categories: auto, term life, individual health (subsidy-adjusted), and commercial equipment. The tool is designed for planning and budgeting, not for underwriting or issuing coverage.",
+      "Estimates are produced from simplified actuarial-style formulas that use the inputs you provide. Actual premiums require underwriting, detailed risk classification, and may include fees, taxes, and discounts not modeled here. Use results only as indicative guidance."
+    ],
+    "methodology": [
+      "Each method uses a transparent, arithmetic model combining exposure (value or coverage amount), base rate assumptions, and multiplicative risk factors. Models are intentionally conservative and simplified to be explainable and auditable.",
+      "Security and data handling recommendations follow NIST and ISO guidance: sensitive inputs must be treated per NIST SP 800-53 controls and ISO/IEC 27001 principles when stored or transmitted. Results that reference program eligibility (for example, health subsidies) are approximations and do not substitute official enrollment systems."
+    ],
+    "how_is_calculated": [
+      "Auto: premium ≈ base_rate_per_1000 × (vehicle_value / 1,000) × risk_score × location_multiplier.",
+      "Term life: annual premium ≈ (coverage_amount / 1,000) × base_rate_per_1000 × age_factor × smoker_multiplier, divided across the term as a budgeting figure.",
+      "Health (subsidy estimate): monthly premium ≈ benchmark_premium × (1 − subsidy_share), where subsidy_share is a simplified function of household income and family size and is clamped to a plausible range.",
+      "Commercial equipment: premium ≈ (equipment_value / 1,000) × rate_per_1000. Underwriting adjustments for usage, location, and business class are not modeled."
+    ],
+    "examples": [
+      "Example: A $20,000 vehicle with average location factor (1.0), no driver points, and 12,000 annual miles: exposure = 20; base rate $8 → estimated annual premium ≈ $8 × 20 × (risk_score close to 1) = ~$160.",
+      "Example: Term life for a 35-year-old non-smoker, $250,000 coverage, 20-year term: base rate $0.5 per $1,000 → annual ≈ (250 × 0.5) × age_multiplier ≈ $125–$200 depending on age multiplier and smoker status."
+    ],
+    "summary": [
+      "Outputs are estimates only. Use them to compare scenarios, test sensitivity (change a single input), and prepare questions for licensed agents or brokers.",
+      "The tool includes guardrails and clamping for unrealistic subsidy values, but it does not replace carrier underwriting or program eligibility determinations."
+    ],
+    "faqs": [
+      {
+        "question": "Are these premiums exact or binding?",
+        "answer": "No. These are quick estimates for planning. Final premiums are determined by carriers after underwriting, background checks, and application of state taxes, fees, and discounts."
+      },
+      {
+        "question": "How accurate are the subsidy estimates for health insurance?",
+        "answer": "They are simplified approximations based on household income and family size and should be used only for budgeting. Official subsidy calculations are state-specific and use program rules not fully replicated here."
+      },
+      {
+        "question": "How should I treat the results for commercial underwriting?",
+        "answer": "For commercial equipment, treat the result as a starting quote. Full underwriting will consider business class, storage and usage patterns, loss history, and legal requirements."
+      },
+      {
+        "question": "What privacy and security practices should I expect?",
+        "answer": "Data handling should follow NIST SP 800-53 and ISO/IEC 27001 guidance. Do not enter sensitive personal identifiers unless you trust the hosting site and understand their privacy policy."
+      },
+      {
+        "question": "Can I calibrate the base rates to my carrier or broker quotes?",
+        "answer": "Yes. Change the base rate and rate-per-1,000 fields to align model outputs with known premiums. The tool is designed to be transparent so you can calibrate parameters for local accuracy."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Exposure",
+        "definition": "Monetary value used to scale premium (for example, vehicle value or coverage amount divided by 1,000)."
+      },
+      {
+        "term": "Base rate per $1,000",
+        "definition": "An assumed charge in USD applied to each $1,000 of exposure before risk multipliers and locality adjustments."
+      },
+      {
+        "term": "Risk factor / multiplier",
+        "definition": "A dimensionless number applied to the base rate to reflect additional underwriting risk such as age, smoking, claims history, driving record, or mileage."
+      },
+      {
+        "term": "Clamping",
+        "definition": "Restricting a computed value to a predefined range to avoid implausible outputs (for example, subsidy shares limited between 0 and 90%)."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Special Publication 800-53 (security and privacy controls)",
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final"
+      },
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO/IEC 27001 (information security management)",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "National Association of Insurance Commissioners (NAIC) — consumer and regulatory resources",
+        "url": "https://www.naic.org/"
+      },
+      {
+        "label": "Centers for Medicare & Medicaid Services (CMS) — Marketplace & subsidy rules",
+        "url": "https://www.cms.gov/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — workplace risk standards",
+        "url": "https://www.osha.gov/"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/insurance/auto-premium-estimate",
+      "/calculators/insurance/life-premium-estimate",
+      "/calculators/insurance/health-subsidy-estimate",
+      "/calculators/insurance/equipment-premium-estimate"
+    ],
+    "external": [
+      {
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final",
+        "label": "NIST SP 800-53",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/isoiec-27001-information-security.html",
+        "label": "ISO/IEC 27001",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.naic.org/",
+        "label": "NAIC — consumer resources",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

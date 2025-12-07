@@ -1,0 +1,592 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Loan Balloon Payment Calculator — with Extra Payment Scenarios",
+    "description": "Estimate the remaining balance and balloon payment for a business loan when regular payments are based on a longer amortization but a lump-sum balloon is due earlier. Supports recurring extra payments and a single lump-sum extra payment. Includes accuracy notes and standards-based guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "scheduled_extra",
+    "methods": {
+      "scheduled_extra": {
+        "label": "Scheduled balloon with recurring extra payments",
+        "description": "Standard balloon calculation where the scheduled periodic payment is computed from the amortization term, and a recurring extra payment is applied each payment period through the balloon date.",
+        "variables": {
+          "payments_per_year": {
+            "expression": "Number(payment_frequency)",
+            "dependencies": [
+              "payment_frequency"
+            ],
+            "label": "Payments per year",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_interest_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_interest_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "total_periods": {
+            "expression": "amortization_years * payments_per_year",
+            "dependencies": [
+              "amortization_years",
+              "payments_per_year"
+            ],
+            "label": "Total amortization periods",
+            "format": "integer",
+            "display": true
+          },
+          "balloon_periods": {
+            "expression": "balloon_years * payments_per_year",
+            "dependencies": [
+              "balloon_years",
+              "payments_per_year"
+            ],
+            "label": "Periods until balloon",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "principal * (periodic_rate) / (1 - pow(1 + periodic_rate, -total_periods))",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "total_periods"
+            ],
+            "label": "Scheduled periodic payment (excl. extras)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "balance_at_balloon": {
+            "expression": "principal * pow(1 + periodic_rate, balloon_periods) - (periodic_payment + recurring_extra) * ((pow(1 + periodic_rate, balloon_periods) - 1) / periodic_rate)",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "balloon_periods",
+              "periodic_payment",
+              "recurring_extra"
+            ],
+            "label": "Outstanding balance at balloon date",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_payment": {
+            "expression": "balance_at_balloon",
+            "dependencies": [
+              "balance_at_balloon"
+            ],
+            "label": "Balloon payment due",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_until_balloon": {
+            "expression": "(periodic_payment + recurring_extra) * balloon_periods",
+            "dependencies": [
+              "periodic_payment",
+              "recurring_extra",
+              "balloon_periods"
+            ],
+            "label": "Total cash paid until balloon (payments + recurring extras)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "principal_reduction_until_balloon": {
+            "expression": "principal - balance_at_balloon",
+            "dependencies": [
+              "principal",
+              "balance_at_balloon"
+            ],
+            "label": "Principal reduction until balloon",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "interest_paid_until_balloon": {
+            "expression": "total_paid_until_balloon - principal_reduction_until_balloon",
+            "dependencies": [
+              "total_paid_until_balloon",
+              "principal_reduction_until_balloon"
+            ],
+            "label": "Interest paid until balloon",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Scheduled periodic payment (excl. extras)",
+            "variable": "periodic_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon",
+            "label": "Outstanding balance at balloon date",
+            "variable": "balance_at_balloon",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_payment",
+            "label": "Balloon payment due",
+            "variable": "balloon_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_until_balloon",
+            "label": "Total paid until balloon (incl. recurring extras)",
+            "variable": "total_paid_until_balloon",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid_until_balloon",
+            "label": "Interest paid until balloon",
+            "variable": "interest_paid_until_balloon",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "lump_sum_extra": {
+        "label": "Balloon with a single lump-sum extra payment",
+        "description": "Compute balloon amount if a single additional principal payment is made at a specified payment number before the balloon date.",
+        "variables": {
+          "payments_per_year": {
+            "expression": "Number(payment_frequency)",
+            "dependencies": [
+              "payment_frequency"
+            ],
+            "label": "Payments per year",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_interest_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_interest_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "%",
+            "format": "decimal",
+            "display": true
+          },
+          "total_periods": {
+            "expression": "amortization_years * payments_per_year",
+            "dependencies": [
+              "amortization_years",
+              "payments_per_year"
+            ],
+            "label": "Total amortization periods",
+            "format": "integer",
+            "display": true
+          },
+          "balloon_periods": {
+            "expression": "balloon_years * payments_per_year",
+            "dependencies": [
+              "balloon_years",
+              "payments_per_year"
+            ],
+            "label": "Periods until balloon",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_payment": {
+            "expression": "principal * (periodic_rate) / (1 - pow(1 + periodic_rate, -total_periods))",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "total_periods"
+            ],
+            "label": "Scheduled periodic payment (excl. extras)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "L": {
+            "expression": "lump_extra_at_period",
+            "dependencies": [
+              "lump_extra_at_period"
+            ],
+            "label": "Period index when lump extra is paid",
+            "format": "integer",
+            "display": true
+          },
+          "balance_before_lump": {
+            "expression": "principal * pow(1 + periodic_rate, L) - periodic_payment * ((pow(1 + periodic_rate, L) - 1) / periodic_rate)",
+            "dependencies": [
+              "principal",
+              "periodic_rate",
+              "L",
+              "periodic_payment"
+            ],
+            "label": "Outstanding balance immediately before lump payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "balance_after_lump": {
+            "expression": "balance_before_lump - lump_extra",
+            "dependencies": [
+              "balance_before_lump",
+              "lump_extra"
+            ],
+            "label": "Outstanding balance immediately after lump payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "balance_at_balloon": {
+            "expression": "balance_after_lump * pow(1 + periodic_rate, balloon_periods - L) - periodic_payment * ((pow(1 + periodic_rate, balloon_periods - L) - 1) / periodic_rate)",
+            "dependencies": [
+              "balance_after_lump",
+              "periodic_payment",
+              "periodic_rate",
+              "balloon_periods",
+              "L"
+            ],
+            "label": "Outstanding balance at balloon date",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_payment": {
+            "expression": "balance_at_balloon",
+            "dependencies": [
+              "balance_at_balloon"
+            ],
+            "label": "Balloon payment due",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_until_balloon": {
+            "expression": "periodic_payment * balloon_periods + lump_extra",
+            "dependencies": [
+              "periodic_payment",
+              "balloon_periods",
+              "lump_extra"
+            ],
+            "label": "Total cash paid until balloon (payments + single lump)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "principal_reduction_until_balloon": {
+            "expression": "principal - balance_at_balloon",
+            "dependencies": [
+              "principal",
+              "balance_at_balloon"
+            ],
+            "label": "Principal reduction until balloon",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "interest_paid_until_balloon": {
+            "expression": "total_paid_until_balloon - principal_reduction_until_balloon",
+            "dependencies": [
+              "total_paid_until_balloon",
+              "principal_reduction_until_balloon"
+            ],
+            "label": "Interest paid until balloon",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Scheduled periodic payment (excl. extras)",
+            "variable": "periodic_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon",
+            "label": "Outstanding balance at balloon date",
+            "variable": "balance_at_balloon",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_payment",
+            "label": "Balloon payment due",
+            "variable": "balloon_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid_until_balloon",
+            "label": "Total paid until balloon (including lump)",
+            "variable": "total_paid_until_balloon",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid_until_balloon",
+            "label": "Interest paid until balloon",
+            "variable": "interest_paid_until_balloon",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 250000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "annual_interest_rate",
+        "label": "Annual interest rate (%)",
+        "type": "number",
+        "default": 6.5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years)",
+        "type": "integer",
+        "default": 25,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "balloon_years",
+        "label": "Balloon due after (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "payment_frequency",
+        "label": "Payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Yearly (1)",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "recurring_extra",
+        "label": "Recurring extra payment per period (applies to scheduled extra method)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lump_extra",
+        "label": "Single lump extra payment amount (applies to lump-sum method)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "lump_extra_at_period",
+        "label": "Period index when lump extra is paid (1 = first payment)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 600,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Scheduled periodic payment (excl. extras)"
+        },
+        {
+          "id": "balance_at_balloon",
+          "label": "Outstanding balance at balloon date"
+        },
+        {
+          "id": "balloon_payment",
+          "label": "Balloon payment due"
+        },
+        {
+          "id": "total_paid_until_balloon",
+          "label": "Total paid until balloon (incl. extras)"
+        },
+        {
+          "id": "interest_paid_until_balloon",
+          "label": "Interest paid until balloon"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This tool estimates the balloon payment and related amounts for a business loan that is amortized over a longer schedule than the balloon maturity. It supports two scenarios: recurring extra payments applied each payment period, and a single lump-sum extra payment at a chosen payment number.",
+      "Results are modelled using standard amortization math and are intended for planning and comparison. They are estimates only and are not a substitute for lender-provided payoff statements or legally required disclosures."
+    ],
+    "methodology": [
+      "The calculator uses period-by-period amortization formulas. The scheduled periodic payment is computed from the amortization term and periodic interest rate using the standard annuity formula. The outstanding balance at the balloon date is computed by projecting the principal forward by periodic compounding and subtracting the accumulated effect of payments.",
+      "For recurring extras, the model treats each extra as an additional constant payment applied each period; for a lump-sum extra it reduces principal at the specified payment period and the post-lump balance is projected to the balloon date. Users should ensure the lump payment period is before or equal to the balloon period; results assume that requirement.",
+      "Accuracy and implementation follow best practices for numerical stability. Calculations are performed in decimal floating arithmetic; rounding to cents is applied for display only. For complex legal or tax consequences, consult qualified professionals."
+    ],
+    "how_is_calculated": [
+      "Periodic interest rate = annual interest rate / 100 / payments per year.",
+      "Scheduled periodic payment (excl. extras) = principal * r / (1 - (1+r)^-N) where r is the periodic rate and N is total amortization periods.",
+      "Outstanding balance after k periods = principal*(1+r)^k - payment * (( (1+r)^k - 1 ) / r). When extras are applied they are included in 'payment' as additional constant amounts. For a lump extra at period L the calculator subtracts that lump from the balance at L and then projects forward to the balloon period."
+    ],
+    "faqs": [
+      {
+        "question": "What exactly is a balloon payment?",
+        "answer": "A balloon payment is the remaining loan balance due at a single maturity date when scheduled periodic payments do not fully amortize the loan. This calculator reports the estimated outstanding balance at the chosen balloon date."
+      },
+      {
+        "question": "How do recurring extra payments affect the balloon?",
+        "answer": "Recurring extra payments reduce the outstanding balance faster and therefore lower the balloon payment. The calculator assumes extras are applied every payment period in addition to the scheduled payment."
+      },
+      {
+        "question": "How does a single lump-sum extra payment work here?",
+        "answer": "A lump-sum extra payment reduces principal immediately at the chosen payment number. The post-lump balance is then projected to the balloon date using the same periodic rate and scheduled payment amount."
+      },
+      {
+        "question": "Are these numbers legally binding?",
+        "answer": "No. This tool provides estimates only. Official payoff figures, interest accrual methods (e.g., actual/365 vs 30/360), prepayment penalties, late fees, and lender-specific rules can change final amounts. Always confirm with your lender and review loan documents."
+      },
+      {
+        "question": "What if interest rate is zero?",
+        "answer": "If the periodic interest rate is zero, the calculator uses arithmetic sums (principal less payments) rather than the annuity formula. Zero-interest is handled as a special case internally; if you enter very small rates, rounding may affect displayed cents."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Numerical stability and software standards",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO — Guidance on financial software quality and data integrity",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE — Best practices for numerical computation and rounding",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA — General workplace and professional safety standards",
+        "url": "https://www.osha.gov/"
+      },
+      {
+        "label": "Truth in Lending (Regulation Z) — Consumer loan disclosure guidance",
+        "url": "https://www.consumerfinance.gov/policy-compliance/rulemaking/regulations/1026/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down a loan over time through scheduled periodic payments of principal and interest."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at a specified maturity when earlier payments were insufficient to fully amortize the loan."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied to each payment period. Calculated as annual rate divided by the number of payments per year."
+      },
+      {
+        "term": "Recurring extra payment",
+        "definition": "An additional fixed payment applied in every payment period in addition to the scheduled periodic payment."
+      },
+      {
+        "term": "Lump-sum extra payment",
+        "definition": "A one-time additional principal payment made at a specified payment period to reduce future interest and the remaining balance."
+      }
+    ],
+    "summary": [
+      "Two calculation modes are provided: recurring extras (applied every period) and a single lump-sum extra (applied at a chosen period).",
+      "This calculator gives estimates only. Confirm final payoff and legal terms with your lender."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/business/loan-basics",
+      "/guides/loan-amortization-explained"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

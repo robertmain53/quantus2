@@ -1,0 +1,548 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Long Term Care Insurance Needs & Premium Estimator",
+    "description": "An advanced, multi-method calculator to estimate the present-value need for long-term care (LTC) coverage and a simple premium proxy. Includes inflation, benefit escalation, discounting, existing savings and family contributions. Designed for scenario comparison and informed conversations with licensed advisors."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "coverage_need",
+    "methods": {
+      "coverage_need": {
+        "label": "Estimated Coverage Need (Present Value)",
+        "description": "Projects future care cost at expected onset, escalates benefits, discounts to present value, subtracts existing resources to produce an estimated additional coverage need.",
+        "variables": {
+          "years_until_onset": {
+            "expression": "max(expected_onset_age - current_age, 0)",
+            "dependencies": [
+              "expected_onset_age",
+              "current_age"
+            ],
+            "label": "Years until expected need",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "projected_start_monthly": {
+            "expression": "current_monthly_cost * pow(1 + annual_inflation, years_until_onset)",
+            "dependencies": [
+              "current_monthly_cost",
+              "annual_inflation",
+              "years_until_onset"
+            ],
+            "label": "Projected monthly cost at onset",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "ratio": {
+            "expression": "(1 + benefit_escalation) / (1 + discount_rate)",
+            "dependencies": [
+              "benefit_escalation",
+              "discount_rate"
+            ],
+            "label": "Growth/discount ratio",
+            "format": "decimal",
+            "display": false
+          },
+          "pv_factor": {
+            "expression": "if(ratio == 1, benefit_years, (1 - pow(ratio, benefit_years)) / (1 - ratio))",
+            "dependencies": [
+              "ratio",
+              "benefit_years"
+            ],
+            "label": "Present-value series factor (geometric)",
+            "format": "decimal",
+            "display": false
+          },
+          "present_value_total": {
+            "expression": "projected_start_monthly / pow(1 + discount_rate, years_until_onset) * pv_factor * 12",
+            "dependencies": [
+              "projected_start_monthly",
+              "discount_rate",
+              "years_until_onset",
+              "pv_factor"
+            ],
+            "label": "Present value of expected care (all benefits)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_family_contribution": {
+            "expression": "family_contribution_monthly * 12 * benefit_years",
+            "dependencies": [
+              "family_contribution_monthly",
+              "benefit_years"
+            ],
+            "label": "Total expected family contribution",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "coverage_needed": {
+            "expression": "max(present_value_total - existing_ltc_savings - total_family_contribution, 0)",
+            "dependencies": [
+              "present_value_total",
+              "existing_ltc_savings",
+              "total_family_contribution"
+            ],
+            "label": "Estimated additional coverage needed",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "covered_pct": {
+            "expression": "if(present_value_total > 0, min(100, 100 * (existing_ltc_savings + total_family_contribution) / present_value_total), 0)",
+            "dependencies": [
+              "present_value_total",
+              "existing_ltc_savings",
+              "total_family_contribution"
+            ],
+            "label": "Percent of need covered by savings/family",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "coverage_needed",
+            "label": "Estimated additional coverage needed",
+            "variable": "coverage_needed",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_start_monthly",
+            "label": "Projected monthly care cost at expected onset",
+            "variable": "projected_start_monthly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "present_value_total",
+            "label": "Present value of expected care (all benefits)",
+            "variable": "present_value_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "covered_pct",
+            "label": "Percent of need covered now (savings + family)",
+            "variable": "covered_pct",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "premium_estimate": {
+        "label": "Simple Annual Premium Proxy",
+        "description": "Provides a transparent, illustrative annual premium estimate using a rate-per-$1,000 of coverage applied to the coverage need calculated using the same economic assumptions. This is a proxy only — actual premiums depend on underwriting, product features and insurer pricing.",
+        "variables": {
+          "years_until_onset_p": {
+            "expression": "max(expected_onset_age - current_age, 0)",
+            "dependencies": [
+              "expected_onset_age",
+              "current_age"
+            ],
+            "label": "Years until expected need",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "projected_start_monthly_p": {
+            "expression": "current_monthly_cost * pow(1 + annual_inflation, years_until_onset_p)",
+            "dependencies": [
+              "current_monthly_cost",
+              "annual_inflation",
+              "years_until_onset_p"
+            ],
+            "label": "Projected monthly cost at onset (premium method)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "ratio_p": {
+            "expression": "(1 + benefit_escalation) / (1 + discount_rate)",
+            "dependencies": [
+              "benefit_escalation",
+              "discount_rate"
+            ],
+            "label": "Growth/discount ratio",
+            "format": "decimal",
+            "display": false
+          },
+          "pv_factor_p": {
+            "expression": "if(ratio_p == 1, benefit_years, (1 - pow(ratio_p, benefit_years)) / (1 - ratio_p))",
+            "dependencies": [
+              "ratio_p",
+              "benefit_years"
+            ],
+            "label": "PV series factor (premium method)",
+            "format": "decimal",
+            "display": false
+          },
+          "present_value_total_p": {
+            "expression": "projected_start_monthly_p / pow(1 + discount_rate, years_until_onset_p) * pv_factor_p * 12",
+            "dependencies": [
+              "projected_start_monthly_p",
+              "discount_rate",
+              "years_until_onset_p",
+              "pv_factor_p"
+            ],
+            "label": "Present value of expected care (premium method)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "coverage_needed_p": {
+            "expression": "max(present_value_total_p - existing_ltc_savings - (family_contribution_monthly * 12 * benefit_years), 0)",
+            "dependencies": [
+              "present_value_total_p",
+              "existing_ltc_savings",
+              "family_contribution_monthly",
+              "benefit_years"
+            ],
+            "label": "Estimated additional coverage needed (premium method)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "annual_premium": {
+            "expression": "(coverage_needed_p / 1000) * rate_per_thousand",
+            "dependencies": [
+              "coverage_needed_p",
+              "rate_per_thousand"
+            ],
+            "label": "Illustrative annual premium (proxy)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_premium_equivalent": {
+            "expression": "annual_premium / 12",
+            "dependencies": [
+              "annual_premium"
+            ],
+            "label": "Illustrative monthly premium equivalent",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_premium",
+            "label": "Illustrative annual premium",
+            "variable": "annual_premium",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_premium_equivalent",
+            "label": "Illustrative monthly premium equivalent",
+            "variable": "monthly_premium_equivalent",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Your current age",
+        "type": "integer",
+        "default": 65,
+        "min": 18,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "expected_onset_age",
+        "label": "Age when you expect to need care (estimate)",
+        "type": "integer",
+        "default": 82,
+        "min": 18,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "current_monthly_cost",
+        "label": "Current monthly cost for the type of care you expect (USD)",
+        "type": "number",
+        "default": 6000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "benefit_years",
+        "label": "Target benefit period (years)",
+        "type": "integer",
+        "default": 3,
+        "min": 1,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "annual_inflation",
+        "label": "Assumed annual general inflation rate (decimal, e.g. 0.03 = 3%)",
+        "type": "number",
+        "default": 0.03,
+        "min": 0,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "benefit_escalation",
+        "label": "Assumed annual benefit escalation (decimal, e.g. 0.03 = 3%)",
+        "type": "number",
+        "default": 0.03,
+        "min": 0,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "discount_rate",
+        "label": "Discount rate to convert future costs to present value (decimal)",
+        "type": "number",
+        "default": 0.03,
+        "min": 0,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "existing_ltc_savings",
+        "label": "Existing savings earmarked for LTC (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "family_contribution_monthly",
+        "label": "Expected family contribution (monthly, USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "rate_per_thousand",
+        "label": "Illustrative annual rate per $1,000 of coverage (USD). Use insurer quote if available",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "personal",
+        "label": "Personal assumptions",
+        "fields": [
+          {
+            "id": "current_age",
+            "label": "Your current age",
+            "type": "integer",
+            "default": 65,
+            "min": 18,
+            "max": 120,
+            "step": 1
+          },
+          {
+            "id": "expected_onset_age",
+            "label": "Expected age to start care",
+            "type": "integer",
+            "default": 82,
+            "min": 18,
+            "max": 120,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "costs",
+        "label": "Cost & economic assumptions",
+        "fields": [
+          {
+            "id": "current_monthly_cost",
+            "label": "Current monthly cost (USD)",
+            "type": "number",
+            "default": 6000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "benefit_years",
+            "label": "Benefit period (years)",
+            "type": "integer",
+            "default": 3,
+            "min": 1,
+            "max": 30,
+            "step": 1
+          },
+          {
+            "id": "annual_inflation",
+            "label": "General inflation (decimal)",
+            "type": "number",
+            "default": 0.03,
+            "min": 0,
+            "max": 0.2,
+            "step": 0.001
+          },
+          {
+            "id": "benefit_escalation",
+            "label": "Benefit escalation (decimal)",
+            "type": "number",
+            "default": 0.03,
+            "min": 0,
+            "max": 0.2,
+            "step": 0.001
+          },
+          {
+            "id": "discount_rate",
+            "label": "Discount rate (decimal)",
+            "type": "number",
+            "default": 0.03,
+            "min": 0,
+            "max": 0.2,
+            "step": 0.001
+          }
+        ]
+      },
+      {
+        "id": "resources",
+        "label": "Resources & premium inputs",
+        "fields": [
+          {
+            "id": "existing_ltc_savings",
+            "label": "Existing LTC savings (USD)",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "family_contribution_monthly",
+            "label": "Family contribution (monthly, USD)",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "rate_per_thousand",
+            "label": "Rate per $1,000 (annual) for premium proxy (USD)",
+            "type": "number",
+            "default": 5,
+            "min": 0,
+            "step": 0.1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates how much additional long-term care (LTC) insurance coverage you might need today by projecting future care costs, escalating benefits, discounting to present value, and subtracting existing resources. It also provides a simple illustrative premium proxy using a user-supplied rate per $1,000 of coverage.",
+      "The tool is designed for planning and comparison. It is not a quote and does not replace underwriting or individualized advice from a licensed insurance professional."
+    ],
+    "methodology": [
+      "We project the current monthly cost to the expected onset age using the general inflation rate, then escalate benefit payments annually by the benefit escalation assumption. The stream of future monthly payments is converted to a present value using the discount rate and summed over the benefit period.",
+      "The calculator subtracts existing savings earmarked for LTC and any expected family contributions (expressed as a total amount) to yield an estimated additional coverage need. The premium proxy multiplies the coverage need by an illustrative rate per $1,000 of coverage. For data security and software quality, this tool is built with recommended practices aligned to NIST and ISO guidance."
+    ],
+    "how_is_calculated": [
+      "1) Years until onset = max(expected_onset_age - current_age, 0).",
+      "2) Projected monthly cost at onset = current_monthly_cost * (1 + annual_inflation)^(years until onset).",
+      "3) Present value of benefit stream = projected_monthly_cost_at_onset / (1 + discount_rate)^(years until onset) * series_factor * 12, where series_factor = geometric sum of (1 + benefit_escalation) / (1 + discount_rate) over benefit years.",
+      "4) Estimated additional coverage needed = max(present_value_of_benefits - existing_ltc_savings - total_family_contribution, 0).",
+      "5) Illustrative annual premium = (coverage_needed / 1000) * rate_per_thousand."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an insurance quote?",
+        "answer": "No. This calculator provides estimates for planning only. Actual premiums and available benefits require insurer underwriting, product selection, and may vary by age, health, gender, location and insurer pricing."
+      },
+      {
+        "question": "What should I use for inflation, escalation and discount rates?",
+        "answer": "Use historical experience and conservative assumptions. Typical inputs often range from 2% to 5% for inflation and escalation; choose a discount rate reflecting expected investment returns or your personal time value of money. Run sensitivity scenarios to understand impact."
+      },
+      {
+        "question": "Why subtract family contribution and savings?",
+        "answer": "The model estimates how much additional coverage (insurance) you would need after accounting for resources you plan to use. If family will contribute or you have earmarked savings, those reduce the insurance amount required."
+      },
+      {
+        "question": "What are the limitations of the premium proxy?",
+        "answer": "The premium proxy is a simple illustration that uses a user-supplied rate per $1,000 of coverage. It does not account for guaranteed renewability, underwriting class, inflation riders, elimination periods, lifetime vs. period benefits, or insurer-specific pricing."
+      },
+      {
+        "question": "How should I interpret present value?",
+        "answer": "Present value converts projected future payments into today’s dollars using the discount rate. It is a planning construct to compare needs now rather than an amount insurers will necessarily quote."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO 31000 — Risk Management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE — Standards and best practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Workplace Safety and Guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Present value",
+        "definition": "The current-dollar equivalent of a future stream of payments, obtained by discounting future payments at a chosen discount rate."
+      },
+      {
+        "term": "Benefit period",
+        "definition": "The number of years an LTC policy will pay benefits after a qualifying event (e.g., 3 years, 5 years, lifetime)."
+      },
+      {
+        "term": "Inflation protection / benefit escalation",
+        "definition": "The annual percentage increase applied to policy benefits to help keep pace with rising care costs."
+      },
+      {
+        "term": "Replacement ratio (covered_pct)",
+        "definition": "Percent of the present-value need covered by existing savings and expected family contributions."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000 Risk Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

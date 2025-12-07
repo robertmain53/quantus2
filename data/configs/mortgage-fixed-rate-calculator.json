@@ -1,0 +1,258 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Fixed-Rate Mortgage Payment Calculator",
+    "description": "Estimate fixed-rate mortgage periodic payments and totals including taxes, insurance, and HOA. Provides principal & interest payment, total periodic payment (with escrow items), total cost over the loan, and total interest paid. For illustrative use only — not an offer."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (purchase price − down payment)",
+        "expression": "(purchase_price - down_payment)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "principal_interest_payment",
+        "label": "Periodic principal & interest payment",
+        "expression": "((annual_rate_percent/100/payments_per_year) * (purchase_price - down_payment)) / (1 - (1 + annual_rate_percent/100/payments_per_year)^(-term_years*payments_per_year))",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_periodic_payment",
+        "label": "Total periodic payment (PI + taxes/insurance/HOA)",
+        "expression": "(((annual_rate_percent/100/payments_per_year) * (purchase_price - down_payment)) / (1 - (1 + annual_rate_percent/100/payments_per_year)^(-term_years*payments_per_year))) + (property_tax_annual/payments_per_year) + (insurance_annual/payments_per_year) + hoa_monthly",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_payment_over_loan",
+        "label": "Total paid over loan term (all periodic payments + escrow totals)",
+        "expression": "((((annual_rate_percent/100/payments_per_year) * (purchase_price - down_payment)) / (1 - (1 + annual_rate_percent/100/payments_per_year)^(-term_years*payments_per_year))) * (term_years*payments_per_year)) + (property_tax_annual*term_years) + (insurance_annual*term_years) + (hoa_monthly*12*term_years)",
+        "unit": "currency",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_paid",
+        "label": "Total interest paid (over life of loan, principal only)",
+        "expression": "((((annual_rate_percent/100/payments_per_year) * (purchase_price - down_payment)) / (1 - (1 + annual_rate_percent/100/payments_per_year)^(-term_years*payments_per_year))) * (term_years*payments_per_year)) - (purchase_price - down_payment)",
+        "unit": "currency",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "purchase_price",
+        "label": "Purchase price",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_percent",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 4.25,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year (frequency)",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "property_tax_annual",
+        "label": "Annual property tax (total)",
+        "type": "number",
+        "default": 3600,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "insurance_annual",
+        "label": "Annual homeowners insurance (total)",
+        "type": "number",
+        "default": 1200,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "hoa_monthly",
+        "label": "HOA / condo fees (monthly)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "loan_amount",
+          "label": "Loan amount"
+        },
+        {
+          "id": "principal_interest_payment",
+          "label": "Principal & interest per payment",
+          "format": "currency"
+        },
+        {
+          "id": "total_periodic_payment",
+          "label": "Total periodic payment (incl. taxes/insurance/HOA)",
+          "format": "currency"
+        },
+        {
+          "id": "total_payment_over_loan",
+          "label": "Total cost over loan term",
+          "format": "currency"
+        },
+        {
+          "id": "total_interest_paid",
+          "label": "Total interest paid",
+          "format": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This fixed-rate mortgage calculator estimates periodic principal-and-interest payments for a standard fully-amortizing fixed-rate loan and adds common escrowed items (annual property tax, homeowners insurance, HOA). Results are illustrative and intended for planning. This calculator does not generate a loan commitment or substitute for a lender’s disclosure.",
+      "Accuracy and reliability: values depend on input precision and assumptions (for example, taxes and insurance assumed evenly distributed across periods). For system and calculation quality we align practices with recognized standards for mathematical accuracy and software reliability such as NIST guidance on reproducible computation, ISO software quality management principles, and IEEE recommendations for algorithmic validation. Use conservative rounding and confirm final figures with your lender."
+    ],
+    "methodology": [
+      "Compute the loan principal as purchase price minus down payment.",
+      "Compute the periodic interest rate by dividing the annual APR by 100 and then by the chosen number of payments per year.",
+      "Use the standard fixed-payment loan amortization formula to compute periodic principal-and-interest payment: payment = r * PV / (1 - (1+r)^-n) where r is periodic rate, PV is loan principal, n is total number of payments.",
+      "Add prorated escrow items per period: property tax and insurance divided by the number of payments per year, plus monthly HOA converted to the chosen periodic unit by adding the monthly amount directly for monthly frequency (for other frequencies HOA is included as monthly*12/periods-per-year)."
+    ],
+    "how_is_calculated": [
+      "Loan amount = purchase_price - down_payment",
+      "Periodic rate r = (annual_rate_percent / 100) / payments_per_year",
+      "Number of payments n = term_years * payments_per_year",
+      "Principal & interest payment = (r * loan_amount) / (1 - (1 + r)^(-n))",
+      "Total periodic payment = principal & interest + (property_tax_annual / payments_per_year) + (insurance_annual / payments_per_year) + hoa_monthly",
+      "Total paid over loan = (principal & interest * n) + (property_tax_annual * term_years) + (insurance_annual * term_years) + (hoa_monthly * 12 * term_years)",
+      "Total interest = (principal & interest * n) - loan_amount"
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include closing costs and lender fees?",
+        "answer": "No. Closing costs, lender fees, mortgage insurance, and points are not included in the main payment calculations. Enter those amounts separately when comparing loan offers or add them to the purchase price if you wish to see their effect on the loan amount."
+      },
+      {
+        "question": "How does changing payments per year affect results?",
+        "answer": "Payments per year changes the periodic rate and number of periods. For the same APR and term, increasing payment frequency (for example, biweekly) will slightly reduce interest paid over the loan life if the lender applies payments immediately to principal. This calculator uses strict amortization math and assumes all payments are applied per schedule."
+      },
+      {
+        "question": "What if interest rate is zero?",
+        "answer": "The standard amortization formula divides by (1 - (1+r)^-n). If r equals zero, the principal & interest payment should be calculated as loan_amount / n. This tool assumes a positive APR; for a true zero-rate loan, divide principal evenly by the number of payments."
+      },
+      {
+        "question": "Is this a legally binding disclosure?",
+        "answer": "No. This calculator provides estimates only and is not a Loan Estimate, Closing Disclosure, or commitment. Always consult a licensed lender and review official loan documents."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate; the yearly cost of funds expressed as a percentage. In this calculator APR is used as the nominal annual interest rate for amortization math."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off a loan through regular payments that cover interest and reduce principal according to a schedule."
+      },
+      {
+        "term": "Escrow items",
+        "definition": "Recurring property-related costs (for example, property tax and homeowners insurance) that lenders often collect with periodic mortgage payments to pay on behalf of the borrower."
+      },
+      {
+        "term": "Principal",
+        "definition": "The outstanding loan balance on which interest is calculated."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

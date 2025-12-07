@@ -1,0 +1,669 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "RV Loan Refinance & Bi‑Weekly Payments Calculator (Comparison + Amortization)",
+    "description": "Compare your current RV loan to a refinance offer, estimate savings, and see the effect of switching to bi‑weekly payments. Supports fees and balloon balances; provides amortization‑level metrics and conservative accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "refinance_compare",
+    "methods": {
+      "refinance_compare": {
+        "label": "Refinance vs Current Loan (side‑by‑side)",
+        "description": "Compute periodic payments, total interest, and net savings comparing your existing loan to a refinance offer using the same amortization formulas for both payment frequencies.",
+        "variables": {
+          "current_period_rate": {
+            "expression": "current_interest_rate / 100 / current_periods_per_year",
+            "dependencies": [
+              "current_interest_rate",
+              "current_periods_per_year"
+            ],
+            "label": "Current periodic interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "current_remaining_periods": {
+            "expression": "current_remaining_term_months * current_periods_per_year / 12",
+            "dependencies": [
+              "current_remaining_term_months",
+              "current_periods_per_year"
+            ],
+            "label": "Current remaining periods",
+            "format": "integer",
+            "display": true
+          },
+          "current_periodic_payment": {
+            "expression": "current_balance * current_period_rate / (1 - (1 + current_period_rate) ^ (-current_remaining_periods))",
+            "dependencies": [
+              "current_balance",
+              "current_period_rate",
+              "current_remaining_periods"
+            ],
+            "label": "Calculated current periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_total_paid": {
+            "expression": "current_periodic_payment * current_remaining_periods + current_balloon",
+            "dependencies": [
+              "current_periodic_payment",
+              "current_remaining_periods",
+              "current_balloon"
+            ],
+            "label": "Total amount paid (current loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "current_total_interest": {
+            "expression": "current_total_paid - current_balance - current_balloon",
+            "dependencies": [
+              "current_total_paid",
+              "current_balance",
+              "current_balloon"
+            ],
+            "label": "Total interest remaining (current loan)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "refi_period_rate": {
+            "expression": "refinance_interest_rate / 100 / refinance_periods_per_year",
+            "dependencies": [
+              "refinance_interest_rate",
+              "refinance_periods_per_year"
+            ],
+            "label": "Refinance periodic interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "refi_total_periods": {
+            "expression": "refinance_term_months * refinance_periods_per_year / 12",
+            "dependencies": [
+              "refinance_term_months",
+              "refinance_periods_per_year"
+            ],
+            "label": "Refinance total periods",
+            "format": "integer",
+            "display": true
+          },
+          "refi_principal": {
+            "expression": "current_balance + refinance_fees",
+            "dependencies": [
+              "current_balance",
+              "refinance_fees"
+            ],
+            "label": "Refinance principal (balance + fees)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "refi_periodic_payment": {
+            "expression": "refi_principal * refi_period_rate / (1 - (1 + refi_period_rate) ^ (-refi_total_periods))",
+            "dependencies": [
+              "refi_principal",
+              "refi_period_rate",
+              "refi_total_periods"
+            ],
+            "label": "Refinance periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "refi_total_paid": {
+            "expression": "refi_periodic_payment * refi_total_periods + refinance_balloon",
+            "dependencies": [
+              "refi_periodic_payment",
+              "refi_total_periods",
+              "refinance_balloon"
+            ],
+            "label": "Total amount paid (refinance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "refi_total_interest": {
+            "expression": "refi_total_paid - refi_principal - refinance_balloon",
+            "dependencies": [
+              "refi_total_paid",
+              "refi_principal",
+              "refinance_balloon"
+            ],
+            "label": "Total interest paid (refinance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "net_interest_savings": {
+            "expression": "current_total_interest - refi_total_interest",
+            "dependencies": [
+              "current_total_interest",
+              "refi_total_interest"
+            ],
+            "label": "Net interest savings from refinancing",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_equivalent_payment_refi": {
+            "expression": "refi_periodic_payment * refinance_periods_per_year / 12",
+            "dependencies": [
+              "refi_periodic_payment",
+              "refinance_periods_per_year"
+            ],
+            "label": "Refinance payment expressed as monthly equivalent",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_periodic_payment",
+            "label": "Current periodic payment",
+            "variable": "current_periodic_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "current_total_interest",
+            "label": "Current remaining interest",
+            "variable": "current_total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "refi_periodic_payment",
+            "label": "Refinance periodic payment",
+            "variable": "refi_periodic_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "refi_total_interest",
+            "label": "Refinance total interest",
+            "variable": "refi_total_interest",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "net_interest_savings",
+            "label": "Estimated net interest savings",
+            "variable": "net_interest_savings",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "biweekly_effect": {
+        "label": "Bi‑Weekly Payment Effect (same APR)",
+        "description": "Estimate payments and interest when switching to a bi‑weekly schedule under the same APR and term. Compares monthly vs bi‑weekly amortization for the refinance principal (balance + fees).",
+        "variables": {
+          "bw_periods_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Bi‑weekly periods per year",
+            "format": "integer",
+            "display": false
+          },
+          "bw_rate": {
+            "expression": "refinance_interest_rate / 100 / bw_periods_per_year",
+            "dependencies": [
+              "refinance_interest_rate",
+              "bw_periods_per_year"
+            ],
+            "label": "Bi‑weekly periodic rate",
+            "format": "decimal",
+            "display": true
+          },
+          "bw_total_periods": {
+            "expression": "refinance_term_months * bw_periods_per_year / 12",
+            "dependencies": [
+              "refinance_term_months",
+              "bw_periods_per_year"
+            ],
+            "label": "Total bi‑weekly periods",
+            "format": "integer",
+            "display": true
+          },
+          "refi_principal_bw": {
+            "expression": "current_balance + refinance_fees",
+            "dependencies": [
+              "current_balance",
+              "refinance_fees"
+            ],
+            "label": "Refinance principal for bi‑weekly calc",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "biweekly_payment": {
+            "expression": "refi_principal_bw * bw_rate / (1 - (1 + bw_rate) ^ (-bw_total_periods))",
+            "dependencies": [
+              "refi_principal_bw",
+              "bw_rate",
+              "bw_total_periods"
+            ],
+            "label": "Calculated bi‑weekly payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid_biweekly": {
+            "expression": "biweekly_payment * bw_total_periods + refinance_balloon",
+            "dependencies": [
+              "biweekly_payment",
+              "bw_total_periods",
+              "refinance_balloon"
+            ],
+            "label": "Total paid with bi‑weekly schedule",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_biweekly": {
+            "expression": "total_paid_biweekly - refi_principal_bw - refinance_balloon",
+            "dependencies": [
+              "total_paid_biweekly",
+              "refi_principal_bw",
+              "refinance_balloon"
+            ],
+            "label": "Interest paid with bi‑weekly payments",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_rate_refi": {
+            "expression": "refinance_interest_rate / 100 / 12",
+            "dependencies": [
+              "refinance_interest_rate"
+            ],
+            "label": "Monthly periodic rate for comparison",
+            "format": "decimal",
+            "display": false
+          },
+          "monthly_periods_refi": {
+            "expression": "refinance_term_months",
+            "dependencies": [
+              "refinance_term_months"
+            ],
+            "label": "Monthly periods (refinance)",
+            "format": "integer",
+            "display": false
+          },
+          "monthly_payment_refi": {
+            "expression": "refi_principal_bw * monthly_rate_refi / (1 - (1 + monthly_rate_refi) ^ (-monthly_periods_refi))",
+            "dependencies": [
+              "refi_principal_bw",
+              "monthly_rate_refi",
+              "monthly_periods_refi"
+            ],
+            "label": "Refinance monthly payment for comparison",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_monthly_refi": {
+            "expression": "monthly_payment_refi * monthly_periods_refi + refinance_balloon - refi_principal_bw - refinance_balloon",
+            "dependencies": [
+              "monthly_payment_refi",
+              "monthly_periods_refi",
+              "refi_principal_bw",
+              "refinance_balloon"
+            ],
+            "label": "Interest if paid monthly (refinance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_savings_vs_monthly": {
+            "expression": "interest_monthly_refi - interest_biweekly",
+            "dependencies": [
+              "interest_monthly_refi",
+              "interest_biweekly"
+            ],
+            "label": "Interest savings when using bi‑weekly vs monthly",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "biweekly_payment",
+            "label": "Bi‑weekly payment",
+            "variable": "biweekly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_payment_refi",
+            "label": "Monthly payment for same refinance",
+            "variable": "monthly_payment_refi",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_biweekly",
+            "label": "Interest with bi‑weekly payments",
+            "variable": "interest_biweekly",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_savings_vs_monthly",
+            "label": "Interest savings vs monthly schedule",
+            "variable": "interest_savings_vs_monthly",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "balloon_impact": {
+        "label": "Balloon Payment Impact",
+        "description": "Show how an end‑of‑term balloon changes total payments and interest for current or refinanced loans.",
+        "variables": {
+          "balloon_refi_principal": {
+            "expression": "current_balance + refinance_fees",
+            "dependencies": [
+              "current_balance",
+              "refinance_fees"
+            ],
+            "label": "Refinance principal for balloon calc",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "balloon_refi_period_rate": {
+            "expression": "refinance_interest_rate / 100 / refinance_periods_per_year",
+            "dependencies": [
+              "refinance_interest_rate",
+              "refinance_periods_per_year"
+            ],
+            "label": "Refinance periodic rate (balloon calc)",
+            "format": "decimal",
+            "display": false
+          },
+          "balloon_refi_periods": {
+            "expression": "refinance_term_months * refinance_periods_per_year / 12",
+            "dependencies": [
+              "refinance_term_months",
+              "refinance_periods_per_year"
+            ],
+            "label": "Refinance periods (balloon calc)",
+            "format": "integer",
+            "display": false
+          },
+          "balloon_refi_payment": {
+            "expression": "balloon_refi_principal * balloon_refi_period_rate / (1 - (1 + balloon_refi_period_rate) ^ (-balloon_refi_periods))",
+            "dependencies": [
+              "balloon_refi_principal",
+              "balloon_refi_period_rate",
+              "balloon_refi_periods"
+            ],
+            "label": "Periodic payment (with balloon term included as final balance)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_total_paid": {
+            "expression": "balloon_refi_payment * balloon_refi_periods + refinance_balloon",
+            "dependencies": [
+              "balloon_refi_payment",
+              "balloon_refi_periods",
+              "refinance_balloon"
+            ],
+            "label": "Total paid with balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balloon_total_interest": {
+            "expression": "balloon_total_paid - balloon_refi_principal - refinance_balloon",
+            "dependencies": [
+              "balloon_total_paid",
+              "balloon_refi_principal",
+              "refinance_balloon"
+            ],
+            "label": "Total interest when balloon is present",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balloon_refi_payment",
+            "label": "Periodic payment (balloon scenario)",
+            "variable": "balloon_refi_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_total_paid",
+            "label": "Total paid (balloon scenario)",
+            "variable": "balloon_total_paid",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balloon_total_interest",
+            "label": "Total interest (balloon scenario)",
+            "variable": "balloon_total_interest",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_balance",
+        "label": "Current loan balance",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "current_interest_rate",
+        "label": "Current APR (annual %)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "current_payment_amount",
+        "label": "Current periodic payment (if known)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_remaining_term_months",
+        "label": "Remaining term (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "current_periods_per_year",
+        "label": "Current payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Bi‑weekly (26)",
+            "value": "26"
+          }
+        ]
+      },
+      {
+        "id": "current_balloon",
+        "label": "Current balloon or residual at term end (if any)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "refinance_interest_rate",
+        "label": "Refinance APR (annual %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "refinance_term_months",
+        "label": "Refinance term (months)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "refinance_fees",
+        "label": "Refinance fees / closing costs",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "refinance_periods_per_year",
+        "label": "Refinance payments per year",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Bi‑weekly (26)",
+            "value": "26"
+          }
+        ]
+      },
+      {
+        "id": "refinance_balloon",
+        "label": "Refinance balloon (end‑of‑term residual)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps RV owners evaluate whether refinancing their existing loan is likely to save money and how switching to bi‑weekly payments changes interest costs. Enter your current loan details and the refinance offer; the tool compares periodic payments, total interest, and net savings.",
+      "It supports fees and an optional balloon (residual) payment. Results are estimates intended for planning and decision support; always verify final terms with your lender and read loan disclosures for exact APR, fees, and payment schedules."
+    ],
+    "methodology": [
+      "The calculator uses standard amortization (annuity) formulas: periodic payment = principal × r / (1 − (1 + r)^−N), where r is the periodic rate and N is the number of periods. For refinance calculations the principal is current balance plus disclosed fees.",
+      "Bi‑weekly schedules are modeled with 26 payment periods per year. The tool computes total interest by summing periodic payments plus any balloon and subtracting the financed principal (balance + fees).",
+      "Outputs intentionally use conservative assumptions: interest computed on scheduled amortization without optional extra payments unless you explicitly change the payment frequency to bi‑weekly."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = (APR ÷ 100) ÷ payments_per_year.",
+      "Payment = principal × periodic_rate ÷ (1 − (1 + periodic_rate)^(−total_periods)).",
+      "Total interest = (periodic_payment × total_periods + balloon) − principal − balloon_adjustment."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator include fees when comparing refinance offers?",
+        "answer": "Yes. The refinance principal equals your current balance plus the refinance fees entered. Fees increase the financed principal and reduce net savings accordingly."
+      },
+      {
+        "question": "How is bi‑weekly different from making half‑monthly payments?",
+        "answer": "Bi‑weekly means 26 payments per year (every two weeks). Half‑monthly (twice per month) results in 24 payments per year and a different effective schedule. This tool models true bi‑weekly schedules as 26 payments per year."
+      },
+      {
+        "question": "Are results exact?",
+        "answer": "Results are estimates. Actual loan documents, rounding rules, and lender accrual methods can change payments and total interest. Use estimates for planning, and verify numbers with lender disclosures."
+      },
+      {
+        "question": "What if I already make extra/irregular payments?",
+        "answer": "This calculator assumes only the scheduled payments you select. To model extra principal prepayments, subtract the extra principal from the balance or use an amortization schedule tool that supports additional payments."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Consumer finance principles and loan disclosure guidance",
+        "url": "https://www.consumerfinance.gov"
+      },
+      {
+        "label": "NIST Cybersecurity Framework (controls recommended for financial tools)",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO 9001 Quality Management (relevant to process validation and testing)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE 754 floating point standard (numerical accuracy guidance)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Periodic rate",
+        "definition": "Interest rate for a single payment period, calculated as APR divided by the number of payments per year."
+      },
+      {
+        "term": "Refinance principal",
+        "definition": "Amount financed under the refinance offer: current balance plus any fees you choose to roll into the loan."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A lump sum due at the end of the loan term; included in total paid and interest calculations here when entered."
+      }
+    ],
+    "summary": [
+      "Use the 'Refinance vs Current Loan' view to see a side‑by‑side comparison of periodic payments and total interest.",
+      "Use the 'Bi‑Weekly Payment Effect' view to estimate additional interest savings and payment differences when moving to 26 payments per year.",
+      "All outputs are estimates. Confirm with lender disclosures before making financial decisions."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.consumerfinance.gov",
+        "label": "Consumer Financial Protection information",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialTool"
+    ]
+  }
+}

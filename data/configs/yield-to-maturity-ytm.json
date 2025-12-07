@@ -1,0 +1,385 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Yield to Maturity (YTM) Calculator",
+    "description": "Calculate a bond's yield to maturity using either a numerical (exact) solver or a standard approximation. Supports coupon frequency, par value, and configurable years to maturity. Includes definitions, methodology, accuracy caveats, and references to numeric and standards guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "exact",
+    "methods": {
+      "exact": {
+        "label": "Numerical solve (Exact YTM)",
+        "description": "Finds the internal rate of return that sets the present value of future coupon and principal payments equal to the bond price. This method uses a root-finding algorithm on the price equation and returns an annualized yield. Numerical tolerance, iteration limits, and day-count conventions affect results. The front-end implementation must perform iterative solving (bisection, secant, or Newton-Raphson) and enforce safeguards for convergence.",
+        "variables": {
+          "C": {
+            "expression": "coupon_rate/100*face/payments_per_year",
+            "dependencies": [
+              "coupon_rate",
+              "face",
+              "payments_per_year"
+            ],
+            "label": "Coupon payment per period",
+            "unit": "currency",
+            "format": "decimal",
+            "display": true
+          },
+          "N": {
+            "expression": "years*payments_per_year",
+            "dependencies": [
+              "years",
+              "payments_per_year"
+            ],
+            "label": "Total number of periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "price": {
+            "expression": "price",
+            "dependencies": [
+              "price"
+            ],
+            "label": "Bond price (entered in same currency units as face; enter 95 for 95.00 when face=100)",
+            "unit": "currency",
+            "format": "decimal",
+            "display": true
+          },
+          "ytm_period": {
+            "expression": "numerical_root_of_present_value_equation",
+            "dependencies": [
+              "C",
+              "N",
+              "face",
+              "price",
+              "payments_per_year"
+            ],
+            "label": "Periodic yield (numeric solution)",
+            "unit": "decimal",
+            "format": "percent",
+            "display": true
+          },
+          "ytm_annual": {
+            "expression": "ytm_period*payments_per_year",
+            "dependencies": [
+              "ytm_period",
+              "payments_per_year"
+            ],
+            "label": "Annualized yield to maturity",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ytm_annual",
+            "label": "Yield to maturity (annual, nominal)",
+            "variable": "ytm_annual",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "ytm_period",
+            "label": "Yield per period (numeric)",
+            "variable": "ytm_period",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "C",
+            "label": "Coupon payment per period",
+            "variable": "C",
+            "unit": "currency",
+            "format": "decimal"
+          },
+          {
+            "id": "N",
+            "label": "Total periods",
+            "variable": "N",
+            "unit": "periods",
+            "format": "integer"
+          }
+        ]
+      },
+      "approx": {
+        "label": "Approximate YTM (Bond math rule-of-thumb)",
+        "description": "Provides the commonly used approximation for YTM used for quick estimates. This approximation is not exact for non-level cash flows or when yield is materially different from coupon; use the numerical method for precise valuation.",
+        "variables": {
+          "C": {
+            "expression": "coupon_rate/100*face/payments_per_year",
+            "dependencies": [
+              "coupon_rate",
+              "face",
+              "payments_per_year"
+            ],
+            "label": "Coupon payment per period",
+            "unit": "currency",
+            "format": "decimal",
+            "display": true
+          },
+          "N": {
+            "expression": "years*payments_per_year",
+            "dependencies": [
+              "years",
+              "payments_per_year"
+            ],
+            "label": "Total number of periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "approx_yield_period": {
+            "expression": "(C + (face - price)/N) / ((face + price)/2)",
+            "dependencies": [
+              "C",
+              "face",
+              "price",
+              "N"
+            ],
+            "label": "Approximate yield per period",
+            "unit": "decimal",
+            "format": "percent",
+            "display": true
+          },
+          "ytm_annual_approx": {
+            "expression": "approx_yield_period*payments_per_year",
+            "dependencies": [
+              "approx_yield_period",
+              "payments_per_year"
+            ],
+            "label": "Annualized approximate YTM",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ytm_annual_approx",
+            "label": "Approximate yield to maturity (annual)",
+            "variable": "ytm_annual_approx",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "approx_yield_period",
+            "label": "Approximate yield per period",
+            "variable": "approx_yield_period",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "price",
+        "label": "Current clean price",
+        "type": "number",
+        "default": 95,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "face",
+        "label": "Face (par) value",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "coupon_rate",
+        "label": "Coupon rate (annual %, e.g., enter 5 for 5%)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "years",
+        "label": "Years to maturity",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Coupon payments per year",
+        "type": "select",
+        "default": "2",
+        "options": [
+          {
+            "label": "Annual (1)",
+            "value": "1"
+          },
+          {
+            "label": "Semiannual (2)",
+            "value": "2"
+          },
+          {
+            "label": "Quarterly (4)",
+            "value": "4"
+          },
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          }
+        ]
+      },
+      {
+        "id": "precision",
+        "label": "Solver precision (decimal places for display)",
+        "type": "select",
+        "default": "4",
+        "options": [
+          {
+            "label": "2 decimal places",
+            "value": "2"
+          },
+          {
+            "label": "4 decimal places",
+            "value": "4"
+          },
+          {
+            "label": "6 decimal places",
+            "value": "6"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "Yield to maturity (YTM) is the annualized rate of return anticipated on a bond if held to maturity, accounting for coupon payments and principal repayment. It is the internal rate of return that equates the present value of the bond's future cash flows to its current price.",
+      "This tool provides two options: a numerical solver that finds the exact IRR for the bond price equation and a standard approximation useful for quick estimates. Use the numerical method for pricing, risk calculations, or regulatory reporting; use the approximation only for rough comparisons."
+    ],
+    "methodology": [
+      "Exact (numerical) method: solve the present-value equation sum_{t=1..N} C/(1+y)^t + F/(1+y)^N = P for the periodic yield y, then annualize by multiplying by payment frequency. The front-end must use a stable root-finding algorithm, limit iterations, and enforce a convergence tolerance.",
+      "Approximate (rule-of-thumb) method: approximate periodic yield = [C + (F - P)/N] / [(F + P)/2], then annualize. This linearized approximation is fast but loses accuracy when coupons or yields are large or when price deviates markedly from par.",
+      "Accuracy, rounding, and numeric stability: implement IEEE 754 compliant arithmetic for consistent floating-point results, and follow numerical best-practices (bracketing, fallback to bisection if Newton steps diverge). Document solver tolerances and iteration limits in any downstream report."
+    ],
+    "how_is_calculated": [
+      "Step 1: Inputs accepted: price (clean, same units as face), face value, coupon rate (annual %), years to maturity, payments per year.",
+      "Step 2 (Exact): form periodic coupon C = coupon_rate/100 * face / payments_per_year and total periods N = years * payments_per_year. Solve for periodic y that satisfies present-value = price. Annualize: YTM_annual = y * payments_per_year.",
+      "Step 2 (Approx): approximate periodic yield = (C + (face - price)/N) / ((face + price)/2). Annualize: YTM_approx = periodic * payments_per_year.",
+      "Note: Day-count conventions, accrued interest, taxes, commissions, and callable features are not modeled in this calculator and must be applied separately."
+    ],
+    "examples": [
+      "Example: Face 100, price 95, coupon 5% paid semiannually (2), years 10. C = 2.5, N = 20. Approx periodic yield = (2.5 + (100-95)/20)/((100+95)/2); approximate annual YTM is periodic*2.",
+      "Exact method numerically solves the price equation and will produce a slightly different annualized YTM; use the exact method for valuation or comparison to market YTM quotes."
+    ],
+    "faqs": [
+      {
+        "question": "Do I enter price as a percent or currency?",
+        "answer": "Enter price in the same units as face value. For a typical market quote where face=100, enter 95 for a price quoted at 95.00. The calculator assumes a clean price; accrued interest is not added automatically."
+      },
+      {
+        "question": "Which method should I use?",
+        "answer": "Use the numerical (Exact) solver for pricing, risk modeling, or when precision is required. Use the Approximate method for quick, back-of-envelope comparisons. The approximation can differ materially for deep discounts/premiums or high coupon rates."
+      },
+      {
+        "question": "How accurate is the numerical solver?",
+        "answer": "Accuracy depends on the chosen numeric tolerance and floating-point arithmetic. Follow IEEE 754 guidelines for floating-point handling, limit iterations to avoid runaway loops, and report solver tolerance. Expect small rounding differences across implementations."
+      },
+      {
+        "question": "Does this handle callable or putable bonds?",
+        "answer": "No. Call and put features change cash flow timing and must be modeled with option-aware valuation (e.g., option-adjusted spread models). This calculator handles plain vanilla fixed-coupon bonds only."
+      },
+      {
+        "question": "Are day-count conventions considered?",
+        "answer": "This calculator assumes full-period coupon timing based on 'payments per year' and does not apply day-count convention adjustments. For settlement-to-maturity date calculations adjust cash flows externally or use an instrument-specific calculator."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Yield to Maturity (YTM)",
+        "definition": "The annualized internal rate of return on a bond if held to maturity, equating the present value of future coupons and principal to the current price."
+      },
+      {
+        "term": "Coupon rate",
+        "definition": "The annual interest rate paid on a bond's face value, expressed as a percentage of face value."
+      },
+      {
+        "term": "Clean price",
+        "definition": "Bond price excluding accrued interest. Use the clean price here; accrued interest is not modeled."
+      },
+      {
+        "term": "Periodic yield",
+        "definition": "Yield per coupon period. Annualized YTM = periodic yield * payments per year for nominal yields."
+      },
+      {
+        "term": "Approximate YTM",
+        "definition": "A rule-of-thumb estimate derived from linearizing cash flows: (C + (F-P)/N) / ((F+P)/2), then annualized. Useful for quick estimates only."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IEEE Standard for Floating-Point Arithmetic (IEEE 754)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "International Organization for Standardization — ISO 31000 Risk Management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission — Bonds and Bond Basics",
+        "url": "https://www.sec.gov"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.sec.gov",
+        "label": "SEC - Investor guidance on bonds",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculation"
+    ]
+  }
+}
