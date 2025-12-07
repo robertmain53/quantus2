@@ -1,0 +1,537 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Retirement Age Calculator (Advanced Planner)",
+    "description": "Interactive planner that estimates the age at which your retirement savings or benefit choices meet a target income, and shows how Social Security claiming age affects benefit amounts. Includes multi-method modeling, sensitivity inputs, and clear accuracy and security caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "savings_goal_age",
+    "methods": {
+      "savings_goal_age": {
+        "label": "Savings to Goal (What age will my savings reach my target?)",
+        "description": "Estimates the first age at which accumulated retirement assets meet the target portfolio needed to support your desired annual retirement income using a constant real return and regular annual contributions.",
+        "variables": {
+          "target_savings": {
+            "expression": "desired_annual_income / withdrawal_rate",
+            "dependencies": [
+              "desired_annual_income",
+              "withdrawal_rate"
+            ],
+            "label": "Target retirement savings",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "real_return": {
+            "expression": "expected_return - inflation_rate",
+            "dependencies": [
+              "expected_return",
+              "inflation_rate"
+            ],
+            "label": "Estimated real annual return",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "growth_factor": {
+            "expression": "1 + real_return",
+            "dependencies": [
+              "real_return"
+            ],
+            "label": "Growth factor (1 + real return)",
+            "format": "decimal",
+            "display": false
+          },
+          "n_years": {
+            "expression": "ln((target_savings * real_return + annual_contribution) / (current_savings * real_return + annual_contribution)) / ln(growth_factor)",
+            "dependencies": [
+              "target_savings",
+              "real_return",
+              "annual_contribution",
+              "current_savings",
+              "growth_factor"
+            ],
+            "label": "Years until target reached (solved from FV equation)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "retirement_age": {
+            "expression": "current_age + n_years",
+            "dependencies": [
+              "current_age",
+              "n_years"
+            ],
+            "label": "Estimated retirement age (when target met)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "annual_withdrawable": {
+            "expression": "target_savings * withdrawal_rate",
+            "dependencies": [
+              "target_savings",
+              "withdrawal_rate"
+            ],
+            "label": "Annual amount supported by target savings",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "retirement_age",
+            "label": "Estimated retirement age (years)",
+            "variable": "retirement_age",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "years_to_goal",
+            "label": "Years until target is reached",
+            "variable": "n_years",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "annual_withdrawable_output",
+            "label": "Annual income supported by savings at goal",
+            "variable": "annual_withdrawable",
+            "unit": "currency/year",
+            "format": "currency"
+          }
+        ]
+      },
+      "ss_claiming_impact": {
+        "label": "Social Security Claiming Impact (Estimate)",
+        "description": "Estimates how choosing a claiming age different from your Full Retirement Age (FRA) changes the monthly benefit. Uses a linear approximation for per-year reductions and crediting for late claiming. This is an estimate; actual program rules are more detailed.",
+        "variables": {
+          "years_from_fra": {
+            "expression": "claiming_age - full_retirement_age",
+            "dependencies": [
+              "claiming_age",
+              "full_retirement_age"
+            ],
+            "label": "Years difference from Full Retirement Age",
+            "unit": "years",
+            "format": "decimal",
+            "display": false
+          },
+          "adjustment_rate": {
+            "expression": "if(years_from_fra >= 0, increase_rate_per_year, -reduction_rate_per_year)",
+            "dependencies": [
+              "years_from_fra",
+              "increase_rate_per_year",
+              "reduction_rate_per_year"
+            ],
+            "label": "Per-year adjustment rate (choose increase or reduction)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "adjustment_multiplier": {
+            "expression": "1 + years_from_fra * adjustment_rate",
+            "dependencies": [
+              "years_from_fra",
+              "adjustment_rate"
+            ],
+            "label": "Multiplier applied to estimated benefit",
+            "format": "decimal",
+            "display": false
+          },
+          "adjusted_monthly_benefit": {
+            "expression": "ss_estimated_benefit * adjustment_multiplier",
+            "dependencies": [
+              "ss_estimated_benefit",
+              "adjustment_multiplier"
+            ],
+            "label": "Estimated monthly benefit at claiming age",
+            "unit": "currency/month",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_monthly_benefit",
+            "label": "Estimated monthly Social Security benefit",
+            "variable": "adjusted_monthly_benefit",
+            "unit": "currency/month",
+            "format": "currency"
+          },
+          {
+            "id": "years_from_fra_output",
+            "label": "Years from Full Retirement Age",
+            "variable": "years_from_fra",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "income_replacement_age": {
+        "label": "Age to Reach Replacement Rate",
+        "description": "Determines the retirement age required so that projected income (Social Security plus safe withdrawal from savings) meets a target replacement rate of pre-retirement income.",
+        "variables": {
+          "required_net_income": {
+            "expression": "pre_retirement_income * replacement_rate",
+            "dependencies": [
+              "pre_retirement_income",
+              "replacement_rate"
+            ],
+            "label": "Target retirement income (replacement of pre-retirement income)",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": false
+          },
+          "needed_from_savings": {
+            "expression": "required_net_income - (ss_estimated_benefit * 12)",
+            "dependencies": [
+              "required_net_income",
+              "ss_estimated_benefit"
+            ],
+            "label": "Annual income needed from savings",
+            "unit": "currency/year",
+            "format": "currency",
+            "display": false
+          },
+          "target_savings_for_replacement": {
+            "expression": "needed_from_savings / withdrawal_rate",
+            "dependencies": [
+              "needed_from_savings",
+              "withdrawal_rate"
+            ],
+            "label": "Savings required to supply needed income",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "years_to_replacement_goal": {
+            "expression": "ln((target_savings_for_replacement * real_return + annual_contribution) / (current_savings * real_return + annual_contribution)) / ln(1 + real_return)",
+            "dependencies": [
+              "target_savings_for_replacement",
+              "real_return",
+              "annual_contribution",
+              "current_savings"
+            ],
+            "label": "Years until replacement target reached",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "replacement_age": {
+            "expression": "current_age + years_to_replacement_goal",
+            "dependencies": [
+              "current_age",
+              "years_to_replacement_goal"
+            ],
+            "label": "Estimated age when replacement rate is met",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "replacement_age_output",
+            "label": "Age when target replacement rate is met",
+            "variable": "replacement_age",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "target_savings_for_replacement_output",
+            "label": "Target savings needed for replacement",
+            "variable": "target_savings_for_replacement",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "number",
+        "default": 45,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current retirement savings (total)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contribution (total)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "expected_return",
+        "label": "Expected nominal annual return (decimal)",
+        "type": "number",
+        "default": 0.06,
+        "min": -0.1,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "inflation_rate",
+        "label": "Expected annual inflation (decimal)",
+        "type": "number",
+        "default": 0.02,
+        "min": 0,
+        "max": 0.1,
+        "step": 0.001
+      },
+      {
+        "id": "desired_annual_income",
+        "label": "Desired annual retirement income (before tax)",
+        "type": "number",
+        "default": 40000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "withdrawal_rate",
+        "label": "Safe withdrawal rate (decimal)",
+        "type": "number",
+        "default": 0.04,
+        "min": 0.01,
+        "max": 0.1,
+        "step": 0.001
+      },
+      {
+        "id": "replacement_rate",
+        "label": "Desired replacement rate (fraction of pre-retirement income)",
+        "type": "number",
+        "default": 0.7,
+        "min": 0,
+        "max": 2,
+        "step": 0.01
+      },
+      {
+        "id": "pre_retirement_income",
+        "label": "Pre-retirement annual income (used for replacement-rate method)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "ss_estimated_benefit",
+        "label": "Estimated Social Security benefit at FRA (monthly)",
+        "type": "number",
+        "default": 1500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "claiming_age",
+        "label": "Planned Social Security claiming age",
+        "type": "number",
+        "default": 65,
+        "min": 62,
+        "max": 70,
+        "step": 1
+      },
+      {
+        "id": "full_retirement_age",
+        "label": "Full Retirement Age (FRA)",
+        "type": "number",
+        "default": 67,
+        "min": 62,
+        "max": 70,
+        "step": 1
+      },
+      {
+        "id": "increase_rate_per_year",
+        "label": "Estimated credit for each year delayed (decimal)",
+        "type": "number",
+        "default": 0.08,
+        "min": 0,
+        "max": 0.2,
+        "step": 0.01
+      },
+      {
+        "id": "reduction_rate_per_year",
+        "label": "Estimated reduction for each year claimed early (decimal)",
+        "type": "number",
+        "default": 0.06,
+        "min": 0,
+        "max": 0.2,
+        "step": 0.01
+      }
+    ],
+    "sections": [
+      {
+        "id": "social_security_section",
+        "label": "Social Security inputs",
+        "show_when": {
+          "field": "ss_estimated_benefit",
+          "is": ""
+        },
+        "fields": [
+          {
+            "id": "ss_estimated_benefit",
+            "label": "Estimated Social Security benefit at FRA (monthly)",
+            "type": "number",
+            "default": 1500,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "claiming_age",
+            "label": "Planned claiming age",
+            "type": "number",
+            "default": 65,
+            "min": 62,
+            "max": 70,
+            "step": 1
+          },
+          {
+            "id": "full_retirement_age",
+            "label": "Full Retirement Age (FRA)",
+            "type": "number",
+            "default": 67,
+            "min": 62,
+            "max": 70,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This advanced retirement age calculator estimates when your savings or benefit choices will meet your target retirement income. It supports three modeling methods: time to a target savings goal, Social Security claiming impact, and age to reach a target replacement rate combining Social Security and withdrawals.",
+      "The tool uses constant-rate assumptions for returns and inflation, annual contribution pacing, and simple linear approximations for Social Security adjustments. Use results as planning guidance, not definitive entitlement or tax advice."
+    ],
+    "methodology": [
+      "Savings goal method solves the future value equation for years until accumulated assets reach a target portfolio size: target = desired annual income / withdrawal rate. The formula solves for n in the future value with regular contributions.",
+      "Social Security output uses a per-year linear approximation for benefit reduction or credit relative to Full Retirement Age (FRA). This is a simplified model; actual program rules include month-by-month rules and bend points.",
+      "We follow accepted controls for numerical reproducibility and data handling: NIST guidance for security and data integrity, IEEE floating-point considerations for numeric stability, ISO 31000 principles for risk-aware assumptions, and common workplace safety disclaimers consistent with OSHA guidance where user actions could lead to financial or occupational risk."
+    ],
+    "how_is_calculated": [
+      "Target savings = desired_annual_income / withdrawal_rate.",
+      "Solve years n from: target = current_savings*(1+real_return)^n + annual_contribution * [((1+real_return)^n - 1) / real_return]. Rearranged: (1+real_return)^n = (target*real_return + annual_contribution) / (current_savings*real_return + annual_contribution). Then n = ln(...) / ln(1+real_return).",
+      "Estimated monthly Social Security at chosen claiming age = ss_estimated_benefit * (1 + years_from_fra * adjustment_rate) where adjustment_rate is positive for delayed claiming and negative for early claiming. This is an approximation for planning only."
+    ],
+    "examples": [
+      "Example 1: If you are 45 with $50,000 saved, $10,000/year contributions, 6% expected return, 2% inflation, and want $40,000/year in retirement with a 4% withdrawal rate, the tool solves the years until your portfolio supports that income.",
+      "Example 2: If FRA is 67, estimated benefit at FRA is $1,500/month, and you plan to claim at 62, the Social Security method shows an estimated reduction using the configured early reduction rate."
+    ],
+    "summary": [
+      "Results are estimate-based and sensitive to return, inflation, contribution, and rate assumptions. Small changes in those inputs can materially change the projected retirement age.",
+      "Use scenario analysis (multiple runs with different return and contribution assumptions) to understand ranges and risk."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are the results?",
+        "answer": "Outputs are model estimates. They depend on constant-rate assumptions and simplified Social Security adjustments. Real-world returns vary, tax treatment differs by account, and actual program rules may change benefits. Use these results as planning guidance only."
+      },
+      {
+        "question": "Does this replace official Social Security statements?",
+        "answer": "No. Use your official Social Security statement or account portal for exact entitlement estimates. This tool provides approximate impacts of different claiming ages for planning, not official benefit amounts."
+      },
+      {
+        "question": "Can I assume the same return forever?",
+        "answer": "No. The tool uses constant expected returns for projection simplicity. For robust planning, run multiple scenarios with different return and inflation assumptions and consider consulting a financial professional."
+      },
+      {
+        "question": "What standards or best practices inform this tool?",
+        "answer": "The tool's development used numerical reproducibility guidance (IEEE floating-point awareness), risk-management framing (ISO 31000), and data security and integrity practices consistent with NIST recommendations. Safety and practical-use disclaimers follow general occupational guidance consistent with OSHA principles."
+      },
+      {
+        "question": "Why might the solver fail to return a finite number of years?",
+        "answer": "If the real return is less than or equal to zero and contributions are insufficient, the equation may not reach the target; the tool will indicate that the target is not achievable under current assumptions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards & Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 31000 Risk Management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Full Retirement Age (FRA)",
+        "definition": "The age at which a person may claim full Social Security retirement benefits without early-age reduction."
+      },
+      {
+        "term": "Replacement rate",
+        "definition": "The fraction of pre-retirement income you aim to receive in retirement, expressed as a decimal or percentage."
+      },
+      {
+        "term": "Safe withdrawal rate",
+        "definition": "An assumed percentage of a portfolio that can be withdrawn annually to support retirement income without depleting the principal prematurely; commonly 4% is used as a rule-of-thumb."
+      },
+      {
+        "term": "Real return",
+        "definition": "Nominal return minus inflation; the return in terms of purchasing power."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/planning/savings-goal",
+      "/planning/social-security-guides"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000 overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

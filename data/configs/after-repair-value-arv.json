@@ -1,0 +1,351 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "After Repair Value (ARV) Estimator",
+    "description": "Multi-method ARV estimator for investors and appraisers. Offers price-per-sqft, average-comp, adjustment, and 70% investor-rule methods with clear inputs, accuracy caveats, and references to standards for measurement and quality assurance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "ppsqft_method",
+    "methods": {
+      "ppsqft_method": {
+        "label": "Price-per-square-foot method",
+        "description": "Estimate ARV by applying an average price-per-square-foot (from comparable sales or market data) to the subject property area.",
+        "variables": {
+          "base_ppsqft": {
+            "expression": "average_ppsqft",
+            "dependencies": [
+              "average_ppsqft"
+            ],
+            "label": "Average price per square foot (input)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "arv_value": {
+            "expression": "base_ppsqft * subject_sqft",
+            "dependencies": [
+              "base_ppsqft",
+              "subject_sqft"
+            ],
+            "label": "Estimated ARV",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "arv",
+            "label": "Estimated After-Repair Value (ARV)",
+            "variable": "arv_value",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "avg_comp_method": {
+        "label": "Average comparable sale method",
+        "description": "Derive price per sqft from average comparable sale price and average comparable size, then scale to the subject property.",
+        "variables": {
+          "comp_ppsqft": {
+            "expression": "average_comp_price / average_comp_sqft",
+            "dependencies": [
+              "average_comp_price",
+              "average_comp_sqft"
+            ],
+            "label": "Average comparable price per sqft",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "arv_value": {
+            "expression": "comp_ppsqft * subject_sqft",
+            "dependencies": [
+              "comp_ppsqft",
+              "subject_sqft"
+            ],
+            "label": "Estimated ARV",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "arv",
+            "label": "Estimated After-Repair Value (ARV)",
+            "variable": "arv_value",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "adjusted_method": {
+        "label": "Adjusted ARV (percent + repairs)",
+        "description": "Start from a price-per-sqft base then apply percentage adjustments (market/condition) and add quantified repair value to reflect likely post-repair market value.",
+        "variables": {
+          "base_arv": {
+            "expression": "average_ppsqft * subject_sqft",
+            "dependencies": [
+              "average_ppsqft",
+              "subject_sqft"
+            ],
+            "label": "Base ARV (price-per-sqft × area)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "adj_multiplier": {
+            "expression": "1 + (adjustment_percent / 100)",
+            "dependencies": [
+              "adjustment_percent"
+            ],
+            "label": "Adjustment multiplier",
+            "format": "decimal",
+            "display": false
+          },
+          "adjusted_arv": {
+            "expression": "base_arv * adj_multiplier + repairs_cost",
+            "dependencies": [
+              "base_arv",
+              "adj_multiplier",
+              "repairs_cost"
+            ],
+            "label": "ARV after adjustments and repairs",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_arv",
+            "label": "Adjusted After-Repair Value (ARV)",
+            "variable": "adjusted_arv",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "seventy_method": {
+        "label": "Investor 70% Rule (ARV → max purchase)",
+        "description": "Common investor heuristic: estimate ARV then calculate a conservative maximum purchase price using the 70% rule. This method provides both ARV estimate and the suggested maximum purchase offer (not an appraisal).",
+        "variables": {
+          "base_arv": {
+            "expression": "average_ppsqft * subject_sqft",
+            "dependencies": [
+              "average_ppsqft",
+              "subject_sqft"
+            ],
+            "label": "Base ARV (price-per-sqft × area)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "investor_max_purchase": {
+            "expression": "(base_arv * 0.7) - repairs_cost - purchase_costs",
+            "dependencies": [
+              "base_arv",
+              "repairs_cost",
+              "purchase_costs"
+            ],
+            "label": "Max purchase price (70% rule)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "arv",
+            "label": "Estimated After-Repair Value (ARV)",
+            "variable": "base_arv",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_purchase",
+            "label": "Suggested max purchase price (70% rule)",
+            "variable": "investor_max_purchase",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "average_ppsqft",
+        "label": "Average price per square foot (USD)",
+        "type": "number",
+        "default": 150,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "average_comp_price",
+        "label": "Average comparable sale price (USD)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "average_comp_sqft",
+        "label": "Average comparable size (sqft)",
+        "type": "number",
+        "default": 2000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "subject_sqft",
+        "label": "Subject property size (sqft)",
+        "type": "number",
+        "default": 1500,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "adjustment_percent",
+        "label": "Adjustment (%). Positive increases ARV, negative decreases",
+        "type": "number",
+        "default": 0,
+        "min": -100,
+        "max": 200,
+        "step": 0.1
+      },
+      {
+        "id": "repairs_cost",
+        "label": "Estimated repair cost to reach target condition (USD)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "purchase_costs",
+        "label": "Estimated closing/transaction costs (USD) used in 70% rule",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 100
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This ARV estimator helps you approximate a property's market value after repairs (After-Repair Value). It provides multiple approaches: price-per-square-foot, average comparable sale, adjusted ARV (percent and repairs), and the 70% investor rule to derive a conservative maximum purchase price.",
+      "This tool is intended for preliminary analysis and deal screening. It is not a certified appraisal. Use a licensed appraiser or local valuation expert for lending, legal, or formal valuation needs."
+    ],
+    "methodology": [
+      "Price-per-square-foot method: multiply an average market price per square foot (derived from sales of similar properties) by the subject property's finished area. This is commonly used when comparable sales are consistent in size and condition.",
+      "Average comparable sale method: derive a per-square-foot rate from the average sale price and size of comparable properties, then apply that rate to the subject property.",
+      "Adjusted ARV: apply a percentage adjustment to the base ARV to reflect market movement, neighborhood trends, or differences in quality; add quantified repair value when repairs directly increase market value.",
+      "70% rule (investor heuristic): calculates a conservative maximum purchase price based on ARV to allow room for repairs, holding costs, and desired profit. This is a rule-of-thumb and not a substitute for detailed financial underwriting or appraisal."
+    ],
+    "how_is_calculated": [
+      "Price-per-sqft ARV = average_price_per_sqft × subject_sqft",
+      "From average comp: comp_price_per_sqft = average_comp_price ÷ average_comp_sqft; ARV = comp_price_per_sqft × subject_sqft",
+      "Adjusted ARV = (base_ARV × (1 + adjustment_percent/100)) + repairs_cost",
+      "70% rule suggested max purchase = (ARV × 0.7) − repairs_cost − purchase_costs"
+    ],
+    "examples": [
+      "Example 1 — Price-per-sqft: If the market avg is $160/sqft and the subject is 1,500 sqft, ARV = $160 × 1,500 = $240,000.",
+      "Example 2 — 70% rule: With ARV $240,000, repairs $15,000, and purchase costs $5,000, max purchase = (240,000 × 0.7) − 15,000 − 5,000 = $148,000."
+    ],
+    "faqs": [
+      {
+        "question": "Is this estimator a formal appraisal?",
+        "answer": "No. This is a modeling tool for preliminary valuation and deal screening. It does not replace a licensed appraisal or a market analysis performed by professional appraisers."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Accuracy depends on input quality: representativeness of comparable sales, correct size measurements, and realistic repair estimates. Use local recent comps and, when available, adjust for material differences. Expected uncertainty varies by market; always include a sensitivity margin."
+      },
+      {
+        "question": "Which method should I use?",
+        "answer": "Use the price-per-sqft method when comps are consistent. Use the average-comp method when you have average comp prices and sizes. Use the adjusted method to include verified repair value or documented market adjustments. Use the 70% rule only for quick investor screening, not formal valuation."
+      },
+      {
+        "question": "Are there recommended data or quality practices?",
+        "answer": "Yes. Prefer recent (typically last 3–6 months) comparable sales, control for key factors (size, condition, lot, location), and document assumptions. For compliance and traceable measurement practices, follow relevant measurement and quality standards."
+      },
+      {
+        "question": "Should I rely on this for lending or legal matters?",
+        "answer": "No. Lenders and courts typically require a licensed appraisal prepared under recognized appraisal standards. Use this tool for internal analysis only."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "After-Repair Value (ARV)",
+        "definition": "Estimated market value of a property after planned repairs and improvements have been completed."
+      },
+      {
+        "term": "Comparable sale (comp)",
+        "definition": "A recently sold property similar in size, condition, and location used as a reference point for valuation."
+      },
+      {
+        "term": "Price per square foot",
+        "definition": "Sale price divided by finished living area; a common normalization to compare properties of different sizes."
+      },
+      {
+        "term": "70% rule",
+        "definition": "Investor heuristic calculating a conservative maximum purchase price as 70% of ARV minus repair and transaction costs to allow margin for profit and risk."
+      },
+      {
+        "term": "Adjustment",
+        "definition": "A percentage applied to base ARV to reflect market change or property condition differences between comps and the subject property."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/tools/real-estate/valuation-guides"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,484 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "SIMPLE IRA Projected Balance & Comparison Calculator",
+    "description": "Estimate future SIMPLE IRA balances, employer contributions, and inflation-adjusted purchasing power. Supports typical SIMPLE employer options (match or 2% nonelective) and includes regulatory and accuracy guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "future_balance",
+    "methods": {
+      "future_balance": {
+        "label": "Projected balance and retirement income",
+        "description": "Projects account value at retirement using annual compounding net of explicit annual fees, sums employee + employer contributions, and provides inflation-adjusted balance and estimated sustainable withdrawal income.",
+        "variables": {
+          "r_nominal": {
+            "expression": "annual_return_percent/100",
+            "dependencies": [
+              "annual_return_percent"
+            ],
+            "label": "Nominal annual return",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "fee": {
+            "expression": "annual_fee_percent/100",
+            "dependencies": [
+              "annual_fee_percent"
+            ],
+            "label": "Annual fee (as decimal)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "r_net": {
+            "expression": "r_nominal - fee",
+            "dependencies": [
+              "r_nominal",
+              "fee"
+            ],
+            "label": "Net annual return after fees",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "t": {
+            "expression": "years",
+            "dependencies": [
+              "years"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "employer_contribution": {
+            "expression": "employer_type == 'match_percent' ? (employee_compensation * employer_match_percent/100) : (employee_compensation * 0.02)",
+            "dependencies": [
+              "employer_type",
+              "employee_compensation",
+              "employer_match_percent"
+            ],
+            "label": "Estimated annual employer contribution",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_total_contrib": {
+            "expression": "employee_contrib + employer_contribution",
+            "dependencies": [
+              "employee_contrib",
+              "employer_contribution"
+            ],
+            "label": "Total annual contributions (employee + employer)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "fv_current": {
+            "expression": "current_balance * pow(1 + r_net, t)",
+            "dependencies": [
+              "current_balance",
+              "r_net",
+              "t"
+            ],
+            "label": "Future value of current balance",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "fv_contribs": {
+            "expression": "r_net != 0 ? (annual_total_contrib * (pow(1 + r_net, t) - 1) / r_net) : (annual_total_contrib * t)",
+            "dependencies": [
+              "annual_total_contrib",
+              "r_net",
+              "t"
+            ],
+            "label": "Future value of a series of annual contributions",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "projected_balance": {
+            "expression": "fv_current + fv_contribs",
+            "dependencies": [
+              "fv_current",
+              "fv_contribs"
+            ],
+            "label": "Projected account balance at retirement (nominal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "projected_balance_real": {
+            "expression": "projected_balance / pow(1 + inflation_percent/100, t)",
+            "dependencies": [
+              "projected_balance",
+              "inflation_percent",
+              "t"
+            ],
+            "label": "Inflation-adjusted projected balance (in today's dollars)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_employee_contributions": {
+            "expression": "employee_contrib * t",
+            "dependencies": [
+              "employee_contrib",
+              "t"
+            ],
+            "label": "Cumulative employee contributions",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_employer_contributions": {
+            "expression": "employer_contribution * t",
+            "dependencies": [
+              "employer_contribution",
+              "t"
+            ],
+            "label": "Cumulative employer contributions",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_annual_withdrawal": {
+            "expression": "projected_balance * withdrawal_rate/100",
+            "dependencies": [
+              "projected_balance",
+              "withdrawal_rate"
+            ],
+            "label": "Estimated first-year sustainable withdrawal (nominal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_balance",
+            "label": "Projected balance (nominal)",
+            "variable": "projected_balance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_balance_real",
+            "label": "Projected balance (today's dollars)",
+            "variable": "projected_balance_real",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_employee_contributions",
+            "label": "Total employee contributions",
+            "variable": "total_employee_contributions",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_employer_contributions",
+            "label": "Total employer contributions (estimated)",
+            "variable": "total_employer_contributions",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_annual_withdrawal",
+            "label": "Estimated initial sustainable withdrawal (nominal)",
+            "variable": "estimated_annual_withdrawal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "r_net",
+            "label": "Net annual return (after fees)",
+            "variable": "r_net",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_balance",
+        "label": "Current SIMPLE IRA balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "employee_contrib",
+        "label": "Your annual employee contribution",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "employee_compensation",
+        "label": "Your annual compensation (W-2 wages)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 500
+      },
+      {
+        "id": "employer_type",
+        "label": "Employer SIMPLE option",
+        "type": "select",
+        "default": "match_percent",
+        "options": [
+          {
+            "label": "Match (typical up to 3% of compensation)",
+            "value": "match_percent"
+          },
+          {
+            "label": "Nonelective 2% of compensation",
+            "value": "nonelective_2_percent"
+          }
+        ]
+      },
+      {
+        "id": "employer_match_percent",
+        "label": "Employer match percent (if using match)",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "annual_return_percent",
+        "label": "Expected annual nominal investment return (before fees)",
+        "type": "number",
+        "default": 6,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "annual_fee_percent",
+        "label": "Annual account/management fees (total %)",
+        "type": "number",
+        "default": 0.5,
+        "min": 0,
+        "max": 5,
+        "step": 0.01
+      },
+      {
+        "id": "inflation_percent",
+        "label": "Expected long-term inflation rate",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "contrib_increase_percent",
+        "label": "Annual contribution increase (pay raises) %",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "years",
+        "label": "Years until retirement",
+        "type": "integer",
+        "default": 30,
+        "min": 0,
+        "max": 75,
+        "step": 1
+      },
+      {
+        "id": "withdrawal_rate",
+        "label": "Planned safe withdrawal rate (initial %)",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "employer_match_section",
+        "label": "Employer match details",
+        "show_when": {
+          "field": "employer_type",
+          "is": "match_percent"
+        },
+        "fields": [
+          {
+            "id": "employer_match_percent_visible",
+            "label": "Employer match percent (if different)",
+            "type": "number",
+            "default": 3,
+            "min": 0,
+            "max": 10,
+            "step": 0.1
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "projected_balance",
+          "label": "Projected balance (nominal)"
+        },
+        {
+          "id": "projected_balance_real",
+          "label": "Projected balance (today's dollars)"
+        },
+        {
+          "id": "total_employee_contributions",
+          "label": "Total employee contributions"
+        },
+        {
+          "id": "total_employer_contributions",
+          "label": "Total employer contributions (estimated)"
+        },
+        {
+          "id": "estimated_annual_withdrawal",
+          "label": "Estimated initial sustainable withdrawal (nominal)"
+        },
+        {
+          "id": "r_net",
+          "label": "Net annual return (after fees)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator projects future SIMPLE IRA account balances using user inputs for current balance, annual employee contribution, employer contribution approach (match or 2% nonelective), expected returns, fees, and inflation. It produces both nominal and inflation-adjusted estimates and an initial sustainable withdrawal estimate.",
+      "The tool models employer contributions using common SIMPLE plan conventions: a dollar-for-dollar match up to a chosen percent of compensation or a 2% nonelective contribution. Users should confirm their plan's exact employer formula and IRS limits when finalizing plans."
+    ],
+    "methodology": [
+      "We forecast balances with annual compounding using a net annual return equal to expected nominal return minus explicit annual fees provided by the user. Employee and employer contributions are treated as annual end-of-year contributions for the series calculation.",
+      "Employer contribution is estimated as either (employee compensation × match percent) when the employer match option is selected or (employee compensation × 2%) for the nonelective option. This simplifies plan variations; please cross-check against your plan document."
+    ],
+    "how_is_calculated": [
+      "Net annual return = (expected nominal return %) - (annual fee %).",
+      "Future value of current balance = current_balance × (1 + net_return)^years.",
+      "Future value of annual contributions = annual_total_contrib × ((1 + net_return)^years − 1) / net_return, with fallback to annual_total_contrib × years if net_return is 0.",
+      "Projected nominal balance = future value of current balance + future value of contributions.",
+      "Inflation-adjusted balance = projected nominal balance / (1 + inflation %) ^ years.",
+      "Estimated initial sustainable withdrawal = projected nominal balance × (withdrawal rate %)."
+    ],
+    "examples": [
+      "Example: $10,000 current balance, $15,000 employee contribution, $50,000 compensation, 3% employer match, 6% return, 0.5% fees, 30 years: calculator returns a nominal projected balance and an inflation-adjusted equivalent, plus cumulative contributions and initial withdrawal estimate.",
+      "Edge case note: if net return equals zero, the calculator sums contributions linearly for growth (avoids division by zero)."
+    ],
+    "faqs": [
+      {
+        "question": "Does this tool enforce IRS SIMPLE IRA contribution limits?",
+        "answer": "No. This calculator does not automatically enforce annual IRS contribution caps or catch-up rules. You must ensure your entered employee contribution does not exceed applicable IRS limits for the tax year and whether catch-up contributions apply."
+      },
+      {
+        "question": "How are employer contributions estimated?",
+        "answer": "If 'match' is selected the employer contribution is estimated as employee compensation × employer match percent. If 'nonelective' is selected the employer contribution is estimated as 2% of compensation. Actual plan formulas may vary; use this as an estimate and verify with plan documents."
+      },
+      {
+        "question": "Are fees and inflation included?",
+        "answer": "Yes. The calculator subtracts the annual fee percentage from the expected nominal return to compute a net return, and it separately adjusts the projected balance to today’s dollars using the inflation rate you provide."
+      },
+      {
+        "question": "How accurate are the withdrawal estimates?",
+        "answer": "Withdrawal estimates are simple initial-year projections using the chosen withdrawal rate. They do not model sequence-of-return risk, taxes, required minimum distributions, or changing spending patterns. Use them for planning only."
+      },
+      {
+        "question": "What if my net return is zero?",
+        "answer": "The model falls back to linear accumulation of contributions when net return equals zero to avoid divide-by-zero errors. This is an approximation and noted in the example section."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "SIMPLE IRA",
+        "definition": "A retirement plan for small employers that allows employee salary deferrals and requires specified employer contributions (either matching or nonelective)."
+      },
+      {
+        "term": "Nonelective contribution",
+        "definition": "An employer contribution made for eligible employees regardless of whether they defer; the SIMPLE nonelective option commonly uses a 2% of compensation rate."
+      },
+      {
+        "term": "Net return",
+        "definition": "Expected nominal return minus explicit annual fees used in this model; does not include taxes or transaction costs unless entered as fees."
+      },
+      {
+        "term": "Inflation-adjusted balance",
+        "definition": "Projected balance converted into today's purchasing power by dividing by (1 + inflation_rate)^years."
+      },
+      {
+        "term": "Safe withdrawal rate",
+        "definition": "A planning assumption for the percentage of the portfolio that can be withdrawn in the first retirement year; does not guarantee sustainability under all market conditions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS - SIMPLE IRA information",
+        "url": "https://www.irs.gov/retirement-plans/simple-ira-plan-contribution-limits"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "summary": [
+      "Use this calculator to estimate future SIMPLE IRA balances and compare employer contribution approaches. It is designed for planning and educational use, not as tax or legal advice.",
+      "Validate all inputs against plan documents and current IRS rules before making contribution decisions."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/retirement/savings/ira-basics",
+      "/retirement/tools/withdrawal-planner"
+    ],
+    "external": [
+      {
+        "url": "https://www.irs.gov/retirement-plans/simple-ira-plan-contribution-limits",
+        "label": "IRS SIMPLE IRA guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

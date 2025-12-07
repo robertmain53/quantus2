@@ -1,0 +1,445 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Standard vs Itemized Deduction Calculator (U.S.)",
+    "description": "Compare the federal standard deduction to your potential itemized deductions and see which reduces your taxable income more. Includes key rules (SALT cap, medical threshold) and an explainable calculation path with accuracy caveats and references."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "compare",
+    "methods": {
+      "standard": {
+        "label": "Standard deduction outcome",
+        "description": "Calculates taxable income when taking the standard deduction you enter or accept as the default.",
+        "variables": {
+          "standard_amount": {
+            "expression": "standard_deduction",
+            "dependencies": [
+              "standard_deduction"
+            ],
+            "label": "Standard deduction amount",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_income_standard": {
+            "expression": "max(0, agi - standard_amount)",
+            "dependencies": [
+              "agi",
+              "standard_amount"
+            ],
+            "label": "Taxable income if standard deduction taken",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "standard_amount",
+            "label": "Standard deduction",
+            "variable": "standard_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "taxable_income_standard",
+            "label": "Taxable income (standard)",
+            "variable": "taxable_income_standard",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "itemized": {
+        "label": "Itemized deduction outcome",
+        "description": "Totals allowed itemized deductions applying the common limits and thresholds, then computes taxable income when itemizing.",
+        "variables": {
+          "med_threshold": {
+            "expression": "agi * 0.075",
+            "dependencies": [
+              "agi"
+            ],
+            "label": "Medical deduction threshold (7.5% of AGI)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "deductible_medical": {
+            "expression": "max(0, medical_expenses - med_threshold)",
+            "dependencies": [
+              "medical_expenses",
+              "med_threshold"
+            ],
+            "label": "Deductible medical expenses (amount over 7.5% of AGI)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "slt_total": {
+            "expression": "state_local_taxes + property_tax",
+            "dependencies": [
+              "state_local_taxes",
+              "property_tax"
+            ],
+            "label": "State and local taxes (SALT) total before cap",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "slt_capped": {
+            "expression": "min(slt_total, 10000)",
+            "dependencies": [
+              "slt_total"
+            ],
+            "label": "SALT after $10,000 cap",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "itemized_total": {
+            "expression": "mortgage_interest + slt_capped + charitable_cash + deductible_medical + other_itemized",
+            "dependencies": [
+              "mortgage_interest",
+              "slt_capped",
+              "charitable_cash",
+              "deductible_medical",
+              "other_itemized"
+            ],
+            "label": "Total itemized deductions (allowed)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_income_itemized": {
+            "expression": "max(0, agi - itemized_total)",
+            "dependencies": [
+              "agi",
+              "itemized_total"
+            ],
+            "label": "Taxable income if itemizing",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "itemized_total",
+            "label": "Total itemized deductions",
+            "variable": "itemized_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "taxable_income_itemized",
+            "label": "Taxable income (itemized)",
+            "variable": "taxable_income_itemized",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "compare": {
+        "label": "Direct comparison",
+        "description": "Side-by-side comparison of the two outcomes and a recommended choice based on lower taxable income.",
+        "variables": {
+          "taxable_income_difference": {
+            "expression": "(agi - standard_deduction) - (agi - (mortgage_interest + min(state_local_taxes + property_tax, 10000) + charitable_cash + max(0, medical_expenses - agi * 0.075) + other_itemized))",
+            "dependencies": [
+              "agi",
+              "standard_deduction",
+              "mortgage_interest",
+              "state_local_taxes",
+              "property_tax",
+              "charitable_cash",
+              "medical_expenses",
+              "other_itemized"
+            ],
+            "label": "Difference in taxable income (standard minus itemized)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_method_code": {
+            "expression": "if(taxable_income_difference < 0, 1, 0)",
+            "dependencies": [
+              "taxable_income_difference"
+            ],
+            "label": "Recommended choice code (1 = Itemize, 0 = Standard)",
+            "format": "integer",
+            "display": false
+          },
+          "recommended_method_text": {
+            "expression": "if(taxable_income_difference < 0, 'Itemize', 'Standard')",
+            "dependencies": [
+              "taxable_income_difference"
+            ],
+            "label": "Recommended filing choice",
+            "display": true
+          },
+          "taxable_income_standard_recalc": {
+            "expression": "max(0, agi - standard_deduction)",
+            "dependencies": [
+              "agi",
+              "standard_deduction"
+            ],
+            "label": "Taxable income if standard (recalc)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "taxable_income_itemized_recalc": {
+            "expression": "max(0, agi - (mortgage_interest + min(state_local_taxes + property_tax, 10000) + charitable_cash + max(0, medical_expenses - agi * 0.075) + other_itemized))",
+            "dependencies": [
+              "agi",
+              "mortgage_interest",
+              "state_local_taxes",
+              "property_tax",
+              "charitable_cash",
+              "medical_expenses",
+              "other_itemized"
+            ],
+            "label": "Taxable income if itemized (recalc)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "taxable_income_difference",
+            "label": "Taxable income difference (standard − itemized)",
+            "variable": "taxable_income_difference",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_method_text",
+            "label": "Recommended choice",
+            "variable": "recommended_method_text"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "filing_status",
+        "label": "Filing status",
+        "type": "select",
+        "default": "single",
+        "options": [
+          {
+            "label": "Single",
+            "value": "single"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "married_filing_jointly"
+          },
+          {
+            "label": "Head of household",
+            "value": "head_of_household"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "married_filing_separately"
+          }
+        ]
+      },
+      {
+        "id": "standard_deduction",
+        "label": "Standard deduction (USD)",
+        "type": "number",
+        "default": 13850,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "agi",
+        "label": "Adjusted Gross Income (AGI, USD)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "mortgage_interest",
+        "label": "Mortgage interest paid (USD)",
+        "type": "number",
+        "default": 8000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "state_local_taxes",
+        "label": "State and local income/sales taxes paid (USD)",
+        "type": "number",
+        "default": 4000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "property_tax",
+        "label": "Property taxes paid (USD)",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "charitable_cash",
+        "label": "Cash charitable contributions (USD)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "medical_expenses",
+        "label": "Total unreimbursed medical expenses (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "other_itemized",
+        "label": "Other deductible itemized amounts (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares the federal standard deduction to an estimate of your total itemized deductions and shows which option yields a lower taxable income. It applies common rules including the SALT ($10,000) cap and the medical deduction threshold (7.5% of AGI).",
+      "Use the fields to enter your adjusted gross income and the itemized categories you expect to claim. The tool is an estimation aid only; final filing should follow current IRS guidance and review by a tax professional where appropriate."
+    ],
+    "methodology": [
+      "We compute the standard outcome by subtracting the standard deduction amount you provide from AGI to get taxable income (not including credits or other adjustments).",
+      "For itemized deductions we total allowed categories: mortgage interest, state and local taxes (SALT) subject to a $10,000 cap, charitable contributions, deductible medical expenses (amount that exceeds 7.5% of AGI), and any other deductible items you enter.",
+      "Comparison is done on taxable income after deductions. The option that yields the lower taxable income is presented as the recommended choice in this calculator."
+    ],
+    "how_is_calculated": [
+      "Standard taxable income equals adjusted gross income minus the standard deduction, floored at zero.",
+      "Medical deductible amount equals medical expenses minus 7.5 percent of adjusted gross income, floored at zero.",
+      "State and local tax deduction equals the sum of state or local tax and property tax, capped at 10,000.",
+      "Itemized total equals mortgage interest plus allowed state and local tax amount plus charitable contributions plus medical deductible amount plus other itemized amounts.",
+      "Itemized taxable income equals adjusted gross income minus the itemized total, floored at zero.",
+      "Recommendation: choose itemizing if the itemized taxable income is lower than the standard taxable income; otherwise the standard deduction is preferable."
+    ],
+    "examples": [
+      "Example 1: AGI $60,000, mortgage interest $8,000, SALT $7,000, property tax $3,000, charitable $1,000. SALT capped at $10,000; compare totals to standard deduction to decide.",
+      "Example 2: If you have significant unreimbursed medical expenses that exceed 7.5% of AGI, those amounts can make itemizing advantageous even when other categories are modest."
+    ],
+    "summary": [
+      "This tool estimates whether you should itemize or claim the standard deduction based on entered figures. It is focused on U.S. federal deduction rules commonly relevant to individual filers.",
+      "Always confirm deduction values and eligibility with the current IRS rules for the tax year you are filing and consult a qualified tax advisor for complex situations."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include tax credits or compute tax liability?",
+        "answer": "No. This tool compares deductions only and shows resulting taxable income. It does not calculate tax liability, tax credits, alternative minimum tax, or state tax returns."
+      },
+      {
+        "question": "How is the SALT cap handled?",
+        "answer": "State and local taxes plus property taxes are summed and capped at $10,000 for the federal deduction per current common rules. Enter the amounts you actually paid; the calculator applies the cap automatically."
+      },
+      {
+        "question": "How are medical expenses treated?",
+        "answer": "Only the portion of unreimbursed medical expenses that exceeds 7.5% of your AGI is potentially deductible. The calculator subtracts 7.5% of AGI from your medical expenses to determine the deductible portion."
+      },
+      {
+        "question": "Are the standard deduction defaults guaranteed accurate?",
+        "answer": "Default standard deduction values may be prefilled for convenience but tax law and inflation adjustments change annually. Verify the correct standard deduction for the tax year you are filing with the IRS before relying on results."
+      },
+      {
+        "question": "Is this a substitute for professional tax advice?",
+        "answer": "No. This calculator is an estimate and educational tool. For decisions that materially affect tax liability, consult a licensed tax professional."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS: Credits and deductions for individuals",
+        "url": "https://www.irs.gov/credits-and-deductions-for-individuals"
+      },
+      {
+        "label": "IRS: Publication describing standard deduction and itemized deductions (general guidance)",
+        "url": "https://www.irs.gov/publications"
+      },
+      {
+        "label": "NIST Special Publication on data integrity and system controls (example guidance)",
+        "url": "https://www.nist.gov/publications"
+      },
+      {
+        "label": "ISO 9001 — Quality management systems (applies to processes and accuracy controls)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE standards overview (recommended for testing and verification practices)",
+        "url": "https://standards.ieee.org/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "AGI (Adjusted Gross Income)",
+        "definition": "Your gross income after allowable adjustments. Many deduction thresholds are calculated as a percentage of AGI."
+      },
+      {
+        "term": "Standard deduction",
+        "definition": "A fixed-dollar deduction amount available to most taxpayers that reduces taxable income without itemizing."
+      },
+      {
+        "term": "Itemized deductions",
+        "definition": "Eligible personal expenses (mortgage interest, SALT, charitable donations, qualifying medical expenses, etc.) that can be summed and claimed instead of the standard deduction."
+      },
+      {
+        "term": "SALT cap",
+        "definition": "The federal limit on the deduction for state and local taxes (income, sales, and property taxes), commonly capped at $10,000 for many tax years."
+      },
+      {
+        "term": "Medical deduction threshold",
+        "definition": "Only unreimbursed medical expenses exceeding 7.5% of AGI are deductible under common federal rules."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/credits-and-deductions-for-individuals",
+        "label": "IRS — Credits and deductions for individuals",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/publications",
+        "label": "NIST publications",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

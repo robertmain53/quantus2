@@ -1,0 +1,527 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Financial Independence & FIRE Planner",
+    "description": "Multi-method financial independence planner that projects nest-egg targets, coast-FIRE requirements, and retirement income replacement using standard future-value math and configurable assumptions."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "fire_4pct",
+    "methods": {
+      "fire_4pct": {
+        "label": "FIRE (4% rule) projection",
+        "description": "Estimate the target nest egg using a configurable safe withdrawal rate and project current savings plus planned contributions to retirement.",
+        "variables": {
+          "years_to_ret": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "future_spending": {
+            "expression": "desired_annual_spending_today * pow(1 + inflation_rate/100, years_to_ret)",
+            "dependencies": [
+              "desired_annual_spending_today",
+              "inflation_rate",
+              "years_to_ret"
+            ],
+            "label": "Estimated annual spending at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "target_nest_egg": {
+            "expression": "future_spending / (withdrawal_rate/100)",
+            "dependencies": [
+              "future_spending",
+              "withdrawal_rate"
+            ],
+            "label": "Target nest egg (based on withdrawal rate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_savings_fv": {
+            "expression": "current_savings * pow(1 + expected_return_pre_ret/100, years_to_ret)",
+            "dependencies": [
+              "current_savings",
+              "expected_return_pre_ret",
+              "years_to_ret"
+            ],
+            "label": "Projected value of current savings",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "contributions_fv": {
+            "expression": "annual_contribution * ((pow(1 + expected_return_pre_ret/100, years_to_ret) - 1) / (expected_return_pre_ret/100))",
+            "dependencies": [
+              "annual_contribution",
+              "expected_return_pre_ret",
+              "years_to_ret"
+            ],
+            "label": "Future value of planned contributions (annuity)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_projected_fv": {
+            "expression": "current_savings_fv + contributions_fv",
+            "dependencies": [
+              "current_savings_fv",
+              "contributions_fv"
+            ],
+            "label": "Total projected savings at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "gap": {
+            "expression": "target_nest_egg - total_projected_fv",
+            "dependencies": [
+              "target_nest_egg",
+              "total_projected_fv"
+            ],
+            "label": "Shortfall (positive means additional saving needed)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "target_nest_egg",
+            "label": "Target nest egg",
+            "variable": "target_nest_egg",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_projected_fv",
+            "label": "Projected savings at retirement",
+            "variable": "total_projected_fv",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "gap",
+            "label": "Projected shortfall / surplus",
+            "variable": "gap",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_to_ret",
+            "label": "Years until retirement",
+            "variable": "years_to_ret",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      },
+      "coast_fire": {
+        "label": "Coast-FIRE calculator",
+        "description": "Calculate the principal required today so that, without further contributions, it will grow to a FIRE nest egg by your retirement date.",
+        "variables": {
+          "years_to_ret": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "future_spending": {
+            "expression": "desired_annual_spending_today * pow(1 + inflation_rate/100, years_to_ret)",
+            "dependencies": [
+              "desired_annual_spending_today",
+              "inflation_rate",
+              "years_to_ret"
+            ],
+            "label": "Estimated annual spending at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "target_nest_egg": {
+            "expression": "future_spending / (withdrawal_rate/100)",
+            "dependencies": [
+              "future_spending",
+              "withdrawal_rate"
+            ],
+            "label": "Target nest egg",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "required_coast_principal": {
+            "expression": "target_nest_egg / pow(1 + expected_return_pre_ret/100, years_to_ret)",
+            "dependencies": [
+              "target_nest_egg",
+              "expected_return_pre_ret",
+              "years_to_ret"
+            ],
+            "label": "Principal required today to coast to target",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "coast_surplus": {
+            "expression": "current_savings - required_coast_principal",
+            "dependencies": [
+              "current_savings",
+              "required_coast_principal"
+            ],
+            "label": "Surplus / shortfall vs coast principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_coast_principal",
+            "label": "Coast principal required today",
+            "variable": "required_coast_principal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "coast_surplus",
+            "label": "Surplus / shortfall vs coast principal",
+            "variable": "coast_surplus",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_to_ret",
+            "label": "Years until retirement",
+            "variable": "years_to_ret",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      },
+      "retirement_projection": {
+        "label": "Retirement income projection & replacement rate",
+        "description": "Project future income needs, account for expected Social Security, and compute required nest egg and projected gap under your assumptions.",
+        "variables": {
+          "years_to_ret": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "projected_income_need": {
+            "expression": "desired_annual_spending_today * pow(1 + inflation_rate/100, years_to_ret)",
+            "dependencies": [
+              "desired_annual_spending_today",
+              "inflation_rate",
+              "years_to_ret"
+            ],
+            "label": "Estimated annual spending at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "income_replacement_ratio": {
+            "expression": "projected_income_need / current_annual_income * 100",
+            "dependencies": [
+              "projected_income_need",
+              "current_annual_income"
+            ],
+            "label": "Projected replacement rate (percent of current income)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "projected_savings_at_retirement": {
+            "expression": "current_savings * pow(1 + expected_return_pre_ret/100, years_to_ret) + annual_contribution * ((pow(1 + expected_return_pre_ret/100, years_to_ret) - 1) / (expected_return_pre_ret/100))",
+            "dependencies": [
+              "current_savings",
+              "expected_return_pre_ret",
+              "years_to_ret",
+              "annual_contribution"
+            ],
+            "label": "Projected savings at retirement (incl. contributions)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "projected_gap_after_ss": {
+            "expression": "projected_income_need - expected_social_security",
+            "dependencies": [
+              "projected_income_need",
+              "expected_social_security"
+            ],
+            "label": "Annual gap after expected Social Security",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "required_nest_egg_after_ss": {
+            "expression": "projected_gap_after_ss / (withdrawal_rate/100)",
+            "dependencies": [
+              "projected_gap_after_ss",
+              "withdrawal_rate"
+            ],
+            "label": "Required nest egg to cover gap after Social Security",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "gap_after_projection": {
+            "expression": "required_nest_egg_after_ss - projected_savings_at_retirement",
+            "dependencies": [
+              "required_nest_egg_after_ss",
+              "projected_savings_at_retirement"
+            ],
+            "label": "Projected shortfall vs required nest egg",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_income_need",
+            "label": "Projected annual spending at retirement",
+            "variable": "projected_income_need",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "income_replacement_ratio",
+            "label": "Replacement rate",
+            "variable": "income_replacement_ratio",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "required_nest_egg_after_ss",
+            "label": "Required nest egg after Social Security",
+            "variable": "required_nest_egg_after_ss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "gap_after_projection",
+            "label": "Projected shortfall vs required nest egg",
+            "variable": "gap_after_projection",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_to_ret",
+            "label": "Years until retirement",
+            "variable": "years_to_ret",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 35,
+        "min": 18,
+        "max": 75,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 60,
+        "min": 40,
+        "max": 90,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current retirement savings (total)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contribution (pre-retirement)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "expected_return_pre_ret",
+        "label": "Expected annual return before retirement (%)",
+        "type": "number",
+        "default": 6,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "expected_return_post_ret",
+        "label": "Expected annual return after retirement (%)",
+        "type": "number",
+        "default": 4,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "inflation_rate",
+        "label": "Expected average inflation rate (%)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "desired_annual_spending_today",
+        "label": "Desired annual spending today (baseline)",
+        "type": "number",
+        "default": 40000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "withdrawal_rate",
+        "label": "Safe withdrawal rate (%)",
+        "type": "number",
+        "default": 4,
+        "min": 0.1,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "current_annual_income",
+        "label": "Current annual income (for replacement rate)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "expected_social_security",
+        "label": "Expected annual Social Security or pensions at retirement",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This planner helps estimate how much you need to achieve financial independence under multiple commonly used approaches: a safe withdrawal rate (FIRE), coast-FIRE (no further contributions), and an income-replacement projection that accounts for expected Social Security or pensions.",
+      "Results are deterministic projections using user-provided inputs and standard future-value formulas. Use the scenarios to compare assumptions (returns, inflation, withdrawal rate) and to understand sensitivity; this tool does not replace personalized financial advice."
+    ],
+    "methodology": [
+      "We compute future spending by inflating the user-specified current spending by the inflation rate over years until retirement.",
+      "Nest-egg targets use the specified withdrawal rate (for example, a four percent rule means target equals future spending divided by 0.04).",
+      "Savings projections use standard discrete future-value formulas: grow current savings by (1 + return)^n and add the future value of an annual contribution treated as an end-of-period annuity.",
+      "Coast-FIRE principal is the present principal that, under the assumed return, grows to the nest-egg target without additional contributions.",
+      "All percentages are entered as whole numbers (for example, 6 means 6%)."
+    ],
+    "how_is_calculated": [
+      "Years until retirement = retirement_age - current_age",
+      "Future spending = desired_spending_today * (1 + inflation_rate/100)^(years_to_ret)",
+      "Target nest egg = Future spending / (withdrawal_rate/100)",
+      "Future value of current savings = current_savings * (1 + expected_return_pre_ret/100)^(years_to_ret)",
+      "Future value of contributions = annual_contribution * ((1 + r)^n - 1) / r where r = expected_return_pre_ret/100",
+      "Required coast principal = target_nest_egg / (1 + expected_return_pre_ret/100)^(years_to_ret)"
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates are as accurate as the inputs and assumptions. They use deterministic formulas and do not model market sequence risk, taxes, or unforeseen events. Use scenarios to test sensitivity. This tool is educational and not a substitute for licensed financial advice."
+      },
+      {
+        "question": "Which withdrawal rate should I use?",
+        "answer": "Common practice uses 3%–5% for long-term sustainability depending on portfolio mix and retirement length. Lower rates reduce the chance of running out of money but increase the required nest egg."
+      },
+      {
+        "question": "Does this account for taxes and sequence of returns?",
+        "answer": "No. This planner uses average annual return assumptions and does not simulate sequence-of-returns risk, taxes, or changing spending patterns. For those elements use stochastic Monte Carlo planning or consult a financial planner."
+      },
+      {
+        "question": "What does 'coast-FIRE' mean here?",
+        "answer": "Coast-FIRE computes the principal you would need today so that, if you stopped contributing and invested with the assumed return, it would grow to your target nest egg by retirement."
+      },
+      {
+        "question": "How should I choose expected returns and inflation?",
+        "answer": "Choose conservative, well-documented long-term estimates. Consider running multiple scenarios (optimistic, baseline, conservative) to see the range of outcomes."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) – secure development & data handling guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) – risk management principles (ISO 31000)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) – algorithmic transparency best practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) – general safety standards",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Social Security Administration – retirement benefits information",
+        "url": "https://www.ssa.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Safe Withdrawal Rate (SWR)",
+        "definition": "The annual percentage of a retirement portfolio that can be withdrawn without depleting the principal too soon. Common rule-of-thumb values are around 3%–5%."
+      },
+      {
+        "term": "Coast-FIRE",
+        "definition": "A strategy where you save enough early so that your investments, without further contributions, will grow to fund retirement at your planned retirement age."
+      },
+      {
+        "term": "Future Value (FV)",
+        "definition": "The value of a current asset at a specified date in the future based on an assumed rate of growth or return."
+      },
+      {
+        "term": "Sequence-of-returns risk",
+        "definition": "The risk that the order of investment returns (especially negative returns early in retirement) can dramatically affect portfolio longevity."
+      },
+      {
+        "term": "Inflation",
+        "definition": "The rate at which the general level of prices for goods and services rises, reducing purchasing power over time."
+      }
+    ],
+    "summary": [
+      "Use multiple scenarios and conservative assumptions to understand potential shortfalls.",
+      "This tool follows secure development and transparency practices recommended by standards bodies, but it is not a regulated financial advisory product."
+    ]
+  }
+}

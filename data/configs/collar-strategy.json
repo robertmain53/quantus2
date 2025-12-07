@@ -1,0 +1,448 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Collar Strategy Calculator",
+    "description": "Analyze protective collar option positions (long stock + long put + short call). Calculates net cash flows, breakeven, capped upside, limited downside, and 'zero-cost' adjustments. Includes risk notes, calibration guidance, and standards-based accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_collar",
+    "methods": {
+      "standard_collar": {
+        "label": "Standard Collar (buy stock, buy put, sell call)",
+        "description": "Calculates cash flows and payoff limits for a protective collar built on a long stock position using provided option prices and strikes.",
+        "variables": {
+          "total_contracts": {
+            "expression": "shares / contract_size",
+            "dependencies": [
+              "shares",
+              "contract_size"
+            ],
+            "label": "Total option contracts",
+            "unit": "contracts",
+            "format": "integer",
+            "display": true
+          },
+          "cost_long_put": {
+            "expression": "long_put_premium * contract_size * total_contracts + commissions_per_contract * total_contracts",
+            "dependencies": [
+              "long_put_premium",
+              "contract_size",
+              "total_contracts",
+              "commissions_per_contract"
+            ],
+            "label": "Total cost to buy puts",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "credit_short_call": {
+            "expression": "short_call_premium * contract_size * total_contracts - commissions_per_contract * total_contracts",
+            "dependencies": [
+              "short_call_premium",
+              "contract_size",
+              "total_contracts",
+              "commissions_per_contract"
+            ],
+            "label": "Total premium received from selling calls (net commissions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_premium_total": {
+            "expression": "cost_long_put - credit_short_call",
+            "dependencies": [
+              "cost_long_put",
+              "credit_short_call"
+            ],
+            "label": "Net premium paid (puts cost minus calls credit)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_premium_per_share": {
+            "expression": "net_premium_total / shares",
+            "dependencies": [
+              "net_premium_total",
+              "shares"
+            ],
+            "label": "Net premium paid per share",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "breakeven_price": {
+            "expression": "underlying_price + net_premium_per_share",
+            "dependencies": [
+              "underlying_price",
+              "net_premium_per_share"
+            ],
+            "label": "Breakeven price at expiry",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_loss_per_share": {
+            "expression": "underlying_price - long_put_strike + net_premium_per_share",
+            "dependencies": [
+              "underlying_price",
+              "long_put_strike",
+              "net_premium_per_share"
+            ],
+            "label": "Maximum potential loss per share (if stock falls to put strike)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_gain_per_share": {
+            "expression": "short_call_strike - underlying_price + net_premium_per_share",
+            "dependencies": [
+              "short_call_strike",
+              "underlying_price",
+              "net_premium_per_share"
+            ],
+            "label": "Maximum potential gain per share (if stock rises to call strike)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "initial_cash_outlay": {
+            "expression": "underlying_price * shares + net_premium_total",
+            "dependencies": [
+              "underlying_price",
+              "shares",
+              "net_premium_total"
+            ],
+            "label": "Initial net cash outlay (purchase stock plus net premium)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "breakeven_price",
+            "label": "Breakeven price",
+            "variable": "breakeven_price",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_loss_per_share",
+            "label": "Max loss per share",
+            "variable": "max_loss_per_share",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_gain_per_share",
+            "label": "Max gain per share",
+            "variable": "max_gain_per_share",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_premium_per_share",
+            "label": "Net premium per share",
+            "variable": "net_premium_per_share",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "initial_cash_outlay",
+            "label": "Initial cash outlay",
+            "variable": "initial_cash_outlay",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "optimize_zero_cost": {
+        "label": "Zero-Cost Target (compute required short-call premium)",
+        "description": "Estimate the short call premium needed to reach a zero net premium (ignoring market impact and rounding). Useful for hedging when aiming to offset put cost with call credit.",
+        "variables": {
+          "total_contracts": {
+            "expression": "shares / contract_size",
+            "dependencies": [
+              "shares",
+              "contract_size"
+            ],
+            "label": "Total option contracts",
+            "unit": "contracts",
+            "format": "integer",
+            "display": true
+          },
+          "required_short_call_premium": {
+            "expression": "long_put_premium + (commissions_per_contract * 2 / contract_size)",
+            "dependencies": [
+              "long_put_premium",
+              "commissions_per_contract",
+              "contract_size"
+            ],
+            "label": "Short call premium required per share to offset put cost (approximate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "resulting_credit_total": {
+            "expression": "required_short_call_premium * contract_size * total_contracts - commissions_per_contract * total_contracts",
+            "dependencies": [
+              "required_short_call_premium",
+              "contract_size",
+              "total_contracts",
+              "commissions_per_contract"
+            ],
+            "label": "Estimated total call credit (net commissions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_premium_total_if_matched": {
+            "expression": "cost_long_put_est - resulting_credit_total",
+            "dependencies": [
+              "cost_long_put_est",
+              "resulting_credit_total"
+            ],
+            "label": "Net premium if required call premium achieved (should be near zero)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cost_long_put_est": {
+            "expression": "long_put_premium * contract_size * total_contracts + commissions_per_contract * total_contracts",
+            "dependencies": [
+              "long_put_premium",
+              "contract_size",
+              "total_contracts",
+              "commissions_per_contract"
+            ],
+            "label": "Estimated total cost to buy puts (for matching calculation)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_short_call_premium",
+            "label": "Required short-call premium per share",
+            "variable": "required_short_call_premium",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "resulting_credit_total",
+            "label": "Estimated total call credit",
+            "variable": "resulting_credit_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_premium_total_if_matched",
+            "label": "Net premium if matched",
+            "variable": "net_premium_total_if_matched",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "underlying_price",
+        "label": "Current underlying price (per share)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "shares",
+        "label": "Number of shares owned",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "contract_size",
+        "label": "Contract size (shares per option contract)",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "long_put_strike",
+        "label": "Long put strike price",
+        "type": "number",
+        "default": 95,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "long_put_premium",
+        "label": "Long put premium (per share)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "short_call_strike",
+        "label": "Short call strike price",
+        "type": "number",
+        "default": 105,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "short_call_premium",
+        "label": "Short call premium (per share)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "commissions_per_contract",
+        "label": "Commissions per contract (both legs)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "days_to_expiry",
+        "label": "Days until option expiry",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models a protective collar: long stock combined with a long put (downside protection) and a short call (upside cap). Use it to estimate net cash outlay, breakeven, and the capped upside or limited downside given your strikes and option premiums.",
+      "The tool is intended for scenario analysis and planning. It does not execute trades, predict fills, or model early assignment probability. Always cross-check live market prices and broker fees before placing trades."
+    ],
+    "methodology": [
+      "Calculations use straightforward cash-flow accounting: purchase cost of the underlying plus option premiums paid minus option premiums received, adjusted for per-contract commissions.",
+      "Risk limits (maximum loss and capped gain) are computed at expiry assuming options are held to expiration and exercised only at or beyond strike prices. This approach follows general model-validation practices recommended by standards bodies for risk calculations and documentation.",
+      "Model validation and operational controls should follow recognised frameworks such as the NIST Risk Management Framework for model governance, ISO risk-management guidance for documentation, and IEEE principles for software accuracy and reproducibility where applicable."
+    ],
+    "how_is_calculated": [
+      "Step 1: Calculate total option contracts = shares / contract_size.",
+      "Step 2: Total put cost = put premium × contract_size × contracts + commissions (per contract × contracts). Total call credit = call premium × contract_size × contracts - commissions.",
+      "Step 3: Net premium = total put cost - total call credit. Net premium per share = net premium / shares.",
+      "Step 4: Breakeven = purchase price + net premium per share. Max loss per share = purchase price - put strike + net premium per share. Max gain per share = call strike - purchase price + net premium per share."
+    ],
+    "examples": [
+      "Example: Buy 100 shares at $100, buy 1 put (strike $95) paying $2.50, sell 1 call (strike $105) receiving $2.50, commissions $1/contract. Net premium ≈ commissions net; breakeven remains near $100.",
+      "Zero-cost target: if you want a zero net premium, the tool's optimizer estimates the short-call premium required to offset put cost, ignoring market liquidity and rounding to permitted option increments."
+    ],
+    "faqs": [
+      {
+        "question": "Is this financial advice?",
+        "answer": "No. This calculator provides informational estimates only and is not investment advice. Consult a licensed advisor for personalized guidance."
+      },
+      {
+        "question": "Does the calculator include early assignment or dividends?",
+        "answer": "No. Results assume options are held to expiration and do not model early assignment, dividend adjustments, or margin costs. Include those factors separately when relevant."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Accuracy depends on the accuracy of inputs (live prices, exact commissions, contract size). The tool provides deterministic arithmetic calculations; it does not model fill slippage, order routing differences, or exchange fees. Use it for planning and perform validation against live broker quotes."
+      },
+      {
+        "question": "Which standards does this tool follow for validation and documentation?",
+        "answer": "Model governance and validation recommendations referenced include NIST risk-management guidance, ISO risk-management standards, and IEEE guidance for software and numerical reproducibility. These are referenced for best-practice documentation and controls, not as financial regulatory endorsement."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Risk Management",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 31000 - Risk management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "U.S. Occupational Safety and Health Administration (for general organizational controls guidance)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission - Investor Education",
+        "url": "https://www.sec.gov/investor"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Collar",
+        "definition": "An options strategy combining long stock, a long put for downside protection, and a short call that caps upside. Often used to limit risk while retaining some upside potential."
+      },
+      {
+        "term": "Long put",
+        "definition": "An option contract giving the holder the right to sell the underlying at the put strike before expiration; used for downside protection."
+      },
+      {
+        "term": "Short call",
+        "definition": "An option contract sold by the trader that obligates them to sell the underlying at the call strike if assigned; generates premium income but caps upside."
+      },
+      {
+        "term": "Net premium",
+        "definition": "Total option cost paid for protective puts minus total premium received from short calls, after commissions."
+      },
+      {
+        "term": "Breakeven",
+        "definition": "Underlying price at expiry where the combined position's net profit/loss is zero, accounting for net premium paid or received."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/options/collar-calculator",
+      "/options/general-fees-and-commissions"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.sec.gov/investor",
+        "label": "SEC Investor Education",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

@@ -1,0 +1,504 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Cost Segregation Calculator — Quick & Detailed Estimates",
+    "description": "Estimate potential accelerated depreciation and first-year tax savings from cost segregation. Provides a quick rule-of-thumb and a more detailed allocation path with configurable custom allocations and bonus depreciation options. Includes accuracy caveats and regulatory citations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "detailed_estimate",
+    "methods": {
+      "quick_estimate": {
+        "label": "Quick estimate (rule-of-thumb)",
+        "description": "Fast, conservative estimate using a single personal property allocation percent and a simplified first-year approximation. Use for initial screening; not a substitute for a qualified study.",
+        "variables": {
+          "building_basis": {
+            "expression": "purchase_price - land_value - other_non_depr + improvement_costs",
+            "dependencies": [
+              "purchase_price",
+              "land_value",
+              "other_non_depr",
+              "improvement_costs"
+            ],
+            "label": "Allocable building basis",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "personal_property_basis": {
+            "expression": "building_basis * (personal_property_percent / 100)",
+            "dependencies": [
+              "building_basis",
+              "personal_property_percent"
+            ],
+            "label": "Estimated personal property basis",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "bonus_depr": {
+            "expression": "personal_property_basis * (bonus_depr_percent / 100)",
+            "dependencies": [
+              "personal_property_basis",
+              "bonus_depr_percent"
+            ],
+            "label": "Estimated bonus depreciation applied",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "first_year_depr": {
+            "expression": "bonus_depr + (personal_property_basis - bonus_depr) / 5",
+            "dependencies": [
+              "bonus_depr",
+              "personal_property_basis"
+            ],
+            "label": "Approximate first-year depreciation (personal property)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_savings_first_year": {
+            "expression": "first_year_depr * (tax_rate / 100)",
+            "dependencies": [
+              "first_year_depr",
+              "tax_rate"
+            ],
+            "label": "Estimated first-year federal tax savings",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "personal_property_basis",
+            "label": "Personal property basis (estimate)",
+            "variable": "personal_property_basis",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "additional_first_year_depreciation",
+            "label": "Approximate first-year accelerated depreciation (personal property + bonus)",
+            "variable": "first_year_depr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_tax_savings_first_year",
+            "label": "Estimated federal tax savings — first year",
+            "variable": "tax_savings_first_year",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "detailed_estimate": {
+        "label": "Detailed estimate (allocations)",
+        "description": "Allocates personal property into 5-, 7-, and 15-year categories with optional custom allocation percentages. Applies bonus depreciation to the total personal property allocation and computes a conservative first-year approximation plus comparison to straight-line building depreciation.",
+        "variables": {
+          "building_basis": {
+            "expression": "purchase_price - land_value - other_non_depr + improvement_costs",
+            "dependencies": [
+              "purchase_price",
+              "land_value",
+              "other_non_depr",
+              "improvement_costs"
+            ],
+            "label": "Allocable building basis",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "personal_property_basis": {
+            "expression": "building_basis * (personal_property_percent / 100)",
+            "dependencies": [
+              "building_basis",
+              "personal_property_percent"
+            ],
+            "label": "Total personal property basis",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "allocated_5yr": {
+            "expression": "personal_property_basis * (use_custom_allocation == 'yes' ? custom_5yr_pct / 100 : 0.40)",
+            "dependencies": [
+              "personal_property_basis",
+              "use_custom_allocation",
+              "custom_5yr_pct"
+            ],
+            "label": "Allocated to 5-year property",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "allocated_7yr": {
+            "expression": "personal_property_basis * (use_custom_allocation == 'yes' ? custom_7yr_pct / 100 : 0.30)",
+            "dependencies": [
+              "personal_property_basis",
+              "use_custom_allocation",
+              "custom_7yr_pct"
+            ],
+            "label": "Allocated to 7-year property",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "allocated_15yr": {
+            "expression": "personal_property_basis * (use_custom_allocation == 'yes' ? custom_15yr_pct / 100 : 0.30)",
+            "dependencies": [
+              "personal_property_basis",
+              "use_custom_allocation",
+              "custom_15yr_pct"
+            ],
+            "label": "Allocated to 15-year property",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "bonus_depr": {
+            "expression": "personal_property_basis * (bonus_depr_percent / 100)",
+            "dependencies": [
+              "personal_property_basis",
+              "bonus_depr_percent"
+            ],
+            "label": "Estimated bonus depreciation amount",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "first_year_depr": {
+            "expression": "bonus_depr + (personal_property_basis - bonus_depr) * 0.20",
+            "dependencies": [
+              "bonus_depr",
+              "personal_property_basis"
+            ],
+            "label": "Estimated first-year depreciation (approximate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "straight_line_depr_first_year": {
+            "expression": "building_basis / (building_type == 'residential' ? 27.5 : 39)",
+            "dependencies": [
+              "building_basis",
+              "building_type"
+            ],
+            "label": "Building straight-line depreciation — first year",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "additional_first_year_depr": {
+            "expression": "first_year_depr - straight_line_depr_first_year",
+            "dependencies": [
+              "first_year_depr",
+              "straight_line_depr_first_year"
+            ],
+            "label": "Additional first-year depreciation vs building straight-line",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_savings_first_year": {
+            "expression": "first_year_depr * (tax_rate / 100)",
+            "dependencies": [
+              "first_year_depr",
+              "tax_rate"
+            ],
+            "label": "Estimated federal tax savings — first year",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_savings_additional": {
+            "expression": "additional_first_year_depr > 0 ? additional_first_year_depr * (tax_rate / 100) : 0",
+            "dependencies": [
+              "additional_first_year_depr",
+              "tax_rate"
+            ],
+            "label": "Tax savings attributable to additional depreciation",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "allocated_5yr",
+            "label": "Allocated to 5-year property",
+            "variable": "allocated_5yr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "allocated_7yr",
+            "label": "Allocated to 7-year property",
+            "variable": "allocated_7yr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "allocated_15yr",
+            "label": "Allocated to 15-year property",
+            "variable": "allocated_15yr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "first_year_depr",
+            "label": "Estimated first-year depreciation (personal property + bonus approximation)",
+            "variable": "first_year_depr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "additional_first_year_depreciation",
+            "label": "Additional depreciation vs building straight-line — first year",
+            "variable": "additional_first_year_depr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_tax_savings_first_year",
+            "label": "Estimated federal tax savings — first year",
+            "variable": "tax_savings_first_year",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_savings_additional",
+            "label": "Tax savings attributable to additional depreciation (first year)",
+            "variable": "tax_savings_additional",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "purchase_price",
+        "label": "Total acquisition or placed-in-service cost (including eligible improvements)",
+        "type": "number",
+        "default": 1000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "land_value",
+        "label": "Estimated land value (non-depreciable)",
+        "type": "number",
+        "default": 200000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "other_non_depr",
+        "label": "Other non-depreciable costs (e.g., certain fees)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "improvement_costs",
+        "label": "Qualified improvement/addition costs (if not in purchase price)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "personal_property_percent",
+        "label": "Estimated percent of building basis allocable to personal property",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "building_type",
+        "label": "Building type (affects straight-line life)",
+        "type": "select",
+        "default": "commercial",
+        "options": [
+          {
+            "label": "Commercial (39-year straight-line)",
+            "value": "commercial"
+          },
+          {
+            "label": "Residential rental (27.5-year straight-line)",
+            "value": "residential"
+          }
+        ]
+      },
+      {
+        "id": "tax_rate",
+        "label": "Marginal federal tax rate (%) to estimate cash tax benefit",
+        "type": "number",
+        "default": 24,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "bonus_depr_percent",
+        "label": "Bonus depreciation election (%) applied to eligible property",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "use_custom_allocation",
+        "label": "Use custom allocation percentages across 5/7/15-year property?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No (use default allocation: 40%/30%/30%)",
+            "value": "no"
+          },
+          {
+            "label": "Yes (enter custom percentages)",
+            "value": "yes"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "custom_allocation",
+        "label": "Custom allocation percentages",
+        "show_when": {
+          "field": "use_custom_allocation",
+          "is": "yes"
+        },
+        "fields": [
+          {
+            "id": "custom_5yr_pct",
+            "label": "Percent allocated to 5-year property",
+            "type": "number",
+            "default": 40,
+            "min": 0,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "custom_7yr_pct",
+            "label": "Percent allocated to 7-year property",
+            "type": "number",
+            "default": 30,
+            "min": 0,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "custom_15yr_pct",
+            "label": "Percent allocated to 15-year property",
+            "type": "number",
+            "default": 30,
+            "min": 0,
+            "max": 100,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides both a quick screening estimate and a more detailed allocation-based estimate of accelerated depreciation and first-year federal tax savings from cost segregation. It is intended to help owners and advisors identify whether a full cost segregation study may be worthwhile.",
+      "Estimates depend on user inputs and simplified assumptions. A professional cost segregation study using engineering-based component analysis and asset-level inspection will produce materially different, higher-confidence results. Use these outputs for planning and preliminary analysis only."
+    ],
+    "methodology": [
+      "Quick estimate: applies a single user-supplied percentage of the allocable building basis to personal property, assumes a 5-year MACRS class life for the majority of personal property, and applies the elected bonus depreciation percentage. This is a conservative screening approach.",
+      "Detailed estimate: divides the personal property basis into 5-, 7-, and 15-year pools using default or custom percentages, applies bonus depreciation to eligible property, and compares an approximate first-year accelerated amount to straight-line building depreciation. Formulas are simplified approximations to aid decision-making, not a substitute for a full study.",
+      "This tool follows sound engineering and tax practice principles for approximation and cites relevant regulatory and standards authorities for controls, data handling, and professional practice. It is not tax advice; consult a qualified CPA or cost segregation specialist for site-specific analysis."
+    ],
+    "how_is_calculated": [
+      "Step 1 — Determine allocable basis: allocable building basis = acquisition cost - land value - non-depreciable amounts + improvements.",
+      "Step 2 — Estimate personal property basis = allocable building basis * personal property percent.",
+      "Step 3 — Apply bonus depreciation: bonus_depr = personal_property_basis * bonus_depr_percent / 100.",
+      "Step 4 — Approximate first-year depreciation = bonus_depr + (personal_property_basis - bonus_depr) * 0.20 (simplified MACRS-first-year proxy).",
+      "Step 5 — Estimate tax savings = first-year depreciation * marginal tax rate.",
+      "Comparison: additional depreciation vs straight-line building first-year = first_year_depr - (building_basis / straight_line_life)."
+    ],
+    "examples": [
+      "Example: $1,000,000 purchase, $200,000 land, 15% personal property, 100% bonus, 24% tax rate. Personal property basis = $120,000. Bonus = $120,000. First-year depreciation approx = $120,000 + (0)/5 = $120,000. Estimated first-year federal tax savings ≈ $28,800."
+    ],
+    "faqs": [
+      {
+        "question": "Is this calculator a replacement for a professional cost segregation study?",
+        "answer": "No. This tool provides preliminary estimates and is not a substitute for a qualified cost segregation study that documents asset-by-asset allocations. Use it to screen opportunities and scope a study."
+      },
+      {
+        "question": "Which inputs most affect the results?",
+        "answer": "Allocable building basis (purchase price less land), the percent you allocate to personal property, the bonus depreciation election, and your marginal tax rate have the largest impact on first-year savings."
+      },
+      {
+        "question": "Are state tax rules included?",
+        "answer": "This calculator estimates federal first-year savings only. State rules vary and may limit or modify bonus depreciation and allocation treatment. Consult state guidance or a tax professional for state-level effects."
+      },
+      {
+        "question": "What accuracy should I expect?",
+        "answer": "Expect screening-level accuracy. Actual study results depend on engineering-level asset identification and local cost databases. Use this tool for planning; obtain a formal study for tax filings."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Publication 946, How To Depreciate Property",
+        "url": "https://www.irs.gov/publications/p946"
+      },
+      {
+        "label": "Internal Revenue Code — depreciation and bonus rules (consult current IRC sections)",
+        "url": "https://www.irs.gov"
+      },
+      {
+        "label": "NIST — Frameworks and guidance for trustworthy systems and data handling",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — standards for quality management and professional practice",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "OSHA — workplace safety guidance for site inspections",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "IEEE — recommended practices for measurement and uncertainty",
+        "url": "https://www.ieee.org"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Cost segregation",
+        "definition": "A tax strategy that identifies and reclassifies personal property assets to shorten the depreciation time for taxation purposes, producing accelerated depreciation deductions."
+      },
+      {
+        "term": "Personal property",
+        "definition": "Assets associated with a building (fixtures, equipment, finishes) that may be depreciated over shorter MACRS lives such as 5, 7, or 15 years rather than 27.5 or 39-year building life."
+      },
+      {
+        "term": "Bonus depreciation",
+        "definition": "An election that allows immediate expensing of a percentage of eligible property in the year placed in service, subject to current tax law limits."
+      },
+      {
+        "term": "Straight-line recovery period",
+        "definition": "The IRS-assigned period for depreciating buildings: typically 27.5 years for residential rental and 39 years for most commercial property."
+      },
+      {
+        "term": "Basis",
+        "definition": "The amount used to determine depreciation deductions: typically acquisition cost adjusted for non-depreciable components and certain improvements."
+      }
+    ]
+  }
+}

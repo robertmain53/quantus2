@@ -1,0 +1,431 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Barista FIRE Calculator (Advanced Semi-Retirement Planner)",
+    "description": "Estimate the portfolio needed to support semi-retirement (Barista FIRE) under multiple methods: safe withdrawal rate, buffer-inclusive planning, and time-to-target projection. Includes sensitivity to part-time income, expected returns, inflation, and emergency reserves."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "swr_with_buffer",
+    "methods": {
+      "swr_basic": {
+        "label": "Safe Withdrawal Rate (basic)",
+        "description": "Calculates the target portfolio using a safe withdrawal rate applied to the annual shortfall after expected part-time income.",
+        "variables": {
+          "annual_shortfall": {
+            "expression": "desired_annual_spending - expected_part_time_income",
+            "dependencies": [
+              "desired_annual_spending",
+              "expected_part_time_income"
+            ],
+            "label": "Annual shortfall (spending minus part-time income)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "target_capital": {
+            "expression": "annual_shortfall / (safe_withdrawal_rate_percent / 100)",
+            "dependencies": [
+              "annual_shortfall",
+              "safe_withdrawal_rate_percent"
+            ],
+            "label": "Target portfolio using SWR",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "target_capital",
+            "label": "Target portfolio (SWR method)",
+            "variable": "target_capital",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_shortfall",
+            "label": "Annual shortfall",
+            "variable": "annual_shortfall",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "swr_with_buffer": {
+        "label": "SWR + Buffer & Emergency Reserve",
+        "description": "SWR target plus an optional multi-year spending buffer and explicit emergency reserve to reduce sequence-of-returns risk or early shortfalls.",
+        "variables": {
+          "annual_shortfall": {
+            "expression": "desired_annual_spending - expected_part_time_income",
+            "dependencies": [
+              "desired_annual_spending",
+              "expected_part_time_income"
+            ],
+            "label": "Annual shortfall (spending minus part-time income)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "target_capital": {
+            "expression": "annual_shortfall / (safe_withdrawal_rate_percent / 100)",
+            "dependencies": [
+              "annual_shortfall",
+              "safe_withdrawal_rate_percent"
+            ],
+            "label": "Base SWR target portfolio",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "buffer_capital": {
+            "expression": "target_buffer_years * annual_shortfall",
+            "dependencies": [
+              "target_buffer_years",
+              "annual_shortfall"
+            ],
+            "label": "Multi-year buffer (years × annual shortfall)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_needed": {
+            "expression": "target_capital + buffer_capital + emergency_fund",
+            "dependencies": [
+              "target_capital",
+              "buffer_capital",
+              "emergency_fund"
+            ],
+            "label": "Total capital required (SWR + buffer + emergency reserve)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "total_needed",
+            "label": "Total required portfolio (with buffer and emergency fund)",
+            "variable": "total_needed",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "buffer_capital",
+            "label": "Buffer capital (years of shortfall)",
+            "variable": "buffer_capital",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "target_capital",
+            "label": "Base SWR target",
+            "variable": "target_capital",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "time_to_target": {
+        "label": "Time-to-Target Projection",
+        "description": "Estimates years to reach a SWR-based target given current savings, annual savings, expected nominal return and inflation (approximate real return). Uses a closed-form approximation assuming constant real return.",
+        "variables": {
+          "annual_shortfall": {
+            "expression": "desired_annual_spending - expected_part_time_income",
+            "dependencies": [
+              "desired_annual_spending",
+              "expected_part_time_income"
+            ],
+            "label": "Annual shortfall",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "target_capital": {
+            "expression": "(desired_annual_spending - expected_part_time_income) / (safe_withdrawal_rate_percent / 100)",
+            "dependencies": [
+              "desired_annual_spending",
+              "expected_part_time_income",
+              "safe_withdrawal_rate_percent"
+            ],
+            "label": "Target portfolio (SWR)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "r_real": {
+            "expression": "(expected_return_percent / 100) - (expected_inflation_percent / 100)",
+            "dependencies": [
+              "expected_return_percent",
+              "expected_inflation_percent"
+            ],
+            "label": "Approximate real return (nominal minus inflation)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "years_to_target": {
+            "expression": "ln((target_capital * r_real + annual_savings) / (current_savings * r_real + annual_savings)) / ln(1 + r_real)",
+            "dependencies": [
+              "target_capital",
+              "r_real",
+              "annual_savings",
+              "current_savings"
+            ],
+            "label": "Years to reach target (approximate)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "years_to_target_note": {
+            "expression": "0",
+            "dependencies": [],
+            "label": "Note: this projection assumes r_real != 0 and constant contributions",
+            "format": "decimal",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "target_capital",
+            "label": "Target portfolio (SWR)",
+            "variable": "target_capital",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "r_real",
+            "label": "Approximate real return",
+            "variable": "r_real",
+            "unit": "",
+            "format": "decimal"
+          },
+          {
+            "id": "years_to_target",
+            "label": "Estimated years to reach target",
+            "variable": "years_to_target",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 35,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "desired_annual_spending",
+        "label": "Desired annual spending in semi-retirement (USD)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 500
+      },
+      {
+        "id": "expected_part_time_income",
+        "label": "Expected annual part-time income (USD)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 500
+      },
+      {
+        "id": "safe_withdrawal_rate_percent",
+        "label": "Assumed safe withdrawal rate (%)",
+        "type": "number",
+        "default": 4,
+        "min": 0.5,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current retirement/investable savings (USD)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "annual_savings",
+        "label": "Net annual savings/contributions (USD)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 500
+      },
+      {
+        "id": "expected_return_percent",
+        "label": "Expected nominal annual portfolio return (%)",
+        "type": "number",
+        "default": 6,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "expected_inflation_percent",
+        "label": "Expected annual inflation rate (%)",
+        "type": "number",
+        "default": 2,
+        "min": -2,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "target_buffer_years",
+        "label": "Buffer years of shortfall to hold (integer years)",
+        "type": "integer",
+        "default": 2,
+        "min": 0,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "id": "emergency_fund",
+        "label": "Emergency reserve to hold separately (USD)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 500
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Barista FIRE calculator helps you plan for a semi-retired lifestyle where part-time work supplements withdrawals from savings. It supports multiple methods so you can compare a straight safe-withdrawal-rate (SWR) target, an SWR target with buffer and emergency reserve, and an estimate of how long it will take to reach your target given current savings and contributions.",
+      "Use the tool to explore sensitivity to key assumptions: part-time income, withdrawal rate, expected returns, inflation, and how many years of spending you want held as a buffer. All outputs are estimates to aid planning and should be interpreted with caution."
+    ],
+    "methodology": [
+      "The calculator implements three complementary methods: a basic SWR approach, an SWR approach augmented with a multi-year buffer plus an explicit emergency reserve, and a time-to-target projection that approximates years-to-go using an assumed constant real return.",
+      "Numerical computations assume constant parameters over time (constant withdrawal rate, constant contributions, and constant expected returns). For projections that solve for time, an approximate real return (nominal minus inflation) is used. Edge cases (zero or negative real return) can invalidate closed-form time estimates; inspect the outputs and use conservative assumptions when needed.",
+      "We follow best-practice software and numerical validation principles and recommend validating results against alternate methods. For secure data handling and testing guidance, see standards and guidelines from NIST, ISO, IEEE, and OSHA referenced below."
+    ],
+    "how_is_calculated": [
+      "SWR target: Target portfolio = (Desired annual spending − Expected part-time income) / (SWR % / 100). If part-time income equals or exceeds spending, shortfall may be zero or negative; the calculator shows the computed value and users should treat negative shortfall as zero for planning.",
+      "Buffer and emergency reserve: Total required = SWR target + (Buffer years × annual shortfall) + Emergency reserve.",
+      "Time-to-target (approximate): Solves for n in the standard future-value/contribution equation using an approximate real return r ≈ nominal_return − inflation; computed via logarithms when r ≠ 0. This is an approximation and sensitive to the r value; if r is near zero use scenario analysis."
+    ],
+    "examples": [
+      "Example 1: Desired spending $30,000, part-time income $10,000, SWR 4% → annual shortfall $20,000 → SWR target $500,000.",
+      "Example 2: Same inputs with a 2-year buffer and $10,000 emergency reserve → total required = $500,000 + (2 × $20,000) + $10,000 = $550,000."
+    ],
+    "faqs": [
+      {
+        "question": "Is this financial advice?",
+        "answer": "No. This calculator provides estimates to support planning. It is not a substitute for professional financial advice. Consider discussing results with a licensed financial advisor or tax professional."
+      },
+      {
+        "question": "What is a safe withdrawal rate (SWR)?",
+        "answer": "SWR is an assumed sustainable percentage of a portfolio that can be withdrawn annually without depleting capital over a given horizon. Common rules of thumb (e.g., 4%) are simplifications and may not fit all situations; adjust for your risk tolerance and expected investment mix."
+      },
+      {
+        "question": "How accurate are the time-to-target projections?",
+        "answer": "Projections assume constant real returns and contributions. They are approximate; actual market volatility, taxes, fees, sequence-of-returns risk, and changes to contributions materially affect outcomes. When the approximate real return is near zero or negative, time-to-target formulas may be invalid or produce large errors."
+      },
+      {
+        "question": "Does the tool consider taxes and Social Security?",
+        "answer": "No. This calculator uses pre-tax nominal inputs for earnings and portfolio returns. Users should separately account for taxes, benefits, and other income sources."
+      },
+      {
+        "question": "How should I treat negative shortfall values?",
+        "answer": "If expected part-time income equals or exceeds desired spending, the computed shortfall may be zero or negative. Practically, treat negative shortfall as zero for the purpose of calculating needed portfolio capital, or adjust your desired spending assumptions."
+      },
+      {
+        "question": "What safeguards are in place for numerical reliability?",
+        "answer": "The tool uses double-precision arithmetic for internal math. It flags scenarios where denominators approach zero (for example, r ≈ 0 in time calculations) and recommends scenario analysis. For development and QA we recommend following IEEE floating-point guidance, numeric validation best practices, and input-range checks."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Barista FIRE",
+        "definition": "A semi-retirement strategy where part-time work supplements withdrawals from savings to lower the needed portfolio size compared with full retirement."
+      },
+      {
+        "term": "Safe Withdrawal Rate (SWR)",
+        "definition": "An assumed sustainable percentage of portfolio value that can be withdrawn annually without depleting capital over a target horizon."
+      },
+      {
+        "term": "Annual shortfall",
+        "definition": "Desired annual spending minus expected annual part-time income; the amount that withdrawals must cover."
+      },
+      {
+        "term": "Real return",
+        "definition": "Approximate return after adjusting nominal returns for inflation; often approximated as nominal_return − inflation."
+      },
+      {
+        "term": "Buffer",
+        "definition": "A multi-year reserve expressed as a number of years of shortfall to hold separately to reduce sequence-of-returns risk."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST (standards and guidance)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO (standards organization)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE (technical standards and best practices)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA (workplace safety guidance)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

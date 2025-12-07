@@ -1,0 +1,285 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Protective Put Calculator",
+    "description": "Calculate P/L, breakeven, cost and downside protection for a protective (married) put: long shares + long put option. Includes partial coverage handling, commissions, and expiry scenarios."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "total_premium",
+        "label": "Total premium paid",
+        "expression": "option_contracts * 100 * option_premium",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_commissions",
+        "label": "Total commissions and fees",
+        "expression": "option_commission_per_contract * option_contracts + stock_commission",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_initial_cost",
+        "label": "Total initial cash outlay",
+        "expression": "stock_shares * stock_price + option_contracts * 100 * option_premium + option_commission_per_contract * option_contracts + stock_commission",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "shares_covered",
+        "label": "Shares covered by puts",
+        "expression": "min(stock_shares, option_contracts * 100)",
+        "unit": "shares",
+        "format": "integer"
+      },
+      {
+        "id": "profit_at_expiry",
+        "label": "Profit / loss at expiry (given expiry price)",
+        "expression": "(expiry_price - stock_price) * stock_shares + max(strike_price - expiry_price, 0) * min(stock_shares, option_contracts * 100) - (option_contracts * 100 * option_premium) - (option_commission_per_contract * option_contracts) - stock_commission",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "breakeven_price",
+        "label": "Breakeven stock price at expiry",
+        "expression": "stock_price + ((option_contracts * 100 * option_premium) + (option_commission_per_contract * option_contracts) + stock_commission) / stock_shares",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "max_loss",
+        "label": "Maximum loss (worst-case at expiry)",
+        "expression": "max(-((-stock_price * stock_shares) + (strike_price * min(stock_shares, option_contracts * 100)) - (option_contracts * 100 * option_premium) - (option_commission_per_contract * option_contracts) - stock_commission), 0)",
+        "unit": "USD",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "stock_price",
+        "label": "Current stock price (per share)",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "stock_shares",
+        "label": "Number of shares owned",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "strike_price",
+        "label": "Put option strike price (per share)",
+        "type": "number",
+        "default": 95,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "option_contracts",
+        "label": "Number of put contracts purchased",
+        "type": "integer",
+        "default": 1,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "option_premium",
+        "label": "Option premium (price per share)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "expiry_price",
+        "label": "Expected price at option expiry (for scenario)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "option_commission_per_contract",
+        "label": "Commission / fees per option contract",
+        "type": "number",
+        "default": 1,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "stock_commission",
+        "label": "Total commission / fees for the stock side",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "total_premium",
+          "label": "Total premium paid",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_commissions",
+          "label": "Total commissions and fees",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_initial_cost",
+          "label": "Total initial cash outlay",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "shares_covered",
+          "label": "Shares covered by puts",
+          "format": "integer",
+          "unit": "shares"
+        },
+        {
+          "id": "profit_at_expiry",
+          "label": "Profit / loss at expiry (scenario)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "breakeven_price",
+          "label": "Breakeven stock price at expiry",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "max_loss",
+          "label": "Maximum loss (worst-case at expiry)",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "A protective put (also called a married put) combines long stock ownership with a long put option to limit downside while retaining upside exposure. This tool computes the premium, commissions, breakeven, profit or loss at a given expiry price, shares covered by the puts, and the theoretical maximum loss at expiry.",
+      "Enter your position details, number of contracts, premium and expected expiry price. The calculator models the option as European-style for expiry payoff purposes and assumes each option contract controls 100 shares unless noted otherwise."
+    ],
+    "methodology": [
+      "The calculator computes cash flows at option expiry by combining stock P/L and put option payoff. Stock profit/loss is (expiry price - entry price) × shares. Put payoff is max(strike - expiry price, 0) × covered shares. Premiums and explicit commissions are subtracted to give net profit or loss.",
+      "Partial coverage is supported: if option_contracts * 100 is less than shares owned, only that many shares receive put protection. The tool assumes premiums are quoted per share and commissions are explicit cash amounts.",
+      "For reliability and numerical handling we follow published guidance on numerical stability and risk-management documentation. Users should treat the output as scenario modeling rather than guaranteed outcomes."
+    ],
+    "how_is_calculated": [
+      "Total premium = option_contracts × 100 × option_premium",
+      "Shares covered = min(stock_shares, option_contracts × 100)",
+      "Profit at expiry = (expiry_price − stock_price) × stock_shares + max(strike_price − expiry_price, 0) × shares_covered − total premium − total commissions",
+      "Breakeven price = stock_price + (total premium + total commissions) / stock_shares",
+      "Maximum loss (worst-case) is computed at expiry price = 0 and reported as the positive dollar loss if that scenario produces a loss"
+    ],
+    "examples": [
+      "Example: Own 100 shares at $100, buy 1 put (strike $95) paying $2.50 premium. Total premium = 1 × 100 × 2.5 = $250. Breakeven = 100 + 250/100 = $102.50 ignoring other fees. If expiry price = $90, payoff = (90 − 100)×100 + (95 − 90)×100 − 250 = −1000 + 500 − 250 = −$750.",
+      "Partial coverage: Own 150 shares but buy 1 put (covers 100). Only 100 shares are protected; 50 shares remain exposed to full downside. The calculator reflects this by setting shares covered = min(150, 100) = 100."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include margin, taxes or assignment costs?",
+        "answer": "No. This model only includes premiums, the explicit commission inputs, and intrinsic payoff at expiry. It does not model taxes, margin interest, early exercise/assignment mechanics, dividend effects, or implied volatility changes prior to expiry. Include those separately in your trade planning."
+      },
+      {
+        "question": "What if I exercise early or the option is American-style?",
+        "answer": "The payoff model here uses expiry scenarios. Early exercise and American exercise considerations (including dividends and time value) are not modeled. For American options, early exercise can change outcomes and may require a different workflow or greeks analysis."
+      },
+      {
+        "question": "How should I handle partial coverage?",
+        "answer": "If option_contracts × 100 is less than your shares owned, only that number of shares is protected. The calculator uses min(shares, contracts×100) to compute covered shares and shows the remaining uncovered shares' exposure in the profit calculation."
+      },
+      {
+        "question": "How accurate are the numbers?",
+        "answer": "Outputs are deterministic results of the stated formulas and inputs. They are for scenario planning only. Market fills, bid/ask spreads, slippage, taxes, and execution timing will change realized results. See the accuracy and standards caveats below."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Special Publication 800-37 (Risk Management Framework)",
+        "url": "https://csrc.nist.gov/publications/sp/800/37/rev-2/final"
+      },
+      {
+        "label": "ISO 31000 — Risk management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE 754 — Standard for Floating-Point Arithmetic",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA — Laws & Regulations (for operational safety guidance)",
+        "url": "https://www.osha.gov/laws-regs"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Protective put",
+        "definition": "A strategy that pairs long stock ownership with a long put option to create a floor on downside losses while retaining upside participation."
+      },
+      {
+        "term": "Premium",
+        "definition": "Price paid per share for the option. Total premium for contracts = premium × 100 × number of contracts."
+      },
+      {
+        "term": "Breakeven price",
+        "definition": "Expiry stock price at which net profit equals zero, computed by adding per-share cost of premium and fees to the initial stock price."
+      },
+      {
+        "term": "Covered shares",
+        "definition": "Number of shares protected by the purchased put contracts; typically option_contracts × 100, capped at the number of shares owned."
+      },
+      {
+        "term": "Max loss (worst-case)",
+        "definition": "Estimated largest possible monetary loss at expiry under the scenario modeled (commissions and premiums included). It assumes expiry outcomes and does not model other market frictions."
+      }
+    ],
+    "summary": [
+      "This calculator models protective put outcomes at option expiry using explicit premiums, contracts, and commissions. It supports partial coverage and provides breakeven, profit/loss at a chosen expiry price, and a worst-case estimate.",
+      "Treat outputs as scenario estimates. For production use or trading decisions, validate results with your broker's fills, consider tax and margin effects, and review numerical stability for very large or very small inputs."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://csrc.nist.gov/publications/sp/800/37/rev-2/final",
+        "label": "NIST Risk Management Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000 Risk Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,464 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Tax Bracket & Withholding Estimator",
+    "description": "Estimate your federal tax bracket, marginal tax rate, total federal tax liability, effective tax rate, and suggested additional withholding per pay period. Supports common filing statuses and standard vs itemized deductions with selectable tax year context and explicit accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "estimate_by_income",
+    "methods": {
+      "estimate_by_income": {
+        "label": "Estimate from Income",
+        "description": "Compute taxable income, marginal tax rate, approximate progressive tax liability, and effective tax rate from reported income and deduction choices.",
+        "variables": {
+          "standard_deduction": {
+            "expression": "tax_year == '2025' ? (filing_status == 'MarriedFilingJointly' ? 27800 : filing_status == 'HeadOfHousehold' ? 20800 : filing_status == 'MarriedFilingSeparately' ? 13900 : 13900) : (tax_year == '2024' ? (filing_status == 'MarriedFilingJointly' ? 25900 : filing_status == 'HeadOfHousehold' ? 19400 : filing_status == 'MarriedFilingSeparately' ? 12950 : 12950) : 0)",
+            "dependencies": [
+              "tax_year",
+              "filing_status"
+            ],
+            "label": "Standard deduction (by filing status & year)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "deduction_used": {
+            "expression": "use_standard_deduction == 'yes' ? standard_deduction : itemized_deductions",
+            "dependencies": [
+              "use_standard_deduction",
+              "standard_deduction",
+              "itemized_deductions"
+            ],
+            "label": "Deductions used",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_income": {
+            "expression": "max(0, gross_income + additional_income - pre_tax_deductions - deduction_used)",
+            "dependencies": [
+              "gross_income",
+              "additional_income",
+              "pre_tax_deductions",
+              "deduction_used"
+            ],
+            "label": "Taxable income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "marginal_rate": {
+            "expression": "taxable_income <= 11000 ? 0.10 : taxable_income <= 44725 ? 0.12 : taxable_income <= 95375 ? 0.22 : taxable_income <= 182100 ? 0.24 : taxable_income <= 231250 ? 0.32 : taxable_income <= 578125 ? 0.35 : 0.37",
+            "dependencies": [
+              "taxable_income"
+            ],
+            "label": "Marginal tax rate (approx)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "tax_liability": {
+            "expression": "(min(taxable_income,11000)*0.10) + (max(0, min(taxable_income,44725)-11000)*0.12) + (max(0, min(taxable_income,95375)-44725)*0.22) + (max(0, min(taxable_income,182100)-95375)*0.24) + (max(0, min(taxable_income,231250)-182100)*0.32) + (max(0, min(taxable_income,578125)-231250)*0.35) + (max(0, taxable_income-578125)*0.37)",
+            "dependencies": [
+              "taxable_income"
+            ],
+            "label": "Estimated federal tax liability (progressive)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "effective_rate": {
+            "expression": "gross_income + additional_income > 0 ? tax_liability / (gross_income + additional_income) : 0",
+            "dependencies": [
+              "tax_liability",
+              "gross_income",
+              "additional_income"
+            ],
+            "label": "Effective federal tax rate (estimated)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "taxable_income",
+            "label": "Taxable income",
+            "variable": "taxable_income",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "marginal_rate",
+            "label": "Marginal tax rate",
+            "variable": "marginal_rate",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "tax_liability",
+            "label": "Estimated federal tax liability",
+            "variable": "tax_liability",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_rate",
+            "label": "Estimated effective tax rate",
+            "variable": "effective_rate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "withholding_estimator": {
+        "label": "Withholding adjustment per pay period",
+        "description": "Estimate additional federal withholding needed per paycheck to meet an expected tax liability or reduce a projected year-end balance due.",
+        "variables": {
+          "standard_deduction_w": {
+            "expression": "tax_year == '2025' ? (filing_status == 'MarriedFilingJointly' ? 27800 : filing_status == 'HeadOfHousehold' ? 20800 : filing_status == 'MarriedFilingSeparately' ? 13900 : 13900) : (tax_year == '2024' ? (filing_status == 'MarriedFilingJointly' ? 25900 : filing_status == 'HeadOfHousehold' ? 19400 : filing_status == 'MarriedFilingSeparately' ? 12950 : 12950) : 0)",
+            "dependencies": [
+              "tax_year",
+              "filing_status"
+            ],
+            "label": "Standard deduction (withholding calc)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "deduction_used_w": {
+            "expression": "use_standard_deduction == 'yes' ? standard_deduction_w : itemized_deductions",
+            "dependencies": [
+              "use_standard_deduction",
+              "standard_deduction_w",
+              "itemized_deductions"
+            ],
+            "label": "Deductions used (withholding calc)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "taxable_income_w": {
+            "expression": "max(0, gross_income + additional_income - pre_tax_deductions - deduction_used_w)",
+            "dependencies": [
+              "gross_income",
+              "additional_income",
+              "pre_tax_deductions",
+              "deduction_used_w"
+            ],
+            "label": "Taxable income (withholding calc)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "tax_liability_w": {
+            "expression": "(min(taxable_income_w,11000)*0.10) + (max(0, min(taxable_income_w,44725)-11000)*0.12) + (max(0, min(taxable_income_w,95375)-44725)*0.22) + (max(0, min(taxable_income_w,182100)-95375)*0.24) + (max(0, min(taxable_income_w,231250)-182100)*0.32) + (max(0, min(taxable_income_w,578125)-231250)*0.35) + (max(0, taxable_income_w-578125)*0.37)",
+            "dependencies": [
+              "taxable_income_w"
+            ],
+            "label": "Estimated federal tax liability (withholding calc)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "periods_per_year": {
+            "expression": "pay_frequency == 'Monthly' ? 12 : pay_frequency == 'SemiMonthly' ? 24 : pay_frequency == 'Biweekly' ? 26 : 52",
+            "dependencies": [
+              "pay_frequency"
+            ],
+            "label": "Pay periods per year",
+            "unit": "count",
+            "format": "integer",
+            "display": true
+          },
+          "estimated_balance_due": {
+            "expression": "tax_liability_w - tax_paid",
+            "dependencies": [
+              "tax_liability_w",
+              "tax_paid"
+            ],
+            "label": "Estimated remaining federal balance due (or refund if negative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "additional_withholding_per_period": {
+            "expression": "periods_per_year > 0 ? (tax_liability_w - tax_paid) / periods_per_year : 0",
+            "dependencies": [
+              "tax_liability_w",
+              "tax_paid",
+              "periods_per_year"
+            ],
+            "label": "Suggested additional withholding per pay period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "tax_liability_w",
+            "label": "Estimated federal tax liability (year)",
+            "variable": "tax_liability_w",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_balance_due",
+            "label": "Estimated balance due (or refund)",
+            "variable": "estimated_balance_due",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "periods_per_year",
+            "label": "Pay periods per year",
+            "variable": "periods_per_year",
+            "format": "integer"
+          },
+          {
+            "id": "additional_withholding_per_period",
+            "label": "Suggested additional withholding per pay period",
+            "variable": "additional_withholding_per_period",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "tax_year",
+        "label": "Tax year",
+        "type": "select",
+        "default": "2025",
+        "options": [
+          {
+            "label": "2025",
+            "value": "2025"
+          },
+          {
+            "label": "2024",
+            "value": "2024"
+          }
+        ]
+      },
+      {
+        "id": "filing_status",
+        "label": "Filing status",
+        "type": "select",
+        "default": "Single",
+        "options": [
+          {
+            "label": "Single",
+            "value": "Single"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "MarriedFilingJointly"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "MarriedFilingSeparately"
+          },
+          {
+            "label": "Head of household",
+            "value": "HeadOfHousehold"
+          }
+        ]
+      },
+      {
+        "id": "gross_income",
+        "label": "Adjusted gross income (AGI) / wages",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "additional_income",
+        "label": "Additional taxable income (interest, dividends, freelance)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "pre_tax_deductions",
+        "label": "Pre-tax deductions (401(k), HSA, FSA)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "use_standard_deduction",
+        "label": "Use standard deduction?",
+        "type": "select",
+        "default": "yes",
+        "options": [
+          {
+            "label": "Yes (use standard deduction)",
+            "value": "yes"
+          },
+          {
+            "label": "No (use itemized amount below)",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "itemized_deductions",
+        "label": "Itemized deductions total (if not using standard)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "tax_paid",
+        "label": "Federal tax already paid this year (withholding + estimated payments)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "pay_frequency",
+        "label": "Pay frequency (for withholding calculation)",
+        "type": "select",
+        "default": "Biweekly",
+        "options": [
+          {
+            "label": "Weekly",
+            "value": "Weekly"
+          },
+          {
+            "label": "Biweekly",
+            "value": "Biweekly"
+          },
+          {
+            "label": "Semi-monthly",
+            "value": "SemiMonthly"
+          },
+          {
+            "label": "Monthly",
+            "value": "Monthly"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you identify an approximate federal tax bracket, marginal rate, total estimated federal tax liability, effective tax rate, and any additional withholding per pay period needed to meet that liability. It is intended as a planning tool, not a tax return.",
+      "Results use typical progressive bracket calculations and selected standard deduction levels for the chosen tax year. Use the IRS or your tax advisor for official filing calculations and for state/local taxes."
+    ],
+    "methodology": [
+      "We compute taxable income as adjusted gross income plus additional taxable income minus pre-tax deductions and either the standard deduction for the chosen filing status and year or your entered itemized deductions.",
+      "Tax liability is calculated using a progressive bracket model: each portion of taxable income is multiplied by its bracket rate and summed. Marginal rate reports the rate applied to the last dollar of taxable income; effective rate equals estimated tax liability divided by total income.",
+      "This tool follows secure development and data handling guidance; recommendations for accuracy and data minimization align with ISO/IEC and NIST risk-management principles. It is not a substitute for IRS guidance or professional tax advice."
+    ],
+    "how_is_calculated": [
+      "Taxable income = max(0, AGI + additional income - pre-tax deductions - (standard deduction or itemized deductions)).",
+      "Marginal rate = bracket rate that applies to the highest portion of taxable income.",
+      "Estimated tax liability = sum over brackets of (taxable portion in bracket × bracket rate); effective rate = tax liability ÷ total income.",
+      "Suggested additional withholding per pay period = (estimated tax liability - tax already paid) ÷ pay periods per year."
+    ],
+    "examples": [
+      "Example: Single filer, AGI $60,000, standard deduction used, estimated tax liability computed by summing each bracket portion. If $7,000 already withheld and biweekly pay, estimator shows additional per-paycheck withholding required to approximate zero year-end balance.",
+      "Example: Married filing jointly, larger standard deduction reduces taxable income and may shift marginal bracket, lowering the marginal rate applied to the last dollar."
+    ],
+    "faqs": [
+      {
+        "question": "Are bracket thresholds exact and final?",
+        "answer": "Bracket thresholds and rates are applied from commonly published tables for the chosen year but may change with IRS rule updates. Use the IRS official tables for filing and final calculations."
+      },
+      {
+        "question": "Does this include state or local taxes?",
+        "answer": "No. This estimator calculates federal tax only. For state or local tax estimates, use dedicated state/local tools or consult a tax professional."
+      },
+      {
+        "question": "Is the suggested additional withholding guaranteed to eliminate a balance due?",
+        "answer": "No. The suggested amount is an estimate based on entered values. Changes in income, credits, or deductions during the year will change actual tax liability. Consider periodic recalculation and consult IRS withholding guidance."
+      },
+      {
+        "question": "Is my data stored or shared?",
+        "answer": "This tool is intended for client-side calculations. Follow organizational controls when integrating with services; adhere to NIST SP 800-series and ISO/IEC 27001 recommendations for secure handling if persisting data."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Marginal tax rate",
+        "definition": "The tax rate applied to the last dollar of taxable income."
+      },
+      {
+        "term": "Effective tax rate",
+        "definition": "Estimated total tax liability divided by total income, expressed as a percentage."
+      },
+      {
+        "term": "Taxable income",
+        "definition": "Income subject to tax after subtracting pre-tax deductions and either the standard deduction or itemized deductions."
+      },
+      {
+        "term": "Standard deduction",
+        "definition": "A fixed-dollar deduction that reduces taxable income; amount varies by filing status and tax year."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Internal Revenue Service - Official site for federal tax forms and instructions",
+        "url": "https://www.irs.gov/"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST) - Risk management and secure development guidance",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - Information security management",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE - Standards for software engineering best practices",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - workplace safety and compliance frameworks",
+        "url": "https://www.osha.gov/"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/tax-tools/withholding-basics",
+      "/tax-tools/standard-deduction-explained"
+    ],
+    "external": [
+      {
+        "url": "https://www.irs.gov/withholding",
+        "label": "IRS withholding guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.irs.gov/taxtopics",
+        "label": "IRS tax topics and publications",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

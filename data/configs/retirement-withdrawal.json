@@ -1,0 +1,425 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Retirement Withdrawal Calculator (multi-method)",
+    "description": "Estimate how long savings will last under different withdrawal strategies: fixed-percentage (4% style), inflation-adjusted systematic withdrawals, and an approximate Required Minimum Distribution (RMD) projection. Designed for planning and education, not a substitute for professional advice."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "fixed_percentage",
+    "methods": {
+      "fixed_percentage": {
+        "label": "Fixed-percentage withdrawal (e.g., 4% rule)",
+        "description": "Estimates years until portfolio depletion assuming a constant initial withdrawal rate that is thereafter adjusted for inflation. Uses an analytic annuity depletion formula on an inflation-adjusted (real) basis.",
+        "variables": {
+          "real_return": {
+            "expression": "((1 + expected_return) / (1 + expected_inflation)) - 1",
+            "dependencies": [
+              "expected_return",
+              "expected_inflation"
+            ],
+            "label": "Real (inflation-adjusted) return",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "withdrawal_amount": {
+            "expression": "current_savings * withdrawal_rate",
+            "dependencies": [
+              "current_savings",
+              "withdrawal_rate"
+            ],
+            "label": "Initial annual withdrawal",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "years_covered": {
+            "expression": "if(real_return > 0, -ln(1 - current_savings * real_return / withdrawal_amount) / ln(1 + real_return), current_savings / withdrawal_amount)",
+            "dependencies": [
+              "real_return",
+              "current_savings",
+              "withdrawal_amount"
+            ],
+            "label": "Estimated years before depletion",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_withdrawal",
+            "label": "Initial annual withdrawal",
+            "variable": "withdrawal_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_covered",
+            "label": "Estimated years before depletion",
+            "variable": "years_covered",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "systematic_inflation_adjusted": {
+        "label": "Systematic inflation-adjusted withdrawals (planned horizon)",
+        "description": "Computes a first-year sustainable withdrawal that grows with inflation for a fixed planning horizon (from retirement to chosen life expectancy) using an annuity formula in real terms.",
+        "variables": {
+          "real_return": {
+            "expression": "((1 + expected_return) / (1 + expected_inflation)) - 1",
+            "dependencies": [
+              "expected_return",
+              "expected_inflation"
+            ],
+            "label": "Real (inflation-adjusted) return",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "N_years": {
+            "expression": "life_expectancy - retirement_age",
+            "dependencies": [
+              "life_expectancy",
+              "retirement_age"
+            ],
+            "label": "Planned withdrawal horizon (years)",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "sustainable_withdrawal": {
+            "expression": "if(real_return != 0, current_savings * real_return / (1 - pow(1 + real_return, -N_years)), current_savings / N_years)",
+            "dependencies": [
+              "current_savings",
+              "real_return",
+              "N_years"
+            ],
+            "label": "Estimated sustainable first-year withdrawal",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "sustainable_withdrawal",
+            "label": "Sustainable first-year withdrawal (inflation-adjusted thereafter)",
+            "variable": "sustainable_withdrawal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "planning_horizon",
+            "label": "Planning horizon (years)",
+            "variable": "N_years",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      },
+      "rmd_estimate": {
+        "label": "Approximate Required Minimum Distribution (RMD) estimate",
+        "description": "Provides a simple first-year RMD estimate using an approximate divisor based on remaining life expectancy. This is an approximation and does not substitute for IRS tables or tax guidance.",
+        "variables": {
+          "divisor": {
+            "expression": "life_expectancy - current_age + 1",
+            "dependencies": [
+              "life_expectancy",
+              "current_age"
+            ],
+            "label": "Approximate RMD divisor (simplified)",
+            "format": "decimal",
+            "display": true
+          },
+          "rmd_amount": {
+            "expression": "current_savings / divisor",
+            "dependencies": [
+              "current_savings",
+              "divisor"
+            ],
+            "label": "Estimated RMD (first year)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "rmd_amount",
+            "label": "Estimated RMD (first year)",
+            "variable": "rmd_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "rmd_divisor",
+            "label": "Approximate RMD divisor",
+            "variable": "divisor",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 65,
+        "min": 18,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 65,
+        "min": 18,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "life_expectancy",
+        "label": "Assumed life expectancy (age)",
+        "type": "integer",
+        "default": 90,
+        "min": 60,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current portfolio balance",
+        "type": "number",
+        "default": 500000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "expected_return",
+        "label": "Expected annual portfolio return (nominal)",
+        "type": "number",
+        "default": 0.05,
+        "min": -0.1,
+        "max": 0.2,
+        "step": 0.0001
+      },
+      {
+        "id": "expected_inflation",
+        "label": "Expected annual inflation",
+        "type": "number",
+        "default": 0.02,
+        "min": 0,
+        "max": 0.1,
+        "step": 0.0001
+      },
+      {
+        "id": "withdrawal_rate",
+        "label": "Initial withdrawal rate (as fraction of portfolio)",
+        "type": "number",
+        "default": 0.04,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "annual_withdrawal",
+        "label": "Desired annual after-tax income from savings",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "tax_rate",
+        "label": "Estimated average tax rate on withdrawals",
+        "type": "number",
+        "default": 0.22,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "portfolio_fee",
+        "label": "Annual portfolio fees (as fraction)",
+        "type": "number",
+        "default": 0.0,
+        "min": 0,
+        "max": 0.05,
+        "step": 0.0001
+      },
+      {
+        "id": "include_pension",
+        "label": "Include pension or other guaranteed income?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "pensions_section",
+        "label": "Pension & Social Security",
+        "show_when": {
+          "field": "include_pension",
+          "is": "yes"
+        },
+        "fields": [
+          {
+            "id": "pension_income",
+            "label": "Annual pension income (nominal)",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "social_security_income",
+            "label": "Annual Social Security or similar (nominal)",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 100
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares multiple withdrawal approaches so you can estimate how long retirement savings may last under different assumptions. It includes a fixed-percentage approach (popularized as the 4% rule), a systematic inflation-adjusted withdrawal computed for a chosen planning horizon, and a simple approximation of Required Minimum Distributions (RMD).",
+      "Results are model-based estimates intended to support planning conversations. They depend on the assumptions you enter: expected returns, inflation, withdrawal choices, and life-horizon. Use conservative assumptions and consult a financial professional for personalized advice."
+    ],
+    "methodology": [
+      "Calculations convert nominal returns to real (inflation-adjusted) returns before applying annuity or depletion formulas so withdrawal sustainability is expressed in constant purchasing power.",
+      "Fixed-percentage method: computes initial withdrawal as portfolio × withdrawal rate, then estimates years before depletion using an analytic annuity depletion formula in real terms. If real return is zero or negative, a simple exhaustion estimate (portfolio / withdrawal) is used.",
+      "Systematic (inflation-adjusted) method: derives the first-year withdrawal that can be increased by inflation each year while depleting the portfolio exactly over the chosen horizon using the real-return annuity formula.",
+      "RMD estimate: uses a simplified divisor approximation for an illustrative first-year RMD. It is not a replacement for IRS published tables or tax advice."
+    ],
+    "how_is_calculated": [
+      "Real return = (1 + nominal_return) / (1 + inflation) − 1.",
+      "Fixed-percentage years: when the real return is positive, years = −ln(1 − PV×real_return / W) / ln(1+real_return); if the real return is zero or negative, years = PV / W. PV is the portfolio and W is the initial withdrawal.",
+      "Systematic withdrawal: sustainable first-year withdrawal = PV × real_return / (1 − (1+real_return)^−N), where N is the number of years in the planning horizon. If real_return = 0, withdrawal = PV / N.",
+      "RMD approximation: divisor ≈ (life_expectancy − current_age + 1); first-year RMD ≈ PV / divisor. This is a simplification and should be checked against official tables."
+    ],
+    "faqs": [
+      {
+        "question": "Is this a guaranteed forecast?",
+        "answer": "No. Outputs are estimates based on deterministic formulas and the inputs you provide. Actual investment returns, inflation, taxes, fees, and spending behavior will change outcomes. Treat results as planning scenarios, not guarantees."
+      },
+      {
+        "question": "How should I pick expected return and inflation?",
+        "answer": "Use conservative, literature-backed assumptions and test sensitivity. Professional guidance often recommends stress-testing lower returns and higher inflation. This tool includes fields so you can run scenarios with different assumptions."
+      },
+      {
+        "question": "Does this replace tax or legal advice (including RMD calculations)?",
+        "answer": "No. RMDs and tax treatments are governed by tax authorities and plan rules. This tool provides a simple approximation for planning. Consult an accountant or plan administrator for exact RMDs and tax consequences."
+      },
+      {
+        "question": "What are the accuracy and data-handling standards behind this tool?",
+        "answer": "This calculator follows engineering and information-quality practices: testability and reproducibility of formulas, documented assumptions, and clear caveats. For software and information security considerations, designers should follow NIST best practices for risk management, ISO standards for quality management where applicable, and IEEE guidance on software engineering quality. Workplace and compliance obligations may reference OSHA requirements for operational safety. Results remain model outputs and should be validated by qualified professionals for high-stakes decisions."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Real return",
+        "definition": "Investment return adjusted for inflation; shows change in purchasing power."
+      },
+      {
+        "term": "Planning horizon",
+        "definition": "Number of years you plan to withdraw (usually life expectancy minus retirement age)."
+      },
+      {
+        "term": "RMD (Required Minimum Distribution)",
+        "definition": "The minimum amount that must be withdrawn from certain retirement accounts each year, calculated from IRS tables and account balances."
+      },
+      {
+        "term": "Initial withdrawal",
+        "definition": "The first-year withdrawal amount used as the baseline for sustainability calculations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Internal Revenue Service — Retirement Plans and RMD guidance",
+        "url": "https://www.irs.gov/retirement-plans"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/planning/retirement/withdrawal-strategies",
+      "/tools/retirement/sensitivity-analysis"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

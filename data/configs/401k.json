@@ -1,0 +1,869 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "401(k) Retirement Projection Calculator (Advanced)",
+    "description": "Multi-scenario 401(k) projection tool supporting standard projection, target-income planning, and early-withdrawal impact. Includes employer match, contribution frequency, contribution increases, expected return and inflation assumptions. Not financial or tax advice."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_projection",
+    "methods": {
+      "standard_projection": {
+        "label": "Projected balance (standard)",
+        "description": "Project account balance at retirement using periodic contributions, employer match, compounding returns and inflation adjustment.",
+        "variables": {
+          "years": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "n_periods": {
+            "expression": "years * periods_per_year",
+            "dependencies": [
+              "years",
+              "periods_per_year"
+            ],
+            "label": "Total contribution periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "(expected_return_percent/100) / periods_per_year",
+            "dependencies": [
+              "expected_return_percent",
+              "periods_per_year"
+            ],
+            "label": "Periodic return rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "periodic_contribution": {
+            "expression": "annual_contribution / periods_per_year",
+            "dependencies": [
+              "annual_contribution",
+              "periods_per_year"
+            ],
+            "label": "Employee contribution per period",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "employer_match_periodic": {
+            "expression": "(salary * (employer_match_percent < employer_match_max_percent ? employer_match_percent : employer_match_max_percent) / 100) / periods_per_year",
+            "dependencies": [
+              "salary",
+              "employer_match_percent",
+              "employer_match_max_percent",
+              "periods_per_year"
+            ],
+            "label": "Employer match per period (estimated)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "total_periodic_contribution": {
+            "expression": "periodic_contribution + employer_match_periodic",
+            "dependencies": [
+              "periodic_contribution",
+              "employer_match_periodic"
+            ],
+            "label": "Total periodic contribution",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "balance_growth": {
+            "expression": "pow(1 + periodic_rate, n_periods)",
+            "dependencies": [
+              "periodic_rate",
+              "n_periods"
+            ],
+            "label": "Growth multiplier",
+            "format": "decimal",
+            "display": false
+          },
+          "contrib_factor": {
+            "expression": "periodic_rate == 0 ? n_periods : ((balance_growth - 1) / periodic_rate)",
+            "dependencies": [
+              "periodic_rate",
+              "balance_growth",
+              "n_periods"
+            ],
+            "label": "Contribution accumulation factor",
+            "format": "decimal",
+            "display": false
+          },
+          "future_value_contributions": {
+            "expression": "total_periodic_contribution * contrib_factor",
+            "dependencies": [
+              "total_periodic_contribution",
+              "contrib_factor"
+            ],
+            "label": "Future value of contributions",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "fv_current": {
+            "expression": "current_balance * balance_growth",
+            "dependencies": [
+              "current_balance",
+              "balance_growth"
+            ],
+            "label": "Future value of current balance",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "final_balance": {
+            "expression": "fv_current + future_value_contributions",
+            "dependencies": [
+              "fv_current",
+              "future_value_contributions"
+            ],
+            "label": "Projected balance at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_withdrawable_income": {
+            "expression": "final_balance * (withdrawal_rate_percent/100)",
+            "dependencies": [
+              "final_balance",
+              "withdrawal_rate_percent"
+            ],
+            "label": "Estimated first-year withdrawable income (nominal)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "inflation_adjusted_withdrawable": {
+            "expression": "annual_withdrawable_income / pow(1 + inflation_percent/100, years)",
+            "dependencies": [
+              "annual_withdrawable_income",
+              "inflation_percent",
+              "years"
+            ],
+            "label": "Inflation-adjusted withdrawable income (in today's dollars)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "final_balance",
+            "label": "Projected balance at retirement",
+            "variable": "final_balance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_withdrawable_income",
+            "label": "Estimated first-year withdrawable income (nominal)",
+            "variable": "annual_withdrawable_income",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "inflation_adjusted_withdrawable",
+            "label": "Inflation-adjusted withdrawable income (today's dollars)",
+            "variable": "inflation_adjusted_withdrawable",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "target_income": {
+        "label": "Target retirement income planner",
+        "description": "Estimate the required retirement balance to support a target annual income and compare with projected savings.",
+        "variables": {
+          "years": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "required_balance": {
+            "expression": "desired_annual_income / (withdrawal_rate_percent/100)",
+            "dependencies": [
+              "desired_annual_income",
+              "withdrawal_rate_percent"
+            ],
+            "label": "Required retirement balance to support target income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "projected_balance_simple": {
+            "expression": "current_balance * pow(1 + expected_return_percent/100, years)",
+            "dependencies": [
+              "current_balance",
+              "expected_return_percent",
+              "years"
+            ],
+            "label": "Projected balance from current savings (no future contributions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_shortfall": {
+            "expression": "required_balance - projected_balance_simple",
+            "dependencies": [
+              "required_balance",
+              "projected_balance_simple"
+            ],
+            "label": "Approximate shortfall (before future contributions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_balance",
+            "label": "Required retirement balance",
+            "variable": "required_balance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_balance_simple",
+            "label": "Projected balance from current savings",
+            "variable": "projected_balance_simple",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_shortfall",
+            "label": "Approximate shortfall",
+            "variable": "annual_shortfall",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "early_withdrawal": {
+        "label": "Early withdrawal impact",
+        "description": "Estimate taxes and penalties for an early withdrawal.",
+        "variables": {
+          "age_trigger_penalty": {
+            "expression": "age_of_withdrawal < 59.5 ? 1 : 0",
+            "dependencies": [
+              "age_of_withdrawal"
+            ],
+            "label": "Penalty applies (1=yes,0=no)",
+            "format": "integer",
+            "display": false
+          },
+          "penalty_amount": {
+            "expression": "age_trigger_penalty * early_withdrawal_amount * (early_withdrawal_penalty_percent/100)",
+            "dependencies": [
+              "age_trigger_penalty",
+              "early_withdrawal_amount",
+              "early_withdrawal_penalty_percent"
+            ],
+            "label": "Estimated early withdrawal penalty",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_due": {
+            "expression": "early_withdrawal_amount * (tax_rate_percent/100)",
+            "dependencies": [
+              "early_withdrawal_amount",
+              "tax_rate_percent"
+            ],
+            "label": "Estimated income tax on withdrawal",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_of_withdrawal": {
+            "expression": "penalty_amount + tax_due",
+            "dependencies": [
+              "penalty_amount",
+              "tax_due"
+            ],
+            "label": "Total estimated taxes and penalties",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "penalty_amount",
+            "label": "Early withdrawal penalty (estimate)",
+            "variable": "penalty_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_due",
+            "label": "Estimated tax due on withdrawal",
+            "variable": "tax_due",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_of_withdrawal",
+            "label": "Total estimated taxes and penalties",
+            "variable": "total_cost_of_withdrawal",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "calculation_method",
+        "label": "Calculation mode",
+        "type": "select",
+        "default": "standard",
+        "options": [
+          {
+            "label": "Standard projection",
+            "value": "standard"
+          },
+          {
+            "label": "Target retirement income",
+            "value": "target"
+          },
+          {
+            "label": "Early withdrawal impact",
+            "value": "early"
+          }
+        ]
+      },
+      {
+        "id": "current_age",
+        "label": "Your current age",
+        "type": "number",
+        "default": 35,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "number",
+        "default": 65,
+        "min": 50,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "current_balance",
+        "label": "Current 401(k) balance (USD)",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Your annual contribution (pre-tax/Roth) (USD)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "max": 1000000,
+        "step": 50
+      },
+      {
+        "id": "periods_per_year",
+        "label": "Contribution frequency",
+        "type": "select",
+        "default": "12",
+        "options": [
+          {
+            "label": "Annual",
+            "value": "1"
+          },
+          {
+            "label": "Monthly",
+            "value": "12"
+          },
+          {
+            "label": "Semi-monthly (24)",
+            "value": "24"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          }
+        ]
+      },
+      {
+        "id": "salary",
+        "label": "Annual salary (USD)",
+        "type": "number",
+        "default": 80000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "employer_match_percent",
+        "label": "Employer match (percent of salary) - estimated",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "max": 50,
+        "step": 0.1
+      },
+      {
+        "id": "employer_match_max_percent",
+        "label": "Employer matching limit (percent of salary)",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "max": 50,
+        "step": 0.1
+      },
+      {
+        "id": "expected_return_percent",
+        "label": "Expected average annual return (percent)",
+        "type": "number",
+        "default": 6.5,
+        "min": -10,
+        "max": 30,
+        "step": 0.1
+      },
+      {
+        "id": "inflation_percent",
+        "label": "Inflation assumption (percent)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 15,
+        "step": 0.1
+      },
+      {
+        "id": "withdrawal_rate_percent",
+        "label": "Withdrawal rate at retirement (percent)",
+        "type": "number",
+        "default": 4,
+        "min": 0.1,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "desired_annual_income",
+        "label": "Target annual income in retirement (USD)",
+        "type": "number",
+        "default": 40000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "early_withdrawal_amount",
+        "label": "Amount you plan to withdraw early (USD)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "age_of_withdrawal",
+        "label": "Age at withdrawal",
+        "type": "number",
+        "default": 50,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "early_withdrawal_penalty_percent",
+        "label": "Early withdrawal penalty percent (estimate)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "max": 50,
+        "step": 0.1
+      },
+      {
+        "id": "tax_rate_percent",
+        "label": "Estimated marginal tax rate on distribution (percent)",
+        "type": "number",
+        "default": 22,
+        "min": 0,
+        "max": 50,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "section_standard",
+        "label": "Standard projection inputs",
+        "show_when": {
+          "field": "calculation_method",
+          "is": "standard"
+        },
+        "fields": [
+          {
+            "id": "current_age",
+            "label": "Your current age",
+            "type": "number",
+            "default": 35,
+            "min": 18,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "retirement_age",
+            "label": "Planned retirement age",
+            "type": "number",
+            "default": 65,
+            "min": 50,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "current_balance",
+            "label": "Current 401(k) balance (USD)",
+            "type": "number",
+            "default": 25000,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "annual_contribution",
+            "label": "Your annual contribution (pre-tax/Roth) (USD)",
+            "type": "number",
+            "default": 10000,
+            "min": 0,
+            "max": 1000000,
+            "step": 50
+          },
+          {
+            "id": "periods_per_year",
+            "label": "Contribution frequency",
+            "type": "select",
+            "default": "12",
+            "options": [
+              {
+                "label": "Annual",
+                "value": "1"
+              },
+              {
+                "label": "Monthly",
+                "value": "12"
+              },
+              {
+                "label": "Semi-monthly (24)",
+                "value": "24"
+              },
+              {
+                "label": "Biweekly (26)",
+                "value": "26"
+              }
+            ]
+          },
+          {
+            "id": "salary",
+            "label": "Annual salary (USD)",
+            "type": "number",
+            "default": 80000,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "employer_match_percent",
+            "label": "Employer match (percent of salary) - estimated",
+            "type": "number",
+            "default": 3,
+            "min": 0,
+            "max": 50,
+            "step": 0.1
+          },
+          {
+            "id": "employer_match_max_percent",
+            "label": "Employer matching limit (percent of salary)",
+            "type": "number",
+            "default": 3,
+            "min": 0,
+            "max": 50,
+            "step": 0.1
+          },
+          {
+            "id": "expected_return_percent",
+            "label": "Expected average annual return (percent)",
+            "type": "number",
+            "default": 6.5,
+            "min": -10,
+            "max": 30,
+            "step": 0.1
+          },
+          {
+            "id": "inflation_percent",
+            "label": "Inflation assumption (percent)",
+            "type": "number",
+            "default": 2.5,
+            "min": 0,
+            "max": 15,
+            "step": 0.1
+          },
+          {
+            "id": "withdrawal_rate_percent",
+            "label": "Withdrawal rate at retirement (percent)",
+            "type": "number",
+            "default": 4,
+            "min": 0.1,
+            "max": 20,
+            "step": 0.1
+          }
+        ]
+      },
+      {
+        "id": "section_target",
+        "label": "Target-income planner inputs",
+        "show_when": {
+          "field": "calculation_method",
+          "is": "target"
+        },
+        "fields": [
+          {
+            "id": "current_age",
+            "label": "Your current age",
+            "type": "number",
+            "default": 35,
+            "min": 18,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "retirement_age",
+            "label": "Planned retirement age",
+            "type": "number",
+            "default": 65,
+            "min": 50,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "current_balance",
+            "label": "Current 401(k) balance (USD)",
+            "type": "number",
+            "default": 25000,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "expected_return_percent",
+            "label": "Expected average annual return (percent)",
+            "type": "number",
+            "default": 6.5,
+            "min": -10,
+            "max": 30,
+            "step": 0.1
+          },
+          {
+            "id": "desired_annual_income",
+            "label": "Target annual income in retirement (USD)",
+            "type": "number",
+            "default": 40000,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "withdrawal_rate_percent",
+            "label": "Withdrawal rate at retirement (percent)",
+            "type": "number",
+            "default": 4,
+            "min": 0.1,
+            "max": 20,
+            "step": 0.1
+          }
+        ]
+      },
+      {
+        "id": "section_early",
+        "label": "Early withdrawal inputs",
+        "show_when": {
+          "field": "calculation_method",
+          "is": "early"
+        },
+        "fields": [
+          {
+            "id": "current_balance",
+            "label": "Current 401(k) balance (USD)",
+            "type": "number",
+            "default": 25000,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "early_withdrawal_amount",
+            "label": "Amount you plan to withdraw early (USD)",
+            "type": "number",
+            "default": 10000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "age_of_withdrawal",
+            "label": "Age at withdrawal",
+            "type": "number",
+            "default": 50,
+            "min": 18,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "early_withdrawal_penalty_percent",
+            "label": "Early withdrawal penalty percent (estimate)",
+            "type": "number",
+            "default": 10,
+            "min": 0,
+            "max": 50,
+            "step": 0.1
+          },
+          {
+            "id": "tax_rate_percent",
+            "label": "Estimated marginal tax rate on distribution (percent)",
+            "type": "number",
+            "default": 22,
+            "min": 0,
+            "max": 50,
+            "step": 0.1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator projects the future value of a 401(k) using your current balance, regular contributions, employer match, and an expected annual return. It supports multiple planning modes: a standard projection, a target-income planner, and an early-withdrawal impact estimator.",
+      "Results are model-based estimates to help with planning and do not guarantee investment performance. Use conservative assumptions and consult a licensed financial or tax professional for personalized advice."
+    ],
+    "methodology": [
+      "We compound contributions at a periodic rate derived from the annual expected return and the chosen contribution frequency. Employer match is estimated as an annual percent of salary and added on each contribution period.",
+      "The tool uses standard future value formulas for lump sums and annuities. For withdrawal estimates it multiplies the projected balance by a user-selected withdrawal rate to estimate first-year income. Early-withdrawal estimates calculate likely tax and penalty amounts using user-provided tax and penalty rates."
+    ],
+    "how_is_calculated": [
+      "Years to retirement = retirement_age - current_age.",
+      "Periodic rate = expected_return_percent / 100 / periods_per_year.",
+      "Future value of current balance = current_balance * (1 + periodic_rate)^(years * periods_per_year).",
+      "Future value of contributions = periodic_contribution * (( (1+periodic_rate)^(years*periods_per_year) - 1 ) / periodic_rate).",
+      "Projected balance = future value of current balance + future value of contributions."
+    ],
+    "examples": [
+      "Example: Age 35, $25,000 balance, $10,000 annual contribution, 6.5% return, retire at 65 → projected balance is the sum of compounded current balance plus compounded future contributions (including employer match).",
+      "Target-income example: If you want $40,000/year and use a 4% withdrawal rate, required balance = $40,000 / 0.04 = $1,000,000. The tool compares that to your projected balance."
+    ],
+    "faqs": [
+      {
+        "question": "Is this a substitute for professional financial or tax advice?",
+        "answer": "No. This calculator provides estimates only and is not tailored financial or tax advice. Consult a qualified advisor for decisions impacting your retirement and taxes."
+      },
+      {
+        "question": "How should I choose the expected return and inflation assumptions?",
+        "answer": "Use long-term, realistic assumptions based on diversified portfolio expectations. Consider using conservative assumptions for planning. Historical returns are not predictive of future returns."
+      },
+      {
+        "question": "Does this tool account for taxes on withdrawals?",
+        "answer": "You can provide an estimated marginal tax rate for early withdrawal scenarios. The standard projection does not model future taxes on distributions; adjust assumptions or consult a tax advisor to estimate post-tax income."
+      },
+      {
+        "question": "How are employer matches treated?",
+        "answer": "Employer match is estimated as a percent of salary and prorated per contribution period. If your plan uses a different formula (e.g., dollar-for-dollar up to a percent of your contribution), adjust the employer match fields to approximate the actual policy."
+      }
+    ],
+    "citations": [
+      {
+        "label": "U.S. Department of Labor — Retirement Plans and 401(k) basics",
+        "url": "https://www.dol.gov/agencies/ebsa/about-ebsa/our-activities/resource-center/publications/retirement-topics-401k"
+      },
+      {
+        "label": "Internal Revenue Service — Retirement Plans FAQs",
+        "url": "https://www.irs.gov/retirement-plans"
+      },
+      {
+        "label": "NIST — Cybersecurity and privacy guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Information security management (example standard page)",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE — Software and systems engineering resources",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — General standards and guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "401(k) plan",
+        "definition": "An employer-sponsored retirement savings plan that allows employees to contribute pre-tax or Roth (after-tax) dollars, often with an employer match."
+      },
+      {
+        "term": "Employer match",
+        "definition": "A contribution made by the employer to an employee's retirement account, typically expressed as a percentage of salary or employee contribution."
+      },
+      {
+        "term": "Compound return",
+        "definition": "The process where returns are reinvested to generate additional returns over time; fundamental to long-term growth of savings."
+      },
+      {
+        "term": "Withdrawal rate",
+        "definition": "The percentage of a retirement portfolio that is withdrawn during the first year of retirement; often used to estimate sustainable retirement income."
+      },
+      {
+        "term": "Inflation-adjusted income",
+        "definition": "Estimated purchasing power of income in today's dollars after accounting for inflation over the saving period."
+      }
+    ],
+    "summary": [
+      "This advanced calculator supports multiple planning modes and helps estimate projected 401(k) balances, required savings for target income, and the cost of early withdrawals.",
+      "Inputs should reflect your best current estimates. Results are modeling outputs, not guarantees. Always verify plan-specific rules (employer match formula, contribution limits) and consult professionals for legal, tax, or investment decisions."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.dol.gov/agencies/ebsa/laws-and-regulations",
+        "label": "U.S. Department of Labor — Laws & Regulations",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/publications",
+        "label": "NIST publications",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

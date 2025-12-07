@@ -1,0 +1,696 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Black‑Scholes Options Calculator (Pricing, Greeks & Implied Volatility)",
+    "description": "Analytic Black‑Scholes pricing and Greeks for European call and put options, plus an implied volatility solver with safety checks, calibration guidance, and regulatory accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "price",
+    "methods": {
+      "price": {
+        "label": "Analytic Price & Greeks (Black‑Scholes)",
+        "description": "Closed‑form Black‑Scholes formulas for European calls and puts with continuous dividend yield. Produces option prices and standard Greeks.",
+        "variables": {
+          "disc_r": {
+            "expression": "exp(-r * T)",
+            "dependencies": [
+              "r",
+              "T"
+            ],
+            "label": "Discount factor (risk‑free)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "disc_q": {
+            "expression": "exp(-q * T)",
+            "dependencies": [
+              "q",
+              "T"
+            ],
+            "label": "Dividend discount factor",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "sqrtT": {
+            "expression": "sqrt(T)",
+            "dependencies": [
+              "T"
+            ],
+            "label": "Square root of time to expiry",
+            "unit": "years^0.5",
+            "format": "decimal",
+            "display": false
+          },
+          "d1": {
+            "expression": "(ln(S / K) + (r - q + 0.5 * sigma * sigma) * T) / (sigma * sqrtT)",
+            "dependencies": [
+              "S",
+              "K",
+              "r",
+              "q",
+              "sigma",
+              "T",
+              "sqrtT"
+            ],
+            "label": "d1 (Black‑Scholes)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "d2": {
+            "expression": "d1 - sigma * sqrtT",
+            "dependencies": [
+              "d1",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "d2 (Black‑Scholes)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "Nd1": {
+            "expression": "normcdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "Cumulative normal N(d1)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "Nd2": {
+            "expression": "normcdf(d2)",
+            "dependencies": [
+              "d2"
+            ],
+            "label": "Cumulative normal N(d2)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "Nnegd1": {
+            "expression": "normcdf(-d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "Cumulative normal N(-d1)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "Nnegd2": {
+            "expression": "normcdf(-d2)",
+            "dependencies": [
+              "d2"
+            ],
+            "label": "Cumulative normal N(-d2)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "npdf_d1": {
+            "expression": "exp(-0.5 * d1 * d1) / sqrt(2 * pi)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "Standard normal density at d1",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "call_price": {
+            "expression": "S * disc_q * Nd1 - K * disc_r * Nd2",
+            "dependencies": [
+              "S",
+              "disc_q",
+              "Nd1",
+              "K",
+              "disc_r",
+              "Nd2"
+            ],
+            "label": "European call price (Black‑Scholes)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "put_price": {
+            "expression": "K * disc_r * Nnegd2 - S * disc_q * Nnegd1",
+            "dependencies": [
+              "K",
+              "disc_r",
+              "Nnegd2",
+              "S",
+              "disc_q",
+              "Nnegd1"
+            ],
+            "label": "European put price (Black‑Scholes)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "delta_call": {
+            "expression": "disc_q * Nd1",
+            "dependencies": [
+              "disc_q",
+              "Nd1"
+            ],
+            "label": "Delta (call)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "delta_put": {
+            "expression": "disc_q * (Nd1 - 1)",
+            "dependencies": [
+              "disc_q",
+              "Nd1"
+            ],
+            "label": "Delta (put)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "gamma": {
+            "expression": "disc_q * npdf_d1 / (S * sigma * sqrtT)",
+            "dependencies": [
+              "disc_q",
+              "npdf_d1",
+              "S",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "Gamma",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "vega": {
+            "expression": "S * disc_q * npdf_d1 * sqrtT",
+            "dependencies": [
+              "S",
+              "disc_q",
+              "npdf_d1",
+              "sqrtT"
+            ],
+            "label": "Vega (per 1.0 vol)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "theta_call": {
+            "expression": "-(S * disc_q * npdf_d1 * sigma) / (2 * sqrtT) - q * S * disc_q * Nd1 + r * K * disc_r * Nd2",
+            "dependencies": [
+              "S",
+              "disc_q",
+              "npdf_d1",
+              "sigma",
+              "sqrtT",
+              "q",
+              "Nd1",
+              "r",
+              "K",
+              "disc_r",
+              "Nd2"
+            ],
+            "label": "Theta (call, per year)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "theta_put": {
+            "expression": "-(S * disc_q * npdf_d1 * sigma) / (2 * sqrtT) + q * S * disc_q * Nnegd1 - r * K * disc_r * Nnegd2",
+            "dependencies": [
+              "S",
+              "disc_q",
+              "npdf_d1",
+              "sigma",
+              "sqrtT",
+              "q",
+              "Nnegd1",
+              "r",
+              "K",
+              "disc_r",
+              "Nnegd2"
+            ],
+            "label": "Theta (put, per year)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "rho_call": {
+            "expression": "K * T * disc_r * Nd2",
+            "dependencies": [
+              "K",
+              "T",
+              "disc_r",
+              "Nd2"
+            ],
+            "label": "Rho (call)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "rho_put": {
+            "expression": "-K * T * disc_r * Nnegd2",
+            "dependencies": [
+              "K",
+              "T",
+              "disc_r",
+              "Nnegd2"
+            ],
+            "label": "Rho (put)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "call_price",
+            "label": "Call price",
+            "variable": "call_price",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "put_price",
+            "label": "Put price",
+            "variable": "put_price",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "delta_call",
+            "label": "Delta (call)",
+            "variable": "delta_call",
+            "format": "decimal"
+          },
+          {
+            "id": "delta_put",
+            "label": "Delta (put)",
+            "variable": "delta_put",
+            "format": "decimal"
+          },
+          {
+            "id": "gamma",
+            "label": "Gamma",
+            "variable": "gamma",
+            "format": "decimal"
+          },
+          {
+            "id": "vega",
+            "label": "Vega (per 1.0 vol)",
+            "variable": "vega",
+            "format": "decimal"
+          },
+          {
+            "id": "theta_call",
+            "label": "Theta (call, per year)",
+            "variable": "theta_call",
+            "format": "decimal"
+          },
+          {
+            "id": "theta_put",
+            "label": "Theta (put, per year)",
+            "variable": "theta_put",
+            "format": "decimal"
+          },
+          {
+            "id": "rho_call",
+            "label": "Rho (call)",
+            "variable": "rho_call",
+            "format": "decimal"
+          },
+          {
+            "id": "rho_put",
+            "label": "Rho (put)",
+            "variable": "rho_put",
+            "format": "decimal"
+          }
+        ]
+      },
+      "implied_vol": {
+        "label": "Implied Volatility (solver)",
+        "description": "Numerical solver for the implied volatility that matches a market option price. Includes sanity checks and status.",
+        "variables": {
+          "implied_vol": {
+            "expression": "impliedVolFromPrice(market_price, S, K, T, r, q, option_type, sigma)",
+            "dependencies": [
+              "market_price",
+              "S",
+              "K",
+              "T",
+              "r",
+              "q",
+              "option_type",
+              "sigma"
+            ],
+            "label": "Implied volatility (annual, decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "solver_status": {
+            "expression": "impliedVolSolverStatus()",
+            "dependencies": [],
+            "label": "Solver status",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "model_price_at_implied": {
+            "expression": "priceFromVol(implied_vol, S, K, T, r, q, option_type)",
+            "dependencies": [
+              "implied_vol",
+              "S",
+              "K",
+              "T",
+              "r",
+              "q",
+              "option_type"
+            ],
+            "label": "Model price at implied vol",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "implied_vol",
+            "label": "Implied volatility",
+            "variable": "implied_vol",
+            "format": "decimal"
+          },
+          {
+            "id": "model_price_at_implied",
+            "label": "Model price at implied vol",
+            "variable": "model_price_at_implied",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "solver_status",
+            "label": "Solver status (0=ok,>0=warning)",
+            "variable": "solver_status",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "mode",
+        "label": "Mode",
+        "type": "select",
+        "default": "price",
+        "options": [
+          {
+            "label": "Price & Greeks",
+            "value": "price"
+          },
+          {
+            "label": "Implied volatility (from market price)",
+            "value": "implied_vol"
+          }
+        ]
+      },
+      {
+        "id": "option_type",
+        "label": "Option type",
+        "type": "select",
+        "default": "call",
+        "options": [
+          {
+            "label": "Call",
+            "value": "call"
+          },
+          {
+            "label": "Put",
+            "value": "put"
+          }
+        ]
+      },
+      {
+        "id": "S",
+        "label": "Spot price (S)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "K",
+        "label": "Strike price (K)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "T",
+        "label": "Time to expiry (T, years)",
+        "type": "number",
+        "default": 0.5,
+        "min": 0.0001,
+        "step": 0.0001
+      },
+      {
+        "id": "r",
+        "label": "Risk‑free rate (annual, decimal)",
+        "type": "number",
+        "default": 0.03,
+        "min": -1,
+        "step": 0.0001
+      },
+      {
+        "id": "q",
+        "label": "Continuous dividend yield (annual, decimal)",
+        "type": "number",
+        "default": 0.0,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "sigma",
+        "label": "Volatility (annual, sigma, decimal)",
+        "type": "number",
+        "default": 0.2,
+        "min": 0.0001,
+        "step": 0.0001
+      }
+    ],
+    "sections": [
+      {
+        "id": "implied_price_section",
+        "label": "Market price (for implied volatility)",
+        "show_when": {
+          "field": "mode",
+          "is": "implied_vol"
+        },
+        "fields": [
+          {
+            "id": "market_price",
+            "label": "Observed option market price",
+            "type": "number",
+            "default": 2.5,
+            "min": 0,
+            "step": 0.01
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "call_price",
+          "label": "Call price"
+        },
+        {
+          "id": "put_price",
+          "label": "Put price"
+        },
+        {
+          "id": "delta_call",
+          "label": "Delta (call)"
+        },
+        {
+          "id": "delta_put",
+          "label": "Delta (put)"
+        },
+        {
+          "id": "gamma",
+          "label": "Gamma"
+        },
+        {
+          "id": "vega",
+          "label": "Vega (per 1.0 vol)"
+        },
+        {
+          "id": "theta_call",
+          "label": "Theta (call, per year)"
+        },
+        {
+          "id": "theta_put",
+          "label": "Theta (put, per year)"
+        },
+        {
+          "id": "rho_call",
+          "label": "Rho (call)"
+        },
+        {
+          "id": "rho_put",
+          "label": "Rho (put)"
+        },
+        {
+          "id": "implied_vol",
+          "label": "Implied volatility"
+        },
+        {
+          "id": "model_price_at_implied",
+          "label": "Model price at implied vol"
+        },
+        {
+          "id": "solver_status",
+          "label": "Solver status"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator implements the Black‑Scholes analytic formulas for European option pricing and standard Greeks (Delta, Gamma, Vega, Theta, Rho) using a continuous dividend yield. It also includes a solver to recover implied volatility from a market option price and returns a solver status and model price at the recovered volatility.",
+      "Use the price mode to compute fair values and sensitivities given volatility. Use the implied volatility mode to input an observed market price and solve for the implied annual volatility. The tool includes built‑in sanity checks and guidance for calibration and model limits."
+    ],
+    "methodology": [
+      "Pricing follows the original Black‑Scholes–Merton closed‑form solution under the assumptions of constant volatility, lognormal underlying returns, continuous dividend yield, and no early exercise (European options). Intermediate terms d1 and d2 are computed and passed into the standard normal cumulative and density functions.",
+      "Implied volatility is found by numerically solving for sigma that makes the Black‑Scholes model price equal to the observed market price. The solver uses bracketed root‑finding with optional Newton updates and reports status codes for convergence, out‑of‑bounds results, or invalid input.",
+      "Operational controls and accuracy practices: validate put-call parity, verify forward price consistency, and check implied vol against typical ranges. For implementation and numerical stability, follow established secure development and numeric testing practices per NIST and IEEE guidance."
+    ],
+    "how_is_calculated": [
+      "d1 = (ln(S/K) + (r - q + 0.5 * sigma^2) * T) / (sigma * sqrt(T))",
+      "d2 = d1 - sigma * sqrt(T)",
+      "Call price = S * e^{-qT} * N(d1) - K * e^{-rT} * N(d2)",
+      "Put price = K * e^{-rT} * N(-d2) - S * e^{-qT} * N(-d1)",
+      "Delta (call) = e^{-qT} * N(d1); Gamma = e^{-qT} * n(d1) / (S * sigma * sqrt(T)); Vega = S * e^{-qT} * n(d1) * sqrt(T)"
+    ],
+    "examples": [
+      "Example 1: S=100, K=100, T=0.5, r=3%, q=0, sigma=20% → computes call and put price and Greeks. Verify put-call parity: C - P = S*e^{-qT} - K*e^{-rT}.",
+      "Example 2: Given market call price 2.50 with same market inputs, use implied volatility mode to recover sigma. Check solver status; if the status reports nonconvergence, verify input price is within no-arbitrage bounds (between intrinsic value and forward price discounted)."
+    ],
+    "faqs": [
+      {
+        "question": "What inputs are required?",
+        "answer": "Spot price (S), strike (K), time to expiry in years (T), risk‑free rate (r), continuous dividend yield (q), and volatility (sigma). For implied volatility mode, provide the observed market option price."
+      },
+      {
+        "question": "Are American options supported?",
+        "answer": "No. Black‑Scholes is for European options without early exercise. For American options or for underlying assets with discrete dividends, use specialized numerical methods (binomial trees, finite differences) and validate against market models."
+      },
+      {
+        "question": "What does the solver status mean?",
+        "answer": "The solver returns a status code: 0 indicates successful convergence; positive values indicate warnings (e.g., slow convergence, price outside model bounds) and negative values indicate failure. If the solver fails, verify inputs and price bounds and consider using alternative methods."
+      },
+      {
+        "question": "How should I interpret Greeks units?",
+        "answer": "Delta and Gamma are in underlying units per one unit move; Vega is the change in option price per one absolute change in volatility (e.g., per 1.0 = 100 percentage points). Theta is returned per year. Convert units to per‑day by dividing by trading days if desired."
+      },
+      {
+        "question": "What are the model limitations?",
+        "answer": "Black‑Scholes assumes constant volatility and lognormal returns. It does not capture volatility smiles, jumps, stochastic volatility, liquidity effects, or transaction costs. Use model diagnostics and market calibration before trading decisions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (standards and secure numerical software guidance)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO (standards catalogue)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA (operational safety and workplace guidelines)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Black‑Scholes model",
+        "definition": "A mathematical model for European option pricing assuming constant volatility, continuous trading, lognormal underlying returns, and no arbitrage."
+      },
+      {
+        "term": "d1 / d2",
+        "definition": "Intermediate terms in Black‑Scholes used to compute cumulative normal probabilities: d1 relates to the forward moneyness and volatility; d2 = d1 - sigma*sqrt(T)."
+      },
+      {
+        "term": "Greeks",
+        "definition": "Sensitivities of option price to underlying parameters: Delta, Gamma, Vega, Theta, and Rho."
+      },
+      {
+        "term": "Implied volatility",
+        "definition": "The volatility parameter that, when plugged into the pricing model, reproduces an observed market option price."
+      },
+      {
+        "term": "Put‑call parity",
+        "definition": "An identity for European options: C - P = S*e^{-qT} - K*e^{-rT}, used as a sanity check for prices."
+      }
+    ],
+    "summary": [
+      "This calculator provides analytic Black‑Scholes prices and Greeks and a solver for implied volatility with explicit solver status and model price validation.",
+      "Use sanity checks (put‑call parity, forward price, implied vol bounds) and follow cited standards for numerical reliability and secure implementation. Be mindful of the model's assumptions and limitations before using results for trading or regulatory reporting."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

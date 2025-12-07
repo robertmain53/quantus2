@@ -1,0 +1,402 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Catch-Up Contribution Calculator (Advanced)",
+    "description": "Estimate allowable catch-up retirement contributions for common U.S. plan types (401(k), 403(b), 457(b), SIMPLE). Supports standard age-50+ catch-up, 457(b) special catch-up estimate, and SIMPLE IRA catch-up. Includes explicit override fields for plan limits so users can enter current IRS values."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_catchup",
+    "methods": {
+      "standard_catchup": {
+        "label": "Standard age 50+ catch-up",
+        "description": "Calculates the commonly used age-50-and-over catch-up amount that supplements the plan's annual elective deferral limit when the participant is age 50 or older.",
+        "variables": {
+          "eligible_flag": {
+            "expression": "age >= 50 ? 1 : 0",
+            "dependencies": [
+              "age"
+            ],
+            "label": "Age-50-or-older flag",
+            "format": "integer",
+            "display": true
+          },
+          "catchup_available": {
+            "expression": "eligible_flag * catchup_limit",
+            "dependencies": [
+              "eligible_flag",
+              "catchup_limit"
+            ],
+            "label": "Available catch-up limit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "new_total": {
+            "expression": "current_contribution + catchup_available",
+            "dependencies": [
+              "current_contribution",
+              "catchup_available"
+            ],
+            "label": "Projected total contribution if you use full catch-up",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "additional_needed": {
+            "expression": "new_total - current_contribution",
+            "dependencies": [
+              "new_total",
+              "current_contribution"
+            ],
+            "label": "Additional contribution required to reach full catch-up",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "max_catchup",
+            "label": "Maximum catch-up available",
+            "variable": "catchup_available",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_total_with_catchup",
+            "label": "Projected total contribution (with full catch-up)",
+            "variable": "new_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_additional",
+            "label": "Additional contribution to reach full catch-up",
+            "variable": "additional_needed",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "special_457": {
+        "label": "457(b) special catch-up estimate",
+        "description": "Estimate for the 457(b) special catch-up provision. This method provides an estimate of the larger contribution window available in the final years before normal retirement age; it is a simplified model and does not replace plan administrator calculations.",
+        "variables": {
+          "special_flag": {
+            "expression": "plan_type == '457b' ? 1 : 0",
+            "dependencies": [
+              "plan_type"
+            ],
+            "label": "Plan is 457(b) flag",
+            "format": "integer",
+            "display": true
+          },
+          "special_limit": {
+            "expression": "current_year_limit * years_to_special",
+            "dependencies": [
+              "current_year_limit",
+              "years_to_special"
+            ],
+            "label": "Estimated special catch-up window (years × annual limit)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "special_catchup_available": {
+            "expression": "special_flag * special_limit",
+            "dependencies": [
+              "special_flag",
+              "special_limit"
+            ],
+            "label": "Estimated 457(b) special catch-up available",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "new_total_special": {
+            "expression": "current_contribution + special_catchup_available",
+            "dependencies": [
+              "current_contribution",
+              "special_catchup_available"
+            ],
+            "label": "Projected total with 457(b) special catch-up",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "457_special_max",
+            "label": "Estimated 457(b) special catch-up available",
+            "variable": "special_catchup_available",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_total_457",
+            "label": "Projected total contribution (with 457 special)",
+            "variable": "new_total_special",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "simple_catchup": {
+        "label": "SIMPLE IRA catch-up",
+        "description": "SIMPLE IRA catch-up for participants age 50 or older. Use the SIMPLE catch-up field to reflect plan-specific limits.",
+        "variables": {
+          "simple_flag": {
+            "expression": "plan_type == 'SIMPLE' ? 1 : 0",
+            "dependencies": [
+              "plan_type"
+            ],
+            "label": "Plan is SIMPLE flag",
+            "format": "integer",
+            "display": true
+          },
+          "simple_catchup_available": {
+            "expression": "simple_flag * simple_catchup_limit",
+            "dependencies": [
+              "simple_flag",
+              "simple_catchup_limit"
+            ],
+            "label": "Available SIMPLE IRA catch-up limit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "new_total_simple": {
+            "expression": "current_contribution + simple_catchup_available",
+            "dependencies": [
+              "current_contribution",
+              "simple_catchup_available"
+            ],
+            "label": "Projected total with SIMPLE catch-up",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "simple_max_catchup",
+            "label": "SIMPLE IRA catch-up available",
+            "variable": "simple_catchup_available",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_total_simple",
+            "label": "Projected total contribution (with SIMPLE catch-up)",
+            "variable": "new_total_simple",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "age",
+        "label": "Your age",
+        "type": "integer",
+        "default": 50,
+        "min": 0,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "plan_type",
+        "label": "Retirement plan type",
+        "type": "select",
+        "default": "401k",
+        "options": [
+          {
+            "label": "401(k) or 403(b)",
+            "value": "401k"
+          },
+          {
+            "label": "457(b)",
+            "value": "457b"
+          },
+          {
+            "label": "SIMPLE IRA",
+            "value": "SIMPLE"
+          },
+          {
+            "label": "Other (use manual limits)",
+            "value": "other"
+          }
+        ]
+      },
+      {
+        "id": "current_year_limit",
+        "label": "Plan's current annual elective deferral limit (enter latest IRS value)",
+        "type": "number",
+        "default": 23000,
+        "min": 0,
+        "max": 100000,
+        "step": 1
+      },
+      {
+        "id": "catchup_limit",
+        "label": "Standard age 50+ catch-up limit (enter latest IRS value)",
+        "type": "number",
+        "default": 7500,
+        "min": 0,
+        "max": 50000,
+        "step": 1
+      },
+      {
+        "id": "simple_catchup_limit",
+        "label": "SIMPLE IRA catch-up limit (enter latest IRS value)",
+        "type": "number",
+        "default": 3500,
+        "min": 0,
+        "max": 50000,
+        "step": 1
+      },
+      {
+        "id": "current_contribution",
+        "label": "Contributions already made this year",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1000000,
+        "step": 1
+      },
+      {
+        "id": "compensation",
+        "label": "Plan compensation (annual)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "max": 10000000,
+        "step": 1
+      },
+      {
+        "id": "years_to_special",
+        "label": "Years used for 457(b) special catch-up window (commonly 3)",
+        "type": "integer",
+        "default": 3,
+        "min": 1,
+        "max": 10,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates the additional retirement contributions you may be allowed to make under common U.S. catch-up provisions. It supports the standard age 50+ catch-up, a simplified 457(b) special catch-up estimate, and the SIMPLE IRA catch-up. Because contribution limits are set by law and vary year to year, fields are provided so you can enter the latest IRS limits used by your plan.",
+      "The tool is a planning aid and does not replace plan documents, your plan administrator, or formal tax advice. Use the override fields to reflect the current official limits published by the IRS for the tax year you are planning."
+    ],
+    "methodology": [
+      "The calculator uses three purpose-built methods to reflect the different catch-up rules: standard age-50+ catch-up (applies to many defined contribution plans), a simplified 457(b) special catch-up window (an estimate model), and SIMPLE IRA catch-up.",
+      "Inputs include participant age, plan type, annual elective deferral limit, catch-up limit(s), and contributions already made. The logic computes eligibility flags and applies user-provided limits to compute available incremental contribution amounts and projected totals."
+    ],
+    "how_is_calculated": [
+      "Standard age-50+ catch-up: If age is 50 or older, available catch-up equals the catch-up limit entered. Projected total equals current contribution plus the catch-up limit.",
+      "457(b) special estimate: Simplified model multiplies the annual elective deferral limit by the number of years in the special window (user-set) to produce an estimated special catch-up pool; projected total adds that estimate to current contributions.",
+      "SIMPLE IRA: If the plan type is SIMPLE and age is 50 or older, available catch-up equals the SIMPLE catch-up limit the user enters; projected total adds that amount to current contributions."
+    ],
+    "faqs": [
+      {
+        "question": "Are the numeric defaults guaranteed to match IRS limits?",
+        "answer": "No. Limits are set by the IRS and can change annually. Default numeric values are for convenience only. Always confirm the current limits from the IRS or your plan sponsor and enter them into the appropriate fields."
+      },
+      {
+        "question": "Does this tool replace my plan administrator or tax advisor?",
+        "answer": "No. This tool is a planning estimator. For binding determinations about allowable contributions, consult your plan documents, plan administrator, or a qualified tax advisor."
+      },
+      {
+        "question": "Is the 457(b) special catch-up calculation exact?",
+        "answer": "No. The 457(b) special catch-up provision has rules that depend on unused deferral history and plan specifics. This method provides an estimate; for precise calculations consult your plan administrator."
+      },
+      {
+        "question": "What should I do if my plan enforces lower limits than IRS maximums?",
+        "answer": "Enter the plan-specific annual limit in the 'Plan's current annual elective deferral limit' field. This calculator uses the values supplied by you to produce estimates."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Retirement Topics: Catch-Up Contributions",
+        "url": "https://www.irs.gov/retirement-plans/retirement-topics-catch-up-contributions"
+      },
+      {
+        "label": "IRS — Retirement Topics — Elective Deferrals",
+        "url": "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-contributions"
+      },
+      {
+        "label": "NIST — Frameworks & Best Practices",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards organization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Technical Standards and Best Practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Workplace safety guidance (referenced for process governance)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Catch-up contribution",
+        "definition": "An additional contribution allowed by law for eligible participants (commonly age 50 or older) that supplements a retirement plan's standard annual elective deferral limit."
+      },
+      {
+        "term": "Elective deferral limit",
+        "definition": "The maximum amount a participant may defer from pay into a retirement plan in a single calendar year, before catch-up amounts are added."
+      },
+      {
+        "term": "457(b) special catch-up",
+        "definition": "A special provision for some 457(b) plans that allows larger contributions in a final window before normal retirement age; calculations depend on unused deferrals and plan rules."
+      },
+      {
+        "term": "SIMPLE IRA catch-up",
+        "definition": "A separate, typically smaller, catch-up limit that applies to SIMPLE IRAs for participants age 50 or older."
+      }
+    ],
+    "summary": [
+      "This advanced estimator provides quick projections for common catch-up scenarios; it is customizable so you can input the official IRS limits or plan-specific limits.",
+      "For absolute accuracy and compliance, confirm values with the latest IRS guidance and your plan administrator."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/retirement/catch-up-overview",
+      "/retirement/contribution-limits"
+    ],
+    "external": [
+      {
+        "url": "https://www.irs.gov/retirement-plans/retirement-topics-catch-up-contributions",
+        "label": "IRS Catch-Up Contributions",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

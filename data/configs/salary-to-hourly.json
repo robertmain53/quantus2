@@ -1,0 +1,380 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Salary to Hourly Calculator (Advanced)",
+    "description": "Estimate an hourly rate from a salary or other pay period. Supports custom work weeks, unpaid leave, and basic overtime adjustments. Outputs are gross (pre-tax) estimates for budgeting and comparison, not tax or payroll advice."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_calculation",
+    "methods": {
+      "standard_calculation": {
+        "label": "Standard — use your hours & unpaid leave",
+        "description": "Converts a salary (any common pay period) into an hourly rate using the user's hours per week and weeks per year. Unpaid leave reduces the annual available hours. Optional overtime input computes an effective blended hourly rate.",
+        "variables": {
+          "annual_salary_normalized": {
+            "expression": "salary_amount * salary_period_multiplier",
+            "dependencies": [
+              "salary_amount",
+              "salary_period_multiplier"
+            ],
+            "label": "Annual salary (normalized)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "unpaid_hours": {
+            "expression": "unpaid_leave_days_per_year * hours_per_day",
+            "dependencies": [
+              "unpaid_leave_days_per_year",
+              "hours_per_day"
+            ],
+            "label": "Unpaid leave (hours/year)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "total_work_hours": {
+            "expression": "hours_per_week * weeks_per_year - unpaid_hours",
+            "dependencies": [
+              "hours_per_week",
+              "weeks_per_year",
+              "unpaid_hours"
+            ],
+            "label": "Total available work hours (year)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "base_hourly": {
+            "expression": "annual_salary_normalized / total_work_hours",
+            "dependencies": [
+              "annual_salary_normalized",
+              "total_work_hours"
+            ],
+            "label": "Base hourly rate",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "overtime_extra_equivalent_hours_per_year": {
+            "expression": "overtime_hours_per_week * (overtime_multiplier - 1) * weeks_per_year",
+            "dependencies": [
+              "overtime_hours_per_week",
+              "overtime_multiplier",
+              "weeks_per_year"
+            ],
+            "label": "Overtime extra equivalent hours (year)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "effective_hourly_with_overtime": {
+            "expression": "annual_salary_normalized / (total_work_hours + overtime_extra_equivalent_hours_per_year)",
+            "dependencies": [
+              "annual_salary_normalized",
+              "total_work_hours",
+              "overtime_extra_equivalent_hours_per_year"
+            ],
+            "label": "Effective hourly rate (weighted for overtime pay)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "base_hourly",
+            "label": "Base hourly rate (gross)",
+            "variable": "base_hourly",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_hourly_with_overtime",
+            "label": "Effective hourly rate (with overtime)",
+            "variable": "effective_hourly_with_overtime",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "standard_2080": {
+        "label": "Standard U.S. 2080 hours/year",
+        "description": "Estimate using the common 2080 hours per year assumption (52 weeks × 40 hours).",
+        "variables": {
+          "annual_salary_normalized": {
+            "expression": "salary_amount * salary_period_multiplier",
+            "dependencies": [
+              "salary_amount",
+              "salary_period_multiplier"
+            ],
+            "label": "Annual salary (normalized)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "standard_hours_2080": {
+            "expression": "2080",
+            "dependencies": [],
+            "label": "Standard hours (year)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "hourly_2080": {
+            "expression": "annual_salary_normalized / standard_hours_2080",
+            "dependencies": [
+              "annual_salary_normalized",
+              "standard_hours_2080"
+            ],
+            "label": "Hourly (2080)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "hourly_2080",
+            "label": "Hourly rate (2080 hours/year)",
+            "variable": "hourly_2080",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "salary_amount",
+        "label": "Salary amount (numeric)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "salary_period_multiplier",
+        "label": "Salary period (choose the multiplier to annualize)",
+        "type": "select",
+        "default": "1",
+        "options": [
+          {
+            "label": "Annual (×1)",
+            "value": "1"
+          },
+          {
+            "label": "Monthly (×12)",
+            "value": "12"
+          },
+          {
+            "label": "Semimonthly (×24)",
+            "value": "24"
+          },
+          {
+            "label": "Biweekly (×26)",
+            "value": "26"
+          },
+          {
+            "label": "Weekly (×52)",
+            "value": "52"
+          }
+        ]
+      },
+      {
+        "id": "hours_per_week",
+        "label": "Typical hours worked per week",
+        "type": "number",
+        "default": 40,
+        "min": 1,
+        "max": 168,
+        "step": 0.25
+      },
+      {
+        "id": "weeks_per_year",
+        "label": "Weeks worked per year (paid vacations do not reduce this unless unpaid)",
+        "type": "number",
+        "default": 52,
+        "min": 1,
+        "max": 52,
+        "step": 0.1
+      },
+      {
+        "id": "hours_per_day",
+        "label": "Hours per work day (used to convert unpaid leave days to hours)",
+        "type": "number",
+        "default": 8,
+        "min": 1,
+        "max": 24,
+        "step": 0.1
+      },
+      {
+        "id": "unpaid_leave_days_per_year",
+        "label": "Unpaid leave days per year (set 0 if leave is paid or none)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "overtime_applies",
+        "label": "Does the worker regularly work overtime?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No regular overtime",
+            "value": "no"
+          },
+          {
+            "label": "Yes, regular overtime",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "overtime_hours_per_week",
+        "label": "Typical overtime hours per week (enter 0 if none)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 168,
+        "step": 0.25
+      },
+      {
+        "id": "overtime_multiplier",
+        "label": "Overtime pay multiplier (e.g., 1.5 for time-and-a-half)",
+        "type": "number",
+        "default": 1.5,
+        "min": 1,
+        "max": 5,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator converts a salary or recurring pay amount into an estimated hourly rate. It supports common pay periods (annual, monthly, biweekly, semimonthly, weekly) and allows you to enter your typical hours, weeks worked, unpaid leave, and overtime to produce both a base hourly estimate and an effective hourly estimate that accounts for overtime pay.",
+      "Results are gross (pre-tax) estimates intended for budgeting, job comparison, and negotiation. This tool does not replace payroll systems, employer calculations, or legal guidance about wage and hour law."
+    ],
+    "methodology": [
+      "The calculator first normalizes the entered pay to an annual amount by multiplying the input by the selected period multiplier (monthly ×12, biweekly ×26, etc.).",
+      "Available annual work hours are computed from hours per week and weeks per year, with unpaid leave converted from days to hours and subtracted. The base hourly rate equals normalized annual pay divided by available annual hours.",
+      "If overtime inputs are provided, an effective (blended) hourly rate is computed by treating overtime as paid at the provided multiplier and converting the extra pay into an equivalent number of compensated hours to derive a weighted hourly figure.",
+      "Estimation quality follows general best practices for numeric accuracy and traceability. For algorithmic and accuracy guidance we follow established standards for measurement and numerical reporting such as NIST guidance on measurement uncertainty and ISO recommendations for quality management and documentation, and we adopt IEEE-style clarity for numeric expressions. This calculator is not a certified payroll tool and should be validated against employer payroll records and local labor regulations (for example, U.S. Fair Labor Standards Act rules on overtime)."
+    ],
+    "how_is_calculated": [
+      "annual_salary_normalized = salary_amount × salary_period_multiplier",
+      "unpaid_hours = unpaid_leave_days_per_year × hours_per_day",
+      "total_work_hours = hours_per_week × weeks_per_year − unpaid_hours",
+      "base_hourly = annual_salary_normalized ÷ total_work_hours",
+      "overtime_extra_equivalent_hours_per_year = overtime_hours_per_week × (overtime_multiplier − 1) × weeks_per_year",
+      "effective_hourly_with_overtime = annual_salary_normalized ÷ (total_work_hours + overtime_extra_equivalent_hours_per_year)",
+      "2080-method: hourly = annual_salary_normalized ÷ 2080"
+    ],
+    "examples": [
+      "Example 1: $60,000 annual, 40 hours/week, 52 weeks, 0 unpaid days → base hourly ≈ $28.85 (using 2080 method yields $28.85).",
+      "Example 2: $48,000 annual, monthly input, 37.5 hours/week, 50 working weeks (2 unpaid weeks) → base hourly = normalized annual ÷ available hours, which accounts for unpaid leave.",
+      "Example 3: If overtime is regularly worked at time-and-a-half for 5 hours/week, the effective hourly rate will be higher than the base hourly rate because overtime pay increases total compensation while adding fewer equivalent hours."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include taxes or deductions?",
+        "answer": "No. All outputs are gross (pre-tax) estimates. Taxes, benefits, and payroll deductions are not included. Use actual payroll statements or a dedicated paycheck calculator to estimate net pay."
+      },
+      {
+        "question": "Which hours-per-year should I use?",
+        "answer": "Common conventions are 2080 hours/year for a full-time 40-hour schedule (52 weeks × 40 hours). Use your normal hours_per_week and weeks_per_year when you want a personalized estimate. Subtract unpaid leave days if they reduce compensated hours."
+      },
+      {
+        "question": "How does overtime affect the hourly estimate?",
+        "answer": "If you regularly work paid overtime, the calculator computes an effective blended hourly rate. It converts the extra overtime pay into equivalent extra compensated hours and redivides annual pay across the expanded equivalent hours to produce a weighted hourly rate."
+      },
+      {
+        "question": "Is this a legal or payroll calculation?",
+        "answer": "No. This tool provides estimates only. For payroll records, tax reporting, or compliance with wage-and-hour laws consult your employer, payroll provider, or legal counsel. For U.S. overtime and exempt status rules, consult official labor authorities."
+      },
+      {
+        "question": "How accurate are these results?",
+        "answer": "Results are mathematically precise given the inputs but are only as accurate as the assumptions you supply. We recommend verifying critical numbers with payroll data. Follow verification practices from standards bodies for measurement traceability and document assumptions when using results for decisions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "U.S. Department of Labor — Fair Labor Standards Act (FLSA)",
+        "url": "https://www.dol.gov/agencies/whd/flsa"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://www.ieee.org/standards"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Annualized salary",
+        "definition": "A salary converted to an annual figure by multiplying the pay amount by the selected period multiplier (for example, monthly ×12)."
+      },
+      {
+        "term": "Base hourly rate",
+        "definition": "Normalized annual salary divided by the total available compensated work hours in a year; a gross (pre-tax) rate."
+      },
+      {
+        "term": "Total work hours",
+        "definition": "Hours_per_week × weeks_per_year minus unpaid leave hours converted from days."
+      },
+      {
+        "term": "Effective (blended) hourly rate",
+        "definition": "An adjusted hourly estimate that accounts for overtime pay by converting extra compensation into equivalent hours and dividing total annual compensation by the sum of regular and equivalent overtime hours."
+      },
+      {
+        "term": "Exempt vs Non-exempt",
+        "definition": "Employment classification typically used in labor law. Exempt employees are not eligible for overtime under certain rules; classification affects how pay should be calculated and reported. Consult local regulations for classification rules."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/conversions/pay/annual-to-hourly",
+      "/tools/paycheck-calculator"
+    ],
+    "external": [
+      {
+        "url": "https://www.dol.gov/agencies/whd/flsa",
+        "label": "U.S. Department of Labor - FLSA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

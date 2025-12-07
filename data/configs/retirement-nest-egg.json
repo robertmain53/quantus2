@@ -1,0 +1,407 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Retirement Nest Egg Calculator (Advanced)",
+    "description": "Two-mode retirement calculator: 1) compute the nest egg needed to support a target retirement income using a chosen safe withdrawal rate and inflation adjustments; 2) project your savings at retirement from current balance and ongoing contributions, then convert that projection into a sustainable withdrawal amount. Includes tax adjustment, buffers, and clear limits and caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "target_nest_egg",
+    "methods": {
+      "target_nest_egg": {
+        "label": "Required Nest Egg (Target Income)",
+        "description": "Estimate the lump sum needed at retirement to sustainably generate your target annual income using a specified safe withdrawal rate and inflation adjustment between today and retirement.",
+        "variables": {
+          "years_to_ret": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "desired_income_at_ret": {
+            "expression": "desired_annual_income_today * pow(1 + inflation_rate/100, years_to_ret)",
+            "dependencies": [
+              "desired_annual_income_today",
+              "inflation_rate",
+              "years_to_ret"
+            ],
+            "label": "Desired annual income at retirement (inflation-adjusted)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "required_nest_egg": {
+            "expression": "desired_income_at_ret / (safe_withdrawal_rate_percent/100)",
+            "dependencies": [
+              "desired_income_at_ret",
+              "safe_withdrawal_rate_percent"
+            ],
+            "label": "Required nest egg (gross)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_buffer": {
+            "expression": "required_nest_egg * 1.1",
+            "dependencies": [
+              "required_nest_egg"
+            ],
+            "label": "Recommended target with 10% buffer",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "required_nest_egg_after_tax": {
+            "expression": "required_nest_egg / (1 - tax_rate/100)",
+            "dependencies": [
+              "required_nest_egg",
+              "tax_rate"
+            ],
+            "label": "Required nest egg (gross) to cover taxes",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_nest_egg",
+            "label": "Required nest egg (gross)",
+            "variable": "required_nest_egg",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_buffer",
+            "label": "Recommended target (10% buffer)",
+            "variable": "recommended_buffer",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "required_nest_egg_after_tax",
+            "label": "Required nest egg to cover taxes",
+            "variable": "required_nest_egg_after_tax",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "projected_balance": {
+        "label": "Project Balance to Retirement (and Sustainable Income)",
+        "description": "Project how much your current savings plus ongoing contributions will grow by retirement using an expected pre-retirement return; then compute a sustainable withdrawal amount using the selected safe withdrawal rate and adjust for taxes.",
+        "variables": {
+          "n": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "r": {
+            "expression": "expected_return_pre_retirement/100",
+            "dependencies": [
+              "expected_return_pre_retirement"
+            ],
+            "label": "Expected annual return (decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "fv_lump": {
+            "expression": "current_savings * pow(1 + expected_return_pre_retirement/100, n)",
+            "dependencies": [
+              "current_savings",
+              "expected_return_pre_retirement",
+              "n"
+            ],
+            "label": "Future value of current savings",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "fv_contrib": {
+            "expression": "annual_contribution * ( (pow(1 + expected_return_pre_retirement/100, n) - 1) / (expected_return_pre_retirement/100) )",
+            "dependencies": [
+              "annual_contribution",
+              "expected_return_pre_retirement",
+              "n"
+            ],
+            "label": "Future value of ongoing contributions",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "future_value": {
+            "expression": "fv_lump + fv_contrib",
+            "dependencies": [
+              "fv_lump",
+              "fv_contrib"
+            ],
+            "label": "Projected balance at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "sustainable_income_gross": {
+            "expression": "future_value * (safe_withdrawal_rate_percent/100)",
+            "dependencies": [
+              "future_value",
+              "safe_withdrawal_rate_percent"
+            ],
+            "label": "Annual sustainable withdrawal (gross)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "sustainable_income_net": {
+            "expression": "sustainable_income_gross * (1 - tax_rate/100)",
+            "dependencies": [
+              "sustainable_income_gross",
+              "tax_rate"
+            ],
+            "label": "Annual sustainable withdrawal (after tax)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "future_value",
+            "label": "Projected balance at retirement",
+            "variable": "future_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "sustainable_income_gross",
+            "label": "Estimated sustainable annual income (gross)",
+            "variable": "sustainable_income_gross",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "sustainable_income_net",
+            "label": "Estimated sustainable annual income (after tax)",
+            "variable": "sustainable_income_net",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 45,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 67,
+        "min": 50,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current retirement savings (USD)",
+        "type": "number",
+        "default": 150000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contribution until retirement (USD)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "expected_return_pre_retirement",
+        "label": "Expected annual return before retirement (%)",
+        "type": "number",
+        "default": 5,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "inflation_rate",
+        "label": "Expected annual inflation rate (%)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "desired_annual_income_today",
+        "label": "Desired annual retirement income today (USD)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "safe_withdrawal_rate_percent",
+        "label": "Safe withdrawal rate (%)",
+        "type": "number",
+        "default": 4,
+        "min": 0.5,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "tax_rate",
+        "label": "Estimated effective tax rate on withdrawals (%)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 50,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you estimate the lump sum you need at retirement to support a target annual income, and alternatively it projects how much your current savings plus future contributions may grow by retirement and what sustainable withdrawal that balance supports.",
+      "Choose the method that matches your intent: compute a target nest egg from desired income, or project your balance forward to check the income it would generate. Results are deterministic estimates and should be used for planning, not as a guarantee."
+    ],
+    "methodology": [
+      "Target nest egg uses an inflation adjustment to convert today's desired income into retirement-year dollars, then divides by a chosen safe withdrawal rate to estimate the principal needed to generate that income.",
+      "Projection computes future value using standard future-value formulas for lump sums and level annual contributions using an assumed nominal annual return, then multiplies the projected balance by the safe withdrawal rate to find a nominal sustainable annual withdrawal. Taxes are applied as a simple effective rate to report net income.",
+      "Calculations follow widely used financial math conventions; numerical functions such as pow() (exponentiation) are used for compounding. This tool is not a stochastic Monte Carlo simulator and does not model sequence-of-return risk explicitly."
+    ],
+    "how_is_calculated": [
+      "Years until retirement = retirement_age - current_age",
+      "Inflation-adjusted desired income = desired_annual_income_today * (1 + inflation_rate/100) ^ years_until_retirement",
+      "Required nest egg = inflation-adjusted desired income / (safe_withdrawal_rate_percent/100)",
+      "Future value of current savings = current_savings * (1 + r) ^ n where r = expected_return_pre_retirement/100 and n = years until retirement",
+      "Future value of contributions = annual_contribution * ((1 + r) ^ n - 1) / r",
+      "Projected balance = future value of current savings + future value of contributions",
+      "Sustainable annual withdrawal (gross) = projected balance * (safe_withdrawal_rate_percent/100)",
+      "Estimated after-tax withdrawal = gross withdrawal * (1 - tax_rate/100)"
+    ],
+    "examples": [
+      "Example 1: Age 45, retirement 67, desired income today $50,000, inflation 2.5%, SWR 4% → calculator inflates the $50k to retirement-year dollars and divides by 4% to give the required nest egg.",
+      "Example 2: Age 50, $200k current savings, $12k annual contributions, expected return 6% → calculator projects future balance at retirement and computes the annual sustainable withdrawal based on your chosen safe withdrawal rate."
+    ],
+    "faqs": [
+      {
+        "question": "Is the safe withdrawal rate guaranteed?",
+        "answer": "No. The safe withdrawal rate is an input assumption, not a promise. Historical studies provide guidance, but actual sustainable withdrawal depends on future returns, sequence-of-return risk, inflation, and your spending flexibility. Use conservative assumptions and consult a financial professional for tailored advice."
+      },
+      {
+        "question": "Does this tool account for market volatility or sequence-of-return risk?",
+        "answer": "No. This tool uses deterministic formulas and fixed annual return and inflation assumptions. It does not simulate return variability or sequence-of-return risk. For probabilistic analysis, consider additional tools or advisor-led modeling."
+      },
+      {
+        "question": "Why do you show a buffer?",
+        "answer": "A buffer (default 10%) is included as a simple risk allowance for unforeseen expenses, higher inflation, or lower returns. You can modify or ignore this buffer based on your risk tolerance."
+      },
+      {
+        "question": "How should I interpret after-tax estimates?",
+        "answer": "After-tax estimates apply a simple effective tax rate you enter. Actual taxes depend on account types, tax brackets, and timing. This is a planning estimate only."
+      },
+      {
+        "question": "What are the key limitations?",
+        "answer": "Deterministic projections assume constant nominal returns and inflation, do not model taxes in detail, fees, or pension/benefit interactions, and exclude behavioral responses to market changes. Use results for high-level planning and verify with professionals."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Safe Withdrawal Rate (SWR)",
+        "definition": "A percentage of a retirement portfolio that is withdrawn annually, often used as a planning rule of thumb to estimate sustainable income without depleting principal over a target horizon."
+      },
+      {
+        "term": "Inflation adjustment",
+        "definition": "Scaling a dollar amount in today’s money into future-year dollars using an assumed annual inflation rate and compounding for the number of years until that future date."
+      },
+      {
+        "term": "Future value",
+        "definition": "The projected value of a current amount or series of contributions after compounding at a specified annual return rate for a number of years."
+      },
+      {
+        "term": "Effective tax rate",
+        "definition": "A single blended rate used to approximate the tax impact on withdrawals. Actual taxes can vary by income type, tax bracket, and jurisdiction."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/tools/retirement/safe-withdrawal-rate-explainer",
+      "/guides/retirement-planning/checklists"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

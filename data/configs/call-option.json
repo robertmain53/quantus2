@@ -1,0 +1,521 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Call Option Calculator (Advanced — Black‑Scholes + Expiration Payoff)",
+    "description": "Interactive call option calculator providing Black‑Scholes theoretical price, standard Greeks, expiration payoff and breakeven/ROI metrics. Includes calibration and accuracy guidance referencing numerical and security standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "black_scholes",
+    "methods": {
+      "black_scholes": {
+        "label": "Black‑Scholes (European Call)",
+        "description": "Computes Black‑Scholes theoretical call price and primary Greeks. Assumes European exercise, constant volatility and continuous dividends.",
+        "variables": {
+          "T": {
+            "expression": "time_years",
+            "dependencies": [
+              "time_years"
+            ],
+            "label": "Time to expiry (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "d1": {
+            "expression": "(ln(spot/strike) + (rate - div_yield + 0.5*vol^2)*time_years) / (vol * sqrt(time_years))",
+            "dependencies": [
+              "spot",
+              "strike",
+              "rate",
+              "div_yield",
+              "vol",
+              "time_years"
+            ],
+            "label": "d1 (Black‑Scholes intermediate)",
+            "format": "decimal",
+            "display": false
+          },
+          "d2": {
+            "expression": "d1 - vol * sqrt(time_years)",
+            "dependencies": [
+              "d1",
+              "vol",
+              "time_years"
+            ],
+            "label": "d2 (Black‑Scholes intermediate)",
+            "format": "decimal",
+            "display": false
+          },
+          "nd1": {
+            "expression": "norm_cdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "N(d1) (standard normal CDF)",
+            "format": "decimal",
+            "display": false
+          },
+          "nd2": {
+            "expression": "norm_cdf(d2)",
+            "dependencies": [
+              "d2"
+            ],
+            "label": "N(d2) (standard normal CDF)",
+            "format": "decimal",
+            "display": false
+          },
+          "pdf_d1": {
+            "expression": "norm_pdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "φ(d1) (standard normal PDF)",
+            "format": "decimal",
+            "display": false
+          },
+          "theoretical_price": {
+            "expression": "spot * exp(-div_yield * time_years) * nd1 - strike * exp(-rate * time_years) * nd2",
+            "dependencies": [
+              "spot",
+              "div_yield",
+              "time_years",
+              "nd1",
+              "strike",
+              "rate",
+              "nd2"
+            ],
+            "label": "Theoretical call price (Black‑Scholes)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "delta": {
+            "expression": "exp(-div_yield * time_years) * nd1",
+            "dependencies": [
+              "div_yield",
+              "time_years",
+              "nd1"
+            ],
+            "label": "Delta (∂Price/∂Spot)",
+            "format": "decimal",
+            "display": true
+          },
+          "gamma": {
+            "expression": "exp(-div_yield * time_years) * pdf_d1 / (spot * vol * sqrt(time_years))",
+            "dependencies": [
+              "div_yield",
+              "time_years",
+              "pdf_d1",
+              "spot",
+              "vol"
+            ],
+            "label": "Gamma (∂²Price/∂Spot²)",
+            "format": "decimal",
+            "display": true
+          },
+          "vega": {
+            "expression": "spot * exp(-div_yield * time_years) * pdf_d1 * sqrt(time_years)",
+            "dependencies": [
+              "spot",
+              "div_yield",
+              "time_years",
+              "pdf_d1"
+            ],
+            "label": "Vega (sensitivity to volatility)",
+            "format": "decimal",
+            "display": true
+          },
+          "theta": {
+            "expression": "(-spot * vol * exp(-div_yield * time_years) * pdf_d1) / (2 * sqrt(time_years)) - rate * strike * exp(-rate * time_years) * nd2 + div_yield * spot * exp(-div_yield * time_years) * nd1",
+            "dependencies": [
+              "spot",
+              "vol",
+              "div_yield",
+              "time_years",
+              "pdf_d1",
+              "rate",
+              "strike",
+              "nd2",
+              "nd1"
+            ],
+            "label": "Theta (time decay per year)",
+            "format": "decimal",
+            "display": true
+          },
+          "rho": {
+            "expression": "strike * time_years * exp(-rate * time_years) * nd2",
+            "dependencies": [
+              "strike",
+              "time_years",
+              "rate",
+              "nd2"
+            ],
+            "label": "Rho (sensitivity to interest rate)",
+            "format": "decimal",
+            "display": true
+          },
+          "position_value": {
+            "expression": "theoretical_price * quantity * contract_size",
+            "dependencies": [
+              "theoretical_price",
+              "quantity",
+              "contract_size"
+            ],
+            "label": "Position value (theoretical) for specified quantity",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "theoretical_price",
+            "label": "Theoretical call price (Black‑Scholes)",
+            "variable": "theoretical_price",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "delta",
+            "label": "Delta",
+            "variable": "delta",
+            "format": "decimal"
+          },
+          {
+            "id": "gamma",
+            "label": "Gamma",
+            "variable": "gamma",
+            "format": "decimal"
+          },
+          {
+            "id": "vega",
+            "label": "Vega",
+            "variable": "vega",
+            "format": "decimal"
+          },
+          {
+            "id": "theta",
+            "label": "Theta",
+            "variable": "theta",
+            "format": "decimal"
+          },
+          {
+            "id": "rho",
+            "label": "Rho",
+            "variable": "rho",
+            "format": "decimal"
+          },
+          {
+            "id": "position_value",
+            "label": "Position value (theoretical)",
+            "variable": "position_value",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "expiration_payoff": {
+        "label": "Expiration Payoff and Profit",
+        "description": "Compute intrinsic value at a chosen future spot price, payoff, profit, breakeven and max loss for a long call position.",
+        "variables": {
+          "final_spot": {
+            "expression": "future_spot",
+            "dependencies": [
+              "future_spot"
+            ],
+            "label": "Assumed spot at expiry",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "intrinsic": {
+            "expression": "max(final_spot - strike, 0)",
+            "dependencies": [
+              "final_spot",
+              "strike"
+            ],
+            "label": "Intrinsic value at expiry (per option)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_payoff": {
+            "expression": "intrinsic * quantity * contract_size",
+            "dependencies": [
+              "intrinsic",
+              "quantity",
+              "contract_size"
+            ],
+            "label": "Total payoff at expiry (position)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "profit": {
+            "expression": "(intrinsic - premium) * quantity * contract_size",
+            "dependencies": [
+              "intrinsic",
+              "premium",
+              "quantity",
+              "contract_size"
+            ],
+            "label": "Profit at expiry (position)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "breakeven": {
+            "expression": "strike + premium",
+            "dependencies": [
+              "strike",
+              "premium"
+            ],
+            "label": "Breakeven spot price at expiry (per option)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_loss": {
+            "expression": "premium * quantity * contract_size",
+            "dependencies": [
+              "premium",
+              "quantity",
+              "contract_size"
+            ],
+            "label": "Maximum loss (long call) — paid premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "intrinsic",
+            "label": "Intrinsic value (per option)",
+            "variable": "intrinsic",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payoff",
+            "label": "Total payoff (position)",
+            "variable": "total_payoff",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "profit",
+            "label": "Profit at expiry (position)",
+            "variable": "profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "breakeven",
+            "label": "Breakeven (per option)",
+            "variable": "breakeven",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_loss",
+            "label": "Maximum loss (position)",
+            "variable": "max_loss",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "spot",
+        "label": "Current underlying price (spot)",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "strike",
+        "label": "Strike price",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "premium",
+        "label": "Option premium (market price per option)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "time_years",
+        "label": "Time to expiry (years)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "vol",
+        "label": "Implied volatility (annual, decimal)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "max": 5,
+        "step": 0.01
+      },
+      {
+        "id": "rate",
+        "label": "Risk‑free rate (annual, decimal)",
+        "type": "number",
+        "default": 0.03,
+        "min": -1,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "div_yield",
+        "label": "Continuous dividend yield (annual, decimal)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "quantity",
+        "label": "Number of option contracts",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "contract_size",
+        "label": "Contract size (units per contract)",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "future_spot",
+        "label": "Assumed underlying price at expiry (for payoff scenarios)",
+        "type": "number",
+        "default": 120,
+        "min": 0.01,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides a theoretical European call option price using the Black‑Scholes model plus primary Greeks and an expiration payoff module for scenario analysis. It supports position‑level P&L by specifying contract quantity and size.",
+      "Use the Black‑Scholes output for quick theoretical valuations, and the expiration payoff module to understand profit and breakeven at specific future spot scenarios. Enter market premium to compute realized payoff and ROI for your position."
+    ],
+    "methodology": [
+      "Black‑Scholes: the calculator implements the standard Black‑Scholes closed‑form formulas for European calls, including d1/d2, cumulative normal functions and analytic Greeks. Assumptions include constant volatility, continuous dividend yield and European exercise.",
+      "Numerical and software integrity: calculations are designed with attention to floating‑point stability and traceability. Implementation and testing should follow IEEE 754 for floating‑point handling and established software testing standards.",
+      "Security and quality management: implementations that handle user data or trade execution should follow NIST and ISO guidance for system security and operational controls; safety and workplace practices should respect applicable occupational safety standards."
+    ],
+    "how_is_calculated": [
+      "Black‑Scholes price (call): C = S e^{-qT} N(d1) - K e^{-rT} N(d2) where d1 = [ln(S/K) + (r - q + 0.5 σ^2) T] / (σ sqrt(T)), d2 = d1 - σ sqrt(T).",
+      "Greeks are the analytic partial derivatives of the Black‑Scholes formula: Delta = e^{-qT} N(d1), Gamma = e^{-qT} φ(d1) / (S σ sqrt(T)), Vega = S e^{-qT} φ(d1) sqrt(T), Theta and Rho use standard closed‑form expressions.",
+      "Expiration payoff: intrinsic = max(ST - K, 0). Profit = (intrinsic - premium) × quantity × contract_size. Breakeven = K + premium. Maximum loss for long call is the premium paid."
+    ],
+    "examples": [
+      "Example: Spot 100, Strike 100, Premium 2.50, Vol 25% annual, Time 0.25 years, Rate 3%: Black‑Scholes outputs a theoretical price and Greeks; expiration payoff at ST=120 shows intrinsic 20.00 per option and profit = (20.00 - 2.50) × quantity × contract_size."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate is the Black‑Scholes price compared with market quotes?",
+        "answer": "Black‑Scholes gives a theoretical price under its assumptions. Market prices reflect supply/demand, discrete dividends, early exercise possibilities, volatility skew and liquidity. Use implied volatility calibrated to observed option prices for closer alignment. Numeric precision follows IEEE floating point conventions; small rounding differences may occur."
+      },
+      {
+        "question": "Does this tool provide trading advice?",
+        "answer": "No. This tool is for educational and analytical purposes. It does not constitute financial, investment, tax or legal advice. Always validate results with market quotes and, if needed, a licensed professional."
+      },
+      {
+        "question": "What are the main limitations I should be aware of?",
+        "answer": "Key limitations: Black‑Scholes assumes constant volatility and interest rates, continuous dividend yield and European exercise. It does not model early exercise for American options, discrete dividends, complex payoff structures, or transaction costs."
+      },
+      {
+        "question": "What standards were used to guide development and testing?",
+        "answer": "Recommended practices referenced include IEEE floating point standard for numeric stability, NIST guidance for system and data security controls, and ISO standards for information security management and quality processes. Occupational safety considerations should follow applicable OSHA guidance where relevant to operations."
+      },
+      {
+        "question": "How should I calibrate volatility inputs?",
+        "answer": "Calibrate implied volatility by observing market option prices across strikes and expiries. For consistency check implied volatility against exchange or broker quotes, and consider using the mid‑market premium when available."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST SP 800‑53 (Security and Privacy Controls)",
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final"
+      },
+      {
+        "label": "ISO/IEC 27001 (Information Security Management)",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE Standard 754‑2019 (Floating‑Point Arithmetic)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "OSHA (Occupational Safety and Health Administration)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Intrinsic value",
+        "definition": "The value of the option if exercised immediately: max(Spot - Strike, 0) for a call."
+      },
+      {
+        "term": "Time value",
+        "definition": "The portion of option premium attributable to time until expiry and volatility; total premium minus intrinsic value."
+      },
+      {
+        "term": "Implied volatility",
+        "definition": "The volatility input that, when used in a pricing model, reproduces the market option price."
+      },
+      {
+        "term": "Delta",
+        "definition": "Sensitivity of option price to a small change in underlying price (∂Price/∂Spot)."
+      },
+      {
+        "term": "Gamma",
+        "definition": "Rate of change of delta with respect to the underlying price (∂²Price/∂Spot²)."
+      },
+      {
+        "term": "Vega",
+        "definition": "Sensitivity of option price to a small change in implied volatility."
+      },
+      {
+        "term": "Theta",
+        "definition": "Rate of change of option price with respect to time to expiry (time decay)."
+      },
+      {
+        "term": "Rho",
+        "definition": "Sensitivity of option price to a small change in the risk‑free interest rate."
+      },
+      {
+        "term": "Breakeven (long call)",
+        "definition": "Underlying price at expiry where profit = 0: Strike + premium paid."
+      },
+      {
+        "term": "Contract size",
+        "definition": "Number of underlying units covered by one option contract (commonly 100 for equity options)."
+      }
+    ]
+  }
+}

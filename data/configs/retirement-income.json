@@ -1,0 +1,497 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Retirement Income Calculator (Multi-Method Planner)",
+    "description": "An advanced retirement income planner that estimates sustainable retirement withdrawals, annuity income, and required capital to meet income goals. Multiple calculation methods let you compare safe-withdrawal-rate, annuity purchase, and target-income approaches."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "swr_method",
+    "methods": {
+      "swr_method": {
+        "label": "Safe Withdrawal Rate (SWR) Scenario",
+        "description": "Estimates first-year withdrawal amount using a user-specified withdrawal rate applied to projected portfolio value at retirement, then adds guaranteed income sources.",
+        "variables": {
+          "years": {
+            "expression": "life_expectancy - retirement_age",
+            "dependencies": [
+              "life_expectancy",
+              "retirement_age"
+            ],
+            "label": "Years in retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "projected_capital_at_retirement": {
+            "expression": "current_savings * pow(1 + pre_retirement_return, retirement_age - current_age) + annual_contribution * ((pow(1 + pre_retirement_return, retirement_age - current_age) - 1) / pre_retirement_return)",
+            "dependencies": [
+              "current_savings",
+              "pre_retirement_return",
+              "retirement_age",
+              "current_age",
+              "annual_contribution"
+            ],
+            "label": "Projected portfolio at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "real_return": {
+            "expression": "(1 + post_retirement_return) / (1 + inflation) - 1",
+            "dependencies": [
+              "post_retirement_return",
+              "inflation"
+            ],
+            "label": "Estimated real return in retirement",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "sustainable_withdrawal": {
+            "expression": "projected_capital_at_retirement * withdrawal_rate_percent / 100",
+            "dependencies": [
+              "projected_capital_at_retirement",
+              "withdrawal_rate_percent"
+            ],
+            "label": "Estimated first-year portfolio withdrawal",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_income_total": {
+            "expression": "sustainable_withdrawal + guaranteed_income + social_security",
+            "dependencies": [
+              "sustainable_withdrawal",
+              "guaranteed_income",
+              "social_security"
+            ],
+            "label": "Total estimated annual retirement income (first year)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_capital_at_retirement",
+            "label": "Projected portfolio at retirement",
+            "variable": "projected_capital_at_retirement",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "sustainable_withdrawal",
+            "label": "Estimated first-year withdrawal from portfolio",
+            "variable": "sustainable_withdrawal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_income_total",
+            "label": "Total estimated annual income (portfolio + guaranteed sources)",
+            "variable": "annual_income_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years",
+            "label": "Years in retirement (life expectancy - retirement age)",
+            "variable": "years",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      },
+      "annuity_method": {
+        "label": "Annuity Purchase Scenario",
+        "description": "Converts a lump-sum annuity purchase into an expected guaranteed annual payout using a user-specified annuity rate (illustrative). Adds other guaranteed and Social Security income to show total guaranteed cash flow.",
+        "variables": {
+          "purchase": {
+            "expression": "annuity_purchase_amount",
+            "dependencies": [
+              "annuity_purchase_amount"
+            ],
+            "label": "Annuity purchase amount",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_annuity_income": {
+            "expression": "annuity_purchase_amount * annuity_rate_percent",
+            "dependencies": [
+              "annuity_purchase_amount",
+              "annuity_rate_percent"
+            ],
+            "label": "Estimated annual annuity payout",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_guaranteed_income": {
+            "expression": "annual_annuity_income + guaranteed_income + social_security",
+            "dependencies": [
+              "annual_annuity_income",
+              "guaranteed_income",
+              "social_security"
+            ],
+            "label": "Total guaranteed income (annuity + pension + Social Security)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_annuity_income",
+            "label": "Estimated annual annuity payout",
+            "variable": "annual_annuity_income",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_guaranteed_income",
+            "label": "Total guaranteed income (annuity + pension + Social Security)",
+            "variable": "total_guaranteed_income",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "income_goal_method": {
+        "label": "Required Capital to Meet Income Goal",
+        "description": "Back-calculates the capital needed to generate a target annual income given a withdrawal rate and existing guaranteed income.",
+        "variables": {
+          "income_shortfall": {
+            "expression": "max(0, desired_annual_income - guaranteed_income - social_security)",
+            "dependencies": [
+              "desired_annual_income",
+              "guaranteed_income",
+              "social_security"
+            ],
+            "label": "Remaining income target after guaranteed sources",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "required_capital": {
+            "expression": "income_shortfall / (withdrawal_rate_percent / 100)",
+            "dependencies": [
+              "income_shortfall",
+              "withdrawal_rate_percent"
+            ],
+            "label": "Required portfolio to meet desired income (approx.)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "income_shortfall",
+            "label": "Income shortfall after guaranteed sources",
+            "variable": "income_shortfall",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "required_capital",
+            "label": "Estimated required capital to meet desired income",
+            "variable": "required_capital",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 45,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 67,
+        "min": 50,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "life_expectancy",
+        "label": "Life expectancy (age)",
+        "type": "integer",
+        "default": 90,
+        "min": 60,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current retirement savings (total)",
+        "type": "number",
+        "default": 150000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contribution before retirement",
+        "type": "number",
+        "default": 12000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "pre_retirement_return",
+        "label": "Expected annual return before retirement (decimal)",
+        "type": "number",
+        "default": 0.06,
+        "min": -0.2,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "post_retirement_return",
+        "label": "Expected annual return in retirement (decimal)",
+        "type": "number",
+        "default": 0.04,
+        "min": -0.2,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "inflation",
+        "label": "Expected annual inflation (decimal)",
+        "type": "number",
+        "default": 0.02,
+        "min": -0.05,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "desired_annual_income",
+        "label": "Desired annual retirement income (before tax)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "guaranteed_income",
+        "label": "Other guaranteed annual income (pension, annuity income guaranteed today)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "social_security",
+        "label": "Estimated Social Security annual benefit (at planned start age)",
+        "type": "number",
+        "default": 18000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annuity_purchase_amount",
+        "label": "Lump sum intended for annuity purchase",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annuity_rate_percent",
+        "label": "Illustrative annuity payout rate (decimal)",
+        "type": "number",
+        "default": 0.04,
+        "min": 0,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "withdrawal_rate_percent",
+        "label": "Planned initial withdrawal rate (percent)",
+        "type": "number",
+        "default": 4,
+        "min": 0.5,
+        "max": 10,
+        "step": 0.1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "projected_capital_at_retirement",
+          "label": "Projected portfolio at retirement",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "sustainable_withdrawal",
+          "label": "Estimated first-year withdrawal from portfolio",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "annual_income_total",
+          "label": "Total estimated annual income (portfolio + guaranteed sources)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "annual_annuity_income",
+          "label": "Estimated annual annuity payout",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_guaranteed_income",
+          "label": "Total guaranteed income (annuity + pension + Social Security)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "income_shortfall",
+          "label": "Income shortfall after guaranteed sources",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "required_capital",
+          "label": "Estimated required capital to meet desired income",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "years",
+          "label": "Years in retirement",
+          "format": "integer",
+          "unit": "years"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you compare multiple ways to generate retirement income: a portfolio-based safe withdrawal plan, a lump-sum annuity purchase, and a backward calculation to estimate required capital for a desired income level. Enter your current savings, expected returns, inflation, and other guaranteed income sources to see first-year income estimates and required capital assumptions.",
+      "The tool is designed to provide clear, comparable outputs so you can evaluate trade-offs (flexibility versus guaranteed income). It does not replace personalized financial advice and should be used with awareness of model limits and input uncertainty."
+    ],
+    "methodology": [
+      "The methods use standard financial math: compound growth to project savings to retirement, a constant-percentage withdrawal applied to projected capital for SWR estimates, and simple division to estimate capital required for a target income. An annuity illustration uses a user-specified payout rate to convert principal to an annual guaranteed payment.",
+      "We follow best-practice engineering and operational controls for calculation integrity and secure handling of inputs, referencing general guidance from standards bodies for software assurance and data protection. This includes using reproducible formulas, documenting assumptions, and advising users on input sensitivity and scenario testing."
+    ],
+    "how_is_calculated": [
+      "Project portfolio at retirement: current_savings * (1 + pre_retirement_return)^(years_to_retirement) + annual_contribution * (((1 + pre_retirement_return)^(years_to_retirement) - 1) / pre_retirement_return).",
+      "SWR first-year withdrawal: projected_portfolio_at_retirement * (withdrawal_rate_percent / 100).",
+      "Annuity payout (illustrative): annuity_purchase_amount * annuity_rate_percent.",
+      "Required capital to meet income goal: max(0, (desired_annual_income - guaranteed_income - social_security)) / (withdrawal_rate_percent / 100)."
+    ],
+    "examples": [
+      "Example 1: A 60-year-old with $500,000, retiring at 67 with 4% assumed withdrawal expects an initial portfolio withdrawal of roughly $X (portfolio dependent).",
+      "Example 2: Purchasing a $200,000 annuity at a 4% payout rate yields roughly $8,000/year guaranteed, which can be combined with pension and Social Security for total guaranteed income."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are scenario estimates based on the inputs and simplified financial formulas. They are sensitive to assumptions about returns, inflation, and longevity. Use multiple scenarios and consult a qualified advisor for tailored planning."
+      },
+      {
+        "question": "Does this include taxes and fees?",
+        "answer": "No. This tool presents pre-tax amounts and illustrative annuity rates. Taxes, transaction costs, and insurance or annuity fees materially affect net income and should be considered separately."
+      },
+      {
+        "question": "Why are there multiple methods?",
+        "answer": "Different methods reflect different retirement strategies: portfolio withdrawals prioritize flexibility, annuities prioritize guaranteed income, and the target-income approach shows the capital needed to meet a target given a withdrawal assumption."
+      },
+      {
+        "question": "Can I rely on a single withdrawal rate forever?",
+        "answer": "A single fixed withdrawal rate is a simplification. Sequence-of-returns risk and real-return variability can deplete portfolios faster than simple formulas predict. Consider stress testing with lower return scenarios and consult a professional."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — general guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 22222 — Personal financial planning standard (overview)",
+        "url": "https://www.iso.org/standard/41077.html"
+      },
+      {
+        "label": "IEEE — Software engineering and reliability resources",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "U.S. Occupational Safety and Health Administration (OSHA) — operational safety standards",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Social Security Administration — benefit estimators and rules",
+        "url": "https://www.ssa.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Safe Withdrawal Rate (SWR)",
+        "definition": "An initial withdrawal percentage applied to retirement capital intended to provide sustainable income; commonly used heuristic varies by study and personal circumstances."
+      },
+      {
+        "term": "Projected portfolio at retirement",
+        "definition": "Estimated total retirement savings at planned retirement date after applying expected pre-retirement returns and contributions."
+      },
+      {
+        "term": "Guaranteed income",
+        "definition": "Income sources contractually promised, such as defined-benefit pensions or annuity payments."
+      },
+      {
+        "term": "Annuity payout rate",
+        "definition": "A market-dependent rate (often expressed as a decimal) used to convert lump-sum purchase price into an expected annual payment; illustrative and varies by provider and contract terms."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST (standards & guidance)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standard/41077.html",
+        "label": "ISO 22222 (personal financial planning)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE (software and engineering resources)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

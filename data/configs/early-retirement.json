@@ -1,0 +1,527 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Early Retirement Planner (multi-method)",
+    "description": "An advanced early-retirement calculator supporting FIRE time-to-retire, static safe-withdrawal, dynamic withdrawal estimates, and target-income planning. Includes configurable returns, inflation, contributions, and conservative accuracy notes aligned with recognized standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "time_to_retire",
+    "methods": {
+      "time_to_retire": {
+        "label": "FIRE-style time-to-retire (target multiple of spending)",
+        "description": "Estimates projected portfolio at planned retirement and compares it to a target portfolio derived from your projected spending and a chosen safe-withdrawal rate.",
+        "variables": {
+          "years_to_retire": {
+            "expression": "planned_retirement_age - current_age",
+            "dependencies": [
+              "planned_retirement_age",
+              "current_age"
+            ],
+            "label": "Years until planned retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "inflated_spending_at_retirement": {
+            "expression": "annual_spending_today * pow(1 + expected_inflation, years_to_retire)",
+            "dependencies": [
+              "annual_spending_today",
+              "expected_inflation",
+              "years_to_retire"
+            ],
+            "label": "Estimated nominal spending in first retirement year",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "target_portfolio": {
+            "expression": "inflated_spending_at_retirement / safe_withdrawal_rate",
+            "dependencies": [
+              "inflated_spending_at_retirement",
+              "safe_withdrawal_rate"
+            ],
+            "label": "Target portfolio to fund first-year nominal spending using the safe withdrawal rate",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "projected_savings": {
+            "expression": "current_savings * pow(1 + expected_return_pre, years_to_retire) + annual_contribution * ( (pow(1 + expected_return_pre, years_to_retire) - 1) / expected_return_pre )",
+            "dependencies": [
+              "current_savings",
+              "expected_return_pre",
+              "years_to_retire",
+              "annual_contribution"
+            ],
+            "label": "Projected portfolio at planned retirement (nominal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "years_to_retirement",
+            "label": "Years until planned retirement",
+            "variable": "years_to_retire",
+            "unit": "years",
+            "format": "integer"
+          },
+          {
+            "id": "projected_portfolio",
+            "label": "Projected portfolio at retirement",
+            "variable": "projected_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "target_portfolio_needed",
+            "label": "Target portfolio needed (safe-withdrawal basis)",
+            "variable": "target_portfolio",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "standard_withdrawal": {
+        "label": "Static safe-withdrawal evaluation (single-rate)",
+        "description": "Applies a single safe-withdrawal percentage to the projected portfolio to estimate first-year retirement income and replacement ratio versus projected spending.",
+        "variables": {
+          "years_to_retire": {
+            "expression": "planned_retirement_age - current_age",
+            "dependencies": [
+              "planned_retirement_age",
+              "current_age"
+            ],
+            "label": "Years until planned retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "projected_portfolio": {
+            "expression": "current_savings * pow(1 + expected_return_pre, years_to_retire) + annual_contribution * ( (pow(1 + expected_return_pre, years_to_retire) - 1) / expected_return_pre )",
+            "dependencies": [
+              "current_savings",
+              "expected_return_pre",
+              "years_to_retire",
+              "annual_contribution"
+            ],
+            "label": "Projected portfolio at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "inflated_spending_at_retirement": {
+            "expression": "annual_spending_today * pow(1 + expected_inflation, years_to_retire)",
+            "dependencies": [
+              "annual_spending_today",
+              "expected_inflation",
+              "years_to_retire"
+            ],
+            "label": "Estimated nominal spending in first retirement year",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "first_year_withdrawal": {
+            "expression": "projected_portfolio * safe_withdrawal_rate",
+            "dependencies": [
+              "projected_portfolio",
+              "safe_withdrawal_rate"
+            ],
+            "label": "Estimated first-year withdrawal (nominal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "replacement_rate_percent": {
+            "expression": "100 * first_year_withdrawal / inflated_spending_at_retirement",
+            "dependencies": [
+              "first_year_withdrawal",
+              "inflated_spending_at_retirement"
+            ],
+            "label": "Replacement rate vs estimated retirement-year spending (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_portfolio",
+            "label": "Projected portfolio",
+            "variable": "projected_portfolio",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "first_year_withdrawal",
+            "label": "Estimated first-year withdrawal",
+            "variable": "first_year_withdrawal",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "replacement_rate",
+            "label": "Replacement rate (%)",
+            "variable": "replacement_rate_percent",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "dynamic_withdrawal": {
+        "label": "Dynamic withdrawal indicator (sequence-of-returns aware estimate)",
+        "description": "Provides a simple heuristic of how many years the projected portfolio would support inflation-adjusted spending at current parameters. This is an estimate and does not simulate sequence-of-returns scenarios.",
+        "variables": {
+          "years_to_retire": {
+            "expression": "planned_retirement_age - current_age",
+            "dependencies": [
+              "planned_retirement_age",
+              "current_age"
+            ],
+            "label": "Years until planned retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "projected_portfolio": {
+            "expression": "current_savings * pow(1 + expected_return_pre, years_to_retire) + annual_contribution * ( (pow(1 + expected_return_pre, years_to_retire) - 1) / expected_return_pre )",
+            "dependencies": [
+              "current_savings",
+              "expected_return_pre",
+              "years_to_retire",
+              "annual_contribution"
+            ],
+            "label": "Projected portfolio at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "real_annual_spending_at_retirement": {
+            "expression": "annual_spending_today * pow(1 + expected_inflation, years_to_retire)",
+            "dependencies": [
+              "annual_spending_today",
+              "expected_inflation",
+              "years_to_retire"
+            ],
+            "label": "Estimated nominal spending at retirement start",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "years_supported_estimate": {
+            "expression": "projected_portfolio / real_annual_spending_at_retirement",
+            "dependencies": [
+              "projected_portfolio",
+              "real_annual_spending_at_retirement"
+            ],
+            "label": "Estimated number of years portfolio supports estimated retirement-year spending",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "years_supported",
+            "label": "Estimated years portfolio supports spending",
+            "variable": "years_supported_estimate",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "projected_portfolio",
+            "label": "Projected portfolio",
+            "variable": "projected_portfolio",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "income_target": {
+        "label": "Target income planning (determine portfolio for a given retirement income)",
+        "description": "Calculates the nominal income required at retirement and the portfolio needed to generate that income based on a chosen withdrawal rate.",
+        "variables": {
+          "years_to_retire": {
+            "expression": "planned_retirement_age - current_age",
+            "dependencies": [
+              "planned_retirement_age",
+              "current_age"
+            ],
+            "label": "Years until planned retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "target_income_nominal": {
+            "expression": "annual_spending_today * pow(1 + expected_inflation, years_to_retire)",
+            "dependencies": [
+              "annual_spending_today",
+              "expected_inflation",
+              "years_to_retire"
+            ],
+            "label": "Nominal target income at retirement start",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "needed_portfolio": {
+            "expression": "target_income_nominal / safe_withdrawal_rate",
+            "dependencies": [
+              "target_income_nominal",
+              "safe_withdrawal_rate"
+            ],
+            "label": "Portfolio required to support target income (first-year basis)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "target_income_nominal",
+            "label": "Target nominal income at retirement start",
+            "variable": "target_income_nominal",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "needed_portfolio",
+            "label": "Portfolio required for target income",
+            "variable": "needed_portfolio",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 35,
+        "min": 18,
+        "max": 80,
+        "step": 1
+      },
+      {
+        "id": "planned_retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 55,
+        "min": 30,
+        "max": 80,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current retirement savings (total)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contribution (pre-retirement)",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_spending_today",
+        "label": "Current annual spending you want to replace",
+        "type": "number",
+        "default": 40000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "expected_return_pre",
+        "label": "Expected pre-retirement nominal annual return (decimal)",
+        "type": "number",
+        "default": 0.06,
+        "min": 0,
+        "max": 0.2,
+        "step": 0.005
+      },
+      {
+        "id": "expected_return_post",
+        "label": "Expected post-retirement nominal annual return (decimal)",
+        "type": "number",
+        "default": 0.05,
+        "min": -0.05,
+        "max": 0.2,
+        "step": 0.005
+      },
+      {
+        "id": "expected_inflation",
+        "label": "Expected annual inflation (decimal)",
+        "type": "number",
+        "default": 0.02,
+        "min": -0.02,
+        "max": 0.1,
+        "step": 0.001
+      },
+      {
+        "id": "safe_withdrawal_rate",
+        "label": "Safe withdrawal rate (decimal, e.g. 0.04 = 4%)",
+        "type": "number",
+        "default": 0.04,
+        "min": 0.01,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "retirement_duration_years",
+        "label": "Planned retirement duration (years) (used by some analyses)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 60,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This advanced early-retirement planner estimates when you could retire given your current savings, contributions, assumed returns, inflation, and a chosen withdrawal strategy. It supports multiple methods so you can compare a FIRE-style target, a static safe-withdrawal projection, a simple dynamic indicator, and a target-income calculation.",
+      "The tool is intended for planning and scenario comparison. It provides deterministic estimates based on the inputs and does not simulate sequence-of-returns scenarios or tax, health, or policy changes. Use conservative assumptions and consult a licensed financial professional for personalized advice."
+    ],
+    "methodology": [
+      "The calculator projects nominal portfolio growth to the planned retirement year using geometric compounding and a standard future value of an annuity formula for contributions. Spending estimates are inflated to the retirement start year using your inflation assumption.",
+      "Multiple methods are provided: a target-portfolio approach (spending × 1/withdrawal rate), a static withdrawal estimate applying a single withdrawal rate to the projected balance, a heuristic dynamic indicator that divides projected balance by inflated spending to estimate years supported, and a target-income calculation solving required portfolio from desired retirement income.",
+      "Accuracy and data handling guidance in this tool follows secure handling and software reliability practices recommended by standards bodies. See citations for links to recognized standards and authoritative sources. This tool is not investment advice."
+    ],
+    "how_is_calculated": [
+      "Years to retirement = planned_retirement_age − current_age",
+      "Projected portfolio = current_savings × (1 + expected_return_pre)^(years_to_retire) + annual_contribution × (( (1 + expected_return_pre)^(years_to_retire) − 1 ) / expected_return_pre)",
+      "Inflated spending at retirement = annual_spending_today × (1 + expected_inflation)^(years_to_retire)",
+      "Target portfolio (safe-withdrawal basis) = inflated spending at retirement ÷ safe_withdrawal_rate",
+      "First-year withdrawal (static) = projected portfolio × safe_withdrawal_rate",
+      "Years-supported heuristic = projected portfolio ÷ inflated spending at retirement"
+    ],
+    "examples": [
+      "Example: Age 35, retire at 55, $100k savings, $15k/year contributions, 6% pre-retirement return, 2% inflation, 4% withdrawal rate. The planner projects the portfolio at 55 and shows how it compares to the target portfolio needed to fund inflation-adjusted spending.",
+      "Use the dynamic-withdrawal indicator to get a rough sense of how many years the projected portfolio could support your estimated first-year retirement spending. This is a heuristic, not a Monte Carlo simulation."
+    ],
+    "faqs": [
+      {
+        "question": "Does this tool run Monte Carlo simulations or model sequence-of-returns risk?",
+        "answer": "No. This calculator provides deterministic, formula-based projections. It does not perform Monte Carlo simulations or model variable sequences of returns. For sequence-of-returns analysis, use a simulator or consult a professional."
+      },
+      {
+        "question": "Are taxes, Social Security, or pensions included?",
+        "answer": "No. This tool does not automatically include taxes, Social Security benefits, defined-benefit pensions, or healthcare costs. You may incorporate those by adjusting your target spending or adding them outside the calculator."
+      },
+      {
+        "question": "What is a safe withdrawal rate?",
+        "answer": "A safe withdrawal rate is an assumed sustainable first-year withdrawal percentage (commonly 3%–5%) used to estimate the portfolio needed to fund retirement. It is a simplifying assumption and not a guarantee of outcomes."
+      },
+      {
+        "question": "How should I choose return and inflation assumptions?",
+        "answer": "Choose conservative, well-reasoned assumptions based on historical ranges, your asset allocation, and current market conditions. Consider running stress cases (lower returns, higher inflation) for planning."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology (guidance on trustworthy computing and risk management)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization (standards catalogue and financial service guidance)",
+        "url": "https://www.iso.org/standards.html"
+      },
+      {
+        "label": "IEEE Standards Association (standards for software and numerical methods)",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration (relevant guidance on organizational risk management practices)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Social Security Administration (official information on retirement benefits)",
+        "url": "https://www.ssa.gov"
+      },
+      {
+        "label": "IRS - Retirement plans and distributions (tax considerations)",
+        "url": "https://www.irs.gov/retirement-plans"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Safe withdrawal rate",
+        "definition": "An assumed initial withdrawal percentage of the portfolio used to estimate sustainable retirement income (e.g., 4% = 0.04). Not a guarantee."
+      },
+      {
+        "term": "Sequence of returns risk",
+        "definition": "The risk that poor investment returns in the early years of retirement can disproportionately deplete a portfolio compared with average returns."
+      },
+      {
+        "term": "Nominal return",
+        "definition": "The annual return expressed in current dollars, not adjusted for inflation."
+      },
+      {
+        "term": "Real return",
+        "definition": "Return adjusted for inflation; nominal return minus inflation rate approximately."
+      },
+      {
+        "term": "Replacement rate",
+        "definition": "The ratio of retirement income to pre-retirement income or spending, often expressed as a percentage."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/planning/retirement/overview",
+      "/tools/savings/growth-calculator"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standards.html",
+        "label": "ISO standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

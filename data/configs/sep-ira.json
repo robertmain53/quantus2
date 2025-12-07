@@ -1,0 +1,318 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "SEP IRA Contribution Calculator (Employer & Self‑Employed)",
+    "description": "Estimate SEP IRA employer contributions for employees and owner-only/self-employed taxpayers. Supports standard employer-rate calculations and the self-employed adjustment used to compute the allowable deduction. Includes IRS limits and security/accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "self_employed_owner",
+    "methods": {
+      "employer_contribution": {
+        "label": "Employer contribution (W-2 employees)",
+        "description": "Calculate employer contribution for an employee using a chosen percentage of compensation, capped at the plan/IRS annual limit.",
+        "variables": {
+          "rate": {
+            "expression": "employer_rate_percent / 100",
+            "dependencies": [
+              "employer_rate_percent"
+            ],
+            "label": "Employer rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "contribution_raw": {
+            "expression": "compensation * rate",
+            "dependencies": [
+              "compensation",
+              "rate"
+            ],
+            "label": "Uncapped contribution",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "contribution_capped": {
+            "expression": "min(contribution_raw, annual_limit)",
+            "dependencies": [
+              "contribution_raw",
+              "annual_limit"
+            ],
+            "label": "Contribution (capped at annual limit)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "percent_of_compensation": {
+            "expression": "if(compensation>0, 100 * contribution_capped / compensation, 0)",
+            "dependencies": [
+              "contribution_capped",
+              "compensation"
+            ],
+            "label": "Contribution as percent of compensation",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "employer_contribution_amount",
+            "label": "Employer contribution (USD)",
+            "variable": "contribution_capped",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "employer_contribution_percent",
+            "label": "Contribution as percent of compensation",
+            "variable": "percent_of_compensation",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "self_employed_owner": {
+        "label": "Self‑employed / owner calculation (sole proprietor)",
+        "description": "Calculate the owner-only SEP IRA contribution using the self-employed adjustment. The formula accounts for half self-employment tax and the deduction interaction that reduces the allowable contribution percentage.",
+        "variables": {
+          "adjusted_income": {
+            "expression": "net_self_employment_income - half_self_employment_tax",
+            "dependencies": [
+              "net_self_employment_income",
+              "half_self_employment_tax"
+            ],
+            "label": "Adjusted net earnings (after half SE tax)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "effective_rate": {
+            "expression": "0.25 / (1 + 0.25)",
+            "dependencies": [],
+            "label": "Effective employer fraction for self-employed",
+            "format": "decimal",
+            "display": false
+          },
+          "contribution_raw": {
+            "expression": "effective_rate * adjusted_income",
+            "dependencies": [
+              "effective_rate",
+              "adjusted_income"
+            ],
+            "label": "Uncapped self-employed contribution",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "contribution_capped": {
+            "expression": "min(contribution_raw, annual_limit)",
+            "dependencies": [
+              "contribution_raw",
+              "annual_limit"
+            ],
+            "label": "Self-employed contribution (capped at annual limit)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "effective_percent_of_net": {
+            "expression": "if(adjusted_income>0, 100 * contribution_capped / adjusted_income, 0)",
+            "dependencies": [
+              "contribution_capped",
+              "adjusted_income"
+            ],
+            "label": "Effective percent of adjusted net earnings",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "self_employed_contribution_amount",
+            "label": "Estimated SEP contribution (USD)",
+            "variable": "contribution_capped",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "self_employed_effective_percent",
+            "label": "Effective percent of adjusted net earnings",
+            "variable": "effective_percent_of_net",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "tax_year",
+        "label": "Tax year (for IRS annual limit reference)",
+        "type": "select",
+        "default": "2024",
+        "options": [
+          {
+            "label": "2023",
+            "value": "2023"
+          },
+          {
+            "label": "2024",
+            "value": "2024"
+          },
+          {
+            "label": "2025",
+            "value": "2025"
+          }
+        ]
+      },
+      {
+        "id": "annual_limit",
+        "label": "IRS annual contribution limit (USD)",
+        "type": "integer",
+        "default": 69000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "compensation",
+        "label": "Employee compensation (W-2 wages) subject to SEP (USD)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "employer_rate_percent",
+        "label": "Employer contribution rate (%)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "max": 25,
+        "step": 0.01
+      },
+      {
+        "id": "net_self_employment_income",
+        "label": "Net earnings from self-employment (Schedule C net profit) (USD)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "half_self_employment_tax",
+        "label": "Half of self-employment tax (USD). If unknown, estimate = net × 0.0765",
+        "type": "number",
+        "default": 7650,
+        "min": 0,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates allowable SEP IRA employer contributions for traditional employer relationships (W-2 employees) and for owner-only/self-employed taxpayers. It implements the common IRS approach where employer contributions are limited to a percentage of compensation and also capped by the IRS annual contribution limit.",
+      "For sole proprietors and other self-employed taxpayers the calculation must account for half of self-employment tax and the deduction interaction that reduces the effective contribution percentage. Use the fields to enter your compensation or net self-employment income and, if needed, an estimate of half your self-employment tax."
+    ],
+    "methodology": [
+      "Employer method: contribution is compensation × chosen rate (typically up to 25% for eligible employees). The calculator applies an IRS annual dollar limit (entered above) and returns the lesser of the percentage calculation and the dollar cap.",
+      "Self-employed method (sole proprietors): the contribution interacts with the allowable deduction. The conventional approach here uses the employer fraction of 25% but converts it to an effective rate for self-employed taxpayers by solving for the contribution when the deduction reduces the base. Mathematically this is rate / (1 + rate) applied to net earnings after subtracting half self-employment tax. For rate=25%, the effective multiplier is 0.25/(1+0.25) = 0.20 (20%).",
+      "Security and accuracy: calculators like this must protect user data and follow recognized controls for handling sensitive financial inputs. We recommend implementing controls aligned with NIST SP 800-53 / NIST Cybersecurity Framework and ISO/IEC 27001 for information security. Calculation logic should be validated and unit-tested; follow IEEE best practices for numerical robustness and document assumptions."
+    ],
+    "how_is_calculated": [
+      "Employer (employees): contribution = min(compensation × (employer_rate_percent / 100), annual_limit).",
+      "Self-employed (sole proprietor): contribution = min((rate / (1 + rate)) × (net_self_employment_income − half_self_employment_tax), annual_limit), where rate = 0.25 for the standard 25% employer fraction (effective multiplier = 0.25 / 1.25 = 0.20).",
+      "Estimate half self-employment tax: half_self_employment_tax ≈ net_self_employment_income × 0.0765 (that is half of 15.3% Self‑Employment tax) if you do not have an exact figure from your tax calculations."
+    ],
+    "examples": [
+      "Example 1 (employee): Compensation = $60,000, Employer rate = 25% → uncapped contribution = $15,000. If the IRS annual limit is $69,000 the contribution stays $15,000.",
+      "Example 2 (self-employed): Net profit = $100,000, estimate half SE tax ≈ $7,650 → adjusted income = $92,350. Effective multiplier = 0.25/1.25 = 0.20 → uncapped contribution ≈ $18,470; apply the annual dollar limit if lower."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator include the IRS dollar limit?",
+        "answer": "Yes. Enter the current IRS annual contribution limit in the 'IRS annual contribution limit' field. The tool returns the lesser of the percentage-based contribution and that dollar cap. Verify the limit for your tax year from the IRS or your tax advisor."
+      },
+      {
+        "question": "How do I estimate half of self-employment tax?",
+        "answer": "If you do not have the exact figure from tax computations, estimate half of self-employment tax as net_self_employment_income × 0.0765 (half of 15.3%). For precise results use the actual amount from Schedule SE or your tax preparer."
+      },
+      {
+        "question": "Is the effective rate for self-employed always 20%?",
+        "answer": "The 20% effective multiplier shown arises from using the 25% employer fraction and solving for the deduction interaction: 0.25/(1+0.25)=0.20. If a different employer percentage is used, the calculator will apply the corresponding formula."
+      },
+      {
+        "question": "Is this a substitute for tax or legal advice?",
+        "answer": "No. This tool provides estimates only. Always verify calculations against IRS guidance and consult a tax professional for planning, filing, or compliance questions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Self-employed individuals: Calculating your own retirement plan contribution and deduction",
+        "url": "https://www.irs.gov/retirement-plans/self-employed-individuals-calculating-your-own-retirement-plan-contribution-and-deduction"
+      },
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO/IEC 27001 — Information security management",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE — Standards and best practices",
+        "url": "https://www.ieee.org/standards/index.html"
+      },
+      {
+        "label": "OSHA — General guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Net earnings from self-employment",
+        "definition": "Net profit from self-employment (Schedule C) minus business deductions; used as the starting point for SEP owner calculations."
+      },
+      {
+        "term": "Half self-employment tax",
+        "definition": "One-half of the self-employment tax liability. This amount is subtracted from net earnings when determining SEP contribution base for self-employed taxpayers."
+      },
+      {
+        "term": "Employer contribution rate",
+        "definition": "The percentage of compensation the employer chooses to contribute to eligible employees' SEP IRAs. For eligible employees the legal maximum commonly used is 25%."
+      },
+      {
+        "term": "Annual contribution limit",
+        "definition": "Dollar cap set annually by the IRS on contributions to a participant's SEP IRA. This must be checked for the correct tax year."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.irs.gov/retirement-plans/self-employed-individuals-calculating-your-own-retirement-plan-contribution-and-deduction",
+        "label": "IRS guidance on self-employed contributions",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

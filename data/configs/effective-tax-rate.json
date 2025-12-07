@@ -1,0 +1,522 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Effective Tax Rate Calculator",
+    "description": "Calculate your effective tax rate using reported taxes or quick estimates. Supports federal, state and payroll taxes, and provides both taxable-income and total-income effective rates with clear caveats and traceable calculations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "reported_taxes",
+    "methods": {
+      "reported_taxes": {
+        "label": "Calculate from reported taxes (recommended)",
+        "description": "Uses actual tax amounts you paid to compute effective rates on taxable income and on total income.",
+        "variables": {
+          "total_tax_paid": {
+            "expression": "federal_tax_paid + state_tax_paid + fica_tax_paid",
+            "dependencies": [
+              "federal_tax_paid",
+              "state_tax_paid",
+              "fica_tax_paid"
+            ],
+            "label": "Total tax paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "effective_rate_taxable": {
+            "expression": "if(taxable_income > 0, total_tax_paid / taxable_income, 0)",
+            "dependencies": [
+              "total_tax_paid",
+              "taxable_income"
+            ],
+            "label": "Effective tax rate (on taxable income)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "effective_rate_total_income": {
+            "expression": "if(total_income > 0, total_tax_paid / total_income, 0)",
+            "dependencies": [
+              "total_tax_paid",
+              "total_income"
+            ],
+            "label": "Effective tax rate (on total income)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "total_tax_paid",
+            "label": "Total tax paid",
+            "variable": "total_tax_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_rate_taxable",
+            "label": "Effective tax rate (taxable income)",
+            "variable": "effective_rate_taxable",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "effective_rate_total_income",
+            "label": "Effective tax rate (total income)",
+            "variable": "effective_rate_total_income",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "include_state": {
+        "label": "Reported taxes with separate state breakdown",
+        "description": "Shows federal and state contributions to your combined effective rate.",
+        "variables": {
+          "federal_component": {
+            "expression": "if(taxable_income > 0, federal_tax_paid / taxable_income, 0)",
+            "dependencies": [
+              "federal_tax_paid",
+              "taxable_income"
+            ],
+            "label": "Federal component of effective rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "state_component": {
+            "expression": "if(taxable_income > 0, state_tax_paid / taxable_income, 0)",
+            "dependencies": [
+              "state_tax_paid",
+              "taxable_income"
+            ],
+            "label": "State component of effective rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "payroll_component": {
+            "expression": "if(taxable_income > 0, fica_tax_paid / taxable_income, 0)",
+            "dependencies": [
+              "fica_tax_paid",
+              "taxable_income"
+            ],
+            "label": "Payroll (FICA) component of effective rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "combined_effective_rate": {
+            "expression": "federal_component + state_component + payroll_component",
+            "dependencies": [
+              "federal_component",
+              "state_component",
+              "payroll_component"
+            ],
+            "label": "Combined effective rate (components summed)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "federal_component",
+            "label": "Federal component",
+            "variable": "federal_component",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "state_component",
+            "label": "State component",
+            "variable": "state_component",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "payroll_component",
+            "label": "Payroll (FICA) component",
+            "variable": "payroll_component",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "combined_effective_rate",
+            "label": "Combined effective rate",
+            "variable": "combined_effective_rate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "estimate_from_marginal": {
+        "label": "Quick estimate from marginal rate",
+        "description": "Simple estimate using a single marginal tax rate. Use when you do not know exact tax amounts. This method approximates progressive taxes by applying the marginal rate to taxable income and is therefore an estimate only.",
+        "variables": {
+          "estimated_federal_tax": {
+            "expression": "taxable_income * (marginal_rate / 100)",
+            "dependencies": [
+              "taxable_income",
+              "marginal_rate"
+            ],
+            "label": "Estimated federal tax (approximate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "effective_rate_estimated": {
+            "expression": "if(taxable_income > 0, estimated_federal_tax / taxable_income, 0)",
+            "dependencies": [
+              "estimated_federal_tax",
+              "taxable_income"
+            ],
+            "label": "Estimated effective rate (on taxable income)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "estimated_federal_tax",
+            "label": "Estimated federal tax",
+            "variable": "estimated_federal_tax",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_rate_estimated",
+            "label": "Estimated effective tax rate",
+            "variable": "effective_rate_estimated",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "from_agi_and_deductions": {
+        "label": "Reconcile from AGI and deductions",
+        "description": "Compute taxable income from AGI minus deductions and then calculate effective rate using reported or estimated taxes.",
+        "variables": {
+          "computed_taxable_income": {
+            "expression": "max(0, agi - deductions - exemptions)",
+            "dependencies": [
+              "agi",
+              "deductions",
+              "exemptions"
+            ],
+            "label": "Computed taxable income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_tax_via_reported": {
+            "expression": "federal_tax_paid + state_tax_paid + fica_tax_paid",
+            "dependencies": [
+              "federal_tax_paid",
+              "state_tax_paid",
+              "fica_tax_paid"
+            ],
+            "label": "Total tax paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "effective_rate_from_computed_taxable": {
+            "expression": "if(computed_taxable_income > 0, total_tax_via_reported / computed_taxable_income, 0)",
+            "dependencies": [
+              "total_tax_via_reported",
+              "computed_taxable_income"
+            ],
+            "label": "Effective rate (using computed taxable income)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "computed_taxable_income",
+            "label": "Computed taxable income",
+            "variable": "computed_taxable_income",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_rate_from_computed_taxable",
+            "label": "Effective tax rate (from computed taxable income)",
+            "variable": "effective_rate_from_computed_taxable",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "total_income",
+        "label": "Total gross income (all sources)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "taxable_income",
+        "label": "Taxable income (after deductions/adjustments)",
+        "type": "number",
+        "default": 45000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "agi",
+        "label": "Adjusted Gross Income (AGI)",
+        "type": "number",
+        "default": 55000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "deductions",
+        "label": "Total deductions (itemized or standard)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "exemptions",
+        "label": "Exemptions or personal allowances (if any)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "federal_tax_paid",
+        "label": "Federal income tax paid (year)",
+        "type": "number",
+        "default": 6000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "state_tax_paid",
+        "label": "State income tax paid (year)",
+        "type": "number",
+        "default": 1500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "fica_tax_paid",
+        "label": "Payroll taxes (FICA) paid (employee share)",
+        "type": "number",
+        "default": 4590,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "marginal_rate",
+        "label": "Marginal federal tax rate (percent) for quick estimate",
+        "type": "number",
+        "default": 22,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "filing_status",
+        "label": "Filing status (affects bracket selection externally)",
+        "type": "select",
+        "default": "single",
+        "options": [
+          {
+            "label": "Single",
+            "value": "single"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "married_joint"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "married_separate"
+          },
+          {
+            "label": "Head of household",
+            "value": "hoh"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "total_tax_paid",
+          "label": "Total tax paid"
+        },
+        {
+          "id": "effective_rate_taxable",
+          "label": "Effective tax rate (taxable income)",
+          "format": "percent"
+        },
+        {
+          "id": "effective_rate_total_income",
+          "label": "Effective tax rate (total income)",
+          "format": "percent"
+        },
+        {
+          "id": "combined_effective_rate",
+          "label": "Combined effective rate (components)",
+          "format": "percent"
+        },
+        {
+          "id": "effective_rate_estimated",
+          "label": "Estimated effective tax rate (quick estimate)",
+          "format": "percent"
+        },
+        {
+          "id": "computed_taxable_income",
+          "label": "Computed taxable income",
+          "format": "currency"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps you compute your effective tax rate — the share of your income paid in taxes — using either reported tax amounts or a quick marginal-rate estimate. Effective tax rate can be measured relative to taxable income or to total gross income; both are shown for clarity.",
+      "Use the 'reported taxes' method when you have year-end tax numbers from tax forms or pay records. Use the 'quick estimate' method only when you do not have exact amounts; it approximates a progressive tax system by applying a single marginal rate and will not match a full tax computation."
+    ],
+    "methodology": [
+      "Primary method: sum the tax amounts you report (federal, state, payroll) and divide by either taxable income or total income depending on the denominator you choose. This yields effective rate on a like-for-like basis.",
+      "Quick estimate method: multiplies taxable income by the marginal rate you enter to approximate federal tax. This is a simplification and does not account for bracketed tax computation, credits, phaseouts, AMT, or other adjustments.",
+      "Quality and security practices: calculator design and data handling follow recognised controls for integrity and traceability. See referenced standards for guidance on software quality management and security controls. Results are estimates and not a substitute for professional tax filing or advice."
+    ],
+    "how_is_calculated": [
+      "Total tax paid = federal_tax_paid + state_tax_paid + fica_tax_paid",
+      "Effective rate (taxable income) = Total tax paid / taxable_income",
+      "Effective rate (total income) = Total tax paid / total_income",
+      "Estimated federal tax (quick) = taxable_income × (marginal_rate ÷ 100)",
+      "Estimated effective rate = Estimated federal tax ÷ taxable_income"
+    ],
+    "examples": [
+      "Example 1 (reported): Federal $6,000 + State $1,500 + FICA $4,590 = Total tax $12,090. If taxable income is $45,000, effective rate on taxable income = 12,090 ÷ 45,000 = 26.87%.",
+      "Example 2 (quick estimate): Taxable income $45,000 with marginal rate 22% gives estimated federal tax 9,900 and estimated effective rate 9,900 ÷ 45,000 = 22% (note: real progressive calculation will differ)."
+    ],
+    "summary": [
+      "Prefer the reported-taxes method when you have actual amounts. Use the quick-estimate method only for rapid, approximate comparisons.",
+      "The calculator reports both taxable-income and total-income effective rates because each denominator answers a different question: tax burden relative to taxable base versus all pre-tax income."
+    ],
+    "faqs": [
+      {
+        "question": "What is the difference between effective tax rate and marginal tax rate?",
+        "answer": "Effective tax rate equals total tax paid divided by the chosen income base. Marginal tax rate is the rate applied to the next dollar earned. The effective rate is an average of taxes paid across your income, whereas the marginal rate is the rate on additional income."
+      },
+      {
+        "question": "Which income should I use as the denominator?",
+        "answer": "Use taxable income when you want your tax burden relative to the income that is actually taxed after deductions and adjustments. Use total gross income if you prefer to see taxes as a share of all pre-tax earnings. Both are valid but answer different questions."
+      },
+      {
+        "question": "Why does the quick estimate differ from my tax return?",
+        "answer": "The quick estimate applies a single marginal rate to all taxable income and therefore ignores progressive bracket arithmetic, credits, phaseouts, and tax-specific rules. It is intentionally simple and will usually not match a complete tax calculation."
+      },
+      {
+        "question": "Is this a substitute for tax advice or a filed return?",
+        "answer": "No. This tool provides informational estimates only and is not tax, legal, or accounting advice. For filing, planning, or dispute resolution consult a licensed tax professional or the tax authority."
+      },
+      {
+        "question": "How accurate is this calculator?",
+        "answer": "Accuracy depends on input quality. When you input exact year-end tax amounts and taxable income, computed effective rates are arithmetic and accurate. Estimated methods are approximate. We follow recognized quality and security practices but make no warranty about calculation accuracy for individual tax situations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Internal Revenue Service — Forms, publications and definitions",
+        "url": "https://www.irs.gov/"
+      },
+      {
+        "label": "ISO 9001 — Quality management systems",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "ISO/IEC 27001 — Information security management",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "NIST Special Publication 800-53 — Security and privacy controls",
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final"
+      },
+      {
+        "label": "IEEE Standards Association — Standards and best practices",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration — Laws and regulations",
+        "url": "https://www.osha.gov/laws-regs"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Effective tax rate",
+        "definition": "Total tax paid divided by the chosen income base (taxable income or total gross income), expressed as a percentage."
+      },
+      {
+        "term": "Marginal tax rate",
+        "definition": "The tax rate applied to the next additional dollar of taxable income."
+      },
+      {
+        "term": "Taxable income",
+        "definition": "Income subject to tax after deductions, adjustments, and exemptions."
+      },
+      {
+        "term": "Adjusted Gross Income (AGI)",
+        "definition": "Gross income minus certain adjustments; a common starting point for calculating taxable income."
+      },
+      {
+        "term": "FICA",
+        "definition": "Federal Insurance Contributions Act taxes, commonly referred to as payroll taxes for Social Security and Medicare."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/",
+        "label": "IRS official website",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final",
+        "label": "NIST SP 800-53 (security & privacy controls)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 Quality Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

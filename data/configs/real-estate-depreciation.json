@@ -1,0 +1,585 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Real Estate Depreciation Calculator (Advanced)",
+    "description": "Multi‑method depreciation calculator for rental and commercial property: straight‑line (MACRS/ADS), componentized (cost segregation), bonus depreciation and Section 179 impacts. Includes component allocations, percent-based cost segregation inputs, and quick annual depreciation outputs with clear assumptions and compliance notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "straight_line",
+    "methods": {
+      "straight_line": {
+        "label": "Straight-line (MACRS) Annual Depreciation",
+        "description": "Estimates annual straight-line depreciation under common U.S. tax recovery periods (residential rental 27.5 years, nonresidential real property 39 years). Uses a simple annualized approach; mid-month, mid-quarter, and placed-in-service prorations are noted but not fully modeled here.",
+        "variables": {
+          "depreciable_basis": {
+            "expression": "total_purchase_price - land_value + improvements",
+            "dependencies": [
+              "total_purchase_price",
+              "land_value",
+              "improvements"
+            ],
+            "label": "Depreciable basis (USD)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recovery_period": {
+            "expression": "property_type == 'residential' ? 27.5 : 39",
+            "dependencies": [
+              "property_type"
+            ],
+            "label": "Recovery period (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "annual_depreciation": {
+            "expression": "depreciable_basis / recovery_period",
+            "dependencies": [
+              "depreciable_basis",
+              "recovery_period"
+            ],
+            "label": "Estimated annual depreciation (straight-line)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "depreciable_basis",
+            "label": "Depreciable basis",
+            "variable": "depreciable_basis",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recovery_period",
+            "label": "Recovery period (years)",
+            "variable": "recovery_period",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "annual_depreciation",
+            "label": "Annual depreciation (straight-line)",
+            "variable": "annual_depreciation",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "cost_segregation": {
+        "label": "Cost Segregation Componentization",
+        "description": "Allocates the depreciable basis across shorter class lives (5‑yr, 7‑yr, 15‑yr) and remaining building life. Use percent allocation inputs to model componentization; outputs show annual depreciation for each class using straight-line within each class life.",
+        "variables": {
+          "depreciable_basis": {
+            "expression": "total_purchase_price - land_value + improvements",
+            "dependencies": [
+              "total_purchase_price",
+              "land_value",
+              "improvements"
+            ],
+            "label": "Depreciable basis (USD)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "basis_5yr": {
+            "expression": "depreciable_basis * (pct_5yr / 100)",
+            "dependencies": [
+              "depreciable_basis",
+              "pct_5yr"
+            ],
+            "label": "Allocated to 5-year property",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "basis_15yr": {
+            "expression": "depreciable_basis * (pct_15yr / 100)",
+            "dependencies": [
+              "depreciable_basis",
+              "pct_15yr"
+            ],
+            "label": "Allocated to 15-year property",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "basis_building": {
+            "expression": "depreciable_basis - basis_5yr - basis_15yr",
+            "dependencies": [
+              "depreciable_basis",
+              "basis_5yr",
+              "basis_15yr"
+            ],
+            "label": "Remaining building/bulk basis",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_depr_5yr": {
+            "expression": "basis_5yr / 5",
+            "dependencies": [
+              "basis_5yr"
+            ],
+            "label": "Annual depreciation (5-year components)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_depr_15yr": {
+            "expression": "basis_15yr / 15",
+            "dependencies": [
+              "basis_15yr"
+            ],
+            "label": "Annual depreciation (15-year components)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_depr_building": {
+            "expression": "basis_building / (property_type == 'residential' ? 27.5 : 39)",
+            "dependencies": [
+              "basis_building",
+              "property_type"
+            ],
+            "label": "Annual depreciation (remaining building)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_annual_depreciation": {
+            "expression": "annual_depr_5yr + annual_depr_15yr + annual_depr_building",
+            "dependencies": [
+              "annual_depr_5yr",
+              "annual_depr_15yr",
+              "annual_depr_building"
+            ],
+            "label": "Total estimated annual depreciation (componentized)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "basis_5yr",
+            "label": "Basis allocated to 5‑yr",
+            "variable": "basis_5yr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "basis_15yr",
+            "label": "Basis allocated to 15‑yr",
+            "variable": "basis_15yr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "basis_building",
+            "label": "Remaining building basis",
+            "variable": "basis_building",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_depr_5yr",
+            "label": "Annual depreciation (5‑yr)",
+            "variable": "annual_depr_5yr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_depr_15yr",
+            "label": "Annual depreciation (15‑yr)",
+            "variable": "annual_depr_15yr",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_depr_building",
+            "label": "Annual depreciation (building)",
+            "variable": "annual_depr_building",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_annual_depreciation",
+            "label": "Total annual depreciation (componentized)",
+            "variable": "total_annual_depreciation",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "bonus_and_section179": {
+        "label": "Bonus Depreciation & Section 179",
+        "description": "Models immediate bonus depreciation percentage and an optional Section 179 election amount. This is a simplified estimator — actual limits, taxable income limitations, carryforwards, and legislative changes are not fully modeled.",
+        "variables": {
+          "depreciable_basis": {
+            "expression": "total_purchase_price - land_value + improvements",
+            "dependencies": [
+              "total_purchase_price",
+              "land_value",
+              "improvements"
+            ],
+            "label": "Depreciable basis (USD)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "bonus_deduction": {
+            "expression": "depreciable_basis * (bonus_pct / 100)",
+            "dependencies": [
+              "depreciable_basis",
+              "bonus_pct"
+            ],
+            "label": "Bonus depreciation (immediate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "section179_deduction": {
+            "expression": "section179_election > section179_limit ? section179_limit : section179_election",
+            "dependencies": [
+              "section179_election",
+              "section179_limit"
+            ],
+            "label": "Section 179 deduction (capped by limit)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_basis_after_immediate": {
+            "expression": "depreciable_basis - bonus_deduction - section179_deduction",
+            "dependencies": [
+              "depreciable_basis",
+              "bonus_deduction",
+              "section179_deduction"
+            ],
+            "label": "Remaining depreciable basis after immediate deductions",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_depreciation_remaining": {
+            "expression": "remaining_basis_after_immediate / (property_type == 'residential' ? 27.5 : 39)",
+            "dependencies": [
+              "remaining_basis_after_immediate",
+              "property_type"
+            ],
+            "label": "Annual depreciation on remaining basis",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "bonus_deduction",
+            "label": "Bonus depreciation (immediate)",
+            "variable": "bonus_deduction",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "section179_deduction",
+            "label": "Section 179 deduction (election, capped)",
+            "variable": "section179_deduction",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "remaining_basis_after_immediate",
+            "label": "Remaining depreciable basis",
+            "variable": "remaining_basis_after_immediate",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_depreciation_remaining",
+            "label": "Annual depreciation (after immediate deductions)",
+            "variable": "annual_depreciation_remaining",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "total_purchase_price",
+        "label": "Total purchase price (including capitalizable closing costs)",
+        "type": "number",
+        "default": 500000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "land_value",
+        "label": "Portion allocated to land",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "improvements",
+        "label": "Capital improvements placed in service (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "property_type",
+        "label": "Property type",
+        "type": "select",
+        "default": "residential",
+        "options": [
+          {
+            "label": "Residential rental (27.5 years)",
+            "value": "residential"
+          },
+          {
+            "label": "Nonresidential (39 years)",
+            "value": "nonresidential"
+          }
+        ]
+      },
+      {
+        "id": "pct_5yr",
+        "label": "Percent allocated to 5‑year components (%)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "pct_15yr",
+        "label": "Percent allocated to 15‑year components (%)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "bonus_pct",
+        "label": "Bonus depreciation (%)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "section179_election",
+        "label": "Section 179 election amount (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "section179_limit",
+        "label": "Section 179 dollar limit (enter current-year statutory limit)",
+        "type": "number",
+        "default": 1200000,
+        "min": 0,
+        "step": 1000
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "depreciable_basis",
+          "label": "Depreciable basis (USD)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "recovery_period",
+          "label": "Recovery period (years)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "annual_depreciation",
+          "label": "Annual depreciation (straight-line)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_annual_depreciation",
+          "label": "Total annual depreciation (componentized)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "bonus_deduction",
+          "label": "Bonus depreciation (immediate)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "section179_deduction",
+          "label": "Section 179 deduction (capped)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "annual_depreciation_remaining",
+          "label": "Annual depreciation after immediate deductions",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps estimate annual depreciation for real estate using multiple commonly used approaches: straight-line (MACRS), componentized cost segregation, and application of bonus depreciation and Section 179 elections. It is designed for quick modeling and planning, not for filing tax returns.",
+      "Results are estimates based on user-provided allocations and statutory recovery periods. The tool intentionally simplifies certain U.S. tax conventions (for example, mid-month and mid-quarter conventions, placed-in-service prorations, and taxable-income limits for Section 179) to keep outputs transparent and easy to interpret."
+    ],
+    "methodology": [
+      "All methods begin with a depreciable basis equal to the purchase price minus land value plus capital improvements. This is the starting point used for allocation and recovery calculations.",
+      "Straight-line method divides the depreciable basis by the statutory recovery period (27.5 years for residential rental property, 39 years for nonresidential real property) to produce a simple annual depreciation estimate.",
+      "Cost segregation allocates percentages of the depreciable basis to shorter property class lives (5‑yr, 7‑yr, 15‑yr). Each allocated portion is depreciated straight-line over its class life; the remaining balance is depreciated over the building life.",
+      "Bonus depreciation and Section 179 are treated as immediate deductions in the year placed in service. This calculator applies a user-specified bonus percentage and a Section 179 election amount capped at the user-provided statutory limit. It does not apply taxable-income-based limitations or carryforwards."
+    ],
+    "how_is_calculated": [
+      "Depreciable basis = total_purchase_price - land_value + improvements",
+      "Straight-line annual depreciation = depreciable_basis / recovery_period (27.5 or 39 years depending on property_type)",
+      "Component annual depreciation = sum(for each class: allocated_basis / class_life). Example class lives: 5, 15, building life (27.5 or 39)",
+      "Immediate deductions = min(section179_election, section179_limit) + (depreciable_basis * bonus_pct / 100); remaining basis is depreciated over the applicable recovery period"
+    ],
+    "examples": [
+      "Example 1: Residential rental purchased for $500,000 with $100,000 land allocation and no improvements. Straight-line annual depreciation = (500000 - 100000) / 27.5 = $14,545.45.",
+      "Example 2: Same property with 10% allocated to 5‑yr and 5% to 15‑yr (cost segregation). Componentized annual depreciation = (depreciable_basis * 0.10)/5 + (depreciable_basis * 0.05)/15 + (remaining_basis)/27.5."
+    ],
+    "summary": [
+      "Use straight-line for a quick baseline estimate. Use the cost segregation mode to model accelerated depreciation from reclassifying components into shorter lives. Use the bonus/Section 179 mode to see the immediate tax-deduction impact, then compare remaining annual depreciation.",
+      "Always consult tax counsel or a licensed CPA before filing: laws change, and elections such as Section 179 and bonus depreciation have eligibility rules, phaseouts, and interactions with taxable income."
+    ],
+    "faqs": [
+      {
+        "question": "Does this tool replace tax advice or official IRS calculations?",
+        "answer": "No. This tool provides estimates for planning and comparison. It does not replace official IRS forms, binding tax advice, or professional cost segregation studies. Use the outputs for planning and consult a CPA for filing or when precision is required."
+      },
+      {
+        "question": "How does the tool treat land versus building costs?",
+        "answer": "You must provide the portion of the purchase price allocated to land. Land is not depreciable. The calculator subtracts land value from the total purchase price to determine the depreciable basis."
+      },
+      {
+        "question": "Are mid-month and mid-quarter conventions applied?",
+        "answer": "Not in full detail. This calculator provides annualized depreciation and notes prorations. For first-year prorations under MACRS conventions, use a tax preparer or specialized software to apply the exact conventions."
+      },
+      {
+        "question": "What should I enter for cost segregation allocations?",
+        "answer": "Enter the percentage of depreciable basis you want allocated to 5‑year and 15‑year property. Percentages should be realistic and based on engineering cost segregation studies when accuracy is required. The calculator will allocate the remainder to the building class life."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS Publication 946 — How to Depreciate Property",
+        "url": "https://www.irs.gov/pub/irs-pdf/p946.pdf"
+      },
+      {
+        "label": "NIST — Frameworks and standards for software and data integrity (for reliability & testing guidance)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Quality management and standardization principles (ISO 9001)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Best practices for software engineering and validation",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — General guidance on organizational controls and recordkeeping",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Depreciable basis",
+        "definition": "The portion of the property's cost that can be depreciated: purchase price less land allocation plus capital improvements."
+      },
+      {
+        "term": "MACRS",
+        "definition": "Modified Accelerated Cost Recovery System, the principal U.S. tax depreciation system with class lives like 5, 7, 15, 27.5, and 39 years."
+      },
+      {
+        "term": "Cost segregation",
+        "definition": "An engineering-based study reallocating property costs to shorter-lived asset classes to accelerate depreciation deductions."
+      },
+      {
+        "term": "Section 179",
+        "definition": "A U.S. tax code provision allowing taxpayers to expense qualifying property up to statutory limits in the year placed in service, subject to taxable income and other limitations."
+      },
+      {
+        "term": "Bonus depreciation",
+        "definition": "A tax provision allowing an immediate percentage deduction for qualifying property in the year placed in service; rates and eligibility vary by statute."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.irs.gov/pub/irs-pdf/p946.pdf",
+        "label": "IRS Publication 946 (Depreciation)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

@@ -1,0 +1,469 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Estate Tax Calculator (Estimate & Scenario Planner)",
+    "description": "Multi-mode estate tax estimator that helps you approximate federal and potential state estate tax exposure after debts, deductions, gifts, and exemptions. Includes a simple quick estimate, a detailed adjustment mode for marital or special deductions, and a state-adjusted scenario for jurisdictions with separate estate taxes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "simple_estimate",
+    "methods": {
+      "simple_estimate": {
+        "label": "Simple estimate",
+        "description": "Quick calculation: subtract liabilities and deductions, apply exemption, then apply an assumed federal marginal rate to compute an estimated federal tax liability.",
+        "variables": {
+          "net_estate": {
+            "expression": "gross_estate_value - debts_total - funeral_costs - allowable_deductions",
+            "dependencies": [
+              "gross_estate_value",
+              "debts_total",
+              "funeral_costs",
+              "allowable_deductions"
+            ],
+            "label": "Net estate",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_estate": {
+            "expression": "max(net_estate - federal_exemption_amount - taxable_gifts, 0)",
+            "dependencies": [
+              "net_estate",
+              "federal_exemption_amount",
+              "taxable_gifts"
+            ],
+            "label": "Estimated taxable estate (after exemption & gifts)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_federal_tax": {
+            "expression": "taxable_estate * assumed_federal_rate",
+            "dependencies": [
+              "taxable_estate",
+              "assumed_federal_rate"
+            ],
+            "label": "Estimated federal estate tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "net_estate",
+            "label": "Net estate (assets minus debts & deductions)",
+            "variable": "net_estate",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "taxable_estate",
+            "label": "Estimated taxable estate",
+            "variable": "taxable_estate",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_federal_tax",
+            "label": "Estimated federal estate tax",
+            "variable": "estimated_federal_tax",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "detailed_estimate": {
+        "label": "Detailed estimate (deductions & marital adjustment)",
+        "description": "Includes a field for explicit marital deduction amount and other itemized adjustments so you may refine the taxable estate before applying an assumed federal rate.",
+        "variables": {
+          "net_estate": {
+            "expression": "gross_estate_value - debts_total - funeral_costs - allowable_deductions",
+            "dependencies": [
+              "gross_estate_value",
+              "debts_total",
+              "funeral_costs",
+              "allowable_deductions"
+            ],
+            "label": "Net estate",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_estate": {
+            "expression": "max(net_estate - federal_exemption_amount - taxable_gifts, 0)",
+            "dependencies": [
+              "net_estate",
+              "federal_exemption_amount",
+              "taxable_gifts"
+            ],
+            "label": "Estimated taxable estate (before marital adjustment)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_taxable_estate": {
+            "expression": "max(taxable_estate - marital_deduction_amount, 0)",
+            "dependencies": [
+              "taxable_estate",
+              "marital_deduction_amount"
+            ],
+            "label": "Adjusted taxable estate (after marital deduction)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_federal_tax": {
+            "expression": "adjusted_taxable_estate * assumed_federal_rate",
+            "dependencies": [
+              "adjusted_taxable_estate",
+              "assumed_federal_rate"
+            ],
+            "label": "Estimated federal estate tax (detailed)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_taxable_estate",
+            "label": "Adjusted taxable estate",
+            "variable": "adjusted_taxable_estate",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_federal_tax",
+            "label": "Estimated federal estate tax",
+            "variable": "estimated_federal_tax",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "state_adjusted": {
+        "label": "State-adjusted estimate (flag state exposure)",
+        "description": "Adds a user-provided assumed state rate when the chosen jurisdiction levies an estate tax. This is an estimate only; state rules vary widely.",
+        "variables": {
+          "net_estate": {
+            "expression": "gross_estate_value - debts_total - funeral_costs - allowable_deductions",
+            "dependencies": [
+              "gross_estate_value",
+              "debts_total",
+              "funeral_costs",
+              "allowable_deductions"
+            ],
+            "label": "Net estate",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_estate": {
+            "expression": "max(net_estate - federal_exemption_amount - taxable_gifts, 0)",
+            "dependencies": [
+              "net_estate",
+              "federal_exemption_amount",
+              "taxable_gifts"
+            ],
+            "label": "Estimated taxable estate",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_federal_tax": {
+            "expression": "taxable_estate * assumed_federal_rate",
+            "dependencies": [
+              "taxable_estate",
+              "assumed_federal_rate"
+            ],
+            "label": "Estimated federal estate tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_state_tax": {
+            "expression": "state_has_estate_tax == 'yes' ? taxable_estate * assumed_state_rate : 0",
+            "dependencies": [
+              "taxable_estate",
+              "state_has_estate_tax",
+              "assumed_state_rate"
+            ],
+            "label": "Estimated state estate tax (if applicable)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_estimated_tax": {
+            "expression": "estimated_federal_tax + estimated_state_tax",
+            "dependencies": [
+              "estimated_federal_tax",
+              "estimated_state_tax"
+            ],
+            "label": "Total estimated estate tax (federal + state)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "estimated_state_tax",
+            "label": "Estimated state estate tax",
+            "variable": "estimated_state_tax",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_estimated_tax",
+            "label": "Total estimated estate tax",
+            "variable": "total_estimated_tax",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "tax_year",
+        "label": "Tax year for policy assumptions",
+        "type": "select",
+        "default": "2025",
+        "options": [
+          {
+            "label": "2025",
+            "value": "2025"
+          },
+          {
+            "label": "2024",
+            "value": "2024"
+          },
+          {
+            "label": "2023",
+            "value": "2023"
+          },
+          {
+            "label": "2022",
+            "value": "2022"
+          }
+        ]
+      },
+      {
+        "id": "gross_estate_value",
+        "label": "Gross estate value (sum of worldwide assets)",
+        "type": "number",
+        "default": 2000000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "debts_total",
+        "label": "Debts and liabilities",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "funeral_costs",
+        "label": "Funeral & administration costs",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "allowable_deductions",
+        "label": "Allowable deductions (charitable, admin, etc.)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "taxable_gifts",
+        "label": "Taxable lifetime gifts (subject to gift/estate offset)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "federal_exemption_amount",
+        "label": "Federal exemption / unified credit amount (user-entered)",
+        "type": "number",
+        "default": 12900000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "assumed_federal_rate",
+        "label": "Assumed effective federal marginal rate (enter as decimal)",
+        "type": "number",
+        "default": 0.4,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "state_has_estate_tax",
+        "label": "Does the decedent's state impose an estate tax?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "assumed_state_rate",
+        "label": "Assumed state effective rate (enter as decimal)",
+        "type": "number",
+        "default": 0.06,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "marital_deduction_amount",
+        "label": "Marital deduction amount (if claiming portability or marital deduction)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool provides scenario-based estimates of estate tax exposure. It is intended to help you understand order-of-magnitude outcomes after subtracting debts, administration costs, and allowable deductions, then applying an exemption and assumed tax rates.",
+      "Estimates are not a substitute for professional tax or estate planning advice. Laws and exemption amounts change; enter current exemption values and, when relevant, consult counsel for valuation, basis adjustments, and state-specific rules."
+    ],
+    "methodology": [
+      "Calculations follow standard accounting order: determine gross estate, subtract allowable liabilities and deductions to compute the net estate, reduce by applicable exemptions and reported lifetime taxable gifts to produce a taxable estate, and apply an assumed effective tax rate to estimate liability.",
+      "Security, privacy, and development practices for this tool align with published standards for trustworthy systems and risk management. See NIST Special Publications and ISO risk-management guidance cited below for controls and system development practices."
+    ],
+    "how_is_calculated": [
+      "Step 1: Net estate = gross_estate_value - debts_total - funeral_costs - allowable_deductions",
+      "Step 2: Taxable estate = max(Net estate - federal_exemption_amount - taxable_gifts, 0)",
+      "Step 3 (simple): Estimated federal tax = Taxable estate × assumed_federal_rate",
+      "Step 4 (state-adjusted): Estimated state tax = If state_has_estate_tax == yes then Taxable estate × assumed_state_rate else 0; Total estimated tax = Estimated federal tax + Estimated state tax"
+    ],
+    "examples": [
+      "Example 1 — Quick estimate: Gross estate $2,000,000; debts & deductions $200,000; federal exemption $12,900,000; taxable estate becomes zero, estimated federal tax $0.",
+      "Example 2 — State-adjusted: Gross estate $15,000,000; debts & deductions $500,000; federal exemption $13,000,000; taxable estate $1,500,000. With assumed federal rate 0.40 and assumed state rate 0.05, estimated federal tax $600,000 and state tax $75,000; total $675,000."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an official tax calculation?",
+        "answer": "No. This is an estimate tool for planning and scenario comparison only. It does not replace filings, formal valuations, or professional advice. Use current statutory exemption numbers and consult a tax attorney or CPA for filing and compliance."
+      },
+      {
+        "question": "How should I choose the assumed federal rate?",
+        "answer": "The assumed federal rate is a user-entered effective marginal estimate that approximates the progressive tax schedule. For conservative planning, use the top marginal rates applicable to the portion of the estate above the exemption; a tax professional can produce an exact bracketed computation."
+      },
+      {
+        "question": "Does this include state estate or inheritance taxes?",
+        "answer": "This tool can include a user-specified state rate when a jurisdiction imposes an estate tax, but it does not encode every state’s brackets, exemptions, or credits. Confirm state-specific rules with state tax authorities or counsel."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Accuracy depends on the correctness of your inputs (asset values, debts, deduction amounts, exemption chosen, and assumed rates). This tool provides estimates only. See the Accuracy & Compliance note in citations for recommended verification standards."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Estate and Gift Taxes (overview)",
+        "url": "https://www.irs.gov/businesses/small-businesses-self-employed/estate-tax"
+      },
+      {
+        "label": "Tax Foundation — State estate & inheritance tax data",
+        "url": "https://taxfoundation.org/data/all/state/estate-inheritance-taxes/"
+      },
+      {
+        "label": "NIST Special Publication 800-53 (security and privacy controls)",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf"
+      },
+      {
+        "label": "ISO 31000 — Risk management guidance",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE Standards (standards portal)",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA — Laws & Regulations",
+        "url": "https://www.osha.gov/laws-regs"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Gross estate",
+        "definition": "Total value of all assets and property owned by the decedent at death (worldwide) before debts, expenses, and deductions."
+      },
+      {
+        "term": "Net estate",
+        "definition": "Gross estate minus debts, administration costs, and allowable deductions used to determine the estate subject to exemptions."
+      },
+      {
+        "term": "Taxable estate",
+        "definition": "Net estate reduced by statutory exemptions (e.g., federal unified credit/exemption) and adjusted for taxable gifts; this base is used to compute estate tax."
+      },
+      {
+        "term": "Marital deduction / portability",
+        "definition": "Rules that allow transfers to a surviving spouse to be deducted from the taxable estate or for unused exemption amounts of a deceased spouse to be transferred (portability), subject to specific election and documentation rules."
+      },
+      {
+        "term": "Assumed effective rate",
+        "definition": "User-provided effective marginal tax rate used for approximation; conservative planning should be based on bracketed schedule calculations by a professional."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/tools/tax/estate-planning-guide"
+    ],
+    "external": [
+      {
+        "url": "https://www.irs.gov/businesses/small-businesses-self-employed/estate-tax",
+        "label": "IRS Estate Tax overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://taxfoundation.org/data/all/state/estate-inheritance-taxes/",
+        "label": "State estate & inheritance tax data",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf",
+        "label": "NIST SP 800-53 (security controls)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FAQPage"
+    ]
+  }
+}

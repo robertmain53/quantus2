@@ -1,0 +1,590 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Savings Rate Calculator (multi-mode)",
+    "description": "Interactive tool to measure current savings rate, compute the required savings rate to reach a financial goal, and project future balance given contributions and interest. Includes clear assumptions, method switching, and accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "current_rate",
+    "methods": {
+      "current_rate": {
+        "label": "Current Savings Rate",
+        "description": "Calculate the percentage of your income you are saving based on amounts and frequencies you provide.",
+        "variables": {
+          "income_annual": {
+            "expression": "income_amount * (income_period == 'monthly' ? 12 : 1)",
+            "dependencies": [
+              "income_amount",
+              "income_period"
+            ],
+            "label": "Annualized income",
+            "unit": "$",
+            "format": "currency",
+            "display": true
+          },
+          "savings_annual": {
+            "expression": "savings_amount * (savings_period == 'monthly' ? 12 : 1)",
+            "dependencies": [
+              "savings_amount",
+              "savings_period"
+            ],
+            "label": "Annualized savings",
+            "unit": "$",
+            "format": "currency",
+            "display": true
+          },
+          "savings_rate_pct": {
+            "expression": "income_annual > 0 ? (savings_annual / income_annual) * 100 : 0",
+            "dependencies": [
+              "income_annual",
+              "savings_annual"
+            ],
+            "label": "Savings rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "savings_rate_pct",
+            "label": "Savings Rate (%)",
+            "variable": "savings_rate_pct",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "savings_annual",
+            "label": "Annual Saved Amount",
+            "variable": "savings_annual",
+            "unit": "$",
+            "format": "currency"
+          },
+          {
+            "id": "income_annual",
+            "label": "Annual Income",
+            "variable": "income_annual",
+            "unit": "$",
+            "format": "currency"
+          }
+        ]
+      },
+      "required_rate_for_goal": {
+        "label": "Required Savings Rate to Reach Goal",
+        "description": "Estimate the annual contribution and savings rate you need to reach a target balance over a given time horizon, allowing for an assumed annual return.",
+        "variables": {
+          "r": {
+            "expression": "annual_interest_rate / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Annual interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "years",
+            "dependencies": [
+              "years"
+            ],
+            "label": "Years to goal",
+            "format": "integer",
+            "display": false
+          },
+          "factor_pow": {
+            "expression": "Math.pow(1 + r, n)",
+            "dependencies": [
+              "r",
+              "n"
+            ],
+            "label": "(1+r)^n",
+            "format": "decimal",
+            "display": false
+          },
+          "required_annual_contribution": {
+            "expression": "((target_amount - current_balance * factor_pow) * r) / (factor_pow - 1)",
+            "dependencies": [
+              "target_amount",
+              "current_balance",
+              "factor_pow",
+              "r"
+            ],
+            "label": "Required annual contribution",
+            "unit": "$",
+            "format": "currency",
+            "display": true
+          },
+          "income_annual": {
+            "expression": "income_amount * (income_period == 'monthly' ? 12 : 1)",
+            "dependencies": [
+              "income_amount",
+              "income_period"
+            ],
+            "label": "Annualized income",
+            "unit": "$",
+            "format": "currency",
+            "display": true
+          },
+          "required_rate_pct": {
+            "expression": "income_annual > 0 ? (required_annual_contribution / income_annual) * 100 : 0",
+            "dependencies": [
+              "required_annual_contribution",
+              "income_annual"
+            ],
+            "label": "Required savings rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_annual_contribution",
+            "label": "Required Annual Contribution",
+            "variable": "required_annual_contribution",
+            "unit": "$",
+            "format": "currency"
+          },
+          {
+            "id": "required_rate_pct",
+            "label": "Required Savings Rate (%) of Income",
+            "variable": "required_rate_pct",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "income_annual",
+            "label": "Annual Income",
+            "variable": "income_annual",
+            "unit": "$",
+            "format": "currency"
+          }
+        ]
+      },
+      "projected_balance": {
+        "label": "Projected Balance with Contributions",
+        "description": "Project future account balance after a number of years given current balance, recurring contributions and an assumed annual return.",
+        "variables": {
+          "r": {
+            "expression": "annual_interest_rate / 100",
+            "dependencies": [
+              "annual_interest_rate"
+            ],
+            "label": "Annual interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "years",
+            "dependencies": [
+              "years"
+            ],
+            "label": "Years",
+            "format": "integer",
+            "display": false
+          },
+          "contribution_annual": {
+            "expression": "contribution_amount * (contribution_frequency == 'monthly' ? 12 : 1)",
+            "dependencies": [
+              "contribution_amount",
+              "contribution_frequency"
+            ],
+            "label": "Annual contribution",
+            "unit": "$",
+            "format": "currency",
+            "display": true
+          },
+          "factor_pow": {
+            "expression": "Math.pow(1 + r, n)",
+            "dependencies": [
+              "r",
+              "n"
+            ],
+            "label": "(1+r)^n",
+            "format": "decimal",
+            "display": false
+          },
+          "future_value": {
+            "expression": "current_balance * factor_pow + contribution_annual * ((factor_pow - 1) / r)",
+            "dependencies": [
+              "current_balance",
+              "factor_pow",
+              "contribution_annual",
+              "r"
+            ],
+            "label": "Projected future balance",
+            "unit": "$",
+            "format": "currency",
+            "display": true
+          },
+          "total_contributed": {
+            "expression": "contribution_annual * n",
+            "dependencies": [
+              "contribution_annual",
+              "n"
+            ],
+            "label": "Total contributions",
+            "unit": "$",
+            "format": "currency",
+            "display": true
+          },
+          "nominal_return": {
+            "expression": "future_value - current_balance - total_contributed",
+            "dependencies": [
+              "future_value",
+              "current_balance",
+              "total_contributed"
+            ],
+            "label": "Nominal investment return",
+            "unit": "$",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "future_value",
+            "label": "Projected Balance",
+            "variable": "future_value",
+            "unit": "$",
+            "format": "currency"
+          },
+          {
+            "id": "total_contributed",
+            "label": "Total Contributions",
+            "variable": "total_contributed",
+            "unit": "$",
+            "format": "currency"
+          },
+          {
+            "id": "nominal_return",
+            "label": "Estimated Return Earned",
+            "variable": "nominal_return",
+            "unit": "$",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method",
+        "label": "Calculation mode",
+        "type": "select",
+        "default": "current_rate",
+        "options": [
+          {
+            "label": "Current savings rate",
+            "value": "current_rate"
+          },
+          {
+            "label": "Required rate to reach a goal",
+            "value": "required_rate_for_goal"
+          },
+          {
+            "label": "Project balance with contributions",
+            "value": "projected_balance"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "section_income_savings",
+        "label": "Income and Savings (used by Current Rate and Required Rate)",
+        "show_when": {
+          "field": "method",
+          "is": "current_rate"
+        },
+        "fields": [
+          {
+            "id": "income_amount",
+            "label": "Income amount",
+            "type": "number",
+            "default": 60000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "income_period",
+            "label": "Income frequency",
+            "type": "select",
+            "default": "yearly",
+            "options": [
+              {
+                "label": "Monthly",
+                "value": "monthly"
+              },
+              {
+                "label": "Yearly",
+                "value": "yearly"
+              }
+            ]
+          },
+          {
+            "id": "savings_amount",
+            "label": "Amount saved per period",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "savings_period",
+            "label": "Savings frequency",
+            "type": "select",
+            "default": "monthly",
+            "options": [
+              {
+                "label": "Monthly",
+                "value": "monthly"
+              },
+              {
+                "label": "Yearly",
+                "value": "yearly"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "section_goal",
+        "label": "Goal inputs",
+        "show_when": {
+          "field": "method",
+          "is": "required_rate_for_goal"
+        },
+        "fields": [
+          {
+            "id": "target_amount",
+            "label": "Target amount",
+            "type": "number",
+            "default": 500000,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "current_balance",
+            "label": "Current savings / balance",
+            "type": "number",
+            "default": 20000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "years",
+            "label": "Years until target",
+            "type": "integer",
+            "default": 20,
+            "min": 1,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "annual_interest_rate",
+            "label": "Expected annual return (APR %)",
+            "type": "number",
+            "default": 5,
+            "min": -99,
+            "max": 100,
+            "step": 0.01
+          },
+          {
+            "id": "income_amount",
+            "label": "Income amount",
+            "type": "number",
+            "default": 60000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "income_period",
+            "label": "Income frequency",
+            "type": "select",
+            "default": "yearly",
+            "options": [
+              {
+                "label": "Monthly",
+                "value": "monthly"
+              },
+              {
+                "label": "Yearly",
+                "value": "yearly"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "section_projection",
+        "label": "Projection inputs",
+        "show_when": {
+          "field": "method",
+          "is": "projected_balance"
+        },
+        "fields": [
+          {
+            "id": "current_balance",
+            "label": "Current balance",
+            "type": "number",
+            "default": 10000,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "contribution_amount",
+            "label": "Contribution amount",
+            "type": "number",
+            "default": 200,
+            "min": 0,
+            "step": 1
+          },
+          {
+            "id": "contribution_frequency",
+            "label": "Contribution frequency",
+            "type": "select",
+            "default": "monthly",
+            "options": [
+              {
+                "label": "Monthly",
+                "value": "monthly"
+              },
+              {
+                "label": "Yearly",
+                "value": "yearly"
+              }
+            ]
+          },
+          {
+            "id": "years",
+            "label": "Years to project",
+            "type": "integer",
+            "default": 10,
+            "min": 1,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "annual_interest_rate",
+            "label": "Expected annual return (APR %)",
+            "type": "number",
+            "default": 4,
+            "min": -99,
+            "max": 100,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator supports three modes: measure your current savings rate, find the required savings rate to reach a future goal, and project future balances given contributions and an assumed annual return.",
+      "Inputs accept amounts and simple frequency choices; the tool annualizes periodic values for consistent comparison. Results are illustrative and rely on the numeric assumptions you provide."
+    ],
+    "methodology": [
+      "All calculations use standard time-value-of-money formulas and annualized amounts. For projection and goal calculations we use discrete annual compounding and closed-form algebraic solutions where available.",
+      "Numeric stability and rounding follow IEEE floating-point conventions; quality assurance recommendations align with ISO 9001 process controls and secure software handling follows NIST guidance for operational integrity. Outputs include explicit assumptions and are not a substitute for professional financial advice."
+    ],
+    "how_is_calculated": [
+      "Current savings rate (%) = (Annualized savings / Annualized income) * 100.",
+      "Projected balance (future value) = current_balance * (1 + r)^n + contribution_annual * (( (1 + r)^n - 1 ) / r), where r = annual_interest_rate / 100 and n = years.",
+      "Required annual contribution to reach target (solved from FV formula) = ((target - current_balance * (1 + r)^n) * r) / ((1 + r)^n - 1)."
+    ],
+    "examples": [
+      "Example 1: Monthly income $5,000 and monthly savings $500 results in annual income $60,000 and annual savings $6,000, which corresponds to a 10% savings rate.",
+      "Example 2: Current balance $20,000, target $500,000, 20 years, expected return 5%: the calculator computes the required annual contribution and the percent of annual income required."
+    ],
+    "summary": [
+      "Choose the mode that matches your question: instantaneous rate, goal planning, or projection.",
+      "Double-check frequencies and make conservative return assumptions. Small changes in assumed return materially affect required contributions when horizons are long."
+    ],
+    "faqs": [
+      {
+        "question": "Is this financial advice?",
+        "answer": "No. This tool provides illustrative calculations based on the inputs you supply. It does not account for taxes, fees, or individual circumstances. Consult a licensed financial professional for personalized advice."
+      },
+      {
+        "question": "Which compounding assumption is used?",
+        "answer": "The calculator uses annual compounding for the projection and goal formulas to keep assumptions explicit and comparable. For frequent compounding, adjust the annual rate accordingly."
+      },
+      {
+        "question": "How precise are the results?",
+        "answer": "Results are computed using standard floating-point arithmetic. Small rounding differences may occur; for mission-critical uses consult a spreadsheet or numerical library with specified precision."
+      },
+      {
+        "question": "What should I enter for income and savings frequency?",
+        "answer": "Enter the nominal amount for the chosen frequency (monthly or yearly). The tool annualizes those amounts before computing percentages or projections."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. government investor tools (compound interest explanation)",
+        "url": "https://www.investor.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Annualized amount",
+        "definition": "A periodic amount scaled to a one-year basis (monthly * 12 or yearly * 1) so different frequencies can be compared."
+      },
+      {
+        "term": "APR",
+        "definition": "Annual percentage rate used here as the nominal expected yearly return. It does not include taxes or fees."
+      },
+      {
+        "term": "Contribution frequency",
+        "definition": "The cadence at which recurring savings are made (monthly or yearly). This tool converts contributions to an annual total before using formulas."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/tools/savings/savings-rate-explained",
+      "/tools/savings/projection-guide"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

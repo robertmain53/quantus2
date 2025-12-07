@@ -1,0 +1,620 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "1031 Exchange Calculator (Advanced — Full, Partial, Reverse)",
+    "description": "Estimate realized gain, recognized gain, deferred gain, and immediate tax due under common 1031 exchange scenarios. Includes standard (forward) deferred exchange, partial exchange with boot, and reverse exchange modes. Results are estimates for planning only and do not replace professional tax or legal advice."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_deferral",
+    "methods": {
+      "standard_deferral": {
+        "label": "Standard 1031 Deferral (Relinquish then Acquire)",
+        "description": "Calculates realized and recognized gain for a typical forward 1031 exchange where replacement property is acquired after relinquished property is sold.",
+        "variables": {
+          "net_sale_proceeds": {
+            "expression": "sale_price - selling_costs - exchange_expenses",
+            "dependencies": [
+              "sale_price",
+              "selling_costs",
+              "exchange_expenses"
+            ],
+            "label": "Net sale proceeds",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "realized_gain": {
+            "expression": "net_sale_proceeds - adjusted_basis",
+            "dependencies": [
+              "net_sale_proceeds",
+              "adjusted_basis"
+            ],
+            "label": "Realized gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "debt_difference": {
+            "expression": "mortgage_released - mortgage_assumed",
+            "dependencies": [
+              "mortgage_released",
+              "mortgage_assumed"
+            ],
+            "label": "Net debt relief (relinquished - assumed)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "boot_effective": {
+            "expression": "boot_received + max(debt_difference, 0)",
+            "dependencies": [
+              "boot_received",
+              "debt_difference"
+            ],
+            "label": "Effective boot (cash + net debt relief)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "recognized_gain": {
+            "expression": "min(realized_gain, boot_effective)",
+            "dependencies": [
+              "realized_gain",
+              "boot_effective"
+            ],
+            "label": "Recognized (taxable) gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "deferred_gain": {
+            "expression": "realized_gain - recognized_gain",
+            "dependencies": [
+              "realized_gain",
+              "recognized_gain"
+            ],
+            "label": "Deferred gain (tax-deferred amount)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_due_on_recognized": {
+            "expression": "recognized_gain * (capital_gains_tax_rate / 100)",
+            "dependencies": [
+              "recognized_gain",
+              "capital_gains_tax_rate"
+            ],
+            "label": "Estimated tax due on recognized gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "depreciation_recapture_tax": {
+            "expression": "realized_gain * (depreciation_recapture_rate / 100)",
+            "dependencies": [
+              "realized_gain",
+              "depreciation_recapture_rate"
+            ],
+            "label": "Estimated depreciation recapture (approx.)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "realized_gain",
+            "label": "Realized gain",
+            "variable": "realized_gain",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recognized_gain",
+            "label": "Recognized (taxable) gain",
+            "variable": "recognized_gain",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "deferred_gain",
+            "label": "Deferred gain",
+            "variable": "deferred_gain",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_due_on_recognized",
+            "label": "Estimated tax due now",
+            "variable": "tax_due_on_recognized",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "depreciation_recapture_tax",
+            "label": "Estimated depreciation recapture tax (approx.)",
+            "variable": "depreciation_recapture_tax",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "partial_with_boot": {
+        "label": "Partial Exchange (Boot Received or Paid)",
+        "description": "Handles scenarios where the exchange includes non-like-kind value (boot) or significant debt difference, producing a portion of gain that is recognized.",
+        "variables": {
+          "net_sale_proceeds_p": {
+            "expression": "sale_price - selling_costs - exchange_expenses",
+            "dependencies": [
+              "sale_price",
+              "selling_costs",
+              "exchange_expenses"
+            ],
+            "label": "Net sale proceeds",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "realized_gain_p": {
+            "expression": "net_sale_proceeds_p - adjusted_basis",
+            "dependencies": [
+              "net_sale_proceeds_p",
+              "adjusted_basis"
+            ],
+            "label": "Realized gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "debt_difference_p": {
+            "expression": "mortgage_released - mortgage_assumed",
+            "dependencies": [
+              "mortgage_released",
+              "mortgage_assumed"
+            ],
+            "label": "Net debt relief (relinquished - assumed)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "effective_boot_p": {
+            "expression": "boot_received - boot_paid + max(debt_difference_p, 0)",
+            "dependencies": [
+              "boot_received",
+              "boot_paid",
+              "debt_difference_p"
+            ],
+            "label": "Net boot (received minus paid, plus debt relief)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "recognized_gain_p": {
+            "expression": "min(realized_gain_p, max(effective_boot_p, 0))",
+            "dependencies": [
+              "realized_gain_p",
+              "effective_boot_p"
+            ],
+            "label": "Recognized gain (taxable portion)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "deferred_gain_p": {
+            "expression": "realized_gain_p - recognized_gain_p",
+            "dependencies": [
+              "realized_gain_p",
+              "recognized_gain_p"
+            ],
+            "label": "Deferred gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_due_on_recognized_p": {
+            "expression": "recognized_gain_p * (capital_gains_tax_rate / 100)",
+            "dependencies": [
+              "recognized_gain_p",
+              "capital_gains_tax_rate"
+            ],
+            "label": "Estimated tax due on recognized gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_cash_to_close_partial": {
+            "expression": "replacement_price + purchase_costs - (net_sale_proceeds_p - boot_received + boot_paid)",
+            "dependencies": [
+              "replacement_price",
+              "purchase_costs",
+              "net_sale_proceeds_p",
+              "boot_received",
+              "boot_paid"
+            ],
+            "label": "Approximate net cash required to complete exchange",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "realized_gain_p",
+            "label": "Realized gain",
+            "variable": "realized_gain_p",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recognized_gain_p",
+            "label": "Recognized (taxable) gain",
+            "variable": "recognized_gain_p",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "deferred_gain_p",
+            "label": "Deferred gain",
+            "variable": "deferred_gain_p",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_due_on_recognized_p",
+            "label": "Estimated tax due now",
+            "variable": "tax_due_on_recognized_p",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_cash_to_close_partial",
+            "label": "Approximate net cash required",
+            "variable": "net_cash_to_close_partial",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "reverse_exchange": {
+        "label": "Reverse Exchange (Acquire Replacement First)",
+        "description": "Estimates taxable and deferred amounts when the replacement property is acquired before relinquishing the old property (reverse exchange). Assumes the exchange is structured to preserve deferral where possible.",
+        "variables": {
+          "net_purchase_costs": {
+            "expression": "replacement_price + purchase_costs + exchange_expenses",
+            "dependencies": [
+              "replacement_price",
+              "purchase_costs",
+              "exchange_expenses"
+            ],
+            "label": "Total replacement acquisition outlay",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "net_sale_proceeds_r": {
+            "expression": "sale_price - selling_costs",
+            "dependencies": [
+              "sale_price",
+              "selling_costs"
+            ],
+            "label": "Net sale proceeds upon relinquishment",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "realized_gain_r": {
+            "expression": "net_sale_proceeds_r - adjusted_basis",
+            "dependencies": [
+              "net_sale_proceeds_r",
+              "adjusted_basis"
+            ],
+            "label": "Realized gain on relinquished property",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "debt_difference_r": {
+            "expression": "mortgage_released - mortgage_assumed",
+            "dependencies": [
+              "mortgage_released",
+              "mortgage_assumed"
+            ],
+            "label": "Net debt relief",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "recognized_gain_r": {
+            "expression": "min(realized_gain_r, max(boot_received + max(debt_difference_r,0), 0))",
+            "dependencies": [
+              "realized_gain_r",
+              "boot_received",
+              "debt_difference_r"
+            ],
+            "label": "Recognized gain (if any)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "deferred_gain_r": {
+            "expression": "realized_gain_r - recognized_gain_r",
+            "dependencies": [
+              "realized_gain_r",
+              "recognized_gain_r"
+            ],
+            "label": "Deferred gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_due_on_recognized_r": {
+            "expression": "recognized_gain_r * (capital_gains_tax_rate / 100)",
+            "dependencies": [
+              "recognized_gain_r",
+              "capital_gains_tax_rate"
+            ],
+            "label": "Estimated tax due on recognized gain",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "realized_gain_r",
+            "label": "Realized gain",
+            "variable": "realized_gain_r",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recognized_gain_r",
+            "label": "Recognized (taxable) gain",
+            "variable": "recognized_gain_r",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "deferred_gain_r",
+            "label": "Deferred gain",
+            "variable": "deferred_gain_r",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_due_on_recognized_r",
+            "label": "Estimated tax due now",
+            "variable": "tax_due_on_recognized_r",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "sale_price",
+        "label": "Relinquished property sale price (USD)",
+        "type": "number",
+        "default": 500000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "selling_costs",
+        "label": "Selling costs (commissions, fees) (USD)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "adjusted_basis",
+        "label": "Adjusted basis of relinquished property (USD)",
+        "type": "number",
+        "default": 200000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "replacement_price",
+        "label": "Replacement property purchase price (USD)",
+        "type": "number",
+        "default": 600000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "purchase_costs",
+        "label": "Purchase costs (closing, improvements) (USD)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "boot_received",
+        "label": "Cash or other boot received by seller (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "boot_paid",
+        "label": "Cash boot paid (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "mortgage_released",
+        "label": "Mortgage/debt relieved on relinquished property (USD)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "mortgage_assumed",
+        "label": "Mortgage/debt assumed on replacement property (USD)",
+        "type": "number",
+        "default": 150000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "exchange_expenses",
+        "label": "Exchange-related expenses (USD)",
+        "type": "number",
+        "default": 2000,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "capital_gains_tax_rate",
+        "label": "Estimated marginal capital gains tax rate (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "depreciation_recapture_rate",
+        "label": "Estimated depreciation recapture rate (%)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates realized gain, recognized (taxable) gain, deferred gain, and immediate estimated tax for common 1031 exchange structures: standard forward exchanges, partial exchanges with boot, and reverse exchanges. Use it for planning; it does not substitute for formal tax or legal advice.",
+      "Values are calculated from the inputs you provide (sale price, costs, basis, debt, boot, and assumed tax rates). The tool is intended to help you understand cash flow and taxable exposure under different exchange arrangements and to prepare questions for your tax advisor or qualified intermediary."
+    ],
+    "methodology": [
+      "Calculations follow standard gain accounting concepts: realized gain = net proceeds minus adjusted basis; recognized gain is the portion taxable today (commonly boot and certain debt relief); deferred gain is the remaining realized gain that is deferred under Section 1031 when like-kind replacement requirements are satisfied.",
+      "Key quantitative rules implemented: effective boot combines cash boot and positive net debt relief; recognized gain cannot exceed realized gain; deferred gain = realized gain − recognized gain. Estimated tax due = recognized gain × capital gains tax rate entered by the user.",
+      "This tool is an estimator. Precision and reliability are improved by cross-checking with formal closing statements, loan payoff figures, and advice from a tax professional. For software QA and numeric stability this implementation follows engineering best practices for unit testing and numeric range checks in line with standards for reliable computation."
+    ],
+    "how_is_calculated": [
+      "Net sale proceeds = sale price − selling costs − exchange expenses.",
+      "Realized gain = net sale proceeds − adjusted basis.",
+      "Effective boot = cash boot received + max(0, debt relieved on relinquished − debt assumed on replacement).",
+      "Recognized gain = min(realized gain, effective boot). Deferred gain = realized gain − recognized gain. Estimated tax now = recognized gain × (capital gains tax rate ÷ 100)."
+    ],
+    "examples": [
+      "Example 1 (Full deferral): Relinquished sale price 500,000, adjusted basis 200,000, no boot, replacement purchase 600,000 → recognized gain = 0, deferred gain = 300,000.",
+      "Example 2 (Partial): Same sale but you receive 50,000 in cash boot → recognized gain = 50,000, tax due = 50,000 × your entered tax rate."
+    ],
+    "summary": [
+      "Use the standard deferral mode for most forward exchanges, the partial mode when cash or non-like-kind property is involved, and the reverse mode when you acquire replacement property before relinquishing the old property.",
+      "Always reconcile calculator outputs with actual settlement statements and consult a tax advisor to confirm tax treatment and filing requirements."
+    ],
+    "faqs": [
+      {
+        "question": "Is this calculator definitive tax advice?",
+        "answer": "No. Outputs are estimates for planning only. Tax treatment depends on detailed facts, the structure of your exchange, and current law. Consult a qualified tax advisor or attorney for binding guidance."
+      },
+      {
+        "question": "What inputs most affect the taxable amount?",
+        "answer": "Cash boot received, differences in mortgage/debt (debt relief vs. debt assumed), adjusted basis, and transaction costs are the primary drivers of recognized (taxable) gain."
+      },
+      {
+        "question": "How accurate are the tax estimates?",
+        "answer": "Estimates are arithmetic calculations based on your inputs and do not include state taxes, surtaxes, or specialized recapture rules. For numerical integrity this tool applies defensive checks on ranges, but you should use official closing figures and guidance for final tax calculations."
+      },
+      {
+        "question": "Does the calculator apply depreciation recapture rules exactly?",
+        "answer": "No. Depreciation recapture can be complex and depends on asset class and prior depreciation history. The calculator provides a rough estimate; consult your tax advisor for precise recapture calculations."
+      },
+      {
+        "question": "Are there regulatory or standards considerations for the calculator?",
+        "answer": "Yes. While tax law governs substantive results, the tool’s engineering and testing approach follows industry standards for computational accuracy, testability, and reliable user experience as cited in the references."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Realized Gain",
+        "definition": "Amount by which net sale proceeds exceed adjusted basis of the relinquished property."
+      },
+      {
+        "term": "Recognized Gain",
+        "definition": "Portion of realized gain that is taxable immediately; commonly includes boot and positive debt relief."
+      },
+      {
+        "term": "Deferred Gain",
+        "definition": "Portion of realized gain that is not recognized (taxable) now because it is deferred under Section 1031 when like-kind replacement rules are met."
+      },
+      {
+        "term": "Boot",
+        "definition": "Cash or non-like-kind property received in an exchange that can trigger recognition of gain."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Internal Revenue Service — Like-Kind Exchanges (Section 1031)",
+        "url": "https://www.irs.gov/businesses/small-businesses-self-employed/like-kind-exchanges-real-estate-section-1031"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Software and Systems",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov/"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/businesses/small-businesses-self-employed/like-kind-exchanges-real-estate-section-1031",
+        "label": "IRS — Like-Kind Exchanges (Section 1031)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

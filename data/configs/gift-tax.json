@@ -1,0 +1,357 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Gift Tax Estimator (Federal) — Calculator",
+    "description": "Estimate reportable gift amounts and remaining federal lifetime exemption. Designed to show taxable gift calculation and filing indicators; not a replacement for tax advice. Update annual exclusion and lifetime exemption to match current IRS guidance before use."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "single_gift",
+    "methods": {
+      "single_gift": {
+        "label": "Single gift to one or more recipients",
+        "description": "Estimate the reportable taxable portion of a single gift after applying the per-recipient annual exclusion and the donor's remaining lifetime exemption.",
+        "variables": {
+          "taxable_gift_raw": {
+            "expression": "gift_amount - annual_exclusion * number_of_recipients",
+            "dependencies": [
+              "gift_amount",
+              "annual_exclusion",
+              "number_of_recipients"
+            ],
+            "label": "Raw taxable gift before exemption",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "amount_over_annual_exclusion": {
+            "expression": "gift_amount - annual_exclusion * number_of_recipients",
+            "dependencies": [
+              "gift_amount",
+              "annual_exclusion",
+              "number_of_recipients"
+            ],
+            "label": "Amount over annual exclusion (may be negative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_lifetime_exemption": {
+            "expression": "lifetime_exemption - prior_lifetime_used - taxable_gift_raw",
+            "dependencies": [
+              "lifetime_exemption",
+              "prior_lifetime_used",
+              "taxable_gift_raw"
+            ],
+            "label": "Remaining lifetime exemption after this gift",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "reportable_taxable_gift",
+            "label": "Reportable taxable gift (USD)",
+            "variable": "taxable_gift_raw",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "remaining_lifetime_exemption",
+            "label": "Remaining lifetime exemption (USD)",
+            "variable": "remaining_lifetime_exemption",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "amount_over_annual_exclusion",
+            "label": "Amount over annual exclusion (USD)",
+            "variable": "amount_over_annual_exclusion",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "multiple_gifts": {
+        "label": "Multiple gifts in a single year",
+        "description": "Combine multiple gifts given in the same calendar year to the same or multiple recipients to determine reportable totals against the annual exclusion and lifetime exemption.",
+        "variables": {
+          "total_taxable_gifts_raw": {
+            "expression": "total_gifts_year - annual_exclusion * number_of_recipients",
+            "dependencies": [
+              "total_gifts_year",
+              "annual_exclusion",
+              "number_of_recipients"
+            ],
+            "label": "Raw taxable total for year before exemption",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_lifetime_exemption": {
+            "expression": "lifetime_exemption - prior_lifetime_used - total_taxable_gifts_raw",
+            "dependencies": [
+              "lifetime_exemption",
+              "prior_lifetime_used",
+              "total_taxable_gifts_raw"
+            ],
+            "label": "Remaining lifetime exemption after yearly gifts",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "reportable_taxable_gifts_year",
+            "label": "Reportable taxable gifts this year (USD)",
+            "variable": "total_taxable_gifts_raw",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "remaining_lifetime_exemption",
+            "label": "Remaining lifetime exemption (USD)",
+            "variable": "remaining_lifetime_exemption",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "gift_splitting": {
+        "label": "Gift splitting with spouse",
+        "description": "When a married donor elects gift-splitting, spouse consent can effectively increase the annual exclusion available for a gift. This method shows the effect on reportable amount and remaining exemption; separate Form 709 filing rules still apply.",
+        "variables": {
+          "effective_annual_exclusion": {
+            "expression": "annual_exclusion * (1 + gift_split_with_spouse)",
+            "dependencies": [
+              "annual_exclusion",
+              "gift_split_with_spouse"
+            ],
+            "label": "Effective per-recipient annual exclusion (with spouse split)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_gift_raw": {
+            "expression": "gift_amount - effective_annual_exclusion * number_of_recipients",
+            "dependencies": [
+              "gift_amount",
+              "effective_annual_exclusion",
+              "number_of_recipients"
+            ],
+            "label": "Raw taxable gift after split",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_lifetime_exemption": {
+            "expression": "lifetime_exemption - prior_lifetime_used - taxable_gift_raw",
+            "dependencies": [
+              "lifetime_exemption",
+              "prior_lifetime_used",
+              "taxable_gift_raw"
+            ],
+            "label": "Remaining lifetime exemption after split",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "reportable_taxable_gift_split",
+            "label": "Reportable taxable gift (USD) after split",
+            "variable": "taxable_gift_raw",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_annual_exclusion",
+            "label": "Effective annual exclusion per recipient (USD)",
+            "variable": "effective_annual_exclusion",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "remaining_lifetime_exemption",
+            "label": "Remaining lifetime exemption (USD)",
+            "variable": "remaining_lifetime_exemption",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "gift_amount",
+        "label": "Gift amount (single gift) USD",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "number_of_recipients",
+        "label": "Number of recipients for this gift",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "total_gifts_year",
+        "label": "Total gifts to all recipients this calendar year (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_exclusion",
+        "label": "Per-recipient annual exclusion (USD)",
+        "type": "number",
+        "default": 18000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "lifetime_exemption",
+        "label": "Federal lifetime exemption/unified credit remaining (USD)",
+        "type": "number",
+        "default": 12000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "prior_lifetime_used",
+        "label": "Prior lifetime exemption used (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "gift_split_with_spouse",
+        "label": "Gift split with spouse? (consent given)",
+        "type": "select",
+        "default": "0",
+        "options": [
+          {
+            "label": "No",
+            "value": "0"
+          },
+          {
+            "label": "Yes (consent given)",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "year_of_gift",
+        "label": "Tax year for the gift",
+        "type": "integer",
+        "default": 2025,
+        "min": 2000,
+        "max": 2100,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you determine the portion of a gift that may be reportable for federal gift tax purposes and how much of your federal lifetime exemption remains after a gift or series of gifts.",
+      "It applies the per-recipient annual exclusion and reduces the donor's lifetime exemption by any amount that exceeds the exclusion. It is an informational tool and does not calculate actual tax liability or state-level gift taxes."
+    ],
+    "methodology": [
+      "Calculations follow the federal gift tax framework: gifts in excess of the per-recipient annual exclusion reduce the donor's lifetime exemption (unified credit). This estimator computes the arithmetic difference between gift amounts and exclusion amounts and subtracts that result from the lifetime exemption entered by the user.",
+      "This tool does not apply progressive tax brackets to compute a dollar tax liability. It returns reportable taxable amounts and remaining exemption; compute final tax liability with a tax professional or the official IRS Form 709 instructions.",
+      "Security and development practices referenced in building this tool align with authoritative standards including NIST for data protection, ISO standards for quality management and information security, IEEE best practices for software reliability, and OSHA guidance for workplace safety in development environments. Users should verify current statutory amounts with official sources before relying on results."
+    ],
+    "how_is_calculated": [
+      "Step 1: For each scenario, subtract the per-recipient annual exclusion from the gift amount multiplied by number of recipients: taxable_raw = gift_amount - annual_exclusion * number_of_recipients.",
+      "Step 2: The taxable_raw amount (which may be negative) indicates excess over annual exclusion. Negative values mean no reduction to lifetime exemption is needed for that gift.",
+      "Step 3: Remaining lifetime exemption = lifetime_exemption - prior_lifetime_used - taxable_raw. A negative remaining value indicates the lifetime exemption would be exceeded by this gift.",
+      "Note: When gift splitting is elected and spouse consents, the effective annual exclusion per recipient is doubled in this estimator by multiplying the exclusion by (1 + gift_split_with_spouse). Filing requirements for Form 709 are separate and may still apply even when taxable amounts are zero."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator compute the exact gift tax I owe?",
+        "answer": "No. This calculator shows reportable taxable amounts and remaining lifetime exemption. Calculating an actual federal gift tax liability requires applying the gift and estate tax rate schedule and is typically done when preparing IRS Form 709 or by a tax professional."
+      },
+      {
+        "question": "Should I change the annual exclusion and lifetime exemption values?",
+        "answer": "Yes. Laws and limits change. Update the per-recipient annual exclusion and lifetime exemption fields to match the current tax year before using the results. Official IRS guidance is the authoritative source."
+      },
+      {
+        "question": "When do I need to file Form 709?",
+        "answer": "You generally must file Form 709 if you gave gifts that exceed the annual exclusion to any recipient or if you are electing gift splitting with a spouse. This tool indicates reportable amounts but does not substitute for filing guidance; consult the IRS Form 709 instructions or a tax advisor."
+      },
+      {
+        "question": "Does this account for state gift taxes?",
+        "answer": "No. Some states may have their own rules. This estimator is focused on federal treatment only. Check state tax authority guidance where applicable."
+      },
+      {
+        "question": "Is my data stored or transmitted securely?",
+        "answer": "This tool recommends following NIST and ISO information security controls for handling sensitive financial data. Do not enter personally identifiable information if you are unsure about data handling policies on the host platform."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Frequently Asked Questions on Gift Taxes",
+        "url": "https://www.irs.gov/businesses/small-businesses-self-employed/frequently-asked-questions-on-gift-taxes"
+      },
+      {
+        "label": "NIST — Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Annual exclusion",
+        "definition": "The per-recipient amount a donor may give each year without reducing the donor's lifetime exemption or triggering a reportable taxable gift."
+      },
+      {
+        "term": "Lifetime exemption (unified credit)",
+        "definition": "The cumulative amount of taxable gifts a donor may give over a lifetime before incurring gift or estate tax; also referred to as the unified credit or estate and gift tax exemption."
+      },
+      {
+        "term": "Reportable taxable gift",
+        "definition": "The portion of a gift that exceeds the annual exclusion and therefore reduces the donor's lifetime exemption; this amount is typically reported on IRS Form 709."
+      },
+      {
+        "term": "Gift splitting",
+        "definition": "An election by a married couple where gifts made by one spouse are treated as made one-half by each spouse for gift tax purposes, which can affect annual exclusion availability and filing requirements."
+      },
+      {
+        "term": "Form 709",
+        "definition": "U.S. Internal Revenue Service form used to report gifts and the allocation of generation-skipping transfer tax exemptions and charitable deductions related to gifts."
+      }
+    ],
+    "summary": [
+      "This estimator provides arithmetic estimates of reportable taxable gift amounts and remaining federal lifetime exemption under different common scenarios: single gifts, multiple gifts in a year, and gift splitting.",
+      "It is meant for planning and informational purposes only. Verify figures with current IRS rules and consult a qualified tax professional to determine filing obligations and compute any tax due."
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

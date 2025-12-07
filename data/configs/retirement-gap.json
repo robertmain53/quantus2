@@ -1,0 +1,653 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Retirement Gap Calculator (Advanced Projection)",
+    "description": "Estimate the difference between your expected retirement income and your desired retirement income. Provides multiple projection methods, portfolio forecasts, required-savings estimates, and transparent assumptions with citations to data-handling and software quality standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "portfolio_withdrawal",
+    "methods": {
+      "portfolio_withdrawal": {
+        "label": "Portfolio withdrawal projection",
+        "description": "Projects your retirement portfolio at retirement, converts that to a sustainable annual withdrawal, and compares to desired income plus guaranteed sources.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "r_nominal": {
+            "expression": "expected_return_pre_pct / 100",
+            "dependencies": [
+              "expected_return_pre_pct"
+            ],
+            "label": "Nominal annual return (pre-retirement)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "inflation": {
+            "expression": "inflation_pct / 100",
+            "dependencies": [
+              "inflation_pct"
+            ],
+            "label": "Inflation rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "r_real": {
+            "expression": "(1 + r_nominal) / (1 + inflation) - 1",
+            "dependencies": [
+              "r_nominal",
+              "inflation"
+            ],
+            "label": "Estimated real return (pre-retirement)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "effective_annual_contribution": {
+            "expression": "annual_contribution + current_annual_income * employer_match_percent / 100",
+            "dependencies": [
+              "annual_contribution",
+              "current_annual_income",
+              "employer_match_percent"
+            ],
+            "label": "Your annual saving including employer match",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "fv_savings": {
+            "expression": "current_savings * pow(1 + r_nominal, years_to_retirement) + effective_annual_contribution * ((pow(1 + r_nominal, years_to_retirement) - 1) / r_nominal)",
+            "dependencies": [
+              "current_savings",
+              "effective_annual_contribution",
+              "r_nominal",
+              "years_to_retirement"
+            ],
+            "label": "Projected portfolio at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "withdrawal_rate": {
+            "expression": "withdrawal_rate_pct / 100",
+            "dependencies": [
+              "withdrawal_rate_pct"
+            ],
+            "label": "Assumed safe withdrawal rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "annual_portfolio_income": {
+            "expression": "fv_savings * withdrawal_rate",
+            "dependencies": [
+              "fv_savings",
+              "withdrawal_rate"
+            ],
+            "label": "Annual income from portfolio",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_projected_income_at_retirement": {
+            "expression": "annual_portfolio_income + expected_pension + expected_social_security",
+            "dependencies": [
+              "annual_portfolio_income",
+              "expected_pension",
+              "expected_social_security"
+            ],
+            "label": "Total projected annual retirement income",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "income_gap": {
+            "expression": "desired_annual_income - total_projected_income_at_retirement",
+            "dependencies": [
+              "desired_annual_income",
+              "total_projected_income_at_retirement"
+            ],
+            "label": "Annual income shortfall (positive means you are short)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "required_portfolio_for_desired_income": {
+            "expression": "(desired_annual_income - expected_pension - expected_social_security) / withdrawal_rate",
+            "dependencies": [
+              "desired_annual_income",
+              "expected_pension",
+              "expected_social_security",
+              "withdrawal_rate"
+            ],
+            "label": "Portfolio required at retirement to fund desired income",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "fv_savings",
+            "label": "Projected portfolio at retirement",
+            "variable": "fv_savings",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_portfolio_income",
+            "label": "Annual income from portfolio",
+            "variable": "annual_portfolio_income",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_projected_income_at_retirement",
+            "label": "Total projected annual retirement income",
+            "variable": "total_projected_income_at_retirement",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "income_gap",
+            "label": "Annual income shortfall",
+            "variable": "income_gap",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "required_portfolio_for_desired_income",
+            "label": "Required portfolio to meet desired income",
+            "variable": "required_portfolio_for_desired_income",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "replacement_ratio_method": {
+        "label": "Replacement ratio method",
+        "description": "Compares desired retirement income to pre-retirement income and estimates the portfolio needed to replace a target fraction of income.",
+        "variables": {
+          "suggested_replacement_rate": {
+            "expression": "0.75",
+            "dependencies": [],
+            "label": "Suggested replacement ratio",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "replacement_ratio": {
+            "expression": "desired_annual_income / current_annual_income",
+            "dependencies": [
+              "desired_annual_income",
+              "current_annual_income"
+            ],
+            "label": "Desired income as fraction of current income",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "r_nominal_2": {
+            "expression": "expected_return_pre_pct / 100",
+            "dependencies": [
+              "expected_return_pre_pct"
+            ],
+            "label": "Nominal return (used for projection)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "withdrawal_rate_2": {
+            "expression": "withdrawal_rate_pct / 100",
+            "dependencies": [
+              "withdrawal_rate_pct"
+            ],
+            "label": "Withdrawal rate",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "required_portfolio_based_on_replacement": {
+            "expression": "(suggested_replacement_rate * current_annual_income - expected_pension - expected_social_security) / withdrawal_rate_2",
+            "dependencies": [
+              "suggested_replacement_rate",
+              "current_annual_income",
+              "expected_pension",
+              "expected_social_security",
+              "withdrawal_rate_2"
+            ],
+            "label": "Estimated portfolio needed to fund suggested replacement ratio",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "shortfall_to_replacement": {
+            "expression": "required_portfolio_based_on_replacement - current_savings",
+            "dependencies": [
+              "required_portfolio_based_on_replacement",
+              "current_savings"
+            ],
+            "label": "Portfolio shortfall relative to current savings",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "replacement_ratio",
+            "label": "Desired/Current income ratio",
+            "variable": "replacement_ratio",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "required_portfolio_based_on_replacement",
+            "label": "Portfolio needed for suggested replacement",
+            "variable": "required_portfolio_based_on_replacement",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "shortfall_to_replacement",
+            "label": "Shortfall to reach suggested replacement",
+            "variable": "shortfall_to_replacement",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 40,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 67,
+        "min": 50,
+        "max": 80,
+        "step": 1
+      },
+      {
+        "id": "life_expectancy",
+        "label": "Assumed life expectancy (age)",
+        "type": "integer",
+        "default": 90,
+        "min": 65,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "current_annual_income",
+        "label": "Current annual pre-tax income",
+        "type": "number",
+        "default": 90000,
+        "min": 0,
+        "max": 10000000,
+        "step": 100
+      },
+      {
+        "id": "current_savings",
+        "label": "Current retirement savings",
+        "type": "number",
+        "default": 150000,
+        "min": 0,
+        "max": 100000000,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Your planned annual retirement contribution",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "max": 2000000,
+        "step": 50
+      },
+      {
+        "id": "employer_match_percent",
+        "label": "Employer match (percent of salary)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "expected_return_pre_pct",
+        "label": "Expected annual return before retirement (nominal %)",
+        "type": "number",
+        "default": 6,
+        "min": -5,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "expected_return_post_pct",
+        "label": "Expected annual return in retirement (nominal %)",
+        "type": "number",
+        "default": 5,
+        "min": -5,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "inflation_pct",
+        "label": "Expected inflation rate (annual %)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "desired_annual_income",
+        "label": "Desired annual retirement income (before tax)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "max": 5000000,
+        "step": 100
+      },
+      {
+        "id": "expected_pension",
+        "label": "Estimated annual pension income",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "max": 1000000,
+        "step": 50
+      },
+      {
+        "id": "expected_social_security",
+        "label": "Estimated annual Social Security",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "max": 200000,
+        "step": 50
+      },
+      {
+        "id": "withdrawal_rate_pct",
+        "label": "Assumed safe withdrawal rate (%)",
+        "type": "number",
+        "default": 4,
+        "min": 0.1,
+        "max": 10,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "personal_info",
+        "label": "Personal & income",
+        "fields": [
+          {
+            "id": "current_age",
+            "label": "Current age",
+            "type": "integer",
+            "default": 40,
+            "min": 18,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "retirement_age",
+            "label": "Planned retirement age",
+            "type": "integer",
+            "default": 67,
+            "min": 50,
+            "max": 80,
+            "step": 1
+          },
+          {
+            "id": "current_annual_income",
+            "label": "Current annual pre-tax income",
+            "type": "number",
+            "default": 90000,
+            "min": 0,
+            "max": 10000000,
+            "step": 100
+          }
+        ]
+      },
+      {
+        "id": "savings_and_contributions",
+        "label": "Savings & contributions",
+        "fields": [
+          {
+            "id": "current_savings",
+            "label": "Current retirement savings",
+            "type": "number",
+            "default": 150000,
+            "min": 0,
+            "max": 100000000,
+            "step": 100
+          },
+          {
+            "id": "annual_contribution",
+            "label": "Your planned annual retirement contribution",
+            "type": "number",
+            "default": 10000,
+            "min": 0,
+            "max": 2000000,
+            "step": 50
+          },
+          {
+            "id": "employer_match_percent",
+            "label": "Employer match (percent of salary)",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "max": 20,
+            "step": 0.1
+          }
+        ]
+      },
+      {
+        "id": "assumptions",
+        "label": "Assumptions",
+        "fields": [
+          {
+            "id": "expected_return_pre_pct",
+            "label": "Expected annual return before retirement (nominal %)",
+            "type": "number",
+            "default": 6,
+            "min": -5,
+            "max": 20,
+            "step": 0.1
+          },
+          {
+            "id": "inflation_pct",
+            "label": "Expected inflation rate (annual %)",
+            "type": "number",
+            "default": 2.5,
+            "min": 0,
+            "max": 10,
+            "step": 0.1
+          },
+          {
+            "id": "withdrawal_rate_pct",
+            "label": "Assumed safe withdrawal rate (%)",
+            "type": "number",
+            "default": 4,
+            "min": 0.1,
+            "max": 10,
+            "step": 0.1
+          }
+        ]
+      },
+      {
+        "id": "retirement_income_goals",
+        "label": "Retirement income goals",
+        "fields": [
+          {
+            "id": "desired_annual_income",
+            "label": "Desired annual retirement income (before tax)",
+            "type": "number",
+            "default": 60000,
+            "min": 0,
+            "max": 5000000,
+            "step": 100
+          },
+          {
+            "id": "expected_pension",
+            "label": "Estimated annual pension income",
+            "type": "number",
+            "default": 5000,
+            "min": 0,
+            "max": 1000000,
+            "step": 50
+          },
+          {
+            "id": "expected_social_security",
+            "label": "Estimated annual Social Security",
+            "type": "number",
+            "default": 15000,
+            "min": 0,
+            "max": 200000,
+            "step": 50
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Retirement Gap Calculator helps you estimate whether your projected retirement income will meet your desired annual retirement spending. It models portfolio growth, converts a projected portfolio into sustainable annual withdrawals, and compares that to guaranteed income sources such as pensions and Social Security.",
+      "Results are scenario estimates, not guarantees. Use conservative assumptions and review outcomes with a qualified financial professional before making major decisions."
+    ],
+    "methodology": [
+      "Projections use deterministic formulas for future value of savings and a constant withdrawal-rate approach to convert a portfolio into annual income. Assumptions include nominal returns, inflation, and employer matches. Where possible the calculator adjusts returns for inflation to show real purchasing power.",
+      "Inputs are user-supplied. The tool does not perform probabilistic Monte Carlo simulations; it provides transparent, auditable arithmetic so you can see how each assumption affects outcomes. For production and data handling, follow NIST cybersecurity guidance for protecting personal inputs; for development, adhere to IEEE software best practices and ISO quality controls."
+    ],
+    "how_is_calculated": [
+      "Projected portfolio (future value): FV = current_savings * (1 + r)^years + contribution * (( (1 + r)^years - 1) / r), where r is annual nominal return and years is retirement_age - current_age.",
+      "Annual income from portfolio = Projected portfolio * withdrawal rate.",
+      "Total projected income = Annual income from portfolio + expected pension + expected Social Security.",
+      "Income gap = Desired annual income - Total projected income.",
+      "Required portfolio to meet desired income = (Desired income - pension - Social Security) / withdrawal rate."
+    ],
+    "examples": [
+      "Example 1: Age 45, retire at 67, current savings $200,000, contribute $12,000/year, expected return 6%: the calculator projects a portfolio and shows how much annual income that portfolio can sustainably provide at a 4% withdrawal rate.",
+      "Example 2: If you have a pension and Social Security totaling $20,000/year, the tool subtracts those sources before computing the remaining gap to be funded by your portfolio."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are the results?",
+        "answer": "This tool provides deterministic estimates based on user inputs and simplifying assumptions. It does not predict market returns or lifespan. Results are sensitive to the return, inflation, and withdrawal-rate assumptions. Use multiple scenarios and consult a licensed financial advisor for personalized planning."
+      },
+      {
+        "question": "Should I use nominal or real return assumptions?",
+        "answer": "You may enter nominal return expectations and an inflation rate. The calculator derives a real return internally. For purchasing-power comparisons use real returns; for nominal dollar outcomes use nominal returns."
+      },
+      {
+        "question": "How should I treat guaranteed income like a pension?",
+        "answer": "Enter expected annual amounts from pensions and Social Security as reliable income sources. If amounts are uncertain, run scenarios with lower and higher estimates to measure sensitivity."
+      },
+      {
+        "question": "How is my personal data handled?",
+        "answer": "This calculator is intended for client-side use only. If you submit or store inputs, follow NIST SP 800-series recommendations for securing sensitive data. Do not enter personally identifying information beyond numeric assumptions."
+      },
+      {
+        "question": "Are there industry standards referenced?",
+        "answer": "Yes. For software quality and risk management we reference IEEE and ISO best practices. For handling and protecting data, see NIST guidance. For workplace and organizational safety policies consult OSHA where applicable."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Social Security Administration",
+        "url": "https://www.ssa.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Future Value (FV)",
+        "definition": "The estimated value of current savings and future contributions at a future date given a specified annual return."
+      },
+      {
+        "term": "Withdrawal rate",
+        "definition": "The percentage of a portfolio withdrawn annually to provide retirement income. Common rule-of-thumb values include 3% to 4%."
+      },
+      {
+        "term": "Replacement ratio",
+        "definition": "Desired retirement income as a fraction of pre-retirement income; used to estimate how much income must be replaced in retirement."
+      },
+      {
+        "term": "Real return",
+        "definition": "Nominal return adjusted for inflation, representing growth in purchasing power."
+      },
+      {
+        "term": "Income gap",
+        "definition": "The difference between desired annual retirement income and projected annual retirement income from all sources."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/retirement/safe-withdrawal",
+      "/guides/retirement-planning/assumptions"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ssa.gov",
+        "label": "Social Security Administration",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

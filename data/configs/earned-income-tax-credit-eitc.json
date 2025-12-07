@@ -1,0 +1,426 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Earned Income Tax Credit (EITC) Estimator",
+    "description": "Estimate your federal Earned Income Tax Credit (EITC) for the selected tax year. Designed for quick, explainable estimates; not a tax return. Use official IRS tables for filing and exact year-specific thresholds."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "federal_eitc",
+    "methods": {
+      "federal_eitc": {
+        "label": "Federal EITC (estimate)",
+        "description": "Piecewise estimate of EITC based on earned income, filing status, number of qualifying children, and basic disqualification rules (investment income, SSN, residency, filing status). Thresholds and rates are illustrative and must be verified against IRS tables for the filing year.",
+        "variables": {
+          "applicable_children": {
+            "expression": "min(max(qualifying_children, 0), 3)",
+            "dependencies": [
+              "qualifying_children"
+            ],
+            "label": "Number of qualifying children used (capped at 3)",
+            "unit": "count",
+            "format": "integer",
+            "display": true
+          },
+          "max_credit": {
+            "expression": "if(applicable_children==0, 600, if(applicable_children==1, 3995, if(applicable_children==2, 6604, 7430)))",
+            "dependencies": [
+              "applicable_children"
+            ],
+            "label": "Maximum credit for qualifying children count (illustrative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "phase_in_rate": {
+            "expression": "if(applicable_children==0, 0.0765, if(applicable_children==1, 0.34, if(applicable_children==2, 0.40, 0.45)))",
+            "dependencies": [
+              "applicable_children"
+            ],
+            "label": "Phase-in rate",
+            "format": "percent",
+            "display": false
+          },
+          "phase_out_rate": {
+            "expression": "if(applicable_children==0, 0.0765, if(applicable_children==1, 0.1598, 0.2106))",
+            "dependencies": [
+              "applicable_children"
+            ],
+            "label": "Phase-out rate (illustrative)",
+            "format": "percent",
+            "display": false
+          },
+          "phase_out_start": {
+            "expression": "let(base = if(applicable_children==0, 9160, 20130), if(filing_status=='married_filing_jointly', base + 6440, base))",
+            "dependencies": [
+              "applicable_children",
+              "filing_status"
+            ],
+            "label": "Phase-out threshold start (illustrative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "investment_income_threshold": {
+            "expression": "11000",
+            "dependencies": [],
+            "label": "Illustrative investment income disqualification threshold",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "disqualified_investment": {
+            "expression": "investment_income > investment_income_threshold",
+            "dependencies": [
+              "investment_income",
+              "investment_income_threshold"
+            ],
+            "label": "Disqualified by investment income",
+            "format": "integer",
+            "display": false
+          },
+          "disqualified_ssn": {
+            "expression": "valid_ssn == 'no'",
+            "dependencies": [
+              "valid_ssn"
+            ],
+            "label": "Disqualified by SSN status",
+            "format": "integer",
+            "display": false
+          },
+          "disqualified_residency": {
+            "expression": "lived_in_us == 'no'",
+            "dependencies": [
+              "lived_in_us"
+            ],
+            "label": "Disqualified by residency",
+            "format": "integer",
+            "display": false
+          },
+          "disqualified_filing_status": {
+            "expression": "filing_status == 'married_filing_separately'",
+            "dependencies": [
+              "filing_status"
+            ],
+            "label": "Disqualified by filing status",
+            "format": "integer",
+            "display": false
+          },
+          "disqualified": {
+            "expression": "disqualified_investment || disqualified_ssn || disqualified_residency || disqualified_filing_status",
+            "dependencies": [
+              "disqualified_investment",
+              "disqualified_ssn",
+              "disqualified_residency",
+              "disqualified_filing_status"
+            ],
+            "label": "Any disqualification flag",
+            "format": "integer",
+            "display": false
+          },
+          "earned_portion": {
+            "expression": "min(max(earned_income * phase_in_rate, 0), max_credit)",
+            "dependencies": [
+              "earned_income",
+              "phase_in_rate",
+              "max_credit"
+            ],
+            "label": "Phase-in earned portion (before phase-out)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "phaseout_amount": {
+            "expression": "max(0, (max(earned_income, adjusted_gross_income) - phase_out_start) * phase_out_rate)",
+            "dependencies": [
+              "earned_income",
+              "adjusted_gross_income",
+              "phase_out_start",
+              "phase_out_rate"
+            ],
+            "label": "Phase-out reduction amount",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "prelim_credit": {
+            "expression": "max(0, earned_portion - phaseout_amount)",
+            "dependencies": [
+              "earned_portion",
+              "phaseout_amount"
+            ],
+            "label": "Preliminary credit (before disqualifications)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "final_credit": {
+            "expression": "if(disqualified, 0, prelim_credit)",
+            "dependencies": [
+              "disqualified",
+              "prelim_credit"
+            ],
+            "label": "Estimated EITC (final)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "estimated_eitc",
+            "label": "Estimated EITC",
+            "variable": "final_credit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "maximum_credit",
+            "label": "Maximum credit for family size (illustrative)",
+            "variable": "max_credit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "earned_portion_output",
+            "label": "Earned portion (phase-in)",
+            "variable": "earned_portion",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "phaseout_reduction",
+            "label": "Phase-out reduction",
+            "variable": "phaseout_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "disqualified_flag",
+            "label": "Disqualified (1 = yes, 0 = no)",
+            "variable": "disqualified",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "tax_year",
+        "label": "Tax year for estimate",
+        "type": "integer",
+        "default": 2025,
+        "min": 2020,
+        "max": 2030,
+        "step": 1
+      },
+      {
+        "id": "filing_status",
+        "label": "Filing status",
+        "type": "select",
+        "default": "single_or_head",
+        "options": [
+          {
+            "label": "Single / Head of household",
+            "value": "single_or_head"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "married_filing_jointly"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "married_filing_separately"
+          }
+        ]
+      },
+      {
+        "id": "qualifying_children",
+        "label": "Number of qualifying children",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "id": "earned_income",
+        "label": "Earned income (wages, self-employment)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "max": 1000000,
+        "step": 1
+      },
+      {
+        "id": "adjusted_gross_income",
+        "label": "Adjusted Gross Income (AGI)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "max": 1000000,
+        "step": 1
+      },
+      {
+        "id": "investment_income",
+        "label": "Taxable investment income",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1000000,
+        "step": 1
+      },
+      {
+        "id": "valid_ssn",
+        "label": "Do you (and qualifying children) have valid SSNs for work?",
+        "type": "select",
+        "default": "yes",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "label": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "lived_in_us",
+        "label": "Was your main home in the United States for more than half the year?",
+        "type": "select",
+        "default": "yes",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "label": "No",
+            "value": "no"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "estimated_eitc",
+          "label": "Estimated EITC"
+        },
+        {
+          "id": "maximum_credit",
+          "label": "Maximum credit for your family size"
+        },
+        {
+          "id": "earned_portion_output",
+          "label": "Earned portion (phase-in)"
+        },
+        {
+          "id": "phaseout_reduction",
+          "label": "Phase-out reduction"
+        },
+        {
+          "id": "disqualified_flag",
+          "label": "Disqualification flag (1 = yes, 0 = no)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator provides a transparent, explainable estimate of the federal Earned Income Tax Credit (EITC) using user-provided income, filing status, and qualifying child counts. It is meant for planning and education, not as a substitute for filing a tax return.",
+      "Thresholds, rates, and disqualification rules change annually. This tool uses illustrative thresholds and common calculation logic; always verify with official IRS publications for the tax year you are filing."
+    ],
+    "methodology": [
+      "The calculator models the EITC as a three-stage piecewise process: a phase-in (credit increases with earned income at a fixed rate up to a maximum), a plateau (where the credit is at the maximum), and a phase-out (credit reduces as income exceeds a threshold).",
+      "Basic disqualifiers are applied: investment income above the illustrative threshold, lack of valid Social Security numbers, nonresidency, and filing as married filing separately — any of these will result in an estimated credit of zero.",
+      "Results are computed deterministically from inputs. For traceability and auditability we surface intermediate values: maximum credit for family size, earned portion, and phase-out reduction."
+    ],
+    "how_is_calculated": [
+      "1) Determine applicable number of qualifying children (capped at 3 for this estimator).",
+      "2) Lookup an illustrative maximum credit for that family size (max_credit).",
+      "3) Compute earned_portion = min(earned_income × phase_in_rate, max_credit).",
+      "4) Compute phaseout_amount = max(0, (max(earned_income, AGI) - phase_out_start) × phase_out_rate).",
+      "5) Preliminary credit = max(0, earned_portion − phaseout_amount). If any disqualification condition is true, final credit = 0.",
+      "Note: All numeric thresholds and rates included here are illustrative. Use official IRS tables (publication for EITC for the tax year) for exact amounts."
+    ],
+    "examples": [
+      "Example: Single filer, one qualifying child, earned income $18,000, AGI $18,000 — earned portion is computed by phase_in_rate × income, then reduced by phaseout if income exceeds phase_out_start. The estimator reports the intermediate values alongside final estimate.",
+      "Example: Married filing jointly with two qualifying children, earned income $30,000 — the estimator applies the married filing threshold adjustment when computing the phase-out start."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an official IRS calculation?",
+        "answer": "No. This estimator uses illustrative thresholds and logic for transparency. Use IRS-provided tables and forms for filing. Always confirm amounts with official IRS guidance for the tax year in question."
+      },
+      {
+        "question": "Why does the tool sometimes report zero credit?",
+        "answer": "A zero estimate can arise because the preliminary calculation falls to zero after phase-out, or because a disqualification condition applies (excess investment income, missing SSNs, nonresidency, or filing separately when that disqualifies)."
+      },
+      {
+        "question": "How accurate is this estimator?",
+        "answer": "The estimator uses deterministic arithmetic and conservative checks but relies on illustrative thresholds. It is intended for planning; for filing use IRS publications and, if needed, a professional preparer. See accuracy caveats in citations."
+      },
+      {
+        "question": "How often are thresholds and rates updated?",
+        "answer": "EITC thresholds and maximum credit amounts are typically updated annually for inflation and legislative changes. Update the tax year field and verify with official IRS tables for each filing year."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS: Earned Income Tax Credit (EITC) Overview",
+        "url": "https://www.irs.gov/credits-deductions/individuals/earned-income-tax-credit-eitc"
+      },
+      {
+        "label": "IRS Publication (EITC) - annual tables and rules (example PDF)",
+        "url": "https://www.irs.gov/pub/irs-pdf/p596.pdf"
+      },
+      {
+        "label": "NIST Special Publication 800-63 (Digital Identity Guidelines) - for authentication and identity proofing guidance",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-63-3.pdf"
+      },
+      {
+        "label": "ISO 9001 (Quality management) — guidance for process controls and validation",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE Standards: software and systems engineering standards catalog",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA: laws and regulations (example for organizational compliance frameworks)",
+        "url": "https://www.osha.gov/laws-regs"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "EITC (Earned Income Tax Credit)",
+        "definition": "A refundable federal tax credit for low- to moderate-income working individuals and families. Eligibility, amounts, and phase-out rules depend on income, filing status, and qualifying children."
+      },
+      {
+        "term": "Phase-in",
+        "definition": "The range of earned income where the credit increases linearly at a set rate until the maximum credit is reached."
+      },
+      {
+        "term": "Phase-out",
+        "definition": "The range of income where the credit decreases as income exceeds a threshold at a set phase-out rate."
+      },
+      {
+        "term": "Adjusted Gross Income (AGI)",
+        "definition": "An individual's total gross income minus specific adjustments. Some EITC rules use AGI when determining phase-out."
+      },
+      {
+        "term": "Investment income disqualification",
+        "definition": "Taxable investment income above a statutory limit disqualifies a filer from claiming EITC. The estimator uses an illustrative threshold; check the IRS for the exact figure for your tax year."
+      }
+    ],
+    "summary": [
+      "This estimator provides an explainable estimate of EITC using piecewise arithmetic and clear intermediate values. It intentionally surfaces assumptions and intermediate calculations so users can validate and cross-check with official IRS tables.",
+      "For official filing, always use the IRS rules, tables, and publications for the exact tax year and consider professional tax assistance if your situation is complex."
+    ]
+  }
+}

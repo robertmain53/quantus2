@@ -1,0 +1,556 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Roth IRA Planner & Comparison Calculator",
+    "description": "Multi-mode Roth IRA tool: project post-tax Roth savings, estimate tax due for Roth conversions, and compare Roth vs Traditional outcomes at retirement. Includes calibrated guards for zero-return scenarios and clear regulatory references."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "projection",
+    "methods": {
+      "projection": {
+        "label": "Roth savings projection",
+        "description": "Estimate your Roth IRA balance at retirement given current balance, ongoing annual contributions, expected return, and contribution timing.",
+        "variables": {
+          "years": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "rate": {
+            "expression": "expected_annual_return / 100",
+            "dependencies": [
+              "expected_annual_return"
+            ],
+            "label": "Expected annual return (decimal)",
+            "format": "percent",
+            "display": false
+          },
+          "contribution_factor": {
+            "expression": "(contribution_timing == 'start' ? (rate == 0 ? years*(1+rate) : ((pow(1+rate,years)-1)/rate)*(1+rate)) : (rate == 0 ? years : ((pow(1+rate,years)-1)/rate)))",
+            "dependencies": [
+              "rate",
+              "years",
+              "contribution_timing"
+            ],
+            "label": "Annuity future-value factor (accounts for timing)",
+            "format": "decimal",
+            "display": false
+          },
+          "contributions_future_value": {
+            "expression": "annual_contribution * contribution_factor",
+            "dependencies": [
+              "annual_contribution",
+              "contribution_factor"
+            ],
+            "label": "Future value of ongoing contributions",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "balance_growth": {
+            "expression": "current_balance * pow(1+rate, years)",
+            "dependencies": [
+              "current_balance",
+              "rate",
+              "years"
+            ],
+            "label": "Current balance grown to retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "final_balance": {
+            "expression": "balance_growth + contributions_future_value",
+            "dependencies": [
+              "balance_growth",
+              "contributions_future_value"
+            ],
+            "label": "Estimated Roth IRA balance at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "final_balance",
+            "label": "Estimated Roth IRA balance at retirement",
+            "variable": "final_balance",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "contributions_future_value",
+            "label": "Future value of contributions",
+            "variable": "contributions_future_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years",
+            "label": "Years until retirement",
+            "variable": "years",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      },
+      "conversion": {
+        "label": "Roth conversion tax estimate & projection",
+        "description": "Estimate immediate tax due on a Roth conversion and project the after-tax converted amount to retirement inside a Roth.",
+        "variables": {
+          "years": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "rate": {
+            "expression": "expected_annual_return / 100",
+            "dependencies": [
+              "expected_annual_return"
+            ],
+            "label": "Expected annual return (decimal)",
+            "format": "percent",
+            "display": false
+          },
+          "conversion_tax_due": {
+            "expression": "conversion_amount * (conversion_tax_rate / 100)",
+            "dependencies": [
+              "conversion_amount",
+              "conversion_tax_rate"
+            ],
+            "label": "Estimated immediate tax due on conversion",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "after_tax_conversion": {
+            "expression": "conversion_amount - conversion_tax_due",
+            "dependencies": [
+              "conversion_amount",
+              "conversion_tax_due"
+            ],
+            "label": "Amount moved into Roth after tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "projected_value": {
+            "expression": "after_tax_conversion * pow(1+rate, years)",
+            "dependencies": [
+              "after_tax_conversion",
+              "rate",
+              "years"
+            ],
+            "label": "Projected value of the converted funds at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "conversion_tax_due",
+            "label": "Conversion tax due now",
+            "variable": "conversion_tax_due",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "after_tax_conversion",
+            "label": "After-tax amount converted",
+            "variable": "after_tax_conversion",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_value",
+            "label": "Projected Roth value of converted funds",
+            "variable": "projected_value",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "compare": {
+        "label": "Roth vs Traditional comparison",
+        "description": "Compare end-state after-tax balances if you contribute to a Roth (post-tax) vs a Traditional IRA (pre-tax) using the same gross contribution amount.",
+        "variables": {
+          "years": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "rate": {
+            "expression": "expected_annual_return / 100",
+            "dependencies": [
+              "expected_annual_return"
+            ],
+            "label": "Expected annual return (decimal)",
+            "format": "percent",
+            "display": false
+          },
+          "post_tax_contribution": {
+            "expression": "annual_contribution * (1 - current_tax_rate/100)",
+            "dependencies": [
+              "annual_contribution",
+              "current_tax_rate"
+            ],
+            "label": "Net annual Roth contribution after current tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "annuity_factor": {
+            "expression": "(contribution_timing == 'start' ? (rate == 0 ? years*(1+rate) : ((pow(1+rate,years)-1)/rate)*(1+rate)) : (rate == 0 ? years : ((pow(1+rate,years)-1)/rate)))",
+            "dependencies": [
+              "contribution_timing",
+              "rate",
+              "years"
+            ],
+            "label": "Annuity future-value factor (for contributions)",
+            "format": "decimal",
+            "display": false
+          },
+          "roth_fv": {
+            "expression": "post_tax_contribution * annuity_factor + roth_balance * pow(1+rate, years)",
+            "dependencies": [
+              "post_tax_contribution",
+              "annuity_factor",
+              "roth_balance",
+              "rate",
+              "years"
+            ],
+            "label": "Estimated Roth IRA balance at retirement (post-tax contributions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "traditional_fv_pre_tax": {
+            "expression": "annual_contribution * annuity_factor + traditional_balance * pow(1+rate, years)",
+            "dependencies": [
+              "annual_contribution",
+              "annuity_factor",
+              "traditional_balance",
+              "rate",
+              "years"
+            ],
+            "label": "Traditional IRA balance at retirement before withdrawal tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "traditional_after_tax": {
+            "expression": "traditional_fv_pre_tax * (1 - retirement_tax_rate/100)",
+            "dependencies": [
+              "traditional_fv_pre_tax",
+              "retirement_tax_rate"
+            ],
+            "label": "After-tax value of Traditional IRA at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "difference": {
+            "expression": "roth_fv - traditional_after_tax",
+            "dependencies": [
+              "roth_fv",
+              "traditional_after_tax"
+            ],
+            "label": "Roth minus Traditional (after-tax) difference at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "roth_fv",
+            "label": "Estimated Roth balance at retirement",
+            "variable": "roth_fv",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "traditional_after_tax",
+            "label": "Traditional balance after retirement tax",
+            "variable": "traditional_after_tax",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "difference",
+            "label": "Difference (Roth - Traditional after tax)",
+            "variable": "difference",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 35,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 65,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "current_balance",
+        "label": "Current Roth IRA balance (USD)",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "roth_balance",
+        "label": "Separate Roth balance to include in comparison (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "traditional_balance",
+        "label": "Traditional IRA / pre-tax balance to include (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contribution (gross, USD)",
+        "type": "number",
+        "default": 6000,
+        "min": 0,
+        "max": 200000,
+        "step": 100
+      },
+      {
+        "id": "expected_annual_return",
+        "label": "Expected annual return (nominal %)",
+        "type": "number",
+        "default": 6,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "contribution_timing",
+        "label": "Contribution timing",
+        "type": "select",
+        "default": "end",
+        "options": [
+          {
+            "label": "End of year (contributions at year-end)",
+            "value": "end"
+          },
+          {
+            "label": "Start of year (contributions at year-start)",
+            "value": "start"
+          }
+        ]
+      },
+      {
+        "id": "current_tax_rate",
+        "label": "Current marginal income tax rate (%)",
+        "type": "number",
+        "default": 22,
+        "min": 0,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "retirement_tax_rate",
+        "label": "Estimated marginal tax rate in retirement (%)",
+        "type": "number",
+        "default": 22,
+        "min": 0,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "conversion_amount",
+        "label": "Amount to convert to Roth now (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "conversion_tax_rate",
+        "label": "Tax rate applied to the conversion (%)",
+        "type": "number",
+        "default": 22,
+        "min": 0,
+        "max": 50,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool helps you model three Roth IRA scenarios: projecting a Roth balance from ongoing contributions, estimating taxes and outcomes for a Roth conversion, and comparing Roth versus Traditional IRA outcomes after taxes. Use realistic inputs and understand outputs are projections based on assumptions you provide.",
+      "Projections assume constant nominal returns and stable contribution patterns unless you change inputs. The calculator includes protections for zero-return cases and clearly shows intermediate values (years, tax due, after-tax amounts) to support decision-making."
+    ],
+    "methodology": [
+      "All growth calculations use standard discrete annual compounding and annuity future-value formulas. For contributions we use a future-value annuity formula; the tool adjusts the annuity factor when the return is zero to avoid division-by-zero errors.",
+      "Conversion tax estimates multiply the conversion amount by the provided tax rate; the net converted amount is then projected forward using the same compounding assumptions as contributions. Comparison mode computes post-tax Roth contributions today and compares their projected value to a Traditional IRA balance after applying the retirement tax rate to withdrawals."
+    ],
+    "how_is_calculated": [
+      "Years until retirement = retirement_age - current_age",
+      "Decimal rate = expected_annual_return / 100",
+      "Annuity future-value factor = ( (1+rate)^years - 1 ) / rate, adjusted for contribution timing; if rate == 0 the factor is replaced by years (or years*(1+rate) for start-of-period contributions) to avoid division by zero.",
+      "Roth conversion tax = conversion_amount × (conversion_tax_rate / 100); after-tax converted amount = conversion_amount - conversion tax; projected value = after-tax amount × (1+rate)^years"
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include contribution limits or eligibility rules?",
+        "answer": "No. This calculator focuses on growth and tax effects. Contribution limits, income phaseouts, and eligibility rules are governed by tax law. See the IRS citation below for current-year contribution limits and eligibility."
+      },
+      {
+        "question": "Are results guaranteed?",
+        "answer": "No. Results are estimates based on inputs and mathematical models. Actual returns, taxes, and future tax rates can differ. Use this tool for planning, not as definitive tax or investment advice."
+      },
+      {
+        "question": "How does contribution timing affect results?",
+        "answer": "Contributions made at the start of each period compound for an extra period compared with end-of-period contributions. The calculator models both options using the annuity future-value factor."
+      },
+      {
+        "question": "Does the tool model taxes on investment returns inside Traditional IRAs?",
+        "answer": "The tool assumes Traditional IRA growth is pre-tax and entire withdrawals are taxed at the retirement tax rate you provide. It does not model partial conversions, required minimum distributions, or state taxes."
+      },
+      {
+        "question": "What assumptions does the conversion estimator make about tax payment?",
+        "answer": "The conversion estimator assumes taxes on the conversion are paid from funds outside the converted amount unless you enter a conversion_amount that includes the tax. Confirm your funding source with a tax advisor."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Amount of Roth IRA contributions that you can make for 2024",
+        "url": "https://www.irs.gov/retirement-plans/plan-participant-employee/amount-of-roth-ira-contributions-that-you-can-make-for-2024"
+      },
+      {
+        "label": "NIST — Cybersecurity and data integrity guidance (for secure handling of financial inputs)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Risk management principles and guidelines",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Standards for software reliability and testing best practices",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA — General workplace safety and recordkeeping (relevance to organizational financial controls)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Roth IRA",
+        "definition": "A retirement account funded with after-tax dollars where qualified withdrawals are typically tax-free."
+      },
+      {
+        "term": "Annuity future-value factor",
+        "definition": "A multiplier used to compute the future value of a series of equal payments (contributions). It equals ((1+r)^n - 1)/r, adjusted if payments occur at period start."
+      },
+      {
+        "term": "Conversion tax",
+        "definition": "Immediate income tax due when pre-tax retirement funds are converted to a Roth IRA, calculated as conversion amount multiplied by the applicable tax rate."
+      },
+      {
+        "term": "Compound return",
+        "definition": "Growth of an investment where returns are reinvested and themselves earn returns in subsequent periods."
+      },
+      {
+        "term": "Assumptions",
+        "definition": "User-provided inputs (rates, ages, tax rates) that the model uses to produce projections; changing assumptions changes results."
+      }
+    ],
+    "summary": [
+      "Use projection mode to estimate how regular Roth contributions grow under your return assumption.",
+      "Use conversion mode to estimate tax due now and the projected Roth value of the converted funds.",
+      "Use compare mode to see an apples-to-apples comparison of identical gross contributions to Roth (post-tax) vs Traditional (pre-tax) accounts, presented as after-tax retirement balances."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/retirement-plans/plan-participant-employee/amount-of-roth-ira-contributions-that-you-can-make-for-2024",
+        "label": "IRS — Roth IRA contribution limits & rules",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

@@ -1,0 +1,527 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Roth vs Traditional IRA Comparison (Advanced)",
+    "description": "Interactive comparison of Roth and Traditional IRA outcomes using customizable assumptions: current balances, separate contribution streams, employer match, tax rates today and in retirement, and expected investment return. Includes conversion (backdoor) assessment and clear accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_compare",
+    "methods": {
+      "standard_compare": {
+        "label": "Side-by-side growth and after-tax comparison",
+        "description": "Projects future balances for Roth and Traditional accounts given separate contribution amounts, employer match to Traditional, current balances, tax rates, and expected return. Shows after-tax retirement values to help decide which account type gives higher after-tax wealth.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "rate": {
+            "expression": "expected_annual_return / 100",
+            "dependencies": [
+              "expected_annual_return"
+            ],
+            "label": "Annual return (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "employer_match": {
+            "expression": "annual_contribution_traditional * (employer_match_percent / 100)",
+            "dependencies": [
+              "annual_contribution_traditional",
+              "employer_match_percent"
+            ],
+            "label": "Employer match (annual)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_total_traditional": {
+            "expression": "annual_contribution_traditional + employer_match",
+            "dependencies": [
+              "annual_contribution_traditional",
+              "employer_match"
+            ],
+            "label": "Total annual into Traditional (employee + employer)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "fv_traditional_contribs": {
+            "expression": "annual_total_traditional * ((pow(1+rate, years_to_retirement) - 1) / rate)",
+            "dependencies": [
+              "annual_total_traditional",
+              "rate",
+              "years_to_retirement"
+            ],
+            "label": "Future value of Traditional contributions",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "fv_current_traditional": {
+            "expression": "current_traditional_balance * pow(1+rate, years_to_retirement)",
+            "dependencies": [
+              "current_traditional_balance",
+              "rate",
+              "years_to_retirement"
+            ],
+            "label": "Future value of existing Traditional balance",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "future_balance_traditional": {
+            "expression": "fv_current_traditional + fv_traditional_contribs",
+            "dependencies": [
+              "fv_current_traditional",
+              "fv_traditional_contribs"
+            ],
+            "label": "Projected Traditional balance at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "after_tax_traditional": {
+            "expression": "future_balance_traditional * (1 - expected_tax_rate_retirement / 100)",
+            "dependencies": [
+              "future_balance_traditional",
+              "expected_tax_rate_retirement"
+            ],
+            "label": "After-tax value of Traditional withdrawals",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "fv_roth_contribs": {
+            "expression": "annual_contribution_roth * (1 - marginal_tax_rate_now / 100) * ((pow(1+rate, years_to_retirement) - 1) / rate)",
+            "dependencies": [
+              "annual_contribution_roth",
+              "marginal_tax_rate_now",
+              "rate",
+              "years_to_retirement"
+            ],
+            "label": "Future value of Roth contributions (post-tax)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "fv_current_roth": {
+            "expression": "current_roth_balance * pow(1+rate, years_to_retirement)",
+            "dependencies": [
+              "current_roth_balance",
+              "rate",
+              "years_to_retirement"
+            ],
+            "label": "Future value of existing Roth balance",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "future_balance_roth": {
+            "expression": "fv_current_roth + fv_roth_contribs",
+            "dependencies": [
+              "fv_current_roth",
+              "fv_roth_contribs"
+            ],
+            "label": "Projected Roth balance at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "after_tax_roth": {
+            "expression": "future_balance_roth",
+            "dependencies": [
+              "future_balance_roth"
+            ],
+            "label": "After-tax value of Roth withdrawals (qualified distributions)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "tax_difference": {
+            "expression": "after_tax_roth - after_tax_traditional",
+            "dependencies": [
+              "after_tax_roth",
+              "after_tax_traditional"
+            ],
+            "label": "After-tax Roth minus Traditional (positive favors Roth)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "future_balance_traditional",
+            "label": "Projected Traditional balance",
+            "variable": "future_balance_traditional",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "after_tax_traditional",
+            "label": "After-tax Traditional withdrawals",
+            "variable": "after_tax_traditional",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "future_balance_roth",
+            "label": "Projected Roth balance",
+            "variable": "future_balance_roth",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "after_tax_roth",
+            "label": "After-tax Roth withdrawals",
+            "variable": "after_tax_roth",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_difference",
+            "label": "After-tax difference (Roth − Traditional)",
+            "variable": "tax_difference",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "backdoor_conversion": {
+        "label": "Conversion (Backdoor) tax and outcome assessment",
+        "description": "Estimate the immediate tax cost of converting Traditional funds to Roth now, and compare the projected after-tax future value of converting versus leaving funds in Traditional and paying tax in retirement.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "rate": {
+            "expression": "expected_annual_return / 100",
+            "dependencies": [
+              "expected_annual_return"
+            ],
+            "label": "Annual return (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "conversion_tax_due": {
+            "expression": "current_traditional_balance * (marginal_tax_rate_now / 100)",
+            "dependencies": [
+              "current_traditional_balance",
+              "marginal_tax_rate_now"
+            ],
+            "label": "Immediate tax due on conversion",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "converted_principal": {
+            "expression": "current_traditional_balance - conversion_tax_due",
+            "dependencies": [
+              "current_traditional_balance",
+              "conversion_tax_due"
+            ],
+            "label": "Principal moved to Roth after paying conversion tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "roth_future_from_conversion": {
+            "expression": "converted_principal * pow(1+rate, years_to_retirement)",
+            "dependencies": [
+              "converted_principal",
+              "rate",
+              "years_to_retirement"
+            ],
+            "label": "Projected Roth value of converted amount at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "future_if_left_traditional": {
+            "expression": "current_traditional_balance * pow(1+rate, years_to_retirement)",
+            "dependencies": [
+              "current_traditional_balance",
+              "rate",
+              "years_to_retirement"
+            ],
+            "label": "Projected Traditional value if not converted",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "after_tax_if_left_traditional": {
+            "expression": "future_if_left_traditional * (1 - expected_tax_rate_retirement / 100)",
+            "dependencies": [
+              "future_if_left_traditional",
+              "expected_tax_rate_retirement"
+            ],
+            "label": "After-tax value if Traditional left in place",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_gain_of_conversion": {
+            "expression": "roth_future_from_conversion - after_tax_if_left_traditional",
+            "dependencies": [
+              "roth_future_from_conversion",
+              "after_tax_if_left_traditional"
+            ],
+            "label": "Net after-tax difference (convert now vs leave Traditional)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "conversion_tax_due",
+            "label": "Immediate tax to pay on conversion",
+            "variable": "conversion_tax_due",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "roth_future_from_conversion",
+            "label": "Projected Roth value from converted principal",
+            "variable": "roth_future_from_conversion",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "after_tax_if_left_traditional",
+            "label": "After-tax value if left in Traditional",
+            "variable": "after_tax_if_left_traditional",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_gain_of_conversion",
+            "label": "Net after-tax advantage of converting now",
+            "variable": "net_gain_of_conversion",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 35,
+        "min": 18,
+        "max": 75,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Expected retirement age",
+        "type": "integer",
+        "default": 65,
+        "min": 50,
+        "max": 80,
+        "step": 1
+      },
+      {
+        "id": "current_traditional_balance",
+        "label": "Current Traditional IRA / pre-tax balance",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "current_roth_balance",
+        "label": "Current Roth IRA / after-tax balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution_traditional",
+        "label": "Annual employee contribution to Traditional (pre-tax)",
+        "type": "number",
+        "default": 6500,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution_roth",
+        "label": "Annual employee contribution to Roth (post-tax)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "employer_match_percent",
+        "label": "Employer match (% of your Traditional contribution)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.5
+      },
+      {
+        "id": "marginal_tax_rate_now",
+        "label": "Your current marginal federal tax rate (%)",
+        "type": "number",
+        "default": 24,
+        "min": 0,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "expected_tax_rate_retirement",
+        "label": "Expected marginal tax rate in retirement (%)",
+        "type": "number",
+        "default": 22,
+        "min": 0,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "expected_annual_return",
+        "label": "Expected annual investment return (%)",
+        "type": "number",
+        "default": 6,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool compares Roth and Traditional IRA outcomes using your assumptions: separate annual contributions to each account type, employer match (applied to Traditional), current balances, current and future tax rates, and expected investment returns. It projects future balances and computes after-tax retirement values to help you evaluate which account type may deliver higher after-tax wealth.",
+      "Results are scenario-driven: change assumptions to explore sensitivity. The calculator does not provide tax advice; always verify with a tax professional for your situation."
+    ],
+    "methodology": [
+      "We model future balances using standard future value formulas: existing balances compound at the expected annual return and each year’s contribution compounds using the future value of an ordinary annuity. Employer match is treated as an additional pre-tax contribution into the Traditional account.",
+      "For Roth contributions we model them as made with post-tax dollars (employee pays income tax today), and Roth qualified distributions are assumed tax-free in retirement. For Traditional we assume contributions are pre-tax and withdrawals in retirement are taxed at the expected retirement marginal rate.",
+      "Conversion (backdoor) assessment estimates the immediate tax due at the current marginal rate on the converted pre-tax principal, then projects the converted principal's future value tax-free. The comparison includes a scenario that projects the after-tax value if funds remain in Traditional and are taxed upon withdrawal."
+    ],
+    "how_is_calculated": [
+      "Years to retirement = retirement_age − current_age.",
+      "Rate (decimal) = expected_annual_return / 100.",
+      "Future value of existing balance = current_balance × (1 + rate)^(years_to_retirement).",
+      "Future value of a series of annual contributions = annual_amount × ( ( (1 + rate)^(years_to_retirement) − 1 ) / rate ).",
+      "After-tax Traditional value = projected Traditional balance × (1 − expected_tax_rate_retirement / 100).",
+      "After-tax Roth value = projected Roth balance (qualified withdrawals are tax-free).",
+      "Conversion tax due = amount_converted × (marginal_tax_rate_now / 100)."
+    ],
+    "faqs": [
+      {
+        "question": "Does the tool account for employer match rules or non-elective employer contributions?",
+        "answer": "Employer match is modeled as an additional annual pre-tax contribution to the Traditional account proportional to the specified match percentage and your Traditional employee contribution. Specific employer plan rules and vesting are not modeled; adjust inputs if your employer match is different."
+      },
+      {
+        "question": "How should I choose tax rates to enter?",
+        "answer": "Use your best estimate for your current marginal rate and the rate you expect in retirement. The calculator compares after-tax results under those assumptions. Because future tax policy is uncertain, run multiple scenarios (higher and lower retirement tax rates)."
+      },
+      {
+        "question": "Are required minimum distributions (RMDs) or early withdrawal penalties included?",
+        "answer": "This tool does not model RMD timing, penalties, or state taxes. It focuses on aggregate after-tax value at the chosen retirement age. For RMDs, age-based rules, or early withdrawal penalties, consult tax guidance and run adjusted scenarios."
+      },
+      {
+        "question": "How accurate are the projections?",
+        "answer": "Projections use deterministic mathematical formulas and depend entirely on your inputs. They do not model market volatility, sequence-of-returns risk, or tax-law changes. See the accuracy and standards caveats below."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Traditional and Roth IRAs (rules, limits, and distributions)",
+        "url": "https://www.irs.gov/retirement-plans/traditional-and-roth-iras"
+      },
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Marginal tax rate",
+        "definition": "The income tax rate applied to the last dollar of taxable income. Use federal marginal rates for the most direct comparison; state taxes are not modeled here unless included in your inputs."
+      },
+      {
+        "term": "Qualified Roth distribution",
+        "definition": "A distribution from a Roth account that meets IRS requirements to be tax-free (typically after age 59½ and after a five-year holding period)."
+      },
+      {
+        "term": "Future value of an annuity",
+        "definition": "The compounded value of a series of equal payments made at regular intervals, using the formula included in the methodology."
+      },
+      {
+        "term": "Conversion (Backdoor Roth)",
+        "definition": "Moving pre-tax Traditional funds to a Roth account and paying income tax on the converted amount at the conversion time."
+      }
+    ],
+    "summary": [
+      "Use separate contribution fields for Roth and Traditional to model mixed strategies. Employer match is applied to Traditional contributions by default.",
+      "Run multiple scenarios for marginal tax rates today and in retirement to understand sensitivity. The calculator provides a deterministic, assumptions-based comparison — not personalized tax or investment advice."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/retirement/ira-basics",
+      "/retirement/conversion-calculator"
+    ],
+    "external": [
+      {
+        "url": "https://www.irs.gov/retirement-plans/traditional-and-roth-iras",
+        "label": "IRS — Traditional and Roth IRAs",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST — Standards and guidance",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculations"
+    ]
+  }
+}

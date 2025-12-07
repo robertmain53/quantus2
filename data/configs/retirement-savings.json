@@ -1,0 +1,393 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Retirement Savings Calculator (Multi‑Method Planner)",
+    "description": "Interactive retirement planner that projects savings growth, estimates required nest egg for a target retirement income, and approximates how long savings will last under configurable return, inflation, and withdrawal assumptions."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "projection",
+    "methods": {
+      "projection": {
+        "label": "Projected Balance (Contributions + Growth)",
+        "description": "Estimate the portfolio value at retirement from current savings and ongoing contributions assuming a constant nominal return.",
+        "variables": {
+          "n_years": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "nominal_return": {
+            "expression": "expected_return_pct/100",
+            "dependencies": [
+              "expected_return_pct"
+            ],
+            "label": "Assumed annual nominal return",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "fv_existing": {
+            "expression": "current_savings * (1 + nominal_return) ^ n_years",
+            "dependencies": [
+              "current_savings",
+              "nominal_return",
+              "n_years"
+            ],
+            "label": "Future value of current savings",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "fv_contributions": {
+            "expression": "if(nominal_return == 0, annual_contribution * n_years, annual_contribution * (((1 + nominal_return) ^ n_years - 1) / nominal_return))",
+            "dependencies": [
+              "annual_contribution",
+              "nominal_return",
+              "n_years"
+            ],
+            "label": "Future value of regular contributions",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "balance_at_retirement": {
+            "expression": "fv_existing + fv_contributions",
+            "dependencies": [
+              "fv_existing",
+              "fv_contributions"
+            ],
+            "label": "Projected balance at retirement",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "balance_at_retirement",
+            "label": "Projected balance at retirement",
+            "variable": "balance_at_retirement",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "n_years",
+            "label": "Years until retirement",
+            "variable": "n_years",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      },
+      "required_nestegg": {
+        "label": "Required Nest Egg for Target Income",
+        "description": "Estimate the portfolio size needed to support a target annual retirement income using a configurable withdrawal rate.",
+        "variables": {
+          "real_withdrawal_rate": {
+            "expression": "safe_withdrawal_pct/100",
+            "dependencies": [
+              "safe_withdrawal_pct"
+            ],
+            "label": "Assumed safe withdrawal rate",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "required_nestegg": {
+            "expression": "if(real_withdrawal_rate == 0, 0, desired_annual_income / real_withdrawal_rate)",
+            "dependencies": [
+              "desired_annual_income",
+              "real_withdrawal_rate"
+            ],
+            "label": "Estimated nest egg required",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_nestegg",
+            "label": "Estimated nest egg required",
+            "variable": "required_nestegg",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "real_withdrawal_rate",
+            "label": "Assumed withdrawal rate",
+            "variable": "real_withdrawal_rate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "sustainability": {
+        "label": "How Long Will Savings Last (Approx.)",
+        "description": "Approximate years savings will sustain a net withdrawal in retirement, using an annuity present‑value approach and a real return assumption. Handles zero or negative real returns with conservative approximations.",
+        "variables": {
+          "annual_withdrawal_net": {
+            "expression": "max(0, desired_annual_income - social_security_income - other_income)",
+            "dependencies": [
+              "desired_annual_income",
+              "social_security_income",
+              "other_income"
+            ],
+            "label": "Net annual withdrawal needed from savings",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "real_return": {
+            "expression": "((1 + expected_retirement_return_pct/100) / (1 + inflation_pct/100)) - 1",
+            "dependencies": [
+              "expected_retirement_return_pct",
+              "inflation_pct"
+            ],
+            "label": "Expected real return in retirement (after inflation)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "years_no_return": {
+            "expression": "if(annual_withdrawal_net <= 0, 999, current_savings / annual_withdrawal_net)",
+            "dependencies": [
+              "current_savings",
+              "annual_withdrawal_net"
+            ],
+            "label": "Years money lasts (no investment return)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "years_with_return_approx": {
+            "expression": "if(annual_withdrawal_net <= 0, 999, if(real_return <= 0, years_no_return, -ln(1 - (current_savings * real_return) / annual_withdrawal_net) / ln(1 + real_return)))",
+            "dependencies": [
+              "current_savings",
+              "real_return",
+              "annual_withdrawal_net",
+              "years_no_return"
+            ],
+            "label": "Years money lasts (approx., with real returns)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_withdrawal_net",
+            "label": "Net annual withdrawal needed from savings",
+            "variable": "annual_withdrawal_net",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "real_return",
+            "label": "Expected real return (inflation adjusted)",
+            "variable": "real_return",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "years_no_return",
+            "label": "Years money lasts (no investment return)",
+            "variable": "years_no_return",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "years_with_return_approx",
+            "label": "Years money lasts (approx., with returns)",
+            "variable": "years_with_return_approx",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 40,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Desired retirement age",
+        "type": "integer",
+        "default": 67,
+        "min": 50,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current retirement savings",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contribution (pre-tax + post-tax combined)",
+        "type": "number",
+        "default": 6000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "expected_return_pct",
+        "label": "Expected annual return before retirement (nominal %)",
+        "type": "number",
+        "default": 6,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "expected_retirement_return_pct",
+        "label": "Expected annual return in retirement (nominal %)",
+        "type": "number",
+        "default": 4,
+        "min": -5,
+        "max": 15,
+        "step": 0.1
+      },
+      {
+        "id": "inflation_pct",
+        "label": "Expected long-term inflation rate (%)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "desired_annual_income",
+        "label": "Desired pre-tax annual retirement income",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 500
+      },
+      {
+        "id": "social_security_income",
+        "label": "Estimated annual Social Security or pension income",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "other_income",
+        "label": "Other guaranteed annual retirement income",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "safe_withdrawal_pct",
+        "label": "Assumed safe withdrawal rate (%)",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This retirement savings calculator helps you project a portfolio balance at retirement, estimate the nest egg needed to support a target retirement income, and approximate how long savings will last under configurable assumptions.",
+      "Use the different calculation methods to explore scenarios: projection from current savings and contributions, required nest egg for a target withdrawal rate, and an approximate sustainability check that accounts for inflation and real returns."
+    ],
+    "methodology": [
+      "Projection method compounds current savings and future contributions using a constant nominal return and standard future value of a series formula. Contributions are treated as end‑of‑period deposits.",
+      "Required nest egg uses a simple withdrawal-rate approach: required nest egg = target annual income / withdrawal rate. This is a heuristic, not a guarantee of outcome.",
+      "Sustainability uses an annuity present‑value inversion to estimate years savings will support a constant net withdrawal given an expected real return. For zero or negative real returns the tool falls back to conservative, no‑return approximations."
+    ],
+    "how_is_calculated": [
+      "Projection: FV = current_savings * (1 + r)^n + annual_contribution * [((1 + r)^n - 1) / r] where r = nominal annual return, n = years until retirement. If r = 0, contributions are summed linearly.",
+      "Required nest egg: nest_egg = desired_annual_income / withdrawal_rate (withdrawal_rate as a decimal).",
+      "Sustainability (approx.): solve current_savings = withdrawal * [1 - (1 + real_return)^-t] / real_return for t, where real_return = (1 + nominal_return) / (1 + inflation) - 1. If the real return is zero or negative, the estimate falls back to a no-return approximation (current_savings divided by annual_withdrawal)."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these projections?",
+        "answer": "Projections are approximations based on constant-rate assumptions and discrete compounding. They do not model market volatility, sequence-of-returns risk, taxes, fees, or changing spending patterns. Use results for planning and comparison, not as a precise forecast."
+      },
+      {
+        "question": "What is the safe withdrawal rate?",
+        "answer": "The safe withdrawal rate is a planning assumption representing a sustainable percentage of the portfolio to withdraw annually. Common starter assumptions are 3%–5%. It is not a guarantee and should be adjusted for longevity, market conditions, and personal risk tolerance."
+      },
+      {
+        "question": "Are taxes, fees, and required minimum distributions (RMDs) included?",
+        "answer": "No. This calculator does not model taxes, investment fees, or regulatory requirements like RMDs. Adjust inputs to approximate after-tax needs or consult a tax advisor for tailored modeling."
+      },
+      {
+        "question": "What inputs should I vary to test scenarios?",
+        "answer": "Run sensitivity checks by varying expected returns, inflation, contribution levels, retirement age, and withdrawal rate. Examine both optimistic and conservative assumptions to understand plan robustness."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (software reliability and best practices)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "U.S. Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "Social Security Administration",
+        "url": "https://www.ssa.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Nominal return",
+        "definition": "The annual percentage return before adjusting for inflation."
+      },
+      {
+        "term": "Real return",
+        "definition": "The annual return after adjusting for inflation; approximated as (1 + nominal)/(1 + inflation) - 1."
+      },
+      {
+        "term": "Safe withdrawal rate",
+        "definition": "A planning assumption for the percentage of portfolio value that can be withdrawn annually without depleting savings too quickly."
+      },
+      {
+        "term": "Present value annuity inversion",
+        "definition": "A mathematical method to estimate the number of periods an annuity payment can be sustained given a principal and a discount rate."
+      },
+      {
+        "term": "Sequence-of-returns risk",
+        "definition": "The risk that poor investment returns early in retirement reduce the longevity of a portfolio more than the average return would suggest."
+      }
+    ]
+  }
+}

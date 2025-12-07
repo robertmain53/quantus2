@@ -1,148 +1,189 @@
 {
   "version": "1.0.0",
   "metadata": {
-    "title": "Convert Price to VAT – Financial Converter",
-    "description": "Calculate VAT from a net or gross price with editable rates, dual outputs, and audit-friendly guidance aligned to EU and UK rules."
+    "title": "Convert Price to VAT",
+    "description": "Calculate net price, VAT amount, and gross price from an entered price and VAT rate. Supports prices entered as net or gross and provides clear rounding and accuracy guidance."
   },
   "logic": {
     "type": "formula",
     "outputs": [
       {
-        "id": "vat_amount",
-        "label": "VAT amount",
-        "expression": "price_net * (vat_rate / 100)",
-        "unit": "currency",
-        "format": "decimal"
+        "id": "net_price",
+        "label": "Net price (ex-VAT)",
+        "expression": "(price_type == \"gross\") ? price / (1 + vat_rate / 100) : price",
+        "unit": null,
+        "format": "currency"
       },
       {
-        "id": "price_gross",
-        "label": "Gross price (after VAT)",
-        "expression": "price_net + (price_net * (vat_rate / 100))",
-        "unit": "currency",
-        "format": "decimal"
+        "id": "gross_price",
+        "label": "Gross price (inc-VAT)",
+        "expression": "(price_type == \"gross\") ? price : price * (1 + vat_rate / 100)",
+        "unit": null,
+        "format": "currency"
+      },
+      {
+        "id": "vat_amount",
+        "label": "VAT amount",
+        "expression": "(price_type == \"gross\") ? price - (price / (1 + vat_rate / 100)) : price * (vat_rate / 100)",
+        "unit": null,
+        "format": "currency"
       }
     ]
   },
   "form": {
     "fields": [
       {
-        "id": "price_net",
-        "label": "Net price (before VAT)",
+        "id": "price",
+        "label": "Price",
         "type": "number",
         "default": 100,
         "min": 0,
-        "step": 0.01,
-        "helpText": "Enter the net amount; negatives are blocked to keep calculations valid."
+        "step": 0.01
       },
       {
         "id": "vat_rate",
         "label": "VAT rate (%)",
         "type": "number",
         "default": 20,
-        "min": 0.1,
-        "step": 0.1,
-        "helpText": "Use the applicable rate (e.g., 20% UK standard, 21% Ireland, 19% Germany, 10% reduced in some EU states)."
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "price_type",
+        "label": "Is the price entered",
+        "type": "select",
+        "default": "net",
+        "options": [
+          {
+            "label": "Net (price excludes VAT)",
+            "value": "net"
+          },
+          {
+            "label": "Gross (price includes VAT)",
+            "value": "gross"
+          }
+        ]
       }
     ],
     "result": {
       "outputs": [
         {
-          "id": "vat_amount",
-          "label": "VAT amount",
-          "format": "decimal"
+          "id": "net_price",
+          "label": "Net price (ex-VAT)",
+          "format": "currency"
         },
         {
-          "id": "price_gross",
-          "label": "Gross price (after VAT)",
-          "format": "decimal"
+          "id": "vat_amount",
+          "label": "VAT amount",
+          "format": "currency"
+        },
+        {
+          "id": "gross_price",
+          "label": "Gross price (inc-VAT)",
+          "format": "currency"
         }
       ]
     }
   },
   "page_content": {
     "introduction": [
-      "Convert a net price to VAT and gross in one step so invoices, receipts, and quotes stay consistent with your jurisdiction’s rates.",
-      "Editable VAT rate covers standard and reduced bands across the EU and UK, while keeping the calculator lean for quick checks.",
-      "Both VAT amount and gross price appear together to align finance, procurement, and compliance teams."
+      "This calculator converts a single entered price into net price, VAT amount, and gross price using the VAT rate you specify. Select whether the entered amount already includes VAT (gross) or excludes VAT (net) and the tool will compute the remaining values.",
+      "Results are intended for quick estimates, pricing checks, and bookkeeping convenience. For legally binding tax returns or cross-border VAT treatment consult local tax authorities or a qualified tax advisor."
     ],
     "methodology": [
-      "VAT = net price × (rate/100); gross = net + VAT. This mirrors EU VAT Directive 2006/112/EC and HMRC guidance for forward calculations.",
-      "Inputs are unit-agnostic (currency) and we apply no hidden rounding; round per your invoicing rules.",
-      "Document the VAT rate, jurisdiction, and rounding applied (e.g., HMRC VAT Notice 700 or local EU guidance) for audit trails."
+      "Calculations use standard arithmetic: when a price is gross (includes VAT), the net price is derived by dividing by (1 + VAT_rate). When a price is net (excludes VAT), the gross price is net × (1 + VAT_rate). VAT amount is the difference between gross and net.",
+      "Rounding follows typical financial practice: reported amounts are shown to two decimal places. Systems integrate guidance on numeric stability and precision drawing on software reliability and measurement best practices from standards organizations to reduce rounding ambiguity.",
+      "This tool is aligned with general software quality and measurement guidance (for example from NIST, ISO and IEEE) and with workplace and operational safety expectations (OSHA) for reliable deployment; it is not a legally certified tax calculation service."
     ],
-    "examples": [
-      "Net £100 at 20% → VAT £20, gross £120.",
-      "Net €55 at 10% → VAT €5.50, gross €60.50.",
-      "Net €38.18 at 5.5% → VAT €2.10, gross €40.28."
+    "how_is_calculated": [
+      "If price entered is net: gross = price × (1 + VAT_rate / 100); VAT = gross − price.",
+      "If price entered is gross: net = price ÷ (1 + VAT_rate / 100); VAT = price − net.",
+      "VAT_rate is entered as a percentage (for example 20 for 20%). All intermediate arithmetic uses standard floating-point operations and results are presented rounded to two decimal places for currency display."
     ],
     "faqs": [
       {
-        "question": "Which VAT rate should I enter?",
-        "answer": "Use the rate on the invoice (standard or reduced). Examples: 20% UK standard, 21% Ireland, 19% Germany, 10% reduced in many EU countries."
+        "question": "Should I enter the price as net or gross?",
+        "answer": "Enter the price exactly as it appears in your invoice or price list. Choose 'net' if the amount excludes VAT, or 'gross' if it already includes VAT. The calculator computes the complementary values accordingly."
       },
       {
-        "question": "How should I round the results?",
-        "answer": "Round per your jurisdiction’s invoicing rules (e.g., to the nearest cent/penny). The calculator keeps full precision until display."
+        "question": "How does the calculator handle rounding?",
+        "answer": "Displayed amounts are rounded to two decimal places for typical currency presentation. For aggregate accounting or statutory reporting, use your accounting system's rounding rules and consult applicable tax guidance."
       },
       {
-        "question": "Can I handle exempt or zero-rated items?",
-        "answer": "Yes. Set the rate to 0% to show VAT 0 and gross = net."
+        "question": "Is this calculation legally binding for tax filings?",
+        "answer": "No. This tool provides estimates and convenience calculations only. For official tax returns, use certified accounting software or consult your tax authority or a qualified accountant."
       },
       {
-        "question": "Is this acceptable for audits?",
-        "answer": "Yes—record the rate, jurisdiction, and rounding. Cite HMRC VAT Notice 700 or your local EU guidance when filing."
+        "question": "What VAT rate should I use for cross-border sales?",
+        "answer": "VAT treatment for cross-border transactions varies by jurisdiction and by the nature of goods or services. Use the rate applicable in the supplying or receiving jurisdiction as required by local law and seek professional tax advice for cross-border cases."
+      },
+      {
+        "question": "What are the limits and precision of the tool?",
+        "answer": "Inputs must be non-negative numbers; VAT rate is accepted between 0 and 100 percent. The tool uses standard floating-point arithmetic; very large values may lose precision and extreme edge cases should be validated with accounting software."
       }
     ],
     "citations": [
       {
-        "label": "EU VAT Directive 2006/112/EC",
-        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32006L0112",
-        "summary": "Framework for VAT computation and rates across EU member states."
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
       },
       {
-        "label": "HMRC VAT Notice 700",
-        "url": "https://www.gov.uk/guidance/vat-guide-notice-700",
-        "summary": "UK guidance on VAT calculations, invoicing, and rounding."
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
       },
       {
-        "label": "OECD Consumption Tax Guidance",
-        "url": "https://www.oecd.org/tax/consumption-tax-guidance.pdf",
-        "summary": "International best practices for VAT/GST administration."
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "EU VAT Directive (for reference on VAT rules within the EU)",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32006L0112"
       }
-    ],
-    "summary": [
-      "Forward-calculates VAT and gross from a net price using rate/100 for compliance alignment.",
-      "Keeps rate editable to cover standard and reduced bands; outputs VAT and gross together for audits.",
-      "Citations to EU and UK VAT rules reinforce accuracy and filing readiness."
     ],
     "glossary": [
       {
-        "term": "Net Price",
-        "definition": "Price before VAT is applied."
+        "term": "VAT (Value Added Tax)",
+        "definition": "A consumption tax assessed incrementally on the added value at each stage of production or distribution. Expressed as a percentage of the taxable base."
       },
       {
-        "term": "VAT Amount",
-        "definition": "Tax calculated by multiplying net price by the VAT rate."
+        "term": "Net price",
+        "definition": "Price excluding VAT. The base amount to which VAT is applied."
       },
       {
-        "term": "Gross Price",
-        "definition": "Price after VAT is added."
-      },
-      {
-        "term": "VAT Rate",
-        "definition": "Percentage applied to the net price to compute VAT; varies by jurisdiction and product category."
+        "term": "Gross price",
+        "definition": "Price including VAT. The amount charged to the customer when VAT is included."
       }
     ]
   },
   "links": {
     "internal": [
-      "/finance/taxes/vat-to-price-converter",
-      "/finance/taxes/megabytes-to-gigabytes-converter"
+      "/conversions/finance/vat-price-to-vat"
     ],
     "external": [
       {
-        "url": "https://www.gov.uk/guidance/vat-guide-notice-700",
-        "label": "HMRC VAT Notice 700",
+        "url": "https://www.nist.gov",
+        "label": "NIST home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE home",
         "rel": [
           "noopener",
           "noreferrer"

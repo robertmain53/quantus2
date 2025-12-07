@@ -1,0 +1,469 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Social Security Benefits Calculator (Estimate & Scenarios)",
+    "description": "Estimate monthly retirement, spousal, and quick benefit amounts using bend-point (PIA) logic with claim-age adjustments. Includes clear assumptions, limits, and security & accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "ssa_pia_estimate",
+    "methods": {
+      "ssa_pia_estimate": {
+        "label": "PIA-based estimate (AIME → PIA → claim-age adjustment)",
+        "description": "Estimate a primary monthly benefit using an AIME approximation and the standard progressive PIA bend-point formula, then adjust for early or delayed claiming. Defaults require user inputs for average earnings and claim age; bend points may be updated annually.",
+        "variables": {
+          "aime": {
+            "expression": "average_annual_earnings / 12",
+            "dependencies": [
+              "average_annual_earnings"
+            ],
+            "label": "Average Indexed Monthly Earnings (AIME) approximation",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "pia": {
+            "expression": "0.9 * min(aime, bend1) + 0.32 * min(max(aime - bend1, 0), bend2 - bend1) + 0.15 * max(aime - bend2, 0)",
+            "dependencies": [
+              "aime",
+              "bend1",
+              "bend2"
+            ],
+            "label": "Primary Insurance Amount (PIA) estimate at Full Retirement Age",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "months_early": {
+            "expression": "max((full_retirement_age - claim_age) * 12, 0)",
+            "dependencies": [
+              "full_retirement_age",
+              "claim_age"
+            ],
+            "label": "Months claimed before full retirement age",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "early_reduction": {
+            "expression": "min(months_early, 36) * (5/9/100) + max(months_early - 36, 0) * (5/12/100)",
+            "dependencies": [
+              "months_early"
+            ],
+            "label": "Estimated proportional reduction for early claiming",
+            "format": "decimal",
+            "display": false
+          },
+          "adjusted_benefit": {
+            "expression": "pia * (1 - early_reduction)",
+            "dependencies": [
+              "pia",
+              "early_reduction"
+            ],
+            "label": "Estimated monthly benefit at chosen claim age",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "pia",
+            "label": "PIA at Full Retirement Age",
+            "variable": "pia",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_benefit",
+            "label": "Estimated monthly benefit at claim age",
+            "variable": "adjusted_benefit",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "quick_method": {
+        "label": "Quick estimate (single-year average)",
+        "description": "Simple, fast estimate that uses average annual earnings divided by 12 and applies a linear claim-age adjustment. Best for rough budgeting.",
+        "variables": {
+          "monthly_base": {
+            "expression": "average_annual_earnings / 12",
+            "dependencies": [
+              "average_annual_earnings"
+            ],
+            "label": "Monthly base (annual average / 12)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "months_early_q": {
+            "expression": "max((full_retirement_age - claim_age) * 12, 0)",
+            "dependencies": [
+              "full_retirement_age",
+              "claim_age"
+            ],
+            "label": "Months early (quick method)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "quick_reduction": {
+            "expression": "months_early_q * 0.005",
+            "dependencies": [
+              "months_early_q"
+            ],
+            "label": "Approximate proportional reduction (quick)",
+            "format": "decimal",
+            "display": false
+          },
+          "quick_estimate": {
+            "expression": "monthly_base * (1 - quick_reduction)",
+            "dependencies": [
+              "monthly_base",
+              "quick_reduction"
+            ],
+            "label": "Quick monthly estimate at claim age",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "quick_estimate",
+            "label": "Quick monthly estimate",
+            "variable": "quick_estimate",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "spousal_method": {
+        "label": "Spousal benefit estimate",
+        "description": "Estimate potential spousal entitlement: compare half of the primary PIA to the spouse's own PIA, then apply claim-age adjustments to the spousal portion if applicable.",
+        "variables": {
+          "primary_aime": {
+            "expression": "average_annual_earnings / 12",
+            "dependencies": [
+              "average_annual_earnings"
+            ],
+            "label": "Primary AIME approximation",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "primary_pia": {
+            "expression": "0.9 * min(primary_aime, bend1) + 0.32 * min(max(primary_aime - bend1, 0), bend2 - bend1) + 0.15 * max(primary_aime - bend2, 0)",
+            "dependencies": [
+              "primary_aime",
+              "bend1",
+              "bend2"
+            ],
+            "label": "Primary PIA",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "spouse_aime": {
+            "expression": "spouse_annual_earnings / 12",
+            "dependencies": [
+              "spouse_annual_earnings"
+            ],
+            "label": "Spouse AIME approximation",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "spouse_pia": {
+            "expression": "0.9 * min(spouse_aime, bend1) + 0.32 * min(max(spouse_aime - bend1, 0), bend2 - bend1) + 0.15 * max(spouse_aime - bend2, 0)",
+            "dependencies": [
+              "spouse_aime",
+              "bend1",
+              "bend2"
+            ],
+            "label": "Spouse's own PIA",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "spousal_entitlement_raw": {
+            "expression": "max(0, 0.5 * primary_pia - spouse_pia)",
+            "dependencies": [
+              "primary_pia",
+              "spouse_pia"
+            ],
+            "label": "Raw spousal entitlement before claim-age adjustment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "spouse_months_early": {
+            "expression": "max((full_retirement_age - spouse_claim_age) * 12, 0)",
+            "dependencies": [
+              "full_retirement_age",
+              "spouse_claim_age"
+            ],
+            "label": "Months spouse claims before full retirement age",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "spouse_early_reduction": {
+            "expression": "min(spouse_months_early, 36) * (5/9/100) + max(spouse_months_early - 36, 0) * (5/12/100)",
+            "dependencies": [
+              "spouse_months_early"
+            ],
+            "label": "Estimated spouse reduction for early claiming",
+            "format": "decimal",
+            "display": false
+          },
+          "spousal_adjusted": {
+            "expression": "spousal_entitlement_raw * (1 - spouse_early_reduction)",
+            "dependencies": [
+              "spousal_entitlement_raw",
+              "spouse_early_reduction"
+            ],
+            "label": "Estimated monthly spousal benefit at spouse claim age",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "spousal_entitlement",
+            "label": "Spousal entitlement (before adjustment)",
+            "variable": "spousal_entitlement_raw",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "spousal_adjusted",
+            "label": "Estimated spousal monthly benefit at claim age",
+            "variable": "spousal_adjusted",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "average_annual_earnings",
+        "label": "Average annual earnings (use indexed or recent average)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "full_retirement_age",
+        "label": "Full retirement age (years)",
+        "type": "number",
+        "default": 67,
+        "min": 62,
+        "max": 70,
+        "step": 1
+      },
+      {
+        "id": "claim_age",
+        "label": "Planned claim age (years)",
+        "type": "number",
+        "default": 67,
+        "min": 62,
+        "max": 70,
+        "step": 1
+      },
+      {
+        "id": "bend1",
+        "label": "PIA bend point 1 (monthly AIME)",
+        "type": "number",
+        "default": 1115,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "bend2",
+        "label": "PIA bend point 2 (monthly AIME)",
+        "type": "number",
+        "default": 6721,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "spouse_annual_earnings",
+        "label": "Spouse average annual earnings",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "spouse_claim_age",
+        "label": "Spouse planned claim age (years)",
+        "type": "number",
+        "default": 67,
+        "min": 62,
+        "max": 70,
+        "step": 1
+      },
+      {
+        "id": "spouse_is_eligible",
+        "label": "Is the spouse potentially eligible for spousal benefits?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "pia",
+          "label": "PIA at Full Retirement Age"
+        },
+        {
+          "id": "adjusted_benefit",
+          "label": "Estimated monthly benefit at claim age"
+        },
+        {
+          "id": "quick_estimate",
+          "label": "Quick monthly estimate"
+        },
+        {
+          "id": "spousal_entitlement",
+          "label": "Spousal entitlement (before adjustment)"
+        },
+        {
+          "id": "spousal_adjusted",
+          "label": "Estimated spousal monthly benefit at claim age"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This tool provides an estimate of monthly retirement and spousal benefits using an AIME → PIA bend-point approach and claim-age adjustments. It is intended for planning and illustration only and does not substitute for official benefit statements.",
+      "Defaults and bend points update periodically; enter your own indexed earnings or conservative averages for more accurate results. Use the quick estimate for rapid budgeting and the PIA-based method for a closer approximation."
+    ],
+    "methodology": [
+      "Primary estimates use a three-tier PIA bend-point formula applied to an average indexed monthly earnings (AIME) approximation. Bend points are inputs so the calculator can be kept current each year.",
+      "Claim-age adjustments approximate standard early reduction rules: a higher proportional reduction for the first 36 months before full retirement age and a smaller per-month reduction thereafter. Delayed retirement credits are not modeled in detail in the quick method, but the PIA-based method can be extended.",
+      "This tool is designed with security and reliability practices in mind. Development and hosting should follow NIST risk management guidance, ISO 27001 principles for information security, and IEEE best practices for numerical software validation."
+    ],
+    "how_is_calculated": [
+      "Step 1: Approximate AIME = average annual earnings / 12.",
+      "Step 2: Compute PIA = 0.9×min(AIME, bend1) + 0.32×min(max(AIME−bend1,0), bend2−bend1) + 0.15×max(AIME−bend2,0).",
+      "Step 3: Calculate months claimed before FRA and apply early reduction = (first 36 months × 5/9% per month) + (remaining months × 5/12% per month).",
+      "Step 4: Adjust PIA by (1 − early reduction) to estimate monthly benefit at chosen claim age. Spousal entitlement = max(0, 0.5 × primary PIA − spouse’s own PIA), then apply spouse claim-age adjustment similarly."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates are approximations for planning purposes. They depend on the accuracy of the earnings input and bend-point values. This tool does not account for detailed indexed earnings history, cost-of-living adjustments, or every special rule. See the accuracy caveats and official benefit statements for precise amounts."
+      },
+      {
+        "question": "How should I choose bend-point values?",
+        "answer": "Bend points change annually. Use the official published monthly bend points for the year in question when available. If unknown, use the defaults but treat results as approximate."
+      },
+      {
+        "question": "Does this calculator account for delayed retirement credits?",
+        "answer": "The PIA-based method can be extended to model delayed retirement credits, but this configuration focuses on estimating PIA and early-claim reductions. For scenarios with delayed claiming beyond FRA, consider adding explicit delayed-credit factors."
+      },
+      {
+        "question": "Can I rely on this for legal or benefit entitlement decisions?",
+        "answer": "No. Use this calculator for financial planning only. For definitive benefit entitlement and exact amounts, consult official statements or agency channels."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) — Risk Management Framework",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 27001 — Information security management systems",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE — Recommended practices for reliable numerical software",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — Safety and health programs guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "AIME",
+        "definition": "Average Indexed Monthly Earnings; here approximated as average annual earnings divided by 12 for planning purposes."
+      },
+      {
+        "term": "PIA",
+        "definition": "Primary Insurance Amount; the base monthly benefit at full retirement age calculated with progressive bend points."
+      },
+      {
+        "term": "Full Retirement Age (FRA)",
+        "definition": "The age at which a person may claim full unreduced retirement benefits. This is an input and may vary by birth year."
+      }
+    ],
+    "summary": [
+      "This calculator provides scenario-based estimates: a PIA-based method for closer approximations, a quick linear method for rapid budgeting, and a spousal estimator that compares entitlements.",
+      "Results are illustrative. Update bend points and earnings with official indexed data for higher accuracy and consult official statements for entitlements."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

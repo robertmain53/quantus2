@@ -1,0 +1,598 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Purchasing Power Calculator (multi-method)",
+    "description": "Estimate the purchasing power of money across time, between currencies using PPP, and an affordability-based housing buying-power estimate. Includes CPI-index and compound-rate methods, PPP conversion, and a housing affordability solver with DTI and taxes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "cpi_index",
+    "methods": {
+      "cpi_index": {
+        "label": "CPI index method (same currency, different years)",
+        "description": "Uses user-supplied CPI (or price index) values to scale an amount directly by index ratios.",
+        "variables": {
+          "factor": {
+            "expression": "to_cpi_index / from_cpi_index",
+            "dependencies": [
+              "to_cpi_index",
+              "from_cpi_index"
+            ],
+            "label": "Index ratio (to/from)",
+            "format": "decimal",
+            "display": true
+          },
+          "adjusted_amount": {
+            "expression": "original_amount * factor",
+            "dependencies": [
+              "original_amount",
+              "factor"
+            ],
+            "label": "Inflation-adjusted amount",
+            "unit": "same currency as Amount",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_amount",
+            "label": "Inflation-adjusted amount",
+            "variable": "adjusted_amount",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "factor",
+            "label": "Index ratio (to/from)",
+            "variable": "factor",
+            "format": "decimal"
+          }
+        ]
+      },
+      "rate_compound": {
+        "label": "Compound annual rate method (same currency)",
+        "description": "Applies a compound annual inflation rate between two years.",
+        "variables": {
+          "years": {
+            "expression": "to_year - from_year",
+            "dependencies": [
+              "to_year",
+              "from_year"
+            ],
+            "label": "Elapsed years",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "factor": {
+            "expression": "pow(1 + annual_inflation_rate/100, years)",
+            "dependencies": [
+              "annual_inflation_rate",
+              "years"
+            ],
+            "label": "Compound inflation factor",
+            "format": "decimal",
+            "display": true
+          },
+          "adjusted_amount": {
+            "expression": "original_amount * factor",
+            "dependencies": [
+              "original_amount",
+              "factor"
+            ],
+            "label": "Inflation-adjusted amount",
+            "unit": "same currency as Amount",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_amount",
+            "label": "Inflation-adjusted amount",
+            "variable": "adjusted_amount",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "factor",
+            "label": "Compound inflation factor",
+            "variable": "factor",
+            "format": "decimal"
+          }
+        ]
+      },
+      "ppp_conversion": {
+        "label": "Purchasing Power Parity (PPP) currency conversion",
+        "description": "Converts an amount from one currency to another using PPP conversion factors (local currency per international dollar).",
+        "variables": {
+          "ppp_factor": {
+            "expression": "ppp_to / ppp_from",
+            "dependencies": [
+              "ppp_to",
+              "ppp_from"
+            ],
+            "label": "PPP conversion factor (to/from)",
+            "format": "decimal",
+            "display": true
+          },
+          "converted_amount": {
+            "expression": "original_amount * ppp_factor",
+            "dependencies": [
+              "original_amount",
+              "ppp_factor"
+            ],
+            "label": "PPP-equivalent amount in target currency",
+            "unit": "target currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "converted_amount",
+            "label": "Amount in target currency (PPP-adjusted)",
+            "variable": "converted_amount",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "ppp_factor",
+            "label": "PPP factor (to/from)",
+            "variable": "ppp_factor",
+            "format": "decimal"
+          }
+        ]
+      },
+      "housing_buying_power": {
+        "label": "Housing purchasing power (affordability estimate)",
+        "description": "Estimate maximum house price supported by income, down payment and a maximum debt-to-income (DTI) constraint. Includes property tax, insurance and HOA assumptions.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "mortgage_rate_percent/100/12",
+            "dependencies": [
+              "mortgage_rate_percent"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "n": {
+            "expression": "term_years * 12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Number of monthly payments",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "amort_factor": {
+            "expression": "monthly_rate / (1 - pow(1 + monthly_rate, -n))",
+            "dependencies": [
+              "monthly_rate",
+              "n"
+            ],
+            "label": "Mortgage amortization multiplier",
+            "format": "decimal",
+            "display": true
+          },
+          "allowed_pmt": {
+            "expression": "(annual_income/12) * max_dti_percent/100 - other_debt_payments_monthly",
+            "dependencies": [
+              "annual_income",
+              "max_dti_percent",
+              "other_debt_payments_monthly"
+            ],
+            "label": "Maximum monthly housing-related payment allowed by DTI",
+            "unit": "currency/month",
+            "format": "currency",
+            "display": true
+          },
+          "t": {
+            "expression": "property_tax_percent/100/12",
+            "dependencies": [
+              "property_tax_percent"
+            ],
+            "label": "Monthly property tax rate (fraction of house price)",
+            "format": "decimal",
+            "display": true
+          },
+          "C": {
+            "expression": "insurance_annual/12 + hoa_monthly",
+            "dependencies": [
+              "insurance_annual",
+              "hoa_monthly"
+            ],
+            "label": "Fixed monthly costs (insurance + HOA)",
+            "unit": "currency/month",
+            "format": "currency",
+            "display": true
+          },
+          "max_house_price": {
+            "expression": "(allowed_pmt - C + down_payment * amort_factor) / (amort_factor + t)",
+            "dependencies": [
+              "allowed_pmt",
+              "C",
+              "down_payment",
+              "amort_factor",
+              "t"
+            ],
+            "label": "Estimated maximum house price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "max_mortgage": {
+            "expression": "max_house_price - down_payment",
+            "dependencies": [
+              "max_house_price",
+              "down_payment"
+            ],
+            "label": "Estimated maximum mortgage principal",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_monthly_payment": {
+            "expression": "amort_factor * max_mortgage + max_house_price * t + C",
+            "dependencies": [
+              "amort_factor",
+              "max_mortgage",
+              "max_house_price",
+              "t",
+              "C"
+            ],
+            "label": "Estimated total monthly housing payment (mortgage + taxes + insurance + HOA)",
+            "unit": "currency/month",
+            "format": "currency",
+            "display": true
+          },
+          "percent_down": {
+            "expression": "down_payment / max_house_price * 100",
+            "dependencies": [
+              "down_payment",
+              "max_house_price"
+            ],
+            "label": "Down payment as percentage of house price",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "max_house_price",
+            "label": "Estimated maximum house price",
+            "variable": "max_house_price",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "max_mortgage",
+            "label": "Estimated maximum mortgage",
+            "variable": "max_mortgage",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_monthly_payment",
+            "label": "Estimated monthly housing payment",
+            "variable": "estimated_monthly_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "percent_down",
+            "label": "Down payment percentage",
+            "variable": "percent_down",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "original_amount",
+        "label": "Amount",
+        "type": "number",
+        "default": 1000,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "from_year",
+        "label": "From year",
+        "type": "integer",
+        "default": 2000,
+        "min": 1800,
+        "max": 2100
+      },
+      {
+        "id": "to_year",
+        "label": "To year",
+        "type": "integer",
+        "default": 2025,
+        "min": 1800,
+        "max": 2100
+      },
+      {
+        "id": "annual_inflation_rate",
+        "label": "Annual inflation rate (%, compound)",
+        "type": "number",
+        "default": 2.5,
+        "min": -50,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "from_cpi_index",
+        "label": "From CPI / price index value",
+        "type": "number",
+        "default": 172.2,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "to_cpi_index",
+        "label": "To CPI / price index value",
+        "type": "number",
+        "default": 305.1,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "ppp_from",
+        "label": "PPP conversion factor (origin: local currency per international dollar)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0.0001,
+        "step": 0.0001
+      },
+      {
+        "id": "ppp_to",
+        "label": "PPP conversion factor (target: local currency per international dollar)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0.0001,
+        "step": 0.0001
+      },
+      {
+        "id": "currency_from",
+        "label": "Origin currency code",
+        "type": "text",
+        "default": "USD"
+      },
+      {
+        "id": "currency_to",
+        "label": "Target currency code",
+        "type": "text",
+        "default": "USD"
+      },
+      {
+        "id": "annual_income",
+        "label": "Annual gross income",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "down_payment",
+        "label": "Available down payment",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "mortgage_rate_percent",
+        "label": "Mortgage annual interest rate (%)",
+        "type": "number",
+        "default": 4.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Mortgage term (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50
+      },
+      {
+        "id": "other_debt_payments_monthly",
+        "label": "Other monthly debt payments",
+        "type": "number",
+        "default": 200,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "max_dti_percent",
+        "label": "Maximum debt-to-income ratio (%) used for housing",
+        "type": "number",
+        "default": 36,
+        "min": 1,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "property_tax_percent",
+        "label": "Annual property tax rate (% of house price)",
+        "type": "number",
+        "default": 1.2,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "insurance_annual",
+        "label": "Annual home insurance cost",
+        "type": "number",
+        "default": 1200,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "hoa_monthly",
+        "label": "HOA / condo fees (monthly)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Purchasing Power Calculator helps you compare value over time, translate value across currencies using PPP, and estimate housing buying power given income and financing assumptions. Use the CPI/index method when you have published index values, or the compound-rate method when you want to apply an average annual inflation rate.",
+      "Results are estimates for planning and comparison. Where possible, supply official series (CPI or PPP conversion factors) from national statistics offices or international sources for best accuracy. The housing estimator solves for a house price consistent with a user-specified debt-to-income constraint and includes property tax, insurance, and HOA assumptions."
+    ],
+    "methodology": [
+      "CPI/index method: the amount is scaled by the ratio of the destination index to the origin index (amount * to_index / from_index). This is the preferred approach when official index series are available for the same currency and price concept.",
+      "Compound-rate method: applies an annualized compound factor: amount * (1 + rate)^(years). Use this when you have an average annual inflation expectation rather than index series.",
+      "PPP conversion: converts via PPP conversion factors expressed as 'local currency per international dollar' for each economy. Conversion multiplies the origin amount by (ppp_to / ppp_from) to represent equivalent purchasing power in the target currency.",
+      "Housing estimate: solves for the maximum house price P that satisfies allowed monthly payment = mortgage payment on (P - down_payment) + monthly property taxes + insurance + HOA. The mortgage payment is computed using the standard fixed-rate amortization formula. See 'How is calculated' for the algebraic rearrangement."
+    ],
+    "how_is_calculated": [
+      "CPI/index method: Adjusted = Amount × (ToIndex ÷ FromIndex).",
+      "Compound-rate method: Adjusted = Amount × (1 + inflation_rate/100)^(ToYear − FromYear).",
+      "PPP conversion: Converted = Amount × (PPP_to ÷ PPP_from). PPP factors are expressed as local currency per international dollar.",
+      "Housing estimate algebra: Let r = monthly_rate, n = months, amort = r / (1 − (1 + r)^−n), t = annual_tax%/12. Solve P = (AllowedPayment − C + DownPayment × amort) / (amort + t), where C is fixed monthly costs (insurance/HOA)."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these results?",
+        "answer": "These outputs are estimates. Accuracy depends on input quality: official CPI indices, published PPP conversion factors, and actual mortgage rates. Use official series where available and treat compound-rate results as scenario estimates rather than precise historical reconstructions. See citations for data sources and standards on numerical validation. Results do not include transaction costs, taxes on sale, or behavioral changes."
+      },
+      {
+        "question": "Which method should I use for time comparisons?",
+        "answer": "Prefer the CPI/index method when you have consistent index values for both dates (same index series). Use the compound-rate method when you only have an average annual rate or for forward-looking scenarios."
+      },
+      {
+        "question": "Where do I get CPI and PPP data?",
+        "answer": "Obtain CPI series from national statistical offices or central banks and PPP conversion factors from international organizations. When using third-party data, verify series definitions and coverage. The tool accepts user-supplied values only and does not fetch live data."
+      },
+      {
+        "question": "Are there regulatory or safety considerations?",
+        "answer": "This tool is informational only. For regulated activities (e.g., consumer lending calculations, disclosures), consult applicable local rules. Numerical and software practices referenced follow standards and good practices listed in the citations; use audited data and professional advice for compliance-sensitive decisions."
+      },
+      {
+        "question": "What are the tool limits and known failure modes?",
+        "answer": "Known limits include: division by zero if indices or factors are zero, loss of precision for extremely large exponents, and inappropriate use of PPP factors across non-comparable baskets. The housing solver assumes taxes scale with house price and a fixed-rate mortgage. For zero or negative interest rates, formulas may need special handling; validate results and run sensitivity checks."
+      },
+      {
+        "question": "How should I calibrate or validate results?",
+        "answer": "Cross-check with official series (e.g., published CPI ratios or PPP tables) for sample dates. For housing estimates, validate against lender affordability calculators and use quoted mortgage rates from lenders. Maintain versioned records of inputs when auditing calculations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST: Frameworks and guidance on software assurance and numeric validation",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO standards on data quality and information accuracy",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE guidance on software engineering and reproducible computations",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA guidance on workplace well-being (context for financial-health tools)",
+        "url": "https://www.osha.gov/"
+      },
+      {
+        "label": "Official CPI and inflation statistics (example national statistics office)",
+        "url": "https://www.bls.gov/"
+      },
+      {
+        "label": "International PPP data and methodology (example international data provider)",
+        "url": "https://data.worldbank.org/indicator/PA.NUS.PPP"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "CPI (Consumer Price Index)",
+        "definition": "A price index measuring the average change over time in the prices paid by consumers for a market basket of goods and services. Use consistent series for comparisons."
+      },
+      {
+        "term": "PPP (Purchasing Power Parity)",
+        "definition": "Conversion factor expressing the amount of a currency required to buy the same basket of goods and services that one international dollar would buy in the base country."
+      },
+      {
+        "term": "DTI (Debt-to-Income ratio)",
+        "definition": "A ratio used by lenders comparing a borrower's recurring monthly debt payments to monthly gross income; used here to constrain maximum housing payments."
+      },
+      {
+        "term": "Amortization factor",
+        "definition": "Multiplier used to compute fixed periodic payment from loan principal given rate and term: r / (1 − (1 + r)^−n)."
+      },
+      {
+        "term": "Compound annual rate",
+        "definition": "An annualized rate that, when applied each year, compounds to produce the overall change across multiple years."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/purchasing-power",
+      "/guides/inflation-vs-ppp"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.bls.gov/",
+        "label": "National CPI data (example)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculation"
+    ]
+  }
+}

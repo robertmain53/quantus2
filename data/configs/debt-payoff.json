@@ -1,0 +1,630 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Debt Payoff Calculator (single‑loan, consolidated estimate, goal planner)",
+    "description": "Estimate time-to-payoff, required payments to meet a target date, and consolidated estimates for up to three debts. Includes single-loan exact formulas and consolidated approximations with transparency on assumptions and accuracy limits."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "single_loan",
+    "methods": {
+      "single_loan": {
+        "label": "Single loan / extra payment calculator",
+        "description": "Exact amortization-based payoff time and totals for a single loan given regular payments (min + extra).",
+        "variables": {
+          "monthly_rate": {
+            "expression": "single_apr / 12 / 100",
+            "dependencies": [
+              "single_apr"
+            ],
+            "label": "Monthly interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": true
+          },
+          "payment": {
+            "expression": "single_min_payment + single_extra_payment",
+            "dependencies": [
+              "single_min_payment",
+              "single_extra_payment"
+            ],
+            "label": "Total monthly payment",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "months_to_payoff": {
+            "expression": "-ln(1 - monthly_rate * single_balance / payment) / ln(1 + monthly_rate)",
+            "dependencies": [
+              "monthly_rate",
+              "single_balance",
+              "payment"
+            ],
+            "label": "Months to payoff (approximate, amortization formula)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "years_to_payoff": {
+            "expression": "months_to_payoff / 12",
+            "dependencies": [
+              "months_to_payoff"
+            ],
+            "label": "Years to payoff",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "payment * months_to_payoff",
+            "dependencies": [
+              "payment",
+              "months_to_payoff"
+            ],
+            "label": "Total amount paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest": {
+            "expression": "total_paid - single_balance",
+            "dependencies": [
+              "total_paid",
+              "single_balance"
+            ],
+            "label": "Estimated total interest paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_to_payoff",
+            "label": "Months to payoff",
+            "variable": "months_to_payoff",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "years_to_payoff",
+            "label": "Years to payoff",
+            "variable": "years_to_payoff",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total paid (principal + interest)",
+            "variable": "total_paid",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest",
+            "label": "Total interest",
+            "variable": "total_interest",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "goal_payoff": {
+        "label": "Payment required to meet a payoff deadline",
+        "description": "Compute the fixed monthly payment required to retire a balance within a specified number of months (amortization inverse).",
+        "variables": {
+          "monthly_rate_goal": {
+            "expression": "single_apr / 12 / 100",
+            "dependencies": [
+              "single_apr"
+            ],
+            "label": "Monthly interest rate",
+            "format": "decimal",
+            "display": true
+          },
+          "n_months": {
+            "expression": "goal_months",
+            "dependencies": [
+              "goal_months"
+            ],
+            "label": "Target months until payoff",
+            "unit": "months",
+            "format": "integer",
+            "display": true
+          },
+          "required_payment": {
+            "expression": "monthly_rate_goal * single_balance / (1 - pow(1 + monthly_rate_goal, - n_months))",
+            "dependencies": [
+              "monthly_rate_goal",
+              "single_balance",
+              "n_months"
+            ],
+            "label": "Required monthly payment to meet target",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_cost_goal": {
+            "expression": "required_payment * n_months",
+            "dependencies": [
+              "required_payment",
+              "n_months"
+            ],
+            "label": "Total paid by target date",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_goal": {
+            "expression": "total_cost_goal - single_balance",
+            "dependencies": [
+              "total_cost_goal",
+              "single_balance"
+            ],
+            "label": "Estimated interest paid to reach goal",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_payment",
+            "label": "Required monthly payment",
+            "variable": "required_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_cost_goal",
+            "label": "Total paid by target",
+            "variable": "total_cost_goal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_goal",
+            "label": "Estimated interest to target",
+            "variable": "total_interest_goal",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "consolidated_estimate": {
+        "label": "Consolidated estimate (up to 3 debts, weighted average APR)",
+        "description": "Approximate payoff time if debts are treated as a single consolidated balance using a weighted-average APR. This is an approximation to help compare approaches; see accuracy notes.",
+        "variables": {
+          "total_balance": {
+            "expression": "debt1_balance + debt2_balance + debt3_balance",
+            "dependencies": [
+              "debt1_balance",
+              "debt2_balance",
+              "debt3_balance"
+            ],
+            "label": "Combined balance",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "weighted_apr": {
+            "expression": "((debt1_balance * debt1_apr) + (debt2_balance * debt2_apr) + (debt3_balance * debt3_apr)) / ( (debt1_balance + debt2_balance + debt3_balance) + 0.0000001 )",
+            "dependencies": [
+              "debt1_balance",
+              "debt2_balance",
+              "debt3_balance",
+              "debt1_apr",
+              "debt2_apr",
+              "debt3_apr"
+            ],
+            "label": "Weighted average APR",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "monthly_rate_combined": {
+            "expression": "weighted_apr / 12 / 100",
+            "dependencies": [
+              "weighted_apr"
+            ],
+            "label": "Combined monthly rate",
+            "format": "decimal",
+            "display": true
+          },
+          "months_estimate": {
+            "expression": "-ln(1 - monthly_rate_combined * total_balance / monthly_budget) / ln(1 + monthly_rate_combined)",
+            "dependencies": [
+              "monthly_rate_combined",
+              "total_balance",
+              "monthly_budget"
+            ],
+            "label": "Estimated months to payoff at specified monthly budget",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "years_estimate": {
+            "expression": "months_estimate / 12",
+            "dependencies": [
+              "months_estimate"
+            ],
+            "label": "Estimated years to payoff",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "estimated_interest_combined": {
+            "expression": "monthly_budget * months_estimate - total_balance",
+            "dependencies": [
+              "monthly_budget",
+              "months_estimate",
+              "total_balance"
+            ],
+            "label": "Estimated total interest (approx.)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "months_estimate",
+            "label": "Estimated months to payoff (consolidated)",
+            "variable": "months_estimate",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "years_estimate",
+            "label": "Estimated years to payoff (consolidated)",
+            "variable": "years_estimate",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "estimated_interest_combined",
+            "label": "Estimated interest (consolidated)",
+            "variable": "estimated_interest_combined",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "weighted_apr",
+            "label": "Weighted average APR",
+            "variable": "weighted_apr",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "debt_summary": {
+        "label": "Per-debt payoff estimate (individual amortization)",
+        "description": "Estimate months to pay off each debt separately using its APR and specified monthly payment (useful for comparing snowball vs avalanche ordering).",
+        "variables": {
+          "debt1_months": {
+            "expression": "-ln(1 - (debt1_apr / 12 / 100) * debt1_balance / debt1_min_payment) / ln(1 + (debt1_apr / 12 / 100))",
+            "dependencies": [
+              "debt1_apr",
+              "debt1_balance",
+              "debt1_min_payment"
+            ],
+            "label": "Debt 1 months (individual estimate)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "debt2_months": {
+            "expression": "-ln(1 - (debt2_apr / 12 / 100) * debt2_balance / debt2_min_payment) / ln(1 + (debt2_apr / 12 / 100))",
+            "dependencies": [
+              "debt2_apr",
+              "debt2_balance",
+              "debt2_min_payment"
+            ],
+            "label": "Debt 2 months (individual estimate)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "debt3_months": {
+            "expression": "-ln(1 - (debt3_apr / 12 / 100) * debt3_balance / debt3_min_payment) / ln(1 + (debt3_apr / 12 / 100))",
+            "dependencies": [
+              "debt3_apr",
+              "debt3_balance",
+              "debt3_min_payment"
+            ],
+            "label": "Debt 3 months (individual estimate)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          },
+          "sum_individual_months": {
+            "expression": "debt1_months + debt2_months + debt3_months",
+            "dependencies": [
+              "debt1_months",
+              "debt2_months",
+              "debt3_months"
+            ],
+            "label": "Sum of individual estimates (months)",
+            "unit": "months",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "debt1_months",
+            "label": "Debt 1 months (estimate)",
+            "variable": "debt1_months",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "debt2_months",
+            "label": "Debt 2 months (estimate)",
+            "variable": "debt2_months",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "debt3_months",
+            "label": "Debt 3 months (estimate)",
+            "variable": "debt3_months",
+            "unit": "months",
+            "format": "decimal"
+          },
+          {
+            "id": "sum_individual_months",
+            "label": "Sum of individual months (for comparison)",
+            "variable": "sum_individual_months",
+            "unit": "months",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "single_balance",
+        "label": "Single loan principal (USD)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "single_apr",
+        "label": "Single loan APR (annual %)",
+        "type": "number",
+        "default": 5.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "single_min_payment",
+        "label": "Single loan required monthly payment (USD)",
+        "type": "number",
+        "default": 200,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "single_extra_payment",
+        "label": "Additional monthly payment you can add (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "goal_months",
+        "label": "Target payoff time (months) for goal planner",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "monthly_budget",
+        "label": "Monthly amount available for debt repayment (USD)",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt1_balance",
+        "label": "Debt 1 balance (USD)",
+        "type": "number",
+        "default": 2500,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt1_apr",
+        "label": "Debt 1 APR (annual %)",
+        "type": "number",
+        "default": 18.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt1_min_payment",
+        "label": "Debt 1 monthly payment (USD)",
+        "type": "number",
+        "default": 75,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt2_balance",
+        "label": "Debt 2 balance (USD)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt2_apr",
+        "label": "Debt 2 APR (annual %)",
+        "type": "number",
+        "default": 12.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt2_min_payment",
+        "label": "Debt 2 monthly payment (USD)",
+        "type": "number",
+        "default": 150,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt3_balance",
+        "label": "Debt 3 balance (USD)",
+        "type": "number",
+        "default": 12000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt3_apr",
+        "label": "Debt 3 APR (annual %)",
+        "type": "number",
+        "default": 6.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "debt3_min_payment",
+        "label": "Debt 3 monthly payment (USD)",
+        "type": "number",
+        "default": 240,
+        "min": 0,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps estimate how long it will take to pay off debt and what payments are required to meet a payoff date. It combines exact amortization formulas for a single loan with consolidated estimates for multiple debts so you can compare approaches.",
+      "Use the single-loan mode for precise amortization results given a fixed monthly payment. Use the consolidated estimate to compare 'consolidate and pay' scenarios across up to three debts. All results are estimates and subject to the assumptions described below."
+    ],
+    "methodology": [
+      "Single-loan computations use standard amortization formulas derived from discrete compound interest. When a fixed periodic payment is applied, number of periods n is computed from the closed-form inverse of the annuity formula.",
+      "Consolidated estimates compute a weighted-average APR across entered debts and apply the single-loan formula to the combined balance. This provides a consistent comparison but is an approximation: it assumes payments are applied proportionally and that no fees or balance-dependent rate changes occur.",
+      "Per-debt estimates compute each debt's payoff time independently using its APR and listed monthly payment. These per-debt results can be used to compare 'snowball' (smallest balance first) vs. 'avalanche' (highest APR first) strategies, but do not model the exact reallocation scheduling that occurs when one debt is paid and payments roll to the next."
+    ],
+    "how_is_calculated": [
+      "Monthly interest rate r = APR / 12 / 100.",
+      "Payment annuity formula: Payment = r * P / (1 - (1 + r)^(-n)). To solve for n use n = -ln(1 - r * P / Payment) / ln(1 + r) where P is principal, Payment is monthly payment.",
+      "Weighted APR = sum(balance_i * APR_i) / sum(balance_i). Consolidated months are computed using the annuity inverse formula with the combined principal and weighted APR.",
+      "If monthly payment ≤ monthly interest (r * P) the formulas are invalid; in that case interest-only or increasing-balance behavior may occur and results are not meaningful."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these results?",
+        "answer": "Single-loan amortization outputs are exact given the inputs and the assumption of level periodic payments and monthly compounding. Consolidated and per-debt summaries are approximations useful for comparison. They do not account for fees, penalty interest rates, promotional rate expirations, or changes to minimum payments over time."
+      },
+      {
+        "question": "Which method should I use: snowball or avalanche?",
+        "answer": "Use per-debt months to compare. Avalanche (highest APR first) typically minimizes total interest paid, while snowball (smallest balance first) often yields behavioral momentum. This tool provides estimates to inform your choice but does not replace personalized financial advice."
+      },
+      {
+        "question": "What assumptions could invalidate the calculations?",
+        "answer": "Assumptions include fixed APRs, constant minimum payments, no late fees or returned payments, and monthly compounding. Balance-dependent rate changes (for example, variable-rate accounts tied to credit utilization) and one-time fees are not modeled."
+      },
+      {
+        "question": "Why might the formula return NaN or not converge?",
+        "answer": "If the monthly payment is less than or equal to the monthly interest (APR/12 * balance), the denominator in the formula becomes zero or negative and the closed-form solution is invalid. Increase the payment or consult a financial advisor for interest-only or restructuring options."
+      },
+      {
+        "question": "Is this calculator compliant with standards?",
+        "answer": "This tool follows general software and risk-management best practices and documents assumptions for transparency. It includes accuracy caveats and references to standards for computational integrity and risk guidance as noted in the citations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — general safety and risk practices",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "APR",
+        "definition": "Annual Percentage Rate — the annual interest rate charged on a loan, expressed as a percentage."
+      },
+      {
+        "term": "Monthly rate",
+        "definition": "The APR divided by 12, used in monthly compounding calculations."
+      },
+      {
+        "term": "Annuity formula",
+        "definition": "The standard formula that relates periodic payment, interest rate, principal, and number of periods for level payments."
+      },
+      {
+        "term": "Weighted average APR",
+        "definition": "An average interest rate across multiple debts weighted by each debt's balance; used for consolidated approximations."
+      }
+    ],
+    "summary": [
+      "Use single-loan mode for exact amortization results and the goal planner to compute the required payment to meet a payoff deadline. Use consolidated estimates to compare combined scenarios across multiple debts. Review assumptions and adjust inputs for fees, rate changes, or non-monthly compounding if applicable."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

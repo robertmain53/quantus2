@@ -1,0 +1,720 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Annuity Payout Calculator (Advanced)",
+    "description": "Estimate payout amounts for common annuity scenarios: immediate fixed-period, deferred fixed, life-estimate (user-specified life expectancy), joint-life estimate, and variable-annuity estimate. Includes inputs for purchase amount, interest/return assumptions, payout frequency, deferral, fees and inflation. Provides clear accuracy caveats and links to standards for testing, security and quality assurance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "immediate_fixed",
+    "methods": {
+      "immediate_fixed": {
+        "label": "Immediate fixed-period annuity",
+        "description": "Single premium paid now in exchange for a fixed periodic payment starting immediately and continuing for a specified number of years.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "payout_frequency == 'monthly' ? 12 : (payout_frequency == 'quarterly' ? 4 : (payout_frequency == 'semiannual' ? 2 : 1))",
+            "dependencies": [
+              "payout_frequency"
+            ],
+            "label": "Payments per year",
+            "unit": "periods",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "interest_rate / 100 / periods_per_year",
+            "dependencies": [
+              "interest_rate",
+              "periods_per_year"
+            ],
+            "label": "Periodic rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "period_years * periods_per_year",
+            "dependencies": [
+              "period_years",
+              "periods_per_year"
+            ],
+            "label": "Total payment periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "payment_per_period": {
+            "expression": "periodic_rate == 0 ? purchase_amount / n : purchase_amount * periodic_rate / (1 - (1 + periodic_rate)^(-n))",
+            "dependencies": [
+              "purchase_amount",
+              "periodic_rate",
+              "n"
+            ],
+            "label": "Payment per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_payment": {
+            "expression": "payment_per_period * periods_per_year",
+            "dependencies": [
+              "payment_per_period",
+              "periods_per_year"
+            ],
+            "label": "Estimated annual payment (nominal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "real_annual_payment": {
+            "expression": "annual_payment / (1 + inflation_rate/100)",
+            "dependencies": [
+              "annual_payment",
+              "inflation_rate"
+            ],
+            "label": "Estimated first-year payment adjusted for inflation",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_per_period",
+            "label": "Payment per period",
+            "variable": "payment_per_period",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_payment",
+            "label": "Annual payment (nominal)",
+            "variable": "annual_payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "real_annual_payment",
+            "label": "Annual payment (inflation-adjusted)",
+            "variable": "real_annual_payment",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "deferred_fixed": {
+        "label": "Deferred fixed-period annuity",
+        "description": "Single premium paid now for fixed periodic payments that begin after a deferral period.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "payout_frequency == 'monthly' ? 12 : (payout_frequency == 'quarterly' ? 4 : (payout_frequency == 'semiannual' ? 2 : 1))",
+            "dependencies": [
+              "payout_frequency"
+            ],
+            "label": "Payments per year",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate": {
+            "expression": "interest_rate / 100 / periods_per_year",
+            "dependencies": [
+              "interest_rate",
+              "periods_per_year"
+            ],
+            "label": "Periodic rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "period_years * periods_per_year",
+            "dependencies": [
+              "period_years",
+              "periods_per_year"
+            ],
+            "label": "Total payment periods after deferral",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "deferral_periods": {
+            "expression": "deferral_years * periods_per_year",
+            "dependencies": [
+              "deferral_years",
+              "periods_per_year"
+            ],
+            "label": "Deferral periods",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "annuity_factor": {
+            "expression": "periodic_rate == 0 ? n : (1 - (1 + periodic_rate)^(-n)) / periodic_rate",
+            "dependencies": [
+              "periodic_rate",
+              "n"
+            ],
+            "label": "Annuity factor (present value of 1 per period)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "payment_per_period": {
+            "expression": "purchase_amount / (annuity_factor * (1 + periodic_rate)^(-deferral_periods))",
+            "dependencies": [
+              "purchase_amount",
+              "annuity_factor",
+              "periodic_rate",
+              "deferral_periods"
+            ],
+            "label": "Payment per period starting after deferral",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_payment": {
+            "expression": "payment_per_period * periods_per_year",
+            "dependencies": [
+              "payment_per_period",
+              "periods_per_year"
+            ],
+            "label": "Estimated annual payment (nominal) after deferral",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_per_period",
+            "label": "Payment per period (after deferral)",
+            "variable": "payment_per_period",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_payment",
+            "label": "Annual payment (nominal, after deferral)",
+            "variable": "annual_payment",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "life_estimate": {
+        "label": "Life-estimate annuity (user-specified life expectancy)",
+        "description": "Estimates an annuity payout based on a user-supplied life expectancy (years). This method does not use actuarial mortality tables; use a professional actuarial estimate for precise life-contingent pricing.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "payout_frequency == 'monthly' ? 12 : (payout_frequency == 'quarterly' ? 4 : (payout_frequency == 'semiannual' ? 2 : 1))",
+            "dependencies": [
+              "payout_frequency"
+            ],
+            "label": "Payments per year",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate": {
+            "expression": "interest_rate / 100 / periods_per_year",
+            "dependencies": [
+              "interest_rate",
+              "periods_per_year"
+            ],
+            "label": "Periodic rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "life_expectancy_years * periods_per_year",
+            "dependencies": [
+              "life_expectancy_years",
+              "periods_per_year"
+            ],
+            "label": "Estimated total periods (life expectancy)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "annuity_factor": {
+            "expression": "periodic_rate == 0 ? n : (1 - (1 + periodic_rate)^(-n)) / periodic_rate",
+            "dependencies": [
+              "periodic_rate",
+              "n"
+            ],
+            "label": "Annuity factor (approximate)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "payment_per_period": {
+            "expression": "purchase_amount / annuity_factor",
+            "dependencies": [
+              "purchase_amount",
+              "annuity_factor"
+            ],
+            "label": "Estimated payment per period (life-estimate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_payment": {
+            "expression": "payment_per_period * periods_per_year",
+            "dependencies": [
+              "payment_per_period",
+              "periods_per_year"
+            ],
+            "label": "Estimated annual payment (nominal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_per_period",
+            "label": "Payment per period (life-estimate)",
+            "variable": "payment_per_period",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_payment",
+            "label": "Annual payment (nominal)",
+            "variable": "annual_payment",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "joint_life_estimate": {
+        "label": "Joint-life estimate (simple survivor adjustment)",
+        "description": "Approximate joint-life payout using a user-provided survivor factor. For formal pricing, use actuarial tables or insurer quotes specifying joint survivor options and reduction percentages.",
+        "variables": {
+          "periods_per_year": {
+            "expression": "payout_frequency == 'monthly' ? 12 : (payout_frequency == 'quarterly' ? 4 : (payout_frequency == 'semiannual' ? 2 : 1))",
+            "dependencies": [
+              "payout_frequency"
+            ],
+            "label": "Payments per year",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "periodic_rate": {
+            "expression": "interest_rate / 100 / periods_per_year",
+            "dependencies": [
+              "interest_rate",
+              "periods_per_year"
+            ],
+            "label": "Periodic rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "life_expectancy_years * periods_per_year",
+            "dependencies": [
+              "life_expectancy_years",
+              "periods_per_year"
+            ],
+            "label": "Estimated total periods (life expectancy)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "annuity_factor": {
+            "expression": "periodic_rate == 0 ? n : (1 - (1 + periodic_rate)^(-n)) / periodic_rate",
+            "dependencies": [
+              "periodic_rate",
+              "n"
+            ],
+            "label": "Annuity factor (approximate)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "payment_per_period_single": {
+            "expression": "purchase_amount / annuity_factor",
+            "dependencies": [
+              "purchase_amount",
+              "annuity_factor"
+            ],
+            "label": "Single-life payment per period (approx)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_per_period_joint": {
+            "expression": "payment_per_period_single * joint_survivor_factor",
+            "dependencies": [
+              "payment_per_period_single",
+              "joint_survivor_factor"
+            ],
+            "label": "Estimated joint-life payment per period (approx)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_payment_joint": {
+            "expression": "payment_per_period_joint * periods_per_year",
+            "dependencies": [
+              "payment_per_period_joint",
+              "periods_per_year"
+            ],
+            "label": "Estimated annual payment (joint-life, nominal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "payment_per_period_joint",
+            "label": "Payment per period (joint-life estimate)",
+            "variable": "payment_per_period_joint",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_payment_joint",
+            "label": "Annual payment (joint-life estimate)",
+            "variable": "annual_payment_joint",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "variable_annuity_estimate": {
+        "label": "Variable annuity / market-return estimate",
+        "description": "Estimate based on an expected long-run return and explicit fees. This is a heuristic estimate for income-producing strategies and does not represent insurer guarantees.",
+        "variables": {
+          "net_expected_return": {
+            "expression": "(expected_return_percent - fees_percent) / 100",
+            "dependencies": [
+              "expected_return_percent",
+              "fees_percent"
+            ],
+            "label": "Net expected return (decimal)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "annual_payout_estimate": {
+            "expression": "purchase_amount * net_expected_return",
+            "dependencies": [
+              "purchase_amount",
+              "net_expected_return"
+            ],
+            "label": "Estimated first-year income from expected return",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_payout_estimate": {
+            "expression": "annual_payout_estimate / 12",
+            "dependencies": [
+              "annual_payout_estimate"
+            ],
+            "label": "Estimated first-year monthly income from expected return",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_payout_estimate",
+            "label": "Estimated annual payout (first-year, market-return)",
+            "variable": "annual_payout_estimate",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "monthly_payout_estimate",
+            "label": "Estimated monthly payout (first-year, market-return)",
+            "variable": "monthly_payout_estimate",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "purchase_amount",
+        "label": "Purchase amount (single premium)",
+        "type": "number",
+        "default": 100000,
+        "min": 1000,
+        "step": 100
+      },
+      {
+        "id": "interest_rate",
+        "label": "Assumed annual interest / discount rate (%)",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "expected_return_percent",
+        "label": "Expected annual return for variable estimate (%)",
+        "type": "number",
+        "default": 5,
+        "min": -100,
+        "max": 200,
+        "step": 0.01
+      },
+      {
+        "id": "fees_percent",
+        "label": "Total annual fees and expenses (%)",
+        "type": "number",
+        "default": 1,
+        "min": 0,
+        "max": 20,
+        "step": 0.01
+      },
+      {
+        "id": "payout_frequency",
+        "label": "Payout frequency",
+        "type": "select",
+        "default": "monthly",
+        "options": [
+          {
+            "label": "Monthly",
+            "value": "monthly"
+          },
+          {
+            "label": "Quarterly",
+            "value": "quarterly"
+          },
+          {
+            "label": "Semiannual",
+            "value": "semiannual"
+          },
+          {
+            "label": "Annual",
+            "value": "annual"
+          }
+        ]
+      },
+      {
+        "id": "period_years",
+        "label": "Payout term in years (for fixed-period options)",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "deferral_years",
+        "label": "Deferral period in years (for deferred annuities)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "life_expectancy_years",
+        "label": "Life expectancy (years) used for life-estimate method",
+        "type": "integer",
+        "default": 20,
+        "min": 1,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "joint_survivor_factor",
+        "label": "Joint survivor factor (multiplier applied to single-life payment)",
+        "type": "number",
+        "default": 0.85,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "inflation_rate",
+        "label": "Expected annual inflation rate (%) (for real payment estimate)",
+        "type": "number",
+        "default": 2,
+        "min": -50,
+        "max": 100,
+        "step": 0.01
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "payment_per_period",
+          "label": "Payment per period"
+        },
+        {
+          "id": "annual_payment",
+          "label": "Annual payment (nominal)"
+        },
+        {
+          "id": "real_annual_payment",
+          "label": "Annual payment (inflation-adjusted)"
+        },
+        {
+          "id": "payment_per_period_joint",
+          "label": "Payment per period (joint-life estimate)"
+        },
+        {
+          "id": "annual_payment_joint",
+          "label": "Annual payment (joint-life estimate)"
+        },
+        {
+          "id": "annual_payout_estimate",
+          "label": "Estimated annual payout (variable estimate)"
+        },
+        {
+          "id": "monthly_payout_estimate",
+          "label": "Estimated monthly payout (variable estimate)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This advanced annuity payout calculator helps you compare typical payout structures: immediate fixed-period, deferred fixed, life-estimate (using a user-specified life expectancy), joint-life estimate and a simple variable-annuity income estimate. It is designed for quick estimates and educational comparisons, not for issuing guarantees or replacing insurer pricing.",
+      "Inputs include purchase amount, assumed interest or expected return, payout frequency, term/deferral, joint-survivor adjustment, fees and an inflation rate for a first-order real-payment estimate. Results are shown as payment per period and annualized amounts where applicable."
+    ],
+    "methodology": [
+      "Fixed-period and deferred calculations use standard time-value-of-money annuity algebra: solving the standard present-value annuity formula for the periodic payment. For periodic rate r and total periods n, the annuity factor is (1 - (1+r)^-n)/r; payment = PV / annuity_factor, with an extra discount for deferred starts.",
+      "Life-estimate and joint-life results are approximations. Life-estimate uses a user-supplied life expectancy (years) to set the number of periods; it does not use mortality tables or insurer-blended survival probabilities. Joint-life uses a user-entered survivor multiplier to crudely reflect reduced payments for survivor benefits.",
+      "Variable-annuity estimates are heuristic: they multiply purchase amount by net expected return (expected return less fees) to provide a first-year income projection. This is not a guarantee and ignores sequence-of-returns risk and volatility."
+    ],
+    "how_is_calculated": [
+      "Periodic rate = (interest_rate %) / periods_per_year.",
+      "Annuity factor = (1 - (1 + periodic_rate)^(-n)) / periodic_rate (or n when periodic_rate = 0).",
+      "Payment per period (fixed) = purchase_amount / annuity_factor. For deferred annuities, the annuity factor is discounted by (1 + periodic_rate)^(deferral_periods).",
+      "Variable annuity first-year estimate = purchase_amount × (expected_return_percent - fees_percent)/100."
+    ],
+    "examples": [
+      "Example 1: $100,000 purchase, 3% assumed interest, monthly payouts for 10 years. The tool computes periodic payments using the monthly periodic rate (3%/12) and n = 120 payments.",
+      "Example 2: Deferred annuity with 5-year deferral and 20-year payout: payments are larger than a straight 20-year immediate annuity because the payment stream is discounted back through the deferral period.",
+      "Example 3: Variable-annuity estimate with 5% expected return and 1% fees gives a net expected return of 4%; first-year income estimate = 4% × purchase amount."
+    ],
+    "summary": [
+      "Use fixed-period methods to model a guaranteed-term payout. Use deferred for payments that begin later. Use life-estimate only if you supply a credible life expectancy or if you want a rough rule-of-thumb. For joint-life and variable annuity scenarios, seek formal insurer quotes for contractual guarantees.",
+      "This calculator provides estimates only. Real insurer quotes incorporate mortality tables, underwriting, crediting rates, fees, profit margins and regulatory constraints that are not modeled here."
+    ],
+    "faqs": [
+      {
+        "question": "Is this calculator a quote for an annuity contract?",
+        "answer": "No. Outputs are estimates for planning and comparison only. Only an insurer can provide a binding annuity quote that reflects underwriting, product-specific guarantee rates, fees and any riders."
+      },
+      {
+        "question": "How should I choose the interest or return rate?",
+        "answer": "Choose an interest or return rate that reflects either the current guaranteed crediting rates available in the market or your expected long-term return after fees. Compare multiple scenarios to see sensitivity. For life-contingent products, insurers typically use their own internal assumptions and mortality tables."
+      },
+      {
+        "question": "Does the tool use actuarial mortality tables?",
+        "answer": "No. For life-contingent or joint-life pricing, use a licensed actuary or insurer quote. This tool accepts a user-specified life expectancy for illustrative calculations but does not implement professional mortality tables."
+      },
+      {
+        "question": "Why do variable-annuity estimates differ from fixed annuities?",
+        "answer": "Variable-annuity estimates are driven by market return assumptions and fees and are therefore not guaranteed. Fixed annuities provide contractual guarantees from the insurer; variable strategies do not."
+      },
+      {
+        "question": "What are the main limitations of these estimates?",
+        "answer": "Simplifications include: no underwriting adjustments, no insurer credit considerations, no mortality table modeling, simplified treatment of deferral discounts, and single-rate assumptions. These can materially change quoted payouts from insurers."
+      },
+      {
+        "question": "How accurate are the inflation-adjusted results?",
+        "answer": "Inflation adjustment here is a simple first-year real estimate dividing nominal first-year payment by (1 + inflation_rate). It does not model subsequent CPI changes, cost-of-living riders, or compounding effects over multiple years."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Annuity factor",
+        "definition": "A present-value multiplier that converts a sequence of periodic payments into a single present value: (1 - (1+r)^-n)/r for periodic rate r and n periods."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "Interest or discount rate per payout period. For example, annual rate 3% with monthly payouts gives a periodic rate of 0.03/12."
+      },
+      {
+        "term": "Deferral period",
+        "definition": "Time between purchase and the first payout. Deferred annuities discount future payments back to the purchase date when solving for payment size."
+      },
+      {
+        "term": "Life-estimate",
+        "definition": "User-provided years of expected payments used to compute an approximate life-contingent annuity. Not a substitute for actuarial survival probabilities."
+      },
+      {
+        "term": "Joint-survivor factor",
+        "definition": "A user-entered multiplier to reduce single-life payments to approximate joint-life payouts when a surviving beneficiary receives a portion of the original payment."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE - Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov/"
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

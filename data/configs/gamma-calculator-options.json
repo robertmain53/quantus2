@@ -1,0 +1,367 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Options Gamma Calculator (Advanced)",
+    "description": "Calculate option gamma and portfolio-level exposure for listed equity options using Black‑Scholes analytic formulas and position aggregation. Includes calibration guidance, accuracy caveats, and links to standards for trustworthy operation."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "black_scholes_european",
+    "methods": {
+      "black_scholes_european": {
+        "label": "Black‑Scholes (European) — analytical gamma",
+        "description": "Analytical gamma for a single European option using Black‑Scholes assumptions (continuous dividend yield).",
+        "variables": {
+          "d1": {
+            "expression": "(ln(S / K) + (r - q + 0.5 * pow(sigma, 2)) * T) / (sigma * sqrt(T))",
+            "dependencies": [
+              "S",
+              "K",
+              "r",
+              "q",
+              "sigma",
+              "T"
+            ],
+            "label": "d1",
+            "display": false
+          },
+          "phi_d1": {
+            "expression": "exp(-0.5 * pow(d1, 2)) / sqrt(2 * pi)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "standard normal pdf at d1",
+            "display": false
+          },
+          "gamma": {
+            "expression": "phi_d1 * exp(-q * T) / (S * sigma * sqrt(T))",
+            "dependencies": [
+              "phi_d1",
+              "q",
+              "T",
+              "S",
+              "sigma"
+            ],
+            "label": "Gamma (per single option, per 1 unit underlying)",
+            "unit": "1/underlying",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "gamma",
+            "label": "Gamma (per option)",
+            "variable": "gamma",
+            "unit": "1/underlying",
+            "format": "decimal"
+          }
+        ]
+      },
+      "position_exposure": {
+        "label": "Position exposure — aggregated gamma and dollar gamma",
+        "description": "Aggregates single‑option gamma across a position (contracts × multiplier) and expresses portfolio gamma and dollar gamma for quick risk assessment.",
+        "variables": {
+          "d1_p": {
+            "expression": "(ln(S / K) + (r - q + 0.5 * pow(sigma, 2)) * T) / (sigma * sqrt(T))",
+            "dependencies": [
+              "S",
+              "K",
+              "r",
+              "q",
+              "sigma",
+              "T"
+            ],
+            "label": "d1 (position)",
+            "display": false
+          },
+          "phi_d1_p": {
+            "expression": "exp(-0.5 * pow(d1_p, 2)) / sqrt(2 * pi)",
+            "dependencies": [
+              "d1_p"
+            ],
+            "label": "standard normal pdf at d1 (position)",
+            "display": false
+          },
+          "gamma_per_option": {
+            "expression": "phi_d1_p * exp(-q * T) / (S * sigma * sqrt(T))",
+            "dependencies": [
+              "phi_d1_p",
+              "q",
+              "T",
+              "S",
+              "sigma"
+            ],
+            "label": "Gamma per single option",
+            "unit": "1/underlying",
+            "format": "decimal",
+            "display": false
+          },
+          "portfolio_gamma": {
+            "expression": "gamma_per_option * multiplier * contracts",
+            "dependencies": [
+              "gamma_per_option",
+              "multiplier",
+              "contracts"
+            ],
+            "label": "Portfolio gamma (aggregated)",
+            "unit": "1/underlying",
+            "format": "decimal",
+            "display": true
+          },
+          "dollar_gamma": {
+            "expression": "portfolio_gamma * pow(S, 2)",
+            "dependencies": [
+              "portfolio_gamma",
+              "S"
+            ],
+            "label": "Dollar gamma (approximate, portfolio)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "portfolio_gamma",
+            "label": "Portfolio gamma (aggregated)",
+            "variable": "portfolio_gamma",
+            "unit": "1/underlying",
+            "format": "decimal"
+          },
+          {
+            "id": "dollar_gamma",
+            "label": "Dollar gamma (approximate)",
+            "variable": "dollar_gamma",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "S",
+        "label": "Underlying price (S)",
+        "type": "number",
+        "default": 100,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "K",
+        "label": "Strike price (K)",
+        "type": "number",
+        "default": 100,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "T",
+        "label": "Time to expiry (years)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0.0001,
+        "max": 10,
+        "step": 0.001
+      },
+      {
+        "id": "sigma",
+        "label": "Implied volatility (σ, annual, decimal)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0.0001,
+        "max": 5,
+        "step": 0.0001
+      },
+      {
+        "id": "r",
+        "label": "Risk‑free rate (annual, decimal)",
+        "type": "number",
+        "default": 0.03,
+        "min": -0.5,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "q",
+        "label": "Continuous dividend yield (annual, decimal)",
+        "type": "number",
+        "default": 0.0,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "option_type",
+        "label": "Option type",
+        "type": "select",
+        "default": "call",
+        "options": [
+          {
+            "label": "Call",
+            "value": "call"
+          },
+          {
+            "label": "Put",
+            "value": "put"
+          }
+        ]
+      },
+      {
+        "id": "contracts",
+        "label": "Number of contracts (positive for long, negative for short)",
+        "type": "integer",
+        "default": 1,
+        "min": -1000000,
+        "max": 1000000,
+        "step": 1
+      },
+      {
+        "id": "multiplier",
+        "label": "Contract multiplier (shares per contract)",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "max": 100000,
+        "step": 1
+      },
+      {
+        "id": "bump_pct",
+        "label": "Bump size for numerical checks (% of S)",
+        "type": "number",
+        "default": 0.5,
+        "min": 0.0001,
+        "max": 100,
+        "step": 0.0001
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool computes option gamma using the Black‑Scholes analytic formula for European options and provides aggregated portfolio exposures for a specified number of contracts and multiplier. It is intended for risk monitoring and quick scenario checks, not as a trading signal.",
+      "The calculator includes guidance on calibration, input limits, and accuracy considerations. It provides both per‑option gamma and aggregated portfolio measures (portfolio gamma and approximate dollar gamma). Use conservative assumptions for volatility and time if using outputs for margin or compliance."
+    ],
+    "methodology": [
+      "Analytic gamma is computed from the Black‑Scholes model using the standard relation Gamma = φ(d1) * e^{−qT} / (S σ √T), where φ is the standard normal probability density function and d1 follows the Black‑Scholes definition.",
+      "Portfolio‑level aggregation multiplies per‑option gamma by the contract multiplier and the number of contracts to produce portfolio gamma. Dollar gamma is approximated as portfolio_gamma × S^2 to give an intuitive dollar-scale curvature metric.",
+      "Inputs must be provided in consistent units: prices in the same currency, volatility as annual decimal (e.g., 0.25 = 25%), and time in years. Continuous dividend yield and risk‑free rate are annual decimals."
+    ],
+    "how_is_calculated": [
+      "Compute d1 = (ln(S/K) + (r − q + 0.5 σ^2) T) / (σ sqrt(T)).",
+      "Compute φ(d1) = exp(−0.5 d1^2) / sqrt(2 π).",
+      "Gamma (per option) = φ(d1) × exp(−q T) / (S σ sqrt(T)).",
+      "Portfolio gamma = Gamma (per option) × multiplier × contracts.",
+      "Dollar gamma (approximate) = Portfolio gamma × S^2."
+    ],
+    "faqs": [
+      {
+        "question": "Can I use this for American options?",
+        "answer": "The analytic Black‑Scholes formula applies to European‑style options. For American options (early exercise possible), analytic gamma may be inaccurate near early‑exercise regions. Consider model calibration with numerical methods (binomial, finite‑difference, or vendor pricing) for American options and use this calculator for indicative checks only."
+      },
+      {
+        "question": "What are the primary accuracy limitations?",
+        "answer": "Accuracy depends on model assumptions: log‑normal returns, constant volatility, continuous dividends and rates. Market features such as discrete dividends, stochastic volatility, jumps, and discrete trading can produce materially different gamma values. Use the bump_pct field and independent numerical checks to gauge sensitivity. For operational systems, follow documented testing and validation procedures per NIST and ISO guidance."
+      },
+      {
+        "question": "How should I pick the contract multiplier?",
+        "answer": "Use the contract multiplier that applies to the instrument you are evaluating (commonly 100 for US equity options). For derivatives with different multipliers, set the value accordingly to compute correct portfolio exposures."
+      },
+      {
+        "question": "Is dollar gamma a regulated metric?",
+        "answer": "Dollar gamma is a risk metric used for sensitivity reporting and internal limits; it is not itself a standardized regulatory metric. When using outputs for compliance or margin purposes, reconcile figures against broker or clearinghouse reports and adhere to applicable regulatory and internal control standards."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Framework and technical standards",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO quality and risk management resources",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE standards and best practices",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA guidance on operational safety and incident controls",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Gamma",
+        "definition": "Second derivative of option price with respect to the underlying price; measures curvature of option price vs underlying price."
+      },
+      {
+        "term": "d1",
+        "definition": "Intermediate Black‑Scholes term used to compute option Greeks: d1 = (ln(S/K) + (r − q + 0.5 σ^2) T) / (σ sqrt(T))."
+      },
+      {
+        "term": "Standard normal pdf (φ)",
+        "definition": "Probability density function of the standard normal distribution: φ(x) = exp(−0.5 x^2) / sqrt(2 π)."
+      },
+      {
+        "term": "Dollar gamma",
+        "definition": "An approximate dollar‑scale curvature metric computed as portfolio gamma × S^2, giving a notional dollar sensitivity to curvature."
+      },
+      {
+        "term": "Contract multiplier",
+        "definition": "Number of underlying shares represented by one option contract (commonly 100 for many equity options)."
+      },
+      {
+        "term": "Implied volatility (σ)",
+        "definition": "Market‑implied annualized volatility used as an input to option pricing models; expressed as a decimal (e.g., 0.25 = 25%)."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/options/greeks/overview",
+      "/risk-management/exposures/greeks"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

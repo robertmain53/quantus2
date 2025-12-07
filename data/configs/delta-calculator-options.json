@@ -1,0 +1,273 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Options Delta Calculator (Black‑Scholes, European)",
+    "description": "Calculate option Delta and Black‑Scholes European call/put prices from spot, strike, volatility, time to expiry, interest rate and dividend yield. Includes accuracy notes, assumptions and references to numerical and governance standards."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "d1",
+        "label": "d1 (standardized)",
+        "expression": "(ln(S/K) + (r - q + 0.5 * sigma * sigma) * (days / 365)) / (sigma * sqrt(days / 365))",
+        "unit": "",
+        "format": "decimal"
+      },
+      {
+        "id": "d2",
+        "label": "d2 (standardized)",
+        "expression": "((ln(S/K) + (r - q + 0.5 * sigma * sigma) * (days / 365)) / (sigma * sqrt(days / 365))) - sigma * sqrt(days / 365)",
+        "unit": "",
+        "format": "decimal"
+      },
+      {
+        "id": "price_call",
+        "label": "European call price",
+        "expression": "S * exp(-q * (days / 365)) * (0.5 * (1 + erf(((ln(S/K) + (r - q + 0.5 * sigma * sigma) * (days / 365)) / (sigma * sqrt(days / 365))) / 1.4142135623730951))) - K * exp(-r * (days / 365)) * (0.5 * (1 + erf(((((ln(S/K) + (r - q + 0.5 * sigma * sigma) * (days / 365)) / (sigma * sqrt(days / 365))) - sigma * sqrt(days / 365)) / 1.4142135623730951))))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "price_put",
+        "label": "European put price",
+        "expression": "K * exp(-r * (days / 365)) * (0.5 * (1 + erf(( -(((ln(S/K) + (r - q + 0.5 * sigma * sigma) * (days / 365)) / (sigma * sqrt(days / 365))) - sigma * sqrt(days / 365)) / 1.4142135623730951)))) - S * exp(-q * (days / 365)) * (0.5 * (1 + erf(( -(((ln(S/K) + (r - q + 0.5 * sigma * sigma) * (days / 365)) / (sigma * sqrt(days / 365))) / 1.4142135623730951)))))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "delta",
+        "label": "Delta (option sensitivity to spot)",
+        "expression": "exp(-q * (days / 365)) * (0.5 * (1 + erf(((ln(S/K) + (r - q + 0.5 * sigma * sigma) * (days / 365)) / (sigma * sqrt(days / 365))) / 1.4142135623730951)) - (1 - (option_type)) / 2)",
+        "unit": "",
+        "format": "decimal"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "S",
+        "label": "Underlying price (S)",
+        "type": "number",
+        "default": 100,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "K",
+        "label": "Strike price (K)",
+        "type": "number",
+        "default": 100,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "sigma",
+        "label": "Volatility, annual (σ, decimal)",
+        "type": "number",
+        "default": 0.2,
+        "min": 0.0001,
+        "max": 5,
+        "step": 0.0001
+      },
+      {
+        "id": "days",
+        "label": "Time to expiry (days)",
+        "type": "integer",
+        "default": 30,
+        "min": 0,
+        "max": 36500,
+        "step": 1
+      },
+      {
+        "id": "r",
+        "label": "Risk-free rate, annual (r, decimal, continuous)",
+        "type": "number",
+        "default": 0.03,
+        "min": -0.5,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "q",
+        "label": "Dividend yield, annual (q, decimal, continuous)",
+        "type": "number",
+        "default": 0.0,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "option_type",
+        "label": "Option type (Call = 1, Put = -1)",
+        "type": "select",
+        "default": "1",
+        "options": [
+          {
+            "label": "Call",
+            "value": "1"
+          },
+          {
+            "label": "Put",
+            "value": "-1"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "delta",
+          "label": "Delta (decimal)",
+          "format": "decimal"
+        },
+        {
+          "id": "price_call",
+          "label": "Call price (USD)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "price_put",
+          "label": "Put price (USD)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "d1",
+          "label": "d1 (internal)",
+          "format": "decimal"
+        },
+        {
+          "id": "d2",
+          "label": "d2 (internal)",
+          "format": "decimal"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes the Black‑Scholes European option Delta and option prices from user inputs: spot price, strike, annual volatility, time to expiry (in days), continuously compounded risk‑free rate and dividend yield. Use it for European-style options where early exercise is not allowed and volatility is approximately constant over the life of the option.",
+      "The tool shows both call and put prices and a single Delta value (call or put) based on the selected option type. Results are numerical approximations and should be used for analysis and educational purposes; use production-grade pricing engines for live trading decisions."
+    ],
+    "methodology": [
+      "We implement the Black‑Scholes closed form for European options. d1 and d2 are computed as standardised inputs to the normal cumulative distribution. The cumulative normal is evaluated via the error function (erf) to provide a numerically stable approximation.",
+      "Inputs must be annualized consistently: volatility as annual decimal (e.g. 20% = 0.20), rates as continuous annual decimals, and time converted to years as days/365. The calculator assumes continuous compounding and lognormal underlying price dynamics."
+    ],
+    "how_is_calculated": [
+      "T = days / 365",
+      "d1 = [ln(S/K) + (r - q + 0.5 σ²) T] / (σ √T)",
+      "d2 = d1 - σ √T",
+      "Call price = S e^{-qT} N(d1) - K e^{-rT} N(d2)",
+      "Put price = K e^{-rT} N(-d2) - S e^{-qT} N(-d1)",
+      "Delta (call) = e^{-qT} N(d1); Delta (put) = e^{-qT} (N(d1) - 1). The calculator returns the appropriate Delta by option type."
+    ],
+    "faqs": [
+      {
+        "question": "What does Delta mean?",
+        "answer": "Delta measures the sensitivity of the option price to a small change in the underlying price (∂option/∂S). It ranges typically between -1 and +1. Positive for calls and negative for puts."
+      },
+      {
+        "question": "Is this valid for American options or discrete dividends?",
+        "answer": "No. This implementation is for European options with continuous dividend yield. American options and discrete dividends require binomial, finite‑difference, or specialized models."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are numerically accurate within limits of the Black‑Scholes assumptions and the error‑function approximation used for the normal CDF. Expect reduced accuracy for near-zero time to expiry, extremely high volatilities, or ill-conditioned numeric inputs. Floating point rounding follows IEEE 754 conventions and may introduce small errors."
+      },
+      {
+        "question": "How should I calibrate volatility and rates?",
+        "answer": "Calibrate volatility from market option prices (implied volatility) or historical returns using established statistical methods. Ensure rates reflect the same compounding convention (continuous) used here or convert accordingly."
+      },
+      {
+        "question": "What security, accuracy and governance standards are referenced?",
+        "answer": "Numerical computations follow IEEE floating point guidance (IEEE 754). Risk and model governance should follow ISO 31000 principles. System controls and cryptographic modules should adhere to applicable NIST recommendations. Workplace and operational safety should observe relevant OSHA guidelines."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Black–Scholes model (overview)",
+        "url": "https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model"
+      },
+      {
+        "label": "IEEE 754 floating‑point standard",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "ISO 31000 Risk management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "NIST (standards and guidance)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "OSHA (occupational safety guidance)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Delta",
+        "definition": "The rate of change of option price with respect to a small change in the underlying price (∂option/∂S). For calls Delta is typically between 0 and 1; for puts between -1 and 0."
+      },
+      {
+        "term": "Black‑Scholes",
+        "definition": "A closed‑form mathematical model for pricing European options under assumptions of constant volatility and lognormal returns."
+      },
+      {
+        "term": "d1, d2",
+        "definition": "Intermediate standardized variables used in the Black‑Scholes formula, functions of spot, strike, rate, dividend yield, volatility and time to expiry."
+      },
+      {
+        "term": "Implied volatility",
+        "definition": "The volatility input that, when used in a pricing model, reproduces a market option price."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

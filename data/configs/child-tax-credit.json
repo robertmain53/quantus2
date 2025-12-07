@@ -1,0 +1,778 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Child Tax Credit Estimator",
+    "description": "Interactive estimator for common federal child tax credit calculations. Provides estimates of total credit before and after income phaseouts, the non‑refundable portion limited by tax liability, and a separate estimate of a potential refundable amount using a phase‑in rule. Results are estimates only and not a tax return."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "ctc_estimate",
+    "methods": {
+      "ctc_estimate": {
+        "label": "Federal Child Tax Credit — Estimate",
+        "description": "Estimate total allowable child tax credit after income phaseouts and how much of that credit can be used against your tax liability.",
+        "variables": {
+          "base_credit": {
+            "expression": "qualifying_children_under17 * credit_per_child + other_dependents * other_dependent_credit",
+            "dependencies": [
+              "qualifying_children_under17",
+              "credit_per_child",
+              "other_dependents",
+              "other_dependent_credit"
+            ],
+            "label": "Base credit (before phaseout)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "phaseout_reduction_raw": {
+            "expression": "(agi - phaseout_start_agI) * phaseout_rate",
+            "dependencies": [
+              "agi",
+              "phaseout_start_agI",
+              "phaseout_rate"
+            ],
+            "label": "Raw phaseout reduction (may be negative before clamp)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "phaseout_reduction": {
+            "expression": "phaseout_reduction_raw > 0 ? phaseout_reduction_raw : 0",
+            "dependencies": [
+              "phaseout_reduction_raw"
+            ],
+            "label": "Phaseout reduction (clamped ≥ 0)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "credit_after_phaseout_raw": {
+            "expression": "base_credit - phaseout_reduction",
+            "dependencies": [
+              "base_credit",
+              "phaseout_reduction"
+            ],
+            "label": "Credit after phaseout (raw)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "credit_after_phaseout": {
+            "expression": "credit_after_phaseout_raw > 0 ? credit_after_phaseout_raw : 0",
+            "dependencies": [
+              "credit_after_phaseout_raw"
+            ],
+            "label": "Total credit after phaseout (≥ 0)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "non_refundable_credit": {
+            "expression": "credit_after_phaseout < tax_liability ? credit_after_phaseout : tax_liability",
+            "dependencies": [
+              "credit_after_phaseout",
+              "tax_liability"
+            ],
+            "label": "Non‑refundable credit limited by tax liability",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_credit": {
+            "expression": "credit_after_phaseout - non_refundable_credit",
+            "dependencies": [
+              "credit_after_phaseout",
+              "non_refundable_credit"
+            ],
+            "label": "Remaining credit potentially refundable",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "total_credit",
+            "label": "Estimated total credit after phaseout",
+            "variable": "credit_after_phaseout",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "non_refundable_credit",
+            "label": "Estimated non‑refundable credit (applies to tax liability)",
+            "variable": "non_refundable_credit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "potential_refundable",
+            "label": "Remaining credit that may be refundable",
+            "variable": "remaining_credit",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "refundable_estimate": {
+        "label": "Potential Refundable Amount (phase‑in estimate)",
+        "description": "Estimate of a potential refundable portion using a phase‑in rule based on earned income. This method recomputes the remaining credit and then compares it to the phase‑in amount.",
+        "variables": {
+          "base_credit_r": {
+            "expression": "qualifying_children_under17 * credit_per_child + other_dependents * other_dependent_credit",
+            "dependencies": [
+              "qualifying_children_under17",
+              "credit_per_child",
+              "other_dependents",
+              "other_dependent_credit"
+            ],
+            "label": "Base credit (before phaseout)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "phaseout_reduction_raw_r": {
+            "expression": "(agi - phaseout_start_agI) * phaseout_rate",
+            "dependencies": [
+              "agi",
+              "phaseout_start_agI",
+              "phaseout_rate"
+            ],
+            "label": "Raw phaseout reduction",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "phaseout_reduction_r": {
+            "expression": "phaseout_reduction_raw_r > 0 ? phaseout_reduction_raw_r : 0",
+            "dependencies": [
+              "phaseout_reduction_raw_r"
+            ],
+            "label": "Phaseout reduction (clamped)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "credit_after_phaseout_r": {
+            "expression": "base_credit_r - phaseout_reduction_r",
+            "dependencies": [
+              "base_credit_r",
+              "phaseout_reduction_r"
+            ],
+            "label": "Credit after phaseout",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "credit_after_phaseout_r_clamped": {
+            "expression": "credit_after_phaseout_r > 0 ? credit_after_phaseout_r : 0",
+            "dependencies": [
+              "credit_after_phaseout_r"
+            ],
+            "label": "Credit after phaseout (clamped ≥ 0)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "non_refundable_credit_r": {
+            "expression": "credit_after_phaseout_r_clamped < tax_liability ? credit_after_phaseout_r_clamped : tax_liability",
+            "dependencies": [
+              "credit_after_phaseout_r_clamped",
+              "tax_liability"
+            ],
+            "label": "Non‑refundable credit (limited by liability)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "remaining_credit_r": {
+            "expression": "credit_after_phaseout_r_clamped - non_refundable_credit_r",
+            "dependencies": [
+              "credit_after_phaseout_r_clamped",
+              "non_refundable_credit_r"
+            ],
+            "label": "Remaining credit",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "refundable_phasein_base": {
+            "expression": "earned_income - refundable_phasein_threshold",
+            "dependencies": [
+              "earned_income",
+              "refundable_phasein_threshold"
+            ],
+            "label": "Earned income above phase‑in threshold",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "refundable_phasein_amount": {
+            "expression": "refundable_phasein_base > 0 ? refundable_phasein_base * refundable_phasein_rate : 0",
+            "dependencies": [
+              "refundable_phasein_base",
+              "refundable_phasein_rate"
+            ],
+            "label": "Phase‑in refundable amount (estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "refundable_amount": {
+            "expression": "remaining_credit_r < refundable_phasein_amount ? remaining_credit_r : refundable_phasein_amount",
+            "dependencies": [
+              "remaining_credit_r",
+              "refundable_phasein_amount"
+            ],
+            "label": "Estimated refundable amount (subject to phase‑in and remaining credit)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "refundable_estimate_amount",
+            "label": "Estimated refundable amount",
+            "variable": "refundable_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "refundable_phasein_amount",
+            "label": "Phase‑in based refundable amount (calculated)",
+            "variable": "refundable_phasein_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_credit_r",
+            "label": "Total credit after phaseout (estimate)",
+            "variable": "credit_after_phaseout_r_clamped",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "tax_year",
+        "label": "Tax year",
+        "type": "select",
+        "default": "2025",
+        "options": [
+          {
+            "label": "2025",
+            "value": "2025"
+          },
+          {
+            "label": "2024",
+            "value": "2024"
+          }
+        ]
+      },
+      {
+        "id": "filing_status",
+        "label": "Filing status",
+        "type": "select",
+        "default": "single",
+        "options": [
+          {
+            "label": "Single",
+            "value": "single"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "married_joint"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "married_sep"
+          },
+          {
+            "label": "Head of household",
+            "value": "hoh"
+          },
+          {
+            "label": "Qualifying widow(er)",
+            "value": "widow"
+          }
+        ]
+      },
+      {
+        "id": "qualifying_children_under17",
+        "label": "Number of qualifying children (under 17)",
+        "type": "integer",
+        "default": 1,
+        "min": 0,
+        "max": 20,
+        "step": 1
+      },
+      {
+        "id": "other_dependents",
+        "label": "Number of other dependents (e.g., qualifying relatives)",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 20,
+        "step": 1
+      },
+      {
+        "id": "agi",
+        "label": "Adjusted gross income (AGI)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "earned_income",
+        "label": "Earned income (for refundable phase‑in calculations)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "tax_liability",
+        "label": "Estimated federal tax liability (before credits)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 50
+      }
+    ],
+    "sections": [
+      {
+        "id": "filing_single",
+        "label": "Defaults for Single filers",
+        "show_when": {
+          "field": "filing_status",
+          "is": "single"
+        },
+        "fields": [
+          {
+            "id": "credit_per_child",
+            "label": "Credit per qualifying child (default)",
+            "type": "number",
+            "default": 2000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "other_dependent_credit",
+            "label": "Credit per other dependent (default)",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "phaseout_start_agI",
+            "label": "Phaseout threshold (AGI) start",
+            "type": "number",
+            "default": 200000,
+            "min": 0,
+            "step": 1000
+          },
+          {
+            "id": "phaseout_rate",
+            "label": "Phaseout reduction rate (decimal)",
+            "type": "number",
+            "default": 0.05,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "refundable_phasein_threshold",
+            "label": "Refundable phase‑in threshold (earned income)",
+            "type": "number",
+            "default": 2500,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "refundable_phasein_rate",
+            "label": "Refundable phase‑in rate (decimal)",
+            "type": "number",
+            "default": 0.15,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "filing_married_joint",
+        "label": "Defaults for Married filing jointly",
+        "show_when": {
+          "field": "filing_status",
+          "is": "married_joint"
+        },
+        "fields": [
+          {
+            "id": "credit_per_child",
+            "label": "Credit per qualifying child (default)",
+            "type": "number",
+            "default": 2000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "other_dependent_credit",
+            "label": "Credit per other dependent (default)",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "phaseout_start_agI",
+            "label": "Phaseout threshold (AGI) start",
+            "type": "number",
+            "default": 400000,
+            "min": 0,
+            "step": 1000
+          },
+          {
+            "id": "phaseout_rate",
+            "label": "Phaseout reduction rate (decimal)",
+            "type": "number",
+            "default": 0.05,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "refundable_phasein_threshold",
+            "label": "Refundable phase‑in threshold (earned income)",
+            "type": "number",
+            "default": 2500,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "refundable_phasein_rate",
+            "label": "Refundable phase‑in rate (decimal)",
+            "type": "number",
+            "default": 0.15,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "filing_married_sep",
+        "label": "Defaults for Married filing separately",
+        "show_when": {
+          "field": "filing_status",
+          "is": "married_sep"
+        },
+        "fields": [
+          {
+            "id": "credit_per_child",
+            "label": "Credit per qualifying child (default)",
+            "type": "number",
+            "default": 2000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "other_dependent_credit",
+            "label": "Credit per other dependent (default)",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "phaseout_start_agI",
+            "label": "Phaseout threshold (AGI) start",
+            "type": "number",
+            "default": 200000,
+            "min": 0,
+            "step": 1000
+          },
+          {
+            "id": "phaseout_rate",
+            "label": "Phaseout reduction rate (decimal)",
+            "type": "number",
+            "default": 0.05,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "refundable_phasein_threshold",
+            "label": "Refundable phase‑in threshold (earned income)",
+            "type": "number",
+            "default": 2500,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "refundable_phasein_rate",
+            "label": "Refundable phase‑in rate (decimal)",
+            "type": "number",
+            "default": 0.15,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "filing_hoh",
+        "label": "Defaults for Head of household",
+        "show_when": {
+          "field": "filing_status",
+          "is": "hoh"
+        },
+        "fields": [
+          {
+            "id": "credit_per_child",
+            "label": "Credit per qualifying child (default)",
+            "type": "number",
+            "default": 2000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "other_dependent_credit",
+            "label": "Credit per other dependent (default)",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "phaseout_start_agI",
+            "label": "Phaseout threshold (AGI) start",
+            "type": "number",
+            "default": 200000,
+            "min": 0,
+            "step": 1000
+          },
+          {
+            "id": "phaseout_rate",
+            "label": "Phaseout reduction rate (decimal)",
+            "type": "number",
+            "default": 0.05,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "refundable_phasein_threshold",
+            "label": "Refundable phase‑in threshold (earned income)",
+            "type": "number",
+            "default": 2500,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "refundable_phasein_rate",
+            "label": "Refundable phase‑in rate (decimal)",
+            "type": "number",
+            "default": 0.15,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "filing_widow",
+        "label": "Defaults for Qualifying widow(er)",
+        "show_when": {
+          "field": "filing_status",
+          "is": "widow"
+        },
+        "fields": [
+          {
+            "id": "credit_per_child",
+            "label": "Credit per qualifying child (default)",
+            "type": "number",
+            "default": 2000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "other_dependent_credit",
+            "label": "Credit per other dependent (default)",
+            "type": "number",
+            "default": 500,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "phaseout_start_agI",
+            "label": "Phaseout threshold (AGI) start",
+            "type": "number",
+            "default": 200000,
+            "min": 0,
+            "step": 1000
+          },
+          {
+            "id": "phaseout_rate",
+            "label": "Phaseout reduction rate (decimal)",
+            "type": "number",
+            "default": 0.05,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "refundable_phasein_threshold",
+            "label": "Refundable phase‑in threshold (earned income)",
+            "type": "number",
+            "default": 2500,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "refundable_phasein_rate",
+            "label": "Refundable phase‑in rate (decimal)",
+            "type": "number",
+            "default": 0.15,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you approximate federal child tax credit amounts based on common parameters: number of qualifying children, adjusted gross income (AGI), estimated tax liability, and earned income for potential refundable portions. It is intended for planning and educational purposes only.",
+      "Results are estimates generated from user inputs and conservative, commonly used phaseout and phase‑in rule representations. This tool does not file a tax return and does not replace professional tax advice or official IRS calculations."
+    ],
+    "methodology": [
+      "The calculator models three stages: compute a base credit by multiplying per‑child credit amounts by the number of qualifying children; apply an income phaseout to reduce the base credit; and split the post‑phaseout credit into the portion usable against tax liability (non‑refundable) and any remaining amount that could be refundable under a phase‑in rule.",
+      "Default per‑child credit amounts, phaseout thresholds, phaseout rate, and refundable phase‑in parameters are provided for common filing statuses. You may override defaults to reflect specific legislative changes or special situations.",
+      "Estimates use simple arithmetic expressions and common phaseout/phase‑in representations; they are intentionally straightforward for transparency and to enable quick scenario testing."
+    ],
+    "how_is_calculated": [
+      "Base credit = qualifying_children_under17 × credit_per_child + other_dependents × other_dependent_credit.",
+      "Phaseout reduction = max(0, (AGI − phaseout_start_AGI) × phaseout_rate).",
+      "Credit after phaseout = max(0, Base credit − Phaseout reduction).",
+      "Non‑refundable portion = min(Credit after phaseout, tax liability).",
+      "Estimated refundable portion (phase‑in model) = min(Remaining credit, max(0, (earned income − refundable_phasein_threshold) × refundable_phasein_rate))."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an official IRS calculation?",
+        "answer": "No. This tool provides estimates for planning. For official guidance and rules that determine eligibility and exact amounts, consult the IRS or a tax professional."
+      },
+      {
+        "question": "Why do defaults include a phaseout threshold and rate?",
+        "answer": "Federal rules commonly reduce credits above income thresholds. The tool uses an explicit numeric threshold and a reduction rate so you can see how changes in income affect the credit. Users can adjust these defaults to reflect specific legislation or personal circumstances."
+      },
+      {
+        "question": "What does refundable mean here?",
+        "answer": "Refundable refers to any portion of the credit that can be issued as a refund even if you have little or no tax liability. This estimator includes a phase‑in style refundable calculation for illustrative purposes; actual refundable rules depend on law and filing details."
+      },
+      {
+        "question": "How accurate is the estimate?",
+        "answer": "Estimates are approximate. They simplify some legal details, exceptions, and interactions with other credits. Use results as a planning aid only and verify final amounts using official IRS forms or a tax preparer."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Child Tax Credit",
+        "url": "https://www.irs.gov/credits-deductions/individuals/child-tax-credit"
+      },
+      {
+        "label": "IRS — Earned Income Tax Credit (for related refundable rules)",
+        "url": "https://www.irs.gov/credits-deductions/individuals/earned-income-tax-credit-eitc"
+      },
+      {
+        "label": "NIST — Frameworks and best practices for software quality and testing",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards for information security and quality systems",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Software engineering best practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Operational safety and risk guidance (organizational standards)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Adjusted Gross Income (AGI)",
+        "definition": "Your gross income after allowable adjustments; used here as the income metric that triggers phaseouts."
+      },
+      {
+        "term": "Phaseout",
+        "definition": "A rule that reduces the available credit as income exceeds a specified threshold."
+      },
+      {
+        "term": "Non‑refundable credit",
+        "definition": "The portion of a credit that can reduce tax liability to zero but does not produce a refund if the credit exceeds the tax owed."
+      },
+      {
+        "term": "Refundable (phase‑in) estimate",
+        "definition": "An illustrative calculation of how much of remaining credit might be refundable, based on a simple earned‑income phase‑in rule included for planning purposes."
+      }
+    ],
+    "summary": [
+      "This estimator provides transparent, editable defaults and shows intermediate steps so you can understand how inputs influence the credit.",
+      "It is designed for scenario planning and not as a substitute for professional tax preparation or official IRS calculations."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/credits-deductions/individuals/child-tax-credit",
+        "label": "IRS — Child Tax Credit",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

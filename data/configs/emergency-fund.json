@@ -1,0 +1,535 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Emergency Fund Calculator (Advanced)",
+    "description": "Estimate how much you should hold in liquid savings for unplanned expenses. Multiple methods let you use months-of-expenses, income-percentage, or a scenario buffer. Includes adjustments for job stability, dependents, and predictable yearly costs."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "months_method",
+    "methods": {
+      "months_method": {
+        "label": "Months-of-expenses method",
+        "description": "Classic approach: multiply monthly essential expenses by the number of months you want to cover, then adjust for job stability, dependents, and predictable yearly emergencies.",
+        "variables": {
+          "monthly_expenses": {
+            "expression": "monthly_total > 0 ? monthly_total : (monthly_essential + monthly_discretionary)",
+            "dependencies": [
+              "monthly_total",
+              "monthly_essential",
+              "monthly_discretionary"
+            ],
+            "label": "Monthly expenses used",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "base_target": {
+            "expression": "monthly_expenses * months",
+            "dependencies": [
+              "monthly_expenses",
+              "months"
+            ],
+            "label": "Base target (monthly × months)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "stability_adj": {
+            "expression": "base_target * job_stability",
+            "dependencies": [
+              "base_target",
+              "job_stability"
+            ],
+            "label": "After job stability adjustment",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "dependent_adj": {
+            "expression": "stability_adj * (1 + dependents * 0.05)",
+            "dependencies": [
+              "stability_adj",
+              "dependents"
+            ],
+            "label": "After dependent adjustment",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "predictable_adjustment": {
+            "expression": "predictable_yearly_emergencies / 12",
+            "dependencies": [
+              "predictable_yearly_emergencies"
+            ],
+            "label": "Monthly equivalent of predictable yearly emergencies",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "adjusted_target": {
+            "expression": "dependent_adj + predictable_adjustment",
+            "dependencies": [
+              "dependent_adj",
+              "predictable_adjustment"
+            ],
+            "label": "Recommended emergency-fund target",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "shortfall": {
+            "expression": "max(0, adjusted_target - current_savings)",
+            "dependencies": [
+              "adjusted_target",
+              "current_savings"
+            ],
+            "label": "Shortfall (target minus current savings)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_monthly_savings": {
+            "expression": "shortfall / max(1, months_to_save)",
+            "dependencies": [
+              "shortfall",
+              "months_to_save"
+            ],
+            "label": "Recommended monthly savings to reach target",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "target_amount",
+            "label": "Emergency fund target",
+            "variable": "adjusted_target",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "shortfall",
+            "label": "Shortfall (need to save)",
+            "variable": "shortfall",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_monthly_savings",
+            "label": "Monthly savings recommended",
+            "variable": "recommended_monthly_savings",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "income_percent_method": {
+        "label": "Income-percentage method",
+        "description": "Target is a fixed percentage of your annual income, adjusted for job stability and dependents.",
+        "variables": {
+          "income_target": {
+            "expression": "annual_income * percent_of_income",
+            "dependencies": [
+              "annual_income",
+              "percent_of_income"
+            ],
+            "label": "Raw income-based target",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "adjusted_income_target": {
+            "expression": "income_target * job_stability * (1 + dependents * 0.03)",
+            "dependencies": [
+              "income_target",
+              "job_stability",
+              "dependents"
+            ],
+            "label": "Adjusted income-based target",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "shortfall": {
+            "expression": "max(0, adjusted_income_target - current_savings)",
+            "dependencies": [
+              "adjusted_income_target",
+              "current_savings"
+            ],
+            "label": "Shortfall (income method)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_monthly_savings": {
+            "expression": "shortfall / max(1, months_to_save)",
+            "dependencies": [
+              "shortfall",
+              "months_to_save"
+            ],
+            "label": "Monthly savings to reach income-based target",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "target_amount_income",
+            "label": "Income-method emergency fund target",
+            "variable": "adjusted_income_target",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "shortfall_income",
+            "label": "Shortfall (income method)",
+            "variable": "shortfall",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_monthly_savings_income",
+            "label": "Monthly savings recommended (income method)",
+            "variable": "recommended_monthly_savings",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "scenario_method": {
+        "label": "Scenario / buffer method",
+        "description": "Pick a one-off buffer for large predictable costs (e.g., medical deductible, car replacement) and compare to months-of-expenses; choose the larger, adjusted for stability and dependents.",
+        "variables": {
+          "monthly_expenses": {
+            "expression": "monthly_total > 0 ? monthly_total : (monthly_essential + monthly_discretionary)",
+            "dependencies": [
+              "monthly_total",
+              "monthly_essential",
+              "monthly_discretionary"
+            ],
+            "label": "Monthly expenses used",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "basic_target": {
+            "expression": "monthly_expenses * months",
+            "dependencies": [
+              "monthly_expenses",
+              "months"
+            ],
+            "label": "Basic months-based target",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "target_amount": {
+            "expression": "max(basic_target, one_off_buffer) * job_stability * (1 + dependents * 0.05) + predictable_yearly_emergencies / 12",
+            "dependencies": [
+              "basic_target",
+              "one_off_buffer",
+              "job_stability",
+              "dependents",
+              "predictable_yearly_emergencies"
+            ],
+            "label": "Scenario-adjusted target",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "shortfall": {
+            "expression": "max(0, target_amount - current_savings)",
+            "dependencies": [
+              "target_amount",
+              "current_savings"
+            ],
+            "label": "Shortfall (scenario method)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_monthly_savings": {
+            "expression": "shortfall / max(1, months_to_save)",
+            "dependencies": [
+              "shortfall",
+              "months_to_save"
+            ],
+            "label": "Monthly savings to reach scenario target",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "scenario_target",
+            "label": "Scenario emergency fund target",
+            "variable": "target_amount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "scenario_shortfall",
+            "label": "Shortfall (scenario method)",
+            "variable": "shortfall",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "scenario_recommended_monthly_savings",
+            "label": "Monthly savings recommended (scenario method)",
+            "variable": "recommended_monthly_savings",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "monthly_essential",
+        "label": "Monthly essential expenses (rent/mortgage, utilities, groceries, insurance)",
+        "type": "number",
+        "default": 2000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "monthly_discretionary",
+        "label": "Monthly discretionary expenses (transportation, subscriptions, dining out)",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "monthly_total",
+        "label": "Total monthly expenses (optional — if provided, this overrides the above)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "months",
+        "label": "Months of expenses to cover (if using months-based method)",
+        "type": "integer",
+        "default": 6,
+        "min": 0,
+        "max": 24,
+        "step": 1
+      },
+      {
+        "id": "job_stability",
+        "label": "Job stability factor",
+        "type": "select",
+        "default": "1.0",
+        "options": [
+          {
+            "label": "Stable (reduce recommended target by 20%)",
+            "value": "0.8"
+          },
+          {
+            "label": "Moderate (no adjustment)",
+            "value": "1.0"
+          },
+          {
+            "label": "Unstable/recent job change (increase recommended target by 50%)",
+            "value": "1.5"
+          }
+        ]
+      },
+      {
+        "id": "dependents",
+        "label": "Number of financial dependents",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 20,
+        "step": 1
+      },
+      {
+        "id": "predictable_yearly_emergencies",
+        "label": "Predictable yearly emergency costs (sum of expected annual one-off expenses, e.g., major maintenance)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current liquid emergency savings",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "months_to_save",
+        "label": "Months you plan to save to reach the target",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "annual_income",
+        "label": "Gross annual income (used for income-percentage method)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "percent_of_income",
+        "label": "Target fraction of annual income (decimal, e.g., 0.05 = 5%)",
+        "type": "number",
+        "default": 0.05,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "one_off_buffer",
+        "label": "One-off buffer for major predictable costs (scenario method)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "An emergency fund is liquid cash set aside to cover unexpected expenses or income interruptions. This tool helps you estimate an appropriate target using multiple commonly used methods and adjustments for personal circumstances.",
+      "Use the Months-of-expenses method for a straightforward safety net, the Income-percentage method for income-relative guidance, or the Scenario method when you expect a one-off large expense. Adjust inputs to reflect your household situation and liquidity preferences."
+    ],
+    "methodology": [
+      "Calculations are deterministic estimates based on user-provided inputs. Methods multiply expected monthly needs or a portion of annual income and then apply multiplicative adjustments for job stability and number of dependents. Predictable annual costs are converted to a monthly equivalent and added to the target.",
+      "Job stability is applied as a multiplicative factor to account for the likelihood and expected duration of income disruption. Each dependent increases the target incrementally to reflect additional household obligations.",
+      "This tool follows best-practice risk-management principles (see ISO 31000) for framing risk-adjusted buffers and applies conservative rounding to avoid underestimation. It is an informational estimator and not individualized financial advice."
+    ],
+    "how_is_calculated": [
+      "Months method: Target = (monthly expenses) × (months) × (job stability factor) × (1 + dependents × 0.05) + (predictable yearly emergencies / 12).",
+      "Income-percentage method: Target = (annual income) × (percent of income) × (job stability factor) × (1 + dependents × 0.03).",
+      "Scenario method: Target = max(monthly expenses × months, one-off buffer) × job stability factor × (1 + dependents × 0.05) + (predictable yearly emergencies / 12).",
+      "Shortfall = max(0, Target − Current savings). Recommended monthly savings = Shortfall / max(1, months to save)."
+    ],
+    "examples": [
+      "Example 1: If monthly essentials are $3,000 and you want 6 months, with moderate job stability and no dependents, the months-method target is 3,000 × 6 = 18,000 (plus any predictable yearly costs).",
+      "Example 2: If annual income is $80,000 and you use 5%, the raw income target is 4,000; after adjustments for instability and dependents, the recommended target will be higher."
+    ],
+    "summary": [
+      "Choose the method that best matches your situation. Months-of-expenses is simplest; income-percentage scales with earnings; scenario is useful when a specific large cost is likely.",
+      "Adjust job stability and dependents to reflect your household. Review and update your target if your recurring expenses, employment situation, or household composition change."
+    ],
+    "faqs": [
+      {
+        "question": "Is this tool giving me financial advice?",
+        "answer": "No. This calculator provides estimates based on the inputs you supply. It does not replace personalized advice from a licensed financial professional."
+      },
+      {
+        "question": "Why is job stability a multiplier and not an additive amount?",
+        "answer": "Job stability affects the expected duration and likelihood of income loss; multiplicative adjustments scale the whole buffer proportionally to better reflect extended needs rather than a single fixed amount."
+      },
+      {
+        "question": "How should I choose months of coverage?",
+        "answer": "Common guidance recommends 3–6 months for most households and up to 12 months for higher job risk or self-employed individuals. Use your industry, role, and local job market to inform the choice."
+      },
+      {
+        "question": "Does this consider inflation or investment returns?",
+        "answer": "No. This tool estimates nominal USD targets and assumes the emergency fund remains liquid. For long-term planning that considers inflation or returns, consult broader financial planning resources."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are estimates. They depend entirely on provided inputs and chosen adjustments. See accuracy caveat in citations and consult a financial advisor for tailored planning."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (general site)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - Risk management (ISO 31000 overview)",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE - Standards organization (general site)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - general site",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Essential expenses",
+        "definition": "Recurring monthly costs required to maintain basic living standards, such as housing, utilities, groceries, insurance, and minimum debt payments."
+      },
+      {
+        "term": "Months of expenses",
+        "definition": "Number of months you want your emergency fund to cover at your essential spending level."
+      },
+      {
+        "term": "Job stability factor",
+        "definition": "A multiplicative adjustment reflecting the perceived risk and expected duration of income disruption; higher values increase the recommended fund size."
+      },
+      {
+        "term": "Shortfall",
+        "definition": "The difference between the recommended emergency fund target and your current liquid emergency savings; reported as zero if you have no shortfall."
+      },
+      {
+        "term": "Predictable yearly emergencies",
+        "definition": "Large but reasonably expected costs that occur irregularly (for example, scheduled major car maintenance or medical deductible), converted to a monthly equivalent for inclusion in the fund target."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/tools/savings/goal-planner",
+      "/planning/budget/monthly-budget-calculator"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000 overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}

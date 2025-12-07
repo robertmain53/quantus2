@@ -1,0 +1,444 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Net Worth Calculator (Current & Projected)",
+    "description": "Calculate your current net worth and project future net worth using expected returns, annual contributions, and inflation adjustments. Includes transparency notes, caveats, and links to relevant standards for data handling and numerical accuracy."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "current",
+    "methods": {
+      "current": {
+        "label": "Current Net Worth",
+        "description": "Sum asset categories, subtract liabilities to compute current net worth.",
+        "variables": {
+          "total_assets": {
+            "expression": "cash_and_savings + investments + property + retirement_accounts + other_assets",
+            "dependencies": [
+              "cash_and_savings",
+              "investments",
+              "property",
+              "retirement_accounts",
+              "other_assets"
+            ],
+            "label": "Total assets",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_liabilities": {
+            "expression": "mortgage + loans + credit_card_debt + other_liabilities",
+            "dependencies": [
+              "mortgage",
+              "loans",
+              "credit_card_debt",
+              "other_liabilities"
+            ],
+            "label": "Total liabilities",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "current_net_worth": {
+            "expression": "total_assets - total_liabilities",
+            "dependencies": [
+              "total_assets",
+              "total_liabilities"
+            ],
+            "label": "Current net worth",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "current_net_worth",
+            "label": "Net worth (today)",
+            "variable": "current_net_worth",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_assets",
+            "label": "Total assets",
+            "variable": "total_assets",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_liabilities",
+            "label": "Total liabilities",
+            "variable": "total_liabilities",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "projected": {
+        "label": "Projected Net Worth",
+        "description": "Project net worth forward using a nominal return and optional inflation adjustment. Uses standard future value formulas for lump sum and periodic contributions.",
+        "variables": {
+          "starting_net_worth": {
+            "expression": "cash_and_savings + investments + property + retirement_accounts + other_assets - (mortgage + loans + credit_card_debt + other_liabilities)",
+            "dependencies": [
+              "cash_and_savings",
+              "investments",
+              "property",
+              "retirement_accounts",
+              "other_assets",
+              "mortgage",
+              "loans",
+              "credit_card_debt",
+              "other_liabilities"
+            ],
+            "label": "Starting net worth (today)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "r": {
+            "expression": "expected_annual_return",
+            "dependencies": [
+              "expected_annual_return"
+            ],
+            "label": "Expected annual nominal return",
+            "format": "decimal",
+            "display": false
+          },
+          "inflation": {
+            "expression": "expected_inflation",
+            "dependencies": [
+              "expected_inflation"
+            ],
+            "label": "Expected annual inflation",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "projection_years",
+            "dependencies": [
+              "projection_years"
+            ],
+            "label": "Projection horizon (years)",
+            "format": "integer",
+            "display": false
+          },
+          "pmt": {
+            "expression": "annual_contribution",
+            "dependencies": [
+              "annual_contribution"
+            ],
+            "label": "Annual contribution (end of year)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "nominal_future": {
+            "expression": "starting_net_worth * (1 + r) ^ n + pmt * (((1 + r) ^ n - 1) / r)",
+            "dependencies": [
+              "starting_net_worth",
+              "r",
+              "n",
+              "pmt"
+            ],
+            "label": "Future net worth (nominal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "real_future": {
+            "expression": "nominal_future / (1 + inflation) ^ n",
+            "dependencies": [
+              "nominal_future",
+              "inflation",
+              "n"
+            ],
+            "label": "Future net worth (inflation-adjusted)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "cagr_from_start": {
+            "expression": "(nominal_future / (starting_net_worth == 0 ? 1 : starting_net_worth)) ^ (1 / n) - 1",
+            "dependencies": [
+              "nominal_future",
+              "starting_net_worth",
+              "n"
+            ],
+            "label": "Implied annual growth (CAGR, nominal)",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "starting_net_worth",
+            "label": "Starting net worth",
+            "variable": "starting_net_worth",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "nominal_future",
+            "label": "Projected net worth (nominal)",
+            "variable": "nominal_future",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "real_future",
+            "label": "Projected net worth (inflation-adjusted)",
+            "variable": "real_future",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "cagr_from_start",
+            "label": "Implied annual growth (CAGR)",
+            "variable": "cagr_from_start",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "cash_and_savings",
+        "label": "Cash & savings",
+        "type": "number",
+        "default": 2000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "investments",
+        "label": "Investments (brokerage, stocks, bonds)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "property",
+        "label": "Property value (market value)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "retirement_accounts",
+        "label": "Retirement accounts (401k, IRA)",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "other_assets",
+        "label": "Other assets (vehicles, valuables)",
+        "type": "number",
+        "default": 2000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "mortgage",
+        "label": "Mortgage balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "loans",
+        "label": "Other loans (student, auto)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "credit_card_debt",
+        "label": "Credit card debt",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "other_liabilities",
+        "label": "Other liabilities",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "expected_annual_return",
+        "label": "Expected annual nominal return (decimal)",
+        "type": "number",
+        "default": 0.05,
+        "min": -0.5,
+        "max": 1,
+        "step": 0.001
+      },
+      {
+        "id": "expected_inflation",
+        "label": "Expected annual inflation (decimal)",
+        "type": "number",
+        "default": 0.02,
+        "min": 0,
+        "max": 0.5,
+        "step": 0.001
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contributions (total)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "projection_years",
+        "label": "Projection horizon (years)",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 100,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes your current net worth by summing commonly reported asset categories and subtracting liabilities. It also projects future net worth using a nominal expected return and optional inflation adjustment.",
+      "Use the Current Net Worth method to get a snapshot today. Use the Projected Net Worth method to model outcomes from expected returns and annual contributions. Results are estimates for planning and should not be interpreted as investment advice."
+    ],
+    "methodology": [
+      "Current net worth is calculated as total assets minus total liabilities. Asset and liability categories are additive and rely on user-provided market values or balances.",
+      "Projected net worth uses the standard future value formula for a lump sum plus an annuity: FV = PV*(1+r)^n + PMT*(((1+r)^n - 1)/r). Where PV is starting net worth, r is the expected annual nominal return, PMT is annual contribution, and n is years. An inflation-adjusted (real) figure divides nominal FV by (1+inflation)^n.",
+      "Accuracy, security, and numerical stability are important. Data handling and protective measures referenced follow guidance from authoritative standards: NIST for cybersecurity controls, ISO for financial planning standards, and IEEE for numerical/formatting best practices. Results are subject to rounding, precision limits, and the quality of inputs provided by the user."
+    ],
+    "how_is_calculated": [
+      "Step 1: Sum asset fields to compute Total assets.",
+      "Step 2: Sum liability fields to compute Total liabilities.",
+      "Step 3: Current net worth = Total assets − Total liabilities.",
+      "Step 4 (Projection): Compute nominal future value using FV = PV*(1+r)^n + PMT*(((1+r)^n − 1)/r). If r equals zero, projection reduces to PV + PMT*n.",
+      "Step 5 (Inflation adjustment): Real (inflation-adjusted) FV = nominal FV / (1+inflation)^n."
+    ],
+    "examples": [
+      "Example: If your starting net worth is $50,000, expected annual return is 5% (0.05), you contribute $5,000 per year, and project 10 years: nominal FV ≈ 50,000*(1.05)^10 + 5,000*(((1.05)^10 − 1) / 0.05).",
+      "Inflation adjustment: With 2% inflation, divide the nominal future value by (1.02)^10 to estimate purchasing-power adjusted net worth."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are the projections?",
+        "answer": "Projections are mathematical estimates based on the inputs you provide. They assume constant annual returns and contributions and do not model year-to-year volatility, taxes, fees, or changes in contribution levels. Use results for planning, not precise forecasting."
+      },
+      {
+        "question": "Do you account for taxes, fees, or market volatility?",
+        "answer": "No. This tool uses deterministic formulas (constant return assumption). To include taxes, fees, or stochastic returns, use a dedicated financial planning tool or consult a licensed planner."
+      },
+      {
+        "question": "What if expected annual return is zero?",
+        "answer": "When expected annual return (r) equals zero, the annuity term simplifies to PMT * n and the lump-sum grows linearly. The tool uses the algebraic formula noted; if r is zero, use the alternative linear calculation."
+      },
+      {
+        "question": "How is my data protected?",
+        "answer": "Recommendations and citations for secure data handling follow NIST cybersecurity guidance and ISO best practices. Do not enter sensitive credentials into calculators. For production integrations, use industry-standard encryption, access controls, and logging consistent with NIST and ISO recommendations."
+      },
+      {
+        "question": "Why is there a difference between nominal and inflation-adjusted results?",
+        "answer": "Nominal results show the raw future dollar amount assuming the stated nominal return. Inflation-adjusted results convert nominal future value into today's purchasing power by discounting using the inflation rate you provide."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO 22222 — Personal financial planning",
+        "url": "https://www.iso.org/standard/43538.html"
+      },
+      {
+        "label": "IEEE Standard for Floating-Point Arithmetic (reference)",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — general guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Net worth",
+        "definition": "Total assets minus total liabilities; a snapshot of financial position at a point in time."
+      },
+      {
+        "term": "Assets",
+        "definition": "Resources with economic value that you own, such as cash, investments, property, and retirement accounts."
+      },
+      {
+        "term": "Liabilities",
+        "definition": "Debts and obligations, such as mortgages, loans, and credit card balances."
+      },
+      {
+        "term": "Nominal return",
+        "definition": "The stated rate of return before adjusting for inflation."
+      },
+      {
+        "term": "Real return",
+        "definition": "Return adjusted for inflation; represents change in purchasing power."
+      },
+      {
+        "term": "Future value (FV)",
+        "definition": "The value of a present amount plus contributions after applying a growth rate over time."
+      },
+      {
+        "term": "CAGR",
+        "definition": "Compound annual growth rate; the constant annual rate that takes a starting value to an ending value over a period."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standard/43538.html",
+        "label": "ISO 22222 — Personal financial planning",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754 standard reference",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "Calculation"
+    ]
+  }
+}

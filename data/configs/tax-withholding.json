@@ -1,0 +1,374 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Tax Withholding Estimator (Advanced)",
+    "description": "Estimate federal income tax liability and recommended additional withholding per pay period. Supports common payroll frequencies and year-to-date withholding to project refund or amount owed."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "employee_estimator",
+    "methods": {
+      "employee_estimator": {
+        "label": "Employee withholding estimator (single-employer)",
+        "description": "Annualize pay, subtract deductions, estimate federal tax using a simplified progressive bracket approximation, and compute recommended additional withholding per remaining pay period.",
+        "variables": {
+          "annualized_income": {
+            "expression": "annual_income + other_income",
+            "dependencies": [
+              "annual_income",
+              "other_income"
+            ],
+            "label": "Annualized gross income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "pay_periods": {
+            "expression": "parseFloat(pay_frequency)",
+            "dependencies": [
+              "pay_frequency"
+            ],
+            "label": "Pay periods per year",
+            "format": "integer",
+            "display": false
+          },
+          "taxable_income": {
+            "expression": "max(0, annualized_income - deductions)",
+            "dependencies": [
+              "annualized_income",
+              "deductions"
+            ],
+            "label": "Estimated taxable income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "effective_tax_rate": {
+            "expression": "if(taxable_income<=11000, 0.10, if(taxable_income<=44725, 0.12, if(taxable_income<=95375, 0.22, if(taxable_income<=182100, 0.24, 0.32))))",
+            "dependencies": [
+              "taxable_income"
+            ],
+            "label": "Estimated effective marginal tax rate (approximate)",
+            "format": "percent",
+            "display": true
+          },
+          "estimated_annual_tax": {
+            "expression": "taxable_income * effective_tax_rate",
+            "dependencies": [
+              "taxable_income",
+              "effective_tax_rate"
+            ],
+            "label": "Estimated federal income tax for year",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_tax_per_period": {
+            "expression": "estimated_annual_tax / pay_periods",
+            "dependencies": [
+              "estimated_annual_tax",
+              "pay_periods"
+            ],
+            "label": "Estimated federal tax per pay period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_withheld_expected": {
+            "expression": "federal_tax_withheld_year_to_date + additional_withholding_per_pay_period * max(0, (pay_periods - year_to_date_pay_periods))",
+            "dependencies": [
+              "federal_tax_withheld_year_to_date",
+              "additional_withholding_per_pay_period",
+              "pay_periods",
+              "year_to_date_pay_periods"
+            ],
+            "label": "Projected total federal withheld by year end",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "projected_balance": {
+            "expression": "total_withheld_expected - estimated_annual_tax",
+            "dependencies": [
+              "total_withheld_expected",
+              "estimated_annual_tax"
+            ],
+            "label": "Projected refund (positive) or amount owed (negative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "recommended_additional_per_period": {
+            "expression": "max(0, (estimated_annual_tax - federal_tax_withheld_year_to_date) / max(1, (pay_periods - year_to_date_pay_periods)))",
+            "dependencies": [
+              "estimated_annual_tax",
+              "federal_tax_withheld_year_to_date",
+              "pay_periods",
+              "year_to_date_pay_periods"
+            ],
+            "label": "Recommended additional federal withholding per remaining pay period",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "estimated_annual_tax",
+            "label": "Estimated federal tax (annual)",
+            "variable": "estimated_annual_tax",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_tax_per_period",
+            "label": "Estimated federal tax per pay period",
+            "variable": "estimated_tax_per_period",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "recommended_additional_per_period",
+            "label": "Recommended additional withholding per pay period",
+            "variable": "recommended_additional_per_period",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "projected_balance",
+            "label": "Projected refund (positive) or amount owed (negative)",
+            "variable": "projected_balance",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "annual_income",
+        "label": "Annual gross wages/salary (projected)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "other_income",
+        "label": "Other taxable income (interest, dividends, side work) - annual",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "pay_frequency",
+        "label": "Pay frequency",
+        "type": "select",
+        "default": "26",
+        "options": [
+          {
+            "label": "Weekly (52)",
+            "value": "52"
+          },
+          {
+            "label": "Biweekly (26)",
+            "value": "26"
+          },
+          {
+            "label": "Semimonthly (24)",
+            "value": "24"
+          },
+          {
+            "label": "Monthly (12)",
+            "value": "12"
+          },
+          {
+            "label": "Annually (1)",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "filing_status",
+        "label": "Filing status",
+        "type": "select",
+        "default": "single",
+        "options": [
+          {
+            "label": "Single",
+            "value": "single"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "married_joint"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "married_separate"
+          },
+          {
+            "label": "Head of household",
+            "value": "head_household"
+          }
+        ]
+      },
+      {
+        "id": "dependents",
+        "label": "Number of dependents",
+        "type": "integer",
+        "default": 0,
+        "min": 0
+      },
+      {
+        "id": "deductions",
+        "label": "Total deductions (standard or itemized) - annual",
+        "type": "number",
+        "default": 13850,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "federal_tax_withheld_year_to_date",
+        "label": "Federal tax withheld so far this year (year-to-date)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "year_to_date_pay_periods",
+        "label": "Number of pay periods already paid this year",
+        "type": "integer",
+        "default": 0,
+        "min": 0
+      },
+      {
+        "id": "additional_withholding_per_pay_period",
+        "label": "Current additional federal withholding per pay period",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator projects your federal income tax for the year and suggests additional withholding per remaining pay period to help avoid an unexpected tax bill at filing. It annualizes wages and other income, subtracts deductions you enter, and uses a simplified progressive-rate approximation to estimate tax.",
+      "The tool is designed for employees paid by a single employer. It does not replace professional tax advice, IRS forms, or filing calculations. Use the inputs to reflect your current withholdings and the most likely deductions for the year."
+    ],
+    "methodology": [
+      "We annualize entered wages and other taxable income and subtract the deductions value you provide to compute estimated taxable income.",
+      "A simplified progressive bracket approximation is used to estimate tax liability. This is an approximation intended for planning; exact tax depends on the official tax tables, credits, and complex rules that vary by filing status and year.",
+      "Calculations, error handling, and data protection follow engineering and operational best practices. The tool references testing and quality frameworks consistent with ISO and IEEE guidance and recommends secure handling of sensitive inputs consistent with NIST cybersecurity guidance."
+    ],
+    "how_is_calculated": [
+      "1) Annualized gross income = Annual wages + Other taxable income.",
+      "2) Taxable income = max(0, Annualized gross income - Deductions entered).",
+      "3) Estimated tax = Taxable income × estimated marginal rate (piecewise approximation).",
+      "4) Estimated tax per pay period = Estimated tax / Pay periods per year.",
+      "5) Projected year-end balance = Projected total withheld (YTD withheld + future withholding) - Estimated tax.",
+      "6) Recommended additional withholding per remaining pay period = max(0, (Estimated tax - YTD withheld) / Remaining pay periods)."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate is this estimator?",
+        "answer": "This estimator provides planning-level estimates. It uses a simplified bracket approximation and does not apply every tax provision, credit, or situational rule. Expect differences from final IRS calculations. For precise liability, use official IRS calculators or consult a tax professional."
+      },
+      {
+        "question": "What should I enter for deductions?",
+        "answer": "Enter the total of your expected standard deduction or itemized deductions for the year. If unsure, enter the standard deduction for your filing status (see IRS guidance). The estimator uses this value directly."
+      },
+      {
+        "question": "Does this handle self-employment tax or multiple employers?",
+        "answer": "This method is intended for employees with a single employer payroll. Self-employment taxes, multiple-employer interactions, AMT, and certain credits are not modeled here. For those circumstances, use a specialized calculator or professional advice."
+      },
+      {
+        "question": "How is privacy and security handled?",
+        "answer": "Do not enter sensitive personal identifiers into this tool. Follow organizational and technical security practices aligned with NIST guidance when storing or transmitting results."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS Tax Withholding Estimator and guidance",
+        "url": "https://www.irs.gov/individuals/tax-withholding-estimator"
+      },
+      {
+        "label": "IRS Publication 505 (Tax Withholding and Estimated Tax)",
+        "url": "https://www.irs.gov/publications/p505"
+      },
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO/IEC 27001 information security standard",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE standards and best practices",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (privacy & security workplace guidance)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Withholding",
+        "definition": "Federal income tax amounts withheld from paychecks by an employer and remitted to the IRS on the employee's behalf."
+      },
+      {
+        "term": "Taxable income",
+        "definition": "Gross income minus allowable deductions and adjustments used to determine income tax liability."
+      },
+      {
+        "term": "Standard deduction",
+        "definition": "A fixed dollar amount that reduces the income on which you are taxed; the amount varies by filing status and tax year."
+      },
+      {
+        "term": "Additional withholding",
+        "definition": "An extra dollar amount you request your employer to withhold from each paycheck to increase the total tax withheld during the year."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/individuals/tax-withholding-estimator",
+        "label": "IRS withholding estimator",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.irs.gov/publications/p505",
+        "label": "IRS Publication 505",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

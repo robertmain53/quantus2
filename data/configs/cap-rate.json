@@ -1,0 +1,314 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Cap Rate Calculator",
+    "description": "Multi-method capitalization rate calculator for real estate: compute cap rate, price, or NOI. Includes clear assumptions, precision notes, and optional inputs to derive NOI from gross income, vacancy and expenses."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "from_noi_price",
+    "methods": {
+      "from_noi_price": {
+        "label": "Cap Rate (NOI ÷ Price)",
+        "description": "Calculate capitalization rate as Net Operating Income divided by purchase price. Result shown as a percentage.",
+        "variables": {
+          "cap_rate": {
+            "expression": "noi / price",
+            "dependencies": [
+              "noi",
+              "price"
+            ],
+            "label": "Capitalization rate (decimal)",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "cap_rate",
+            "label": "Cap rate (%)",
+            "variable": "cap_rate",
+            "format": "percent"
+          }
+        ]
+      },
+      "from_cap_price": {
+        "label": "NOI (Cap Rate × Price)",
+        "description": "Given a market cap rate and a property price, compute the implied annual NOI.",
+        "variables": {
+          "noi_calculated": {
+            "expression": "cap_rate_percent / 100 * price",
+            "dependencies": [
+              "cap_rate_percent",
+              "price"
+            ],
+            "label": "Net Operating Income",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "noi_calculated",
+            "label": "Implied NOI",
+            "variable": "noi_calculated",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "from_noi_cap": {
+        "label": "Price (NOI ÷ Cap Rate)",
+        "description": "Estimate property price implied by a given NOI and target cap rate.",
+        "variables": {
+          "price_calculated": {
+            "expression": "noi / (cap_rate_percent / 100)",
+            "dependencies": [
+              "noi",
+              "cap_rate_percent"
+            ],
+            "label": "Implied Price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "price_calculated",
+            "label": "Implied price",
+            "variable": "price_calculated",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "noi_source",
+        "label": "NOI input method",
+        "type": "select",
+        "default": "enter_noi",
+        "options": [
+          {
+            "label": "Enter NOI directly",
+            "value": "enter_noi"
+          },
+          {
+            "label": "Calculate NOI from income and expenses",
+            "value": "calculate_noi"
+          }
+        ]
+      },
+      {
+        "id": "price",
+        "label": "Purchase price / current value",
+        "type": "number",
+        "default": 1000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "cap_rate_percent",
+        "label": "Cap rate (annual %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      }
+    ],
+    "sections": [
+      {
+        "id": "enter_noi_section",
+        "label": "Enter NOI",
+        "show_when": {
+          "field": "noi_source",
+          "is": "enter_noi"
+        },
+        "fields": [
+          {
+            "id": "noi",
+            "label": "Net Operating Income (annual)",
+            "type": "number",
+            "default": 50000,
+            "min": 0,
+            "step": 100
+          }
+        ]
+      },
+      {
+        "id": "calc_noi_section",
+        "label": "Calculate NOI from income & expenses",
+        "show_when": {
+          "field": "noi_source",
+          "is": "calculate_noi"
+        },
+        "fields": [
+          {
+            "id": "gross_income",
+            "label": "Gross scheduled income (annual)",
+            "type": "number",
+            "default": 120000,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "vacancy_rate",
+            "label": "Vacancy & credit loss (%)",
+            "type": "number",
+            "default": 5,
+            "min": 0,
+            "max": 100,
+            "step": 0.1
+          },
+          {
+            "id": "operating_expenses",
+            "label": "Operating expenses (annual)",
+            "type": "number",
+            "default": 30000,
+            "min": 0,
+            "step": 100
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This capitalization rate (cap rate) calculator provides three common workflows: compute cap rate from NOI and price, compute implied NOI from cap rate and price, and compute implied price from NOI and cap rate. Use the method that matches the value you know and the value you need.",
+      "The tool accepts direct NOI input or allows you to derive NOI from gross income, vacancy rate, and operating expenses. Results are displayed with clear units and formats and include accuracy and data-handling guidance."
+    ],
+    "methodology": [
+      "Cap rate is a simple ratio used to compare income-producing properties. For consistency this calculator treats cap rate as annual NOI divided by property price or value.",
+      "When deriving NOI from gross income: NOI = Gross scheduled income × (1 − vacancy rate) − operating expenses. Vacancy and expense inputs should be annualized and reflect stabilized operating levels.",
+      "Inputs are plain numeric values. Cap rate inputs are entered as percentages (for example, enter 5 for 5%). Internally the tool converts percentages to decimals when required (divide by 100)."
+    ],
+    "how_is_calculated": [
+      "Cap rate = NOI ÷ Price",
+      "NOI (implied) = (Cap rate % ÷ 100) × Price",
+      "Price (implied) = NOI ÷ (Cap rate % ÷ 100)",
+      "Optional NOI derivation: NOI = Gross scheduled income × (1 − Vacancy % ÷ 100) − Operating expenses"
+    ],
+    "examples": [
+      "If annual NOI is 60,000 and property price is 1,200,000 then cap rate = 60,000 ÷ 1,200,000 = 0.05 → 5.00%.",
+      "If a market cap rate is 6% and a property price is 2,000,000 then implied NOI = 0.06 × 2,000,000 = 120,000."
+    ],
+    "summary": [
+      "Use the cap rate calculation to compare similar properties and to sanity-check valuation or underwriting assumptions.",
+      "Remember that cap rate is only one metric: it excludes financing structure, tax effects, and one-time items. For investment decisions combine cap rate analysis with cash flow, ROI, and risk assessments."
+    ],
+    "faqs": [
+      {
+        "question": "Should I enter cap rate as a decimal or percent?",
+        "answer": "Enter cap rate as a percentage (for example, enter 5 for 5%). The calculator converts that percentage into a decimal internally where needed."
+      },
+      {
+        "question": "Can this tool calculate NOI from rent and expenses?",
+        "answer": "Yes. Select the option to calculate NOI and provide annual gross scheduled income, vacancy rate, and operating expenses. NOI will be estimated as: gross income × (1 − vacancy) − operating expenses."
+      },
+      {
+        "question": "How precise are the results?",
+        "answer": "Results follow standard numeric precision practices for financial calculators. Small rounding differences may occur; for regulatory or contractual use, round according to your reporting rules and confirm with primary financial records."
+      },
+      {
+        "question": "How should I treat non-recurring items or capital expenditures?",
+        "answer": "This calculator treats NOI as recurring operating income less recurring operating expenses. Exclude non-recurring items and treat capital expenditures separately unless you intentionally include them in operating expenses."
+      },
+      {
+        "question": "What are the limits and caveats of this tool?",
+        "answer": "The calculator provides indicative results only. It does not substitute for professional appraisal, due diligence, or legal advice. Confirm all inputs against source documents and apply local regulatory or accounting standards when necessary."
+      },
+      {
+        "question": "How is data handled and secured?",
+        "answer": "Implementations of this calculator should follow established data security and privacy standards. See the citations for general guidance on technical and organizational controls."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Cap rate (capitalization rate)",
+        "definition": "A ratio equal to annual Net Operating Income divided by property price or market value, typically expressed as a percentage."
+      },
+      {
+        "term": "Net Operating Income (NOI)",
+        "definition": "Annual property income after vacancy and operating expenses, before financing, taxes, depreciation, and capital expenditures."
+      },
+      {
+        "term": "Gross scheduled income",
+        "definition": "Total annual rent and other recurring income assuming full occupancy and all units rented at scheduled rates."
+      },
+      {
+        "term": "Vacancy rate",
+        "definition": "Estimated percentage of gross income lost to vacancy and uncollectible accounts."
+      },
+      {
+        "term": "Operating expenses",
+        "definition": "Recurring costs to operate and maintain the property, such as management, utilities, insurance, repairs, and property taxes."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

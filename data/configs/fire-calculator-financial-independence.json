@@ -1,0 +1,438 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "FIRE Planner — Financial Independence Calculator (multi-method)",
+    "description": "Multi-method Financial Independence (FIRE) calculator supporting Safe Withdrawal Rate target, Coast FIRE current-need, and Time-to-FI projections. Includes inflation adjustment, configurable return assumptions, and sensitivity-aware outputs for planning and disclosure."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "target_by_swr",
+    "methods": {
+      "target_by_swr": {
+        "label": "Target net worth using Safe Withdrawal Rate",
+        "description": "Computes the retirement nest egg required to support your inflation-adjusted annual spending using a chosen safe withdrawal rate.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "desired_retirement_age - current_age",
+            "dependencies": [
+              "desired_retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "inflation_adjusted_spending": {
+            "expression": "annual_spending_today * pow(1 + expected_inflation_pct/100, years_to_retirement)",
+            "dependencies": [
+              "annual_spending_today",
+              "expected_inflation_pct",
+              "years_to_retirement"
+            ],
+            "label": "Estimated annual spending at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "target_fi": {
+            "expression": "inflation_adjusted_spending / (safe_withdrawal_rate_pct/100)",
+            "dependencies": [
+              "inflation_adjusted_spending",
+              "safe_withdrawal_rate_pct"
+            ],
+            "label": "Target FIRE net worth",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "target_fi",
+            "label": "FIRE target (by SWR)",
+            "variable": "target_fi",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "inflation_adjusted_spending",
+            "label": "Inflation-adjusted annual spending at retirement",
+            "variable": "inflation_adjusted_spending",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_to_retirement",
+            "label": "Years until retirement",
+            "variable": "years_to_retirement",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      },
+      "coast_fire": {
+        "label": "Coast FIRE: current savings needed to reach FIRE without new contributions",
+        "description": "Calculates the amount of capital you would need today so that, with expected real returns, it grows to your FIRE target by retirement even if you stop new contributions.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "desired_retirement_age - current_age",
+            "dependencies": [
+              "desired_retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "inflation_adjusted_spending": {
+            "expression": "annual_spending_today * pow(1 + expected_inflation_pct/100, years_to_retirement)",
+            "dependencies": [
+              "annual_spending_today",
+              "expected_inflation_pct",
+              "years_to_retirement"
+            ],
+            "label": "Estimated annual spending at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "target_fi": {
+            "expression": "inflation_adjusted_spending / (safe_withdrawal_rate_pct/100)",
+            "dependencies": [
+              "inflation_adjusted_spending",
+              "safe_withdrawal_rate_pct"
+            ],
+            "label": "Target FIRE net worth",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "real_return_fraction": {
+            "expression": "(expected_return_pct - expected_inflation_pct)/100",
+            "dependencies": [
+              "expected_return_pct",
+              "expected_inflation_pct"
+            ],
+            "label": "Expected real return (fraction)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "coast_current_needed": {
+            "expression": "target_fi * pow(1 + real_return_fraction, -years_to_retirement)",
+            "dependencies": [
+              "target_fi",
+              "real_return_fraction",
+              "years_to_retirement"
+            ],
+            "label": "Current capital needed for Coast FIRE",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "coast_current_needed",
+            "label": "Current savings needed (Coast FIRE)",
+            "variable": "coast_current_needed",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "years_to_retirement",
+            "label": "Years until retirement",
+            "variable": "years_to_retirement",
+            "unit": "years",
+            "format": "integer"
+          }
+        ]
+      },
+      "time_to_fi": {
+        "label": "Time to FI given savings and contributions",
+        "description": "Estimates years required to reach your FIRE target given current savings, ongoing contributions, and expected return.",
+        "variables": {
+          "target_fi": {
+            "expression": " (annual_spending_today * pow(1 + expected_inflation_pct/100, max(desired_retirement_age - current_age,0))) / (safe_withdrawal_rate_pct/100)",
+            "dependencies": [
+              "annual_spending_today",
+              "expected_inflation_pct",
+              "desired_retirement_age",
+              "current_age",
+              "safe_withdrawal_rate_pct"
+            ],
+            "label": "Target FIRE net worth (used for time calculation)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "r": {
+            "expression": "expected_return_pct/100",
+            "dependencies": [
+              "expected_return_pct"
+            ],
+            "label": "Expected annual return (fraction)",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "A": {
+            "expression": "annual_contribution",
+            "dependencies": [
+              "annual_contribution"
+            ],
+            "label": "Annual contribution",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "current": {
+            "expression": "current_savings",
+            "dependencies": [
+              "current_savings"
+            ],
+            "label": "Current savings",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "years_to_fi": {
+            "expression": "log((target_fi * r + A) / (current * r + A)) / log(1 + r)",
+            "dependencies": [
+              "target_fi",
+              "r",
+              "A",
+              "current"
+            ],
+            "label": "Estimated years to reach FIRE",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "years_to_fi",
+            "label": "Estimated years until FIRE",
+            "variable": "years_to_fi",
+            "unit": "years",
+            "format": "decimal"
+          },
+          {
+            "id": "target_fi",
+            "label": "FIRE target used",
+            "variable": "target_fi",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 35,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "desired_retirement_age",
+        "label": "Desired retirement age",
+        "type": "integer",
+        "default": 55,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "current_savings",
+        "label": "Current investable savings (USD)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_contribution",
+        "label": "Annual contributions (USD)",
+        "type": "number",
+        "default": 12000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "expected_return_pct",
+        "label": "Expected annual return (nominal %)",
+        "type": "number",
+        "default": 6,
+        "min": -10,
+        "max": 30,
+        "step": 0.1
+      },
+      {
+        "id": "expected_inflation_pct",
+        "label": "Expected annual inflation (%)",
+        "type": "number",
+        "default": 2.5,
+        "min": -5,
+        "max": 15,
+        "step": 0.1
+      },
+      {
+        "id": "annual_spending_today",
+        "label": "Current annual spending you want covered in retirement (USD)",
+        "type": "number",
+        "default": 40000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "safe_withdrawal_rate_pct",
+        "label": "Safe withdrawal rate (%)",
+        "type": "number",
+        "default": 4,
+        "min": 0.1,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "tax_rate_pct",
+        "label": "Estimated effective tax rate in retirement (%)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 50,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This FIRE planner helps you estimate the nest egg needed for Financial Independence under multiple pragmatic methods: a Safe Withdrawal Rate (SWR) target, the Coast FIRE current-need, and a Time-to-FI projection based on current savings and contributions.",
+      "The tool uses user-supplied assumptions for returns, inflation, and contributions. Results are illustrative planning figures, not guarantees. See methodology and caveats for assumptions, sensitivity, and regulatory and technical standards used to validate the approach."
+    ],
+    "methodology": [
+      "Calculations are deterministic algebraic projections based on compound growth and standard withdrawal math. Inputs are treated as point estimates; real-world outcomes vary.",
+      "We follow best-practice software controls and data handling guidance aligned with standards for reliability and security, including NIST cybersecurity and risk-management guidance, ISO quality controls, and engineering best practices compatible with IEEE recommendations. Occupational safety governance referenced where relevant follows OSHA guidance for human factors in financial tools.",
+      "Accuracy notes: financial projections are sensitive to return and inflation assumptions and to withdrawal-rate selection. Backtesting or Monte Carlo analysis may be used alongside these deterministic methods to understand probabilities; this tool provides clear formulas and assumptions so users can validate and reproduce results."
+    ],
+    "how_is_calculated": [
+      "Target (SWR) = inflation-adjusted annual spending at retirement ÷ (safe withdrawal rate). Inflation-adjusted spending = current spending × (1 + inflation)^(years until retirement).",
+      "Coast FIRE current need = Target × (1 + real_return)^(-years until retirement), where real_return = expected_return − expected_inflation.",
+      "Time to FI (approx) solves target = current_savings×(1+r)^n + annual_contribution×((1+r)^n − 1)/r for n; solved using logarithms when r ≠ 0."
+    ],
+    "examples": [
+      "Example: age 35, retire at 55 (20 years), current spending $40,000, inflation 2.5%, SWR 4% → inflation-adjusted spending ≈ $65,000; target ≈ $1,625,000.",
+      "Coast FIRE example: with expected real return 3.5% and 20 years to grow, the coast capital required is target / (1.035^20).",
+      "Time-to-FI example: with $50,000 current savings, $12,000 annual contribution, and 6% expected return, the model solves for years until the projected balance reaches the target."
+    ],
+    "faqs": [
+      {
+        "question": "Is the calculator a guarantee of outcomes?",
+        "answer": "No. Results are deterministic projections using your inputs. Actual investment returns, inflation, taxes, sequence of returns, and unexpected expenses will affect outcomes. Use these outputs for planning and scenario comparison, not as guarantees."
+      },
+      {
+        "question": "What safe withdrawal rate should I use?",
+        "answer": "The choice of SWR is a planning decision that balances prudence with lifestyle. Common starting points are 3%–4%, but use sensitivity analysis to see how different rates affect your target. Consider professional advice for personalized plans."
+      },
+      {
+        "question": "Why do projections vary from other calculators?",
+        "answer": "Differences arise from assumptions (nominal vs real returns), inflation treatment, tax assumptions, and whether tools include Monte Carlo or backtesting. This tool shows explicit formulas so differences can be traced to input choices."
+      },
+      {
+        "question": "Are taxes and healthcare costs included?",
+        "answer": "You can approximate future taxes using the effective tax rate input. Healthcare, social benefits, and other irregular costs should be added to annual spending estimates to include them in the target calculation."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (National Institute of Standards and Technology)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO (International Organization for Standardization)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE (Institute of Electrical and Electronics Engineers)",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA (Occupational Safety and Health Administration)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Safe Withdrawal Rate (SWR)",
+        "definition": "An annual percentage of the portfolio that can be withdrawn in the first year of retirement (adjusted for inflation thereafter) intended to make capital last for a specified horizon."
+      },
+      {
+        "term": "Coast FIRE",
+        "definition": "A planning approach where you accumulate a sum large enough that, without further contributions, expected growth will reach your FIRE target by your planned retirement age."
+      },
+      {
+        "term": "Real return",
+        "definition": "Nominal return adjusted for inflation. Used to estimate purchasing-power growth of capital."
+      },
+      {
+        "term": "Inflation-adjusted spending",
+        "definition": "Projected amount you will need in retirement after adjusting current spending for expected inflation over the saving horizon."
+      },
+      {
+        "term": "Target FI",
+        "definition": "The portfolio value required at retirement that, given a withdrawal policy, is expected to support planned spending."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

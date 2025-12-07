@@ -1,0 +1,851 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Option Greeks Calculator (Black‑Scholes, Dividend‑Adjusted, Bachelier)",
+    "description": "Interactive calculator that computes option price and primary Greeks (Delta, Gamma, Vega, Theta, Rho) for European-style options using multiple models and explicit assumptions. Includes calibration and accuracy notes, units, and implementation limits."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "black_scholes_dividend",
+    "methods": {
+      "black_scholes_dividend": {
+        "label": "Black‑Scholes (continuous dividend yield)",
+        "description": "Standard Black‑Scholes formulas adjusted for a continuous dividend yield q. All Greeks are annualized; time input is days-to-expiry converted to years (days/365).",
+        "variables": {
+          "T": {
+            "expression": "days / 365",
+            "dependencies": [
+              "days"
+            ],
+            "label": "Time to expiry (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "sqrtT": {
+            "expression": "sqrt(T)",
+            "dependencies": [
+              "T"
+            ],
+            "label": "Square root of time",
+            "format": "decimal",
+            "display": false
+          },
+          "d1": {
+            "expression": "(ln(S / K) + (r - q + 0.5 * sigma * sigma) * T) / (sigma * sqrtT)",
+            "dependencies": [
+              "S",
+              "K",
+              "r",
+              "q",
+              "sigma",
+              "T",
+              "sqrtT"
+            ],
+            "label": "d1 (Black‑Scholes)",
+            "format": "decimal",
+            "display": true
+          },
+          "d2": {
+            "expression": "d1 - sigma * sqrtT",
+            "dependencies": [
+              "d1",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "d2 (Black‑Scholes)",
+            "format": "decimal",
+            "display": true
+          },
+          "nd1": {
+            "expression": "norm_cdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "N(d1)",
+            "format": "decimal",
+            "display": false
+          },
+          "nd2": {
+            "expression": "norm_cdf(d2)",
+            "dependencies": [
+              "d2"
+            ],
+            "label": "N(d2)",
+            "format": "decimal",
+            "display": false
+          },
+          "pdf_d1": {
+            "expression": "norm_pdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "n(d1)",
+            "format": "decimal",
+            "display": false
+          },
+          "price_call": {
+            "expression": "S * exp(-q * T) * nd1 - K * exp(-r * T) * nd2",
+            "dependencies": [
+              "S",
+              "q",
+              "T",
+              "nd1",
+              "K",
+              "r",
+              "nd2"
+            ],
+            "label": "Call price",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "price_put": {
+            "expression": "K * exp(-r * T) * norm_cdf(-d2) - S * exp(-q * T) * norm_cdf(-d1)",
+            "dependencies": [
+              "K",
+              "r",
+              "T",
+              "d2",
+              "S",
+              "q",
+              "d1"
+            ],
+            "label": "Put price",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "delta": {
+            "expression": "if(option_type == 'call', exp(-q * T) * nd1, exp(-q * T) * (nd1 - 1))",
+            "dependencies": [
+              "option_type",
+              "q",
+              "T",
+              "nd1"
+            ],
+            "label": "Delta",
+            "format": "decimal",
+            "display": true
+          },
+          "gamma": {
+            "expression": "exp(-q * T) * pdf_d1 / (S * sigma * sqrtT)",
+            "dependencies": [
+              "q",
+              "T",
+              "pdf_d1",
+              "S",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "Gamma",
+            "format": "decimal",
+            "display": true
+          },
+          "vega": {
+            "expression": "S * exp(-q * T) * pdf_d1 * sqrtT",
+            "dependencies": [
+              "S",
+              "q",
+              "T",
+              "pdf_d1",
+              "sqrtT"
+            ],
+            "label": "Vega",
+            "unit": "per vol",
+            "format": "decimal",
+            "display": true
+          },
+          "theta": {
+            "expression": "if(option_type == 'call', -(S * exp(-q * T) * sigma * pdf_d1) / (2 * sqrtT) - r * K * exp(-r * T) * nd2 + q * S * exp(-q * T) * nd1, -(S * exp(-q * T) * sigma * pdf_d1) / (2 * sqrtT) + r * K * exp(-r * T) * norm_cdf(-d2) - q * S * exp(-q * T) * norm_cdf(-d1))",
+            "dependencies": [
+              "option_type",
+              "S",
+              "q",
+              "T",
+              "sigma",
+              "pdf_d1",
+              "sqrtT",
+              "r",
+              "K",
+              "nd2",
+              "d2",
+              "d1"
+            ],
+            "label": "Theta (annual)",
+            "unit": "currency per year",
+            "format": "decimal",
+            "display": true
+          },
+          "rho": {
+            "expression": "if(option_type == 'call', K * T * exp(-r * T) * nd2, -K * T * exp(-r * T) * norm_cdf(-d2))",
+            "dependencies": [
+              "option_type",
+              "K",
+              "T",
+              "r",
+              "nd2",
+              "d2"
+            ],
+            "label": "Rho",
+            "format": "decimal",
+            "display": true
+          },
+          "price": {
+            "expression": "if(option_type == 'call', price_call, price_put)",
+            "dependencies": [
+              "option_type",
+              "price_call",
+              "price_put"
+            ],
+            "label": "Option price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "price",
+            "label": "Option price",
+            "variable": "price",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "delta",
+            "label": "Delta",
+            "variable": "delta",
+            "format": "decimal"
+          },
+          {
+            "id": "gamma",
+            "label": "Gamma",
+            "variable": "gamma",
+            "format": "decimal"
+          },
+          {
+            "id": "vega",
+            "label": "Vega",
+            "variable": "vega",
+            "format": "decimal"
+          },
+          {
+            "id": "theta",
+            "label": "Theta (annual)",
+            "variable": "theta",
+            "format": "decimal"
+          },
+          {
+            "id": "rho",
+            "label": "Rho",
+            "variable": "rho",
+            "format": "decimal"
+          }
+        ]
+      },
+      "black_scholes_no_dividend": {
+        "label": "Black‑Scholes (no dividend)",
+        "description": "Black‑Scholes assuming zero continuous dividend yield (q = 0). Formulas and Greeks are the same as the dividend model when q = 0.",
+        "variables": {
+          "T": {
+            "expression": "days / 365",
+            "dependencies": [
+              "days"
+            ],
+            "label": "Time to expiry (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "sqrtT": {
+            "expression": "sqrt(T)",
+            "dependencies": [
+              "T"
+            ],
+            "label": "Square root of time",
+            "format": "decimal",
+            "display": false
+          },
+          "d1": {
+            "expression": "(ln(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrtT)",
+            "dependencies": [
+              "S",
+              "K",
+              "r",
+              "sigma",
+              "T",
+              "sqrtT"
+            ],
+            "label": "d1",
+            "format": "decimal",
+            "display": true
+          },
+          "d2": {
+            "expression": "d1 - sigma * sqrtT",
+            "dependencies": [
+              "d1",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "d2",
+            "format": "decimal",
+            "display": true
+          },
+          "nd1": {
+            "expression": "norm_cdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "N(d1)",
+            "format": "decimal",
+            "display": false
+          },
+          "nd2": {
+            "expression": "norm_cdf(d2)",
+            "dependencies": [
+              "d2"
+            ],
+            "label": "N(d2)",
+            "format": "decimal",
+            "display": false
+          },
+          "pdf_d1": {
+            "expression": "norm_pdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "n(d1)",
+            "format": "decimal",
+            "display": false
+          },
+          "price": {
+            "expression": "S * nd1 - K * exp(-r * T) * nd2",
+            "dependencies": [
+              "S",
+              "nd1",
+              "K",
+              "r",
+              "T",
+              "nd2"
+            ],
+            "label": "Option price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "delta": {
+            "expression": "if(option_type == 'call', nd1, nd1 - 1)",
+            "dependencies": [
+              "option_type",
+              "nd1"
+            ],
+            "label": "Delta",
+            "format": "decimal",
+            "display": true
+          },
+          "gamma": {
+            "expression": "pdf_d1 / (S * sigma * sqrtT)",
+            "dependencies": [
+              "pdf_d1",
+              "S",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "Gamma",
+            "format": "decimal",
+            "display": true
+          },
+          "vega": {
+            "expression": "S * pdf_d1 * sqrtT",
+            "dependencies": [
+              "S",
+              "pdf_d1",
+              "sqrtT"
+            ],
+            "label": "Vega",
+            "format": "decimal",
+            "display": true
+          },
+          "theta": {
+            "expression": "if(option_type == 'call', -(S * sigma * pdf_d1) / (2 * sqrtT) - r * K * exp(-r * T) * nd2, -(S * sigma * pdf_d1) / (2 * sqrtT) + r * K * exp(-r * T) * norm_cdf(-d2))",
+            "dependencies": [
+              "option_type",
+              "S",
+              "sigma",
+              "pdf_d1",
+              "sqrtT",
+              "r",
+              "K",
+              "T",
+              "nd2",
+              "d2"
+            ],
+            "label": "Theta (annual)",
+            "format": "decimal",
+            "display": true
+          },
+          "rho": {
+            "expression": "if(option_type == 'call', K * T * exp(-r * T) * nd2, -K * T * exp(-r * T) * norm_cdf(-d2))",
+            "dependencies": [
+              "option_type",
+              "K",
+              "T",
+              "r",
+              "nd2",
+              "d2"
+            ],
+            "label": "Rho",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "price",
+            "label": "Option price",
+            "variable": "price",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "delta",
+            "label": "Delta",
+            "variable": "delta",
+            "format": "decimal"
+          },
+          {
+            "id": "gamma",
+            "label": "Gamma",
+            "variable": "gamma",
+            "format": "decimal"
+          },
+          {
+            "id": "vega",
+            "label": "Vega",
+            "variable": "vega",
+            "format": "decimal"
+          },
+          {
+            "id": "theta",
+            "label": "Theta (annual)",
+            "variable": "theta",
+            "format": "decimal"
+          },
+          {
+            "id": "rho",
+            "label": "Rho",
+            "variable": "rho",
+            "format": "decimal"
+          }
+        ]
+      },
+      "bachelier_normal": {
+        "label": "Bachelier (normal) model",
+        "description": "Normal (Bachelier) approximation useful for low-strike or low-volatility regimes and interest rate options. Greeks differ from Black‑Scholes; delta is based on normal cdf of (S-K)/(sigma*sqrtT).",
+        "variables": {
+          "T": {
+            "expression": "days / 365",
+            "dependencies": [
+              "days"
+            ],
+            "label": "Time to expiry (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "sqrtT": {
+            "expression": "sqrt(T)",
+            "dependencies": [
+              "T"
+            ],
+            "label": "Square root of time",
+            "format": "decimal",
+            "display": false
+          },
+          "d": {
+            "expression": "(S - K) / (sigma * sqrtT)",
+            "dependencies": [
+              "S",
+              "K",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "d (Bachelier)",
+            "format": "decimal",
+            "display": true
+          },
+          "pdf_d": {
+            "expression": "norm_pdf(d)",
+            "dependencies": [
+              "d"
+            ],
+            "label": "n(d)",
+            "format": "decimal",
+            "display": false
+          },
+          "nd": {
+            "expression": "norm_cdf(d)",
+            "dependencies": [
+              "d"
+            ],
+            "label": "N(d)",
+            "format": "decimal",
+            "display": false
+          },
+          "price": {
+            "expression": "if(option_type == 'call', (S - K) * nd + sigma * sqrtT * pdf_d, (K - S) * (1 - nd) + sigma * sqrtT * pdf_d)",
+            "dependencies": [
+              "option_type",
+              "S",
+              "K",
+              "nd",
+              "sigma",
+              "sqrtT",
+              "pdf_d"
+            ],
+            "label": "Option price (Bachelier)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "delta": {
+            "expression": "if(option_type == 'call', nd, nd - 1)",
+            "dependencies": [
+              "option_type",
+              "nd"
+            ],
+            "label": "Delta",
+            "format": "decimal",
+            "display": true
+          },
+          "gamma": {
+            "expression": "pdf_d / (sigma * sqrtT)",
+            "dependencies": [
+              "pdf_d",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "Gamma",
+            "format": "decimal",
+            "display": true
+          },
+          "vega": {
+            "expression": "sqrtT * pdf_d",
+            "dependencies": [
+              "sqrtT",
+              "pdf_d"
+            ],
+            "label": "Vega",
+            "format": "decimal",
+            "display": true
+          },
+          "theta": {
+            "expression": "if(option_type == 'call', -sigma * pdf_d / (2 * sqrtT) - r * (S - K) * nd, -sigma * pdf_d / (2 * sqrtT) + r * (S - K) * (1 - nd))",
+            "dependencies": [
+              "option_type",
+              "sigma",
+              "pdf_d",
+              "sqrtT",
+              "r",
+              "S",
+              "K",
+              "nd"
+            ],
+            "label": "Theta (annual, Bachelier)",
+            "format": "decimal",
+            "display": true
+          },
+          "rho": {
+            "expression": "0",
+            "dependencies": [],
+            "label": "Rho (Bachelier approximation not explicitly interest-rate sensitive in this form)",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "price",
+            "label": "Option price (Bachelier)",
+            "variable": "price",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "delta",
+            "label": "Delta",
+            "variable": "delta",
+            "format": "decimal"
+          },
+          {
+            "id": "gamma",
+            "label": "Gamma",
+            "variable": "gamma",
+            "format": "decimal"
+          },
+          {
+            "id": "vega",
+            "label": "Vega",
+            "variable": "vega",
+            "format": "decimal"
+          },
+          {
+            "id": "theta",
+            "label": "Theta (annual)",
+            "variable": "theta",
+            "format": "decimal"
+          },
+          {
+            "id": "rho",
+            "label": "Rho",
+            "variable": "rho",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "S",
+        "label": "Underlying price (S)",
+        "type": "number",
+        "default": 100,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "K",
+        "label": "Strike price (K)",
+        "type": "number",
+        "default": 100,
+        "min": 0.0001,
+        "step": 0.01
+      },
+      {
+        "id": "days",
+        "label": "Days to expiry",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 36500,
+        "step": 1
+      },
+      {
+        "id": "r",
+        "label": "Risk‑free rate (annual, decimal)",
+        "type": "number",
+        "default": 0.03,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "q",
+        "label": "Continuous dividend yield (annual, decimal)",
+        "type": "number",
+        "default": 0.0,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "sigma",
+        "label": "Volatility (annual, decimal)",
+        "type": "number",
+        "default": 0.2,
+        "min": 0.0001,
+        "max": 5,
+        "step": 0.0001
+      },
+      {
+        "id": "option_type",
+        "label": "Option type",
+        "type": "select",
+        "default": "call",
+        "options": [
+          {
+            "label": "Call",
+            "value": "call"
+          },
+          {
+            "label": "Put",
+            "value": "put"
+          }
+        ]
+      },
+      {
+        "id": "model",
+        "label": "Pricing model",
+        "type": "select",
+        "default": "black_scholes_dividend",
+        "options": [
+          {
+            "label": "Black‑Scholes (with dividend q)",
+            "value": "black_scholes_dividend"
+          },
+          {
+            "label": "Black‑Scholes (no dividend)",
+            "value": "black_scholes_no_dividend"
+          },
+          {
+            "label": "Bachelier (normal)",
+            "value": "bachelier_normal"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "advanced_notes",
+        "label": "Advanced inputs",
+        "show_when": {
+          "field": "model",
+          "is": "black_scholes_dividend"
+        },
+        "fields": [
+          {
+            "id": "note_dividend",
+            "label": "Dividend yield is applied as continuous yield q; set to 0 if no dividend",
+            "type": "text",
+            "default": "Use q for equities or continuous yield proxies for income instruments"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes European option price and primary Greeks (Delta, Gamma, Vega, Theta, Rho) under multiple models: Black‑Scholes with continuous dividend yield, Black‑Scholes without dividends, and the Bachelier (normal) approximation. Time is accepted as days-to-expiry and converted to years (days/365).",
+      "Use the model selector to choose the underlying assumption set. Results are returned in conventional units: price in currency, Greeks as decimals (Delta, Gamma, Vega, Rho) and Theta expressed on an annual basis. Vega here represents the change in price per 1.0 change in volatility (decimal)."
+    ],
+    "methodology": [
+      "Black‑Scholes formulas follow the closed‑form expressions for European options; the dividend model uses a continuous dividend yield q. The Bachelier normal model is included for instruments where normal volatility is the appropriate assumption (for example certain rate options or low-price assets).",
+      "Numerical implementation uses standard error‑function based approximations for the normal cumulative distribution and density functions. Implementations should follow well-known numerical methods (e.g., rational approximations described in numerical analysis references) and validate against high-precision libraries.",
+      "Accuracy, calibration, and limits: this tool assumes constant volatility and continuous rates over the life of the option. It does not perform path-dependent or American-style adjustments. For production use, follow secure software and numerical accuracy standards (NIST guidelines for numerical methods), implement unit tests against reference libraries, and document tolerance limits. For operational controls and risk management, follow ISO 31000 principles and applicable financial conduct regulations."
+    ],
+    "how_is_calculated": [
+      "Time conversion: T = days / 365.",
+      "Black‑Scholes (with q): d1 = (ln(S/K) + (r - q + 0.5 * sigma^2) * T) / (sigma * sqrt(T)); d2 = d1 - sigma * sqrt(T).",
+      "Greeks (examples): Delta_call = e^{-qT} * N(d1); Gamma = e^{-qT} * n(d1) / (S * sigma * sqrt(T)); Vega = S * e^{-qT} * n(d1) * sqrt(T). Theta and Rho follow the standard closed-form derivatives (annualized)."
+    ],
+    "examples": [
+      "Example: S=100, K=100, days=30, r=0.03, q=0.0, sigma=0.20, call, Black‑Scholes: price ≈ typical ATM value; Delta ≈ 0.53, Gamma small, Vega positive.",
+      "Example (dividend): For a 2% continuous dividend yield set q=0.02; Delta and price will be adjusted downward by factor e^{-qT} in forward exposure."
+    ],
+    "faqs": [
+      {
+        "question": "Which model should I choose?",
+        "answer": "Use Black‑Scholes (with q) for standard equity options and when a continuous dividend yield is known. Use the Bachelier model for instruments with normal vol semantics or when low strike makes lognormal assumptions inappropriate. Review model assumptions and choose based on underlying asset behavior."
+      },
+      {
+        "question": "Are Greeks annualized or per‑day?",
+        "answer": "Outputs are provided in conventional units: Theta is annualized (currency per year). If you need per‑day Theta divide the returned value by 365. Delta, Gamma, Vega, and Rho are shown in decimal terms consistent with model definitions."
+      },
+      {
+        "question": "How accurate are the numeric functions (norm_cdf, norm_pdf)?",
+        "answer": "The calculator relies on standard numeric approximations for the normal CDF and PDF. For production deployment follow NIST recommendations for numerical algorithms and validate against a high-precision reference implementation. Expect small rounding differences near extreme tails."
+      },
+      {
+        "question": "What are important limits and warnings?",
+        "answer": "Inputs outside typical ranges (for example, very small days to expiry or extremely high volatility above 300 percent) reduce model reliability. The models assume constant volatility and interest or dividend rates; they do not price American exercise features, discrete dividends, or path-dependent payoffs. For regulatory reporting or large notional exposures, cross-validate with vendor libraries and model governance."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Delta",
+        "definition": "Sensitivity of option price to a small change in underlying price (dPrice/dS)."
+      },
+      {
+        "term": "Gamma",
+        "definition": "Sensitivity of Delta to a small change in underlying price (dDelta/dS)."
+      },
+      {
+        "term": "Vega",
+        "definition": "Sensitivity of option price to a small change in volatility (dPrice/dsigma)."
+      },
+      {
+        "term": "Theta",
+        "definition": "Sensitivity of option price to the passage of time, expressed here on an annual basis (dPrice/dt)."
+      },
+      {
+        "term": "Rho",
+        "definition": "Sensitivity of option price to a small change in the risk‑free interest rate (dPrice/dr)."
+      },
+      {
+        "term": "Implied volatility",
+        "definition": "The volatility parameter sigma that, when input to the model, yields the observed market price. This calculator accepts volatility as an input; it does not compute implied volatility."
+      },
+      {
+        "term": "Black‑Scholes model",
+        "definition": "A closed‑form model for pricing European options under the assumption of lognormal underlying returns, constant volatility, and continuous rates."
+      },
+      {
+        "term": "Bachelier (normal) model",
+        "definition": "An alternative model assuming normally distributed underlying changes; useful for certain instruments and rate markets."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST: Numerical methods and mathematical functions (general reference)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO: Risk management principles (ISO 31000)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE: Standards and best practices for software and numerical computing",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Original Black and Scholes 1973 (reference)",
+        "url": "https://www.jstor.org/stable/1831029"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission - Options overview (regulatory context)",
+        "url": "https://www.sec.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/options/implied-volatility",
+      "/calculators/options/position-greeks"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculations"
+    ]
+  }
+}

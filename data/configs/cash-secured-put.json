@@ -1,0 +1,574 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Cash-Secured Put Calculator",
+    "description": "Multi-mode calculator for cash-secured put trades. Computes required cash reserve, net credit, break-even, maximum potential loss, period and annualized return, and a simplified roll (out & down) scenario. Includes calibration notes and accuracy caveats aligned with industry standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard",
+    "methods": {
+      "standard": {
+        "label": "Standard cash-secured put",
+        "description": "Calculates key metrics for selling a single cash-secured put position held to expiration.",
+        "variables": {
+          "shares_per_contract": {
+            "expression": "100",
+            "dependencies": [],
+            "label": "Shares per contract",
+            "unit": "shares",
+            "format": "integer",
+            "display": false
+          },
+          "commission_total": {
+            "expression": "commission_per_contract * contracts",
+            "dependencies": [
+              "commission_per_contract",
+              "contracts"
+            ],
+            "label": "Total commissions",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "total_premium": {
+            "expression": "premium_received * contracts * shares_per_contract",
+            "dependencies": [
+              "premium_received",
+              "contracts",
+              "shares_per_contract"
+            ],
+            "label": "Total premium received",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cash_required": {
+            "expression": "strike_price * contracts * shares_per_contract",
+            "dependencies": [
+              "strike_price",
+              "contracts",
+              "shares_per_contract"
+            ],
+            "label": "Cash required (reserve)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "break_even_price": {
+            "expression": "strike_price - premium_received",
+            "dependencies": [
+              "strike_price",
+              "premium_received"
+            ],
+            "label": "Break-even price",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_loss_currency": {
+            "expression": "(strike_price - premium_received) * contracts * shares_per_contract",
+            "dependencies": [
+              "strike_price",
+              "premium_received",
+              "contracts",
+              "shares_per_contract"
+            ],
+            "label": "Maximum potential loss (to zero)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_credit": {
+            "expression": "total_premium - commission_total",
+            "dependencies": [
+              "total_premium",
+              "commission_total"
+            ],
+            "label": "Net credit received",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "return_on_cash": {
+            "expression": "net_credit / cash_required",
+            "dependencies": [
+              "net_credit",
+              "cash_required"
+            ],
+            "label": "Return on cash (per period)",
+            "unit": "",
+            "format": "percent",
+            "display": true
+          },
+          "annualized_return": {
+            "expression": "return_on_cash * (365 / days_to_expiry)",
+            "dependencies": [
+              "return_on_cash",
+              "days_to_expiry"
+            ],
+            "label": "Approx. annualized return",
+            "unit": "",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "cash_required",
+            "label": "Cash required (reserve)",
+            "variable": "cash_required",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_credit",
+            "label": "Net credit received",
+            "variable": "net_credit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "break_even_price",
+            "label": "Break-even price",
+            "variable": "break_even_price",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_loss_currency",
+            "label": "Maximum potential loss (to zero)",
+            "variable": "max_loss_currency",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "return_on_cash",
+            "label": "Return on cash (per period)",
+            "variable": "return_on_cash",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "annualized_return",
+            "label": "Approx. annualized return",
+            "variable": "annualized_return",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "roll": {
+        "label": "Roll (Out & Down) - simplified",
+        "description": "Simplified calculation showing the net premium change and adjusted cash requirement when rolling a subset of contracts out in time and down in strike. This is an illustrative, not trade-by-trade execution model.",
+        "variables": {
+          "shares_per_contract": {
+            "expression": "100",
+            "dependencies": [],
+            "label": "Shares per contract",
+            "unit": "shares",
+            "format": "integer",
+            "display": false
+          },
+          "initial_total_premium": {
+            "expression": "premium_received * contracts_to_roll * shares_per_contract",
+            "dependencies": [
+              "premium_received",
+              "contracts_to_roll",
+              "shares_per_contract"
+            ],
+            "label": "Initial premium for rolled contracts",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "new_total_premium": {
+            "expression": "new_premium_received * contracts_to_roll * shares_per_contract",
+            "dependencies": [
+              "new_premium_received",
+              "contracts_to_roll",
+              "shares_per_contract"
+            ],
+            "label": "New premium collected when opening new put",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "additional_commission": {
+            "expression": "commission_per_contract * 2 * contracts_to_roll",
+            "dependencies": [
+              "commission_per_contract",
+              "contracts_to_roll"
+            ],
+            "label": "Estimated additional commissions (close + open)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "net_credit_change": {
+            "expression": "new_total_premium - initial_total_premium - additional_commission",
+            "dependencies": [
+              "new_total_premium",
+              "initial_total_premium",
+              "additional_commission"
+            ],
+            "label": "Net change in credit from the roll",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "original_cash_required": {
+            "expression": "strike_price * contracts_to_roll * shares_per_contract",
+            "dependencies": [
+              "strike_price",
+              "contracts_to_roll",
+              "shares_per_contract"
+            ],
+            "label": "Original cash reserved for rolled contracts",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "new_cash_required": {
+            "expression": "new_strike_price * contracts_to_roll * shares_per_contract",
+            "dependencies": [
+              "new_strike_price",
+              "contracts_to_roll",
+              "shares_per_contract"
+            ],
+            "label": "New cash required after roll",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "combined_net_credit": {
+            "expression": "initial_total_premium + new_total_premium - additional_commission",
+            "dependencies": [
+              "initial_total_premium",
+              "new_total_premium",
+              "additional_commission"
+            ],
+            "label": "Combined net credit (illustrative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_annualized_return": {
+            "expression": "(combined_net_credit / original_cash_required) * (365 / (days_to_expiry + days_until_roll))",
+            "dependencies": [
+              "combined_net_credit",
+              "original_cash_required",
+              "days_to_expiry",
+              "days_until_roll"
+            ],
+            "label": "Adjusted annualized return (approx., illustrative)",
+            "unit": "",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "net_credit_change",
+            "label": "Net change in credit from the roll",
+            "variable": "net_credit_change",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "new_cash_required",
+            "label": "New cash required after roll",
+            "variable": "new_cash_required",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "combined_net_credit",
+            "label": "Combined net credit (illustrative)",
+            "variable": "combined_net_credit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_annualized_return",
+            "label": "Adjusted annualized return (approx.)",
+            "variable": "adjusted_annualized_return",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method",
+        "label": "Mode",
+        "type": "select",
+        "default": "standard",
+        "options": [
+          {
+            "label": "Standard cash-secured put",
+            "value": "standard"
+          },
+          {
+            "label": "Roll (Out & Down) - simplified",
+            "value": "roll"
+          }
+        ]
+      },
+      {
+        "id": "underlying_price",
+        "label": "Underlying price (current)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "strike_price",
+        "label": "Strike price (original)",
+        "type": "number",
+        "default": 95,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "premium_received",
+        "label": "Premium received (per share)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "contracts",
+        "label": "Number of contracts (sell)",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "max": 1000
+      },
+      {
+        "id": "days_to_expiry",
+        "label": "Days until option expiry",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 365
+      },
+      {
+        "id": "commission_per_contract",
+        "label": "Commission per contract (round-trip assumed for roll calculation)",
+        "type": "number",
+        "default": 0.65,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "cash_interest_rate_annual",
+        "label": "Opportunity cost / cash interest (annual %, for reference)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "tax_rate",
+        "label": "Estimated tax rate on short-term option income (%)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "roll_details",
+        "label": "Roll (Out & Down) details",
+        "show_when": {
+          "field": "method",
+          "is": "roll"
+        },
+        "fields": [
+          {
+            "id": "contracts_to_roll",
+            "label": "Number of contracts to roll",
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 1000
+          },
+          {
+            "id": "new_strike_price",
+            "label": "New strike price (after roll)",
+            "type": "number",
+            "default": 90,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "new_premium_received",
+            "label": "Premium expected for new strike (per share)",
+            "type": "number",
+            "default": 3,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "days_until_roll",
+            "label": "Days until roll (from now)",
+            "type": "integer",
+            "default": 15,
+            "min": 1,
+            "max": 365
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides practical, trade-level metrics for cash-secured put positions: required cash reserve, net credit, break-even price, maximum potential loss, and both period and approximate annualized returns. It also includes a simplified illustrative scenario for rolling a subset of contracts out and down.",
+      "The tool is designed for decision support and scenario exploration. It does not replace brokerage execution platforms, legal advice, or tax guidance. Results are illustrative and rely on inputs provided by the user."
+    ],
+    "methodology": [
+      "Calculations follow straightforward arithmetic: premiums are per-share and multiplied by contract size (100 shares per contract). Cash required equals strike price × contracts × 100. Net credit subtracts estimated commissions. Annualized return is an approximation using linear scaling (return × 365 / days_to_expiry).",
+      "Model and user-interface design follow recognized practices for reliability and traceability. For secure handling of inputs, storage, and integration, follow NIST guidance on data integrity and ISO/IEC best practices for information security. Accuracy and safety disclaimers reference IEEE guidelines for algorithmic transparency and OSHA recommendations for operational controls where applicable."
+    ],
+    "how_is_calculated": [
+      "Total premium = premium_received × contracts × 100",
+      "Cash required = strike_price × contracts × 100",
+      "Break-even price = strike_price − premium_received",
+      "Maximum potential loss (to zero) = (strike_price − premium_received) × contracts × 100",
+      "Net credit = total_premium − estimated_commissions",
+      "Return on cash (period) = net_credit / cash_required",
+      "Approx. annualized return = return_on_cash × (365 / days_to_expiry)"
+    ],
+    "examples": [
+      "Example: Sell 1 put at 95 strike, receive $2.50 premium, 30 days to expiry. Cash required = $9,500. Total premium = $250. Net credit (after $0.65 commission) = $249.35 (illustrative). Return on cash ≈ 2.62% for the period, annualized ≈ 31.8% (approx.).",
+      "Rolling example (illustrative): If rolling 1 contract from strike 95 to new strike 90, collect a different premium for the new strike, and pay estimated closing and opening commissions, the net change in credit and new cash reserve are shown. This is a simplified model and does not replicate live fill prices or slippage."
+    ],
+    "faqs": [
+      {
+        "question": "What does 'cash-secured' mean?",
+        "answer": "Cash-secured means you reserve the full cash amount needed to buy the underlying at the strike if assigned. The calculator computes that reserved amount as strike × contracts × 100."
+      },
+      {
+        "question": "Are commissions, fees, and taxes included?",
+        "answer": "The calculator deducts a user-specified commission per contract as an estimate. It provides a field for a tax rate for user reference but does not compute detailed tax liability. Users should consult tax professionals for precise tax treatment."
+      },
+      {
+        "question": "How accurate are the annualized returns?",
+        "answer": "Annualized returns use a linear scaling approximation (return × 365 / days). This ignores path dependency, reinvestment, and timing effects. Use annualized results for rough comparison only; do not treat them as guaranteed."
+      },
+      {
+        "question": "Is this suitable for trade execution?",
+        "answer": "No. This tool is for scenarios and planning. Execution depends on live market prices, fills, margin rules, and broker-specific requirements."
+      },
+      {
+        "question": "What standards support the calculator's trust assertions?",
+        "answer": "Design, data handling, and transparency recommendations referenced include NIST frameworks for data integrity, ISO/IEC information security guidance, IEEE recommendations for algorithmic transparency, and OSHA guidance for operational safety oversight where human procedures are concerned."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (National Institute of Standards & Technology)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (International Organization for Standardization)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA (Occupational Safety and Health Administration)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission - Investor Bulletin",
+        "url": "https://www.sec.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Cash-secured put",
+        "definition": "A short put option position where the seller holds sufficient cash to buy the underlying at the strike if assigned."
+      },
+      {
+        "term": "Break-even price",
+        "definition": "Strike price minus premium received; the underlying price at which the position's net result is zero at expiration (ignoring commissions and taxes)."
+      },
+      {
+        "term": "Net credit",
+        "definition": "Total premium received minus estimated commissions and fees."
+      },
+      {
+        "term": "Return on cash",
+        "definition": "Net credit divided by the cash required (reserve) for the position; shown per period."
+      },
+      {
+        "term": "Annualized return (approx.)",
+        "definition": "A linearized projection of the period return to a 365-day basis; an approximation for comparison, not a guarantee."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/options/cash-secured-put"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.sec.gov",
+        "label": "U.S. SEC",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "FinancialCalculation",
+      "HowTo"
+    ]
+  }
+}

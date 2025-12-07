@@ -1,0 +1,479 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Safe Withdrawal Rate Calculator (Advanced)",
+    "description": "Interactive retirement withdrawal toolkit supporting multiple methods (fixed-rate, inflation-adjusted, 4% rule-of-thumb, and Monte Carlo heuristic). Produces first-year withdrawal, required portfolio for a target spending level, and method-specific guidance. Includes accuracy caveats and citations to standards for computational validation."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "inflation_adjusted",
+    "methods": {
+      "fixed_rate": {
+        "label": "Fixed-rate withdrawal",
+        "description": "Withdraw a fixed percentage of the portfolio each year (does not rebalance for inflation).",
+        "variables": {
+          "withdrawal_rate": {
+            "expression": "withdrawal_rate_pct",
+            "dependencies": [
+              "withdrawal_rate_pct"
+            ],
+            "label": "Withdrawal rate (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "initial_withdrawal": {
+            "expression": "portfolio_value * (withdrawal_rate / 100)",
+            "dependencies": [
+              "portfolio_value",
+              "withdrawal_rate"
+            ],
+            "label": "First-year withdrawal",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "initial_withdrawal",
+            "label": "First-year withdrawal",
+            "variable": "initial_withdrawal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "withdrawal_rate",
+            "label": "Withdrawal rate",
+            "variable": "withdrawal_rate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "inflation_adjusted": {
+        "label": "Inflation-adjusted withdrawal",
+        "description": "Start with a withdrawal percentage, then index the withdrawn amount to inflation each year. Useful when you want spending power maintained in real terms.",
+        "variables": {
+          "initial_withdrawal": {
+            "expression": "portfolio_value * (withdrawal_rate_pct / 100)",
+            "dependencies": [
+              "portfolio_value",
+              "withdrawal_rate_pct"
+            ],
+            "label": "First-year withdrawal",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "required_portfolio": {
+            "expression": "annual_spending / (withdrawal_rate_pct / 100)",
+            "dependencies": [
+              "annual_spending",
+              "withdrawal_rate_pct"
+            ],
+            "label": "Portfolio required to support target spending",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "initial_withdrawal",
+            "label": "First-year withdrawal",
+            "variable": "initial_withdrawal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "required_portfolio",
+            "label": "Required portfolio for target spending",
+            "variable": "required_portfolio",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "rule_of_thumb": {
+        "label": "Rule-of-thumb (4% style)",
+        "description": "A conservative, simple rule-of-thumb expressed as a flat percentage. Use as a quick benchmark rather than a guarantee.",
+        "variables": {
+          "rule_rate": {
+            "expression": "4",
+            "dependencies": [],
+            "label": "Rule-of-thumb withdrawal rate (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "initial_withdrawal": {
+            "expression": "portfolio_value * (rule_rate / 100)",
+            "dependencies": [
+              "portfolio_value",
+              "rule_rate"
+            ],
+            "label": "First-year withdrawal (rule-of-thumb)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "rule_margin_vs_custom": {
+            "expression": "rule_rate - withdrawal_rate_pct",
+            "dependencies": [
+              "rule_rate",
+              "withdrawal_rate_pct"
+            ],
+            "label": "Difference between rule and your chosen rate (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "initial_withdrawal",
+            "label": "First-year withdrawal (rule-of-thumb)",
+            "variable": "initial_withdrawal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "rule_rate",
+            "label": "Rule-of-thumb SWR",
+            "variable": "rule_rate",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "rule_margin_vs_custom",
+            "label": "Rule margin vs custom rate",
+            "variable": "rule_margin_vs_custom",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "monte_carlo": {
+        "label": "Monte Carlo heuristic (approximate)",
+        "description": "Provides a heuristic estimate derived from expected real return and volatility. Full Monte Carlo requires a computational engine and many simulated paths; this method uses a conservative analytic heuristic when full simulation is not enabled.",
+        "variables": {
+          "real_return_pct": {
+            "expression": "expected_return_pct - expected_inflation_pct",
+            "dependencies": [
+              "expected_return_pct",
+              "expected_inflation_pct"
+            ],
+            "label": "Expected real return (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "probable_withdrawal_rate": {
+            "expression": "real_return_pct - (monte_carlo_volatility_pct / 4)",
+            "dependencies": [
+              "real_return_pct",
+              "monte_carlo_volatility_pct"
+            ],
+            "label": "Heuristic sustainable withdrawal rate (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "initial_withdrawal": {
+            "expression": "portfolio_value * (probable_withdrawal_rate / 100)",
+            "dependencies": [
+              "portfolio_value",
+              "probable_withdrawal_rate"
+            ],
+            "label": "First-year withdrawal (heuristic)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "simulation_count_out": {
+            "expression": "simulation_count",
+            "dependencies": [
+              "simulation_count"
+            ],
+            "label": "Simulation count (input)",
+            "unit": "count",
+            "format": "integer",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "probable_withdrawal_rate",
+            "label": "Heuristic SWR",
+            "variable": "probable_withdrawal_rate",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "initial_withdrawal",
+            "label": "First-year withdrawal (heuristic)",
+            "variable": "initial_withdrawal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "simulation_count_out",
+            "label": "Requested simulation count",
+            "variable": "simulation_count_out",
+            "format": "integer"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "portfolio_value",
+        "label": "Current portfolio value (USD)",
+        "type": "number",
+        "default": 1000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "annual_spending",
+        "label": "Desired first-year spending (USD)",
+        "type": "number",
+        "default": 40000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "withdrawal_rate_pct",
+        "label": "Custom withdrawal rate (%)",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "expected_return_pct",
+        "label": "Nominal expected portfolio return (%) per year",
+        "type": "number",
+        "default": 6,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "expected_inflation_pct",
+        "label": "Expected inflation (%) per year",
+        "type": "number",
+        "default": 2,
+        "min": -2,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "retirement_years",
+        "label": "Planned retirement horizon (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 60,
+        "step": 1
+      },
+      {
+        "id": "start_age",
+        "label": "Planned retirement start age",
+        "type": "integer",
+        "default": 65,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "use_monte_carlo",
+        "label": "Enable Monte Carlo options?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "simulation_count",
+        "label": "Monte Carlo simulation count",
+        "type": "integer",
+        "default": 1000,
+        "min": 100,
+        "max": 100000,
+        "step": 100
+      },
+      {
+        "id": "monte_carlo_volatility_pct",
+        "label": "Estimated annualized volatility (%) for Monte Carlo",
+        "type": "number",
+        "default": 12,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "monte_carlo_options",
+        "label": "Monte Carlo options",
+        "show_when": {
+          "field": "use_monte_carlo",
+          "is": "yes"
+        },
+        "fields": [
+          {
+            "id": "simulation_count",
+            "label": "Simulations",
+            "type": "integer",
+            "default": 1000,
+            "min": 100,
+            "max": 100000,
+            "step": 100
+          },
+          {
+            "id": "monte_carlo_volatility_pct",
+            "label": "Monte Carlo volatility (%)",
+            "type": "number",
+            "default": 12,
+            "min": 0,
+            "max": 100,
+            "step": 0.1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps estimate sustainable retirement withdrawals using multiple methods: fixed-rate, inflation-adjusted, a rule-of-thumb benchmark, and a Monte Carlo heuristic. Use the controls to compare outcomes and understand trade-offs between simplicity and model complexity.",
+      "Results are intended as guidance, not guarantees. The tool includes conservative heuristics and exposes the parameters that matter most: portfolio value, spending, expected returns, inflation, and volatility."
+    ],
+    "methodology": [
+      "Fixed-rate: multiplies portfolio value by the chosen withdrawal percentage to produce a first-year withdrawal.",
+      "Inflation-adjusted: computes the first-year withdrawal from a rate and shows the portfolio required to support a target first-year spending; subsequent years are indexed to the inflation assumption to preserve spending power.",
+      "Rule-of-thumb: a flat benchmark (4%) provided for quick comparison; treat it as a heuristic rather than a guaranteed safe rate.",
+      "Monte Carlo heuristic: when full simulation is not available, we estimate a conservative sustainable rate using expected real return minus a volatility buffer. Full Monte Carlo simulation (many stochastic paths) is recommended for deeper analysis and requires a computational engine."
+    ],
+    "how_is_calculated": [
+      "Initial withdrawal (fixed or inflation-adjusted) = portfolio_value * (withdrawal_rate % / 100).",
+      "Required portfolio for target spending = annual_spending / (withdrawal_rate % / 100).",
+      "Rule-of-thumb SWR = 4% (benchmark only).",
+      "Monte Carlo heuristic SWR ≈ expected_real_return % - (volatility % / 4). This is a conservative analytic approximation and not a replacement for full simulation."
+    ],
+    "examples": [
+      "Example 1: $1,000,000 portfolio, 4% withdrawal → first-year withdrawal = $40,000.",
+      "Example 2: $800,000 portfolio, target $50,000 spending, chosen rate 5% → required portfolio = $50,000 / 0.05 = $1,000,000 (shows shortfall).",
+      "Example 3 (heuristic): expected return 6%, inflation 2% → expected real return 4%. With volatility 12%, heuristic SWR ≈ 4% - (12% / 4) = 1% (very conservative)."
+    ],
+    "summary": [
+      "Compare methods to see the sensitivity of withdrawal outcomes to key assumptions.",
+      "Consider running full Monte Carlo simulations with a dedicated engine for scenario probabilities and sequence-of-returns risk analysis.",
+      "Adjust assumptions conservatively and revisit plans periodically as markets and personal circumstances change."
+    ],
+    "faqs": [
+      {
+        "question": "Is the 4% rule always safe?",
+        "answer": "No. The 4% rule is a long-used benchmark for a 30-year retirement in historical US-market conditions. Safety depends on horizon, returns, inflation, sequence-of-returns, taxes, and spending flexibility."
+      },
+      {
+        "question": "What does the Monte Carlo heuristic mean?",
+        "answer": "It provides a conservative approximate withdrawal rate based on expected real return minus a volatility buffer. For a probability-based answer you must run full stochastic simulations."
+      },
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates are approximate. Numerical results depend on input assumptions and model choice. For computational reproducibility, follow numerics best practices (IEEE floating-point considerations) and validate simulations against independent engines."
+      },
+      {
+        "question": "Should I rely only on this calculator?",
+        "answer": "Use this tool for initial planning and comparison. For legally binding financial advice, tax, or regulatory decisions consult a licensed professional."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (numerical computing and reproducibility principles)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (standards directory)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association (floating-point and numerical stability guidance)",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (regulatory compliance practices for operations)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Safe Withdrawal Rate (SWR)",
+        "definition": "The percentage of a portfolio that can be withdrawn annually with the aim of not exhausting the portfolio within a given horizon."
+      },
+      {
+        "term": "Monte Carlo simulation",
+        "definition": "A computational method that uses repeated random sampling to estimate the probability distribution of outcomes under stochastic inputs."
+      },
+      {
+        "term": "Sequence-of-returns risk",
+        "definition": "The risk that the order of investment returns (particularly negative returns early in retirement) increases the chance of portfolio depletion."
+      },
+      {
+        "term": "Real return",
+        "definition": "Nominal return minus inflation; reflects change in purchasing power."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/retirement/swr-explainer",
+      "/retirement/monte-carlo-guide"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

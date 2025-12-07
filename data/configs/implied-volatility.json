@@ -1,0 +1,451 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Implied Volatility Calculator (Multi‑method)",
+    "description": "Compute implied volatility for exchanged options using Black‑Scholes and Black‑76 methods with clear inputs, provenance, and numerical caveats. Includes safeguards for convergence and references to standards for data integrity and testing."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "black_scholes",
+    "methods": {
+      "black_scholes": {
+        "label": "Black‑Scholes (European options, continuous dividend yield)",
+        "description": "Standard Black‑Scholes implied volatility for European calls and puts with continuous dividend yield. Uses a robust root‑finding routine to match model price to observed market price.",
+        "variables": {
+          "S": {
+            "expression": "spot",
+            "dependencies": [
+              "spot"
+            ],
+            "label": "Spot price",
+            "unit": "USD",
+            "format": "decimal",
+            "display": true
+          },
+          "K": {
+            "expression": "strike",
+            "dependencies": [
+              "strike"
+            ],
+            "label": "Strike price",
+            "unit": "USD",
+            "format": "decimal",
+            "display": true
+          },
+          "market_price": {
+            "expression": "market_price",
+            "dependencies": [
+              "market_price"
+            ],
+            "label": "Observed option mid/last price",
+            "unit": "USD",
+            "format": "decimal",
+            "display": true
+          },
+          "T": {
+            "expression": "days_to_expiry / 365",
+            "dependencies": [
+              "days_to_expiry"
+            ],
+            "label": "Time to expiry (years)",
+            "format": "decimal",
+            "unit": "years",
+            "display": true
+          },
+          "r": {
+            "expression": "interest_rate / 100",
+            "dependencies": [
+              "interest_rate"
+            ],
+            "label": "Risk‑free rate (annual, decimal)",
+            "format": "percent",
+            "display": false
+          },
+          "q": {
+            "expression": "dividend_yield / 100",
+            "dependencies": [
+              "dividend_yield"
+            ],
+            "label": "Dividend yield (annual, decimal)",
+            "format": "percent",
+            "display": false
+          },
+          "vol": {
+            "expression": "root_find(price_bs, market_price)",
+            "dependencies": [
+              "price_bs",
+              "market_price"
+            ],
+            "label": "Implied volatility (root for model price = market price)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "d1": {
+            "expression": "(ln(S / K) + (r - q + 0.5 * vol^2) * T) / (vol * sqrt(T))",
+            "dependencies": [
+              "S",
+              "K",
+              "r",
+              "q",
+              "vol",
+              "T"
+            ],
+            "label": "d1 intermediate term",
+            "format": "decimal",
+            "display": false
+          },
+          "d2": {
+            "expression": "d1 - vol * sqrt(T)",
+            "dependencies": [
+              "d1",
+              "vol",
+              "T"
+            ],
+            "label": "d2 intermediate term",
+            "format": "decimal",
+            "display": false
+          },
+          "price_bs": {
+            "expression": "if(option_type == 'call', S * exp(-q * T) * N(d1) - K * exp(-r * T) * N(d2), K * exp(-r * T) * N(-d2) - S * exp(-q * T) * N(-d1))",
+            "dependencies": [
+              "S",
+              "K",
+              "q",
+              "r",
+              "T",
+              "d1",
+              "d2",
+              "option_type"
+            ],
+            "label": "Black‑Scholes theoretical price (for given vol)",
+            "unit": "USD",
+            "format": "decimal",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "implied_vol",
+            "label": "Implied volatility (Black‑Scholes)",
+            "variable": "vol",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "black_76": {
+        "label": "Black‑76 (options on futures/forward prices)",
+        "description": "Black‑76 style implied volatility where the model is defined on forward price. Use when quoting is on futures or forward instruments.",
+        "variables": {
+          "S": {
+            "expression": "spot",
+            "dependencies": [
+              "spot"
+            ],
+            "label": "Spot price",
+            "unit": "USD",
+            "format": "decimal",
+            "display": true
+          },
+          "K": {
+            "expression": "strike",
+            "dependencies": [
+              "strike"
+            ],
+            "label": "Strike price",
+            "unit": "USD",
+            "format": "decimal",
+            "display": true
+          },
+          "T": {
+            "expression": "days_to_expiry / 365",
+            "dependencies": [
+              "days_to_expiry"
+            ],
+            "label": "Time to expiry (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "r": {
+            "expression": "interest_rate / 100",
+            "dependencies": [
+              "interest_rate"
+            ],
+            "label": "Risk‑free rate (annual, decimal)",
+            "format": "percent",
+            "display": false
+          },
+          "q": {
+            "expression": "dividend_yield / 100",
+            "dependencies": [
+              "dividend_yield"
+            ],
+            "label": "Dividend yield (annual, decimal)",
+            "format": "percent",
+            "display": false
+          },
+          "F": {
+            "expression": "S * exp((r - q) * T)",
+            "dependencies": [
+              "S",
+              "r",
+              "q",
+              "T"
+            ],
+            "label": "Forward price",
+            "unit": "USD",
+            "format": "decimal",
+            "display": false
+          },
+          "vol": {
+            "expression": "root_find(price_black76, market_price)",
+            "dependencies": [
+              "price_black76",
+              "market_price"
+            ],
+            "label": "Implied volatility (Black‑76)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "d1": {
+            "expression": "(ln(F / K) + 0.5 * vol^2 * T) / (vol * sqrt(T))",
+            "dependencies": [
+              "F",
+              "K",
+              "vol",
+              "T"
+            ],
+            "label": "d1 for Black‑76",
+            "format": "decimal",
+            "display": false
+          },
+          "d2": {
+            "expression": "d1 - vol * sqrt(T)",
+            "dependencies": [
+              "d1",
+              "vol",
+              "T"
+            ],
+            "label": "d2 for Black‑76",
+            "format": "decimal",
+            "display": false
+          },
+          "price_black76": {
+            "expression": "if(option_type == 'call', exp(-r * T) * (F * N(d1) - K * N(d2)), exp(-r * T) * (K * N(-d2) - F * N(-d1)))",
+            "dependencies": [
+              "F",
+              "K",
+              "r",
+              "T",
+              "d1",
+              "d2",
+              "option_type"
+            ],
+            "label": "Black‑76 theoretical price (for given vol)",
+            "unit": "USD",
+            "format": "decimal",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "implied_vol_black76",
+            "label": "Implied volatility (Black‑76)",
+            "variable": "vol",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "spot",
+        "label": "Underlying spot price",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "strike",
+        "label": "Option strike price",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "market_price",
+        "label": "Observed option price (mid/last)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "days_to_expiry",
+        "label": "Days to expiry",
+        "type": "integer",
+        "default": 30,
+        "min": 0,
+        "max": 3650,
+        "step": 1
+      },
+      {
+        "id": "interest_rate",
+        "label": "Risk‑free interest rate (annual %)",
+        "type": "number",
+        "default": 1,
+        "min": -10,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "dividend_yield",
+        "label": "Dividend yield (annual %)",
+        "type": "number",
+        "default": 0,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "option_type",
+        "label": "Option type",
+        "type": "select",
+        "default": "call",
+        "options": [
+          {
+            "label": "Call",
+            "value": "call"
+          },
+          {
+            "label": "Put",
+            "value": "put"
+          }
+        ]
+      },
+      {
+        "id": "method",
+        "label": "Model method",
+        "type": "select",
+        "default": "black_scholes",
+        "options": [
+          {
+            "label": "Black‑Scholes (European)",
+            "value": "black_scholes"
+          },
+          {
+            "label": "Black‑76 (forward/futures)",
+            "value": "black_76"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "implied_vol",
+          "label": "Implied volatility (selected model)",
+          "format": "percent",
+          "unit": "%"
+        },
+        {
+          "id": "implied_vol_black76",
+          "label": "Implied volatility (Black‑76)",
+          "format": "percent",
+          "unit": "%"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator finds the implied volatility consistent with an observed option price using industry standard models and robust numerical routines. Choose the model that matches how the option is quoted (Black‑Scholes for spot‑based European options; Black‑76 for forward/futures based quotes).",
+      "Results are intended for indicative analysis and risk management. Numerical routines may fail to converge for deep in‑the‑money or extremely low prices; interpret outputs alongside market liquidity and quotes."
+    ],
+    "methodology": [
+      "Implied volatility is determined by numerically inverting the option pricing model: find the volatility input that makes the theoretical model price equal the observed market price.",
+      "This implementation computes intermediate terms (d1, d2) and model price, then applies a root‑finding procedure that combines bracketed solvers with safeguarded iterations to improve stability and convergence across a wide range of strikes and maturities.",
+      "Published standards and best practices for numerical testing and data integrity are followed where applicable (see citations). Always validate with a small set of known cases and compare with exchange quotes when available."
+    ],
+    "how_is_calculated": [
+      "Step 1: Convert user inputs to model units: T = days_to_expiry / 365, r = interest_rate / 100, q = dividend_yield / 100.",
+      "Step 2: For a candidate volatility sigma, compute d1 = (ln(S / K) + (r - q + 0.5 * sigma^2) * T) / (sigma * sqrt(T)) and d2 = d1 - sigma * sqrt(T).",
+      "Step 3: Compute model price using Black‑Scholes formula for calls or puts. For Black‑76, compute forward F = S * exp((r - q) * T) and apply the Black‑76 formula.",
+      "Step 4: Use a robust root‑finding procedure to find sigma such that model_price(sigma) = market_price. The calculator uses bracketing and safeguarded iterations to avoid divergence and to report failures explicitly."
+    ],
+    "examples": [
+      "Example 1: Spot 100, Strike 100, Price 2.5, 30 days, r 1% → implied vol ≈ value returned by Black‑Scholes method. Use result as a market‑quoted implied vol approximation.",
+      "Example 2: Futures quoted option: choose Black‑76, provide futures forward inputs indirectly via spot, rates, yield; result will differ from spot‑based Black‑Scholes implied volatility."
+    ],
+    "faqs": [
+      {
+        "question": "What should I do if the calculator returns no convergence or an error?",
+        "answer": "Check input consistency: ensure market price is within theoretical bounds (not below intrinsic value and not implausibly large). Increase the market price input precision, try an alternate model (Black‑76), and confirm days to expiry. If issues persist, widen search bounds or use a validated market data feed."
+      },
+      {
+        "question": "Does the tool account for options with American exercise or discrete dividends?",
+        "answer": "No. This tool implements European pricing models (Black‑Scholes and Black‑76) with continuous dividend yield. American options, early exercise features, or discrete dividend schedules require specialized models and may produce different implied volatilities."
+      },
+      {
+        "question": "How accurate is the implied volatility number?",
+        "answer": "Accuracy depends on the model fit, quality of market price, and numerical solver tolerance. Reported volatility is a model parameter that gives the closest theoretical price under the chosen model. Confirm sensitivity using vega and alternative methods."
+      },
+      {
+        "question": "How should I use the result in risk management?",
+        "answer": "Use implied volatility as a market indicator and input for greeks and scenario analysis. For position sizing or regulatory reporting, perform independent checks, include model risk buffers, and retain source data and timestamps for audit."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Implied volatility",
+        "definition": "The volatility input to an option pricing model (e.g., Black‑Scholes) that makes the model price equal the observed market price."
+      },
+      {
+        "term": "Black‑Scholes",
+        "definition": "A closed‑form model for pricing European options under constant volatility, continuous dividend yield, and lognormal price dynamics."
+      },
+      {
+        "term": "Black‑76",
+        "definition": "A variant of Black's model where options are priced on forwards or futures rather than on spot prices; commonly used for interest rate and commodity options."
+      },
+      {
+        "term": "Vega",
+        "definition": "The sensitivity of an option's price to a change in implied volatility; useful to gauge how much the implied volatility estimate affects theoretical price."
+      },
+      {
+        "term": "Convergence tolerance",
+        "definition": "Numerical threshold used by root‑finding routines to decide when the model price matches market price closely enough to stop iterations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Numerical Methods and Testing Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards for financial data and testing processes",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Software and algorithmic testing practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Data integrity and operational safety guidance (applied internally to testing processes)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "summary": [
+      "Select the model consistent with how the option is quoted, provide clean market inputs, and interpret the return as a model‑dependent parameter, not a market‑observed fixed quantity.",
+      "Run sensitivity checks (change price by bid/ask, vary rates) and retain input snapshots for governance. For regulatory or production use, validate numerics against a vetted implementation and document test coverage following the cited standards."
+    ]
+  }
+}

@@ -1,0 +1,519 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Fix & Flip Investment Calculator (Advanced)",
+    "description": "Comprehensive fix-and-flip calculator offering a detailed budget method, a 70% rule quick-check, and a lender/loan impact analysis. Computes profit, ROI, project costs, loan interest and fees, and maximum purchase price per the 70% guideline."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "detailed_budget",
+    "methods": {
+      "detailed_budget": {
+        "label": "Detailed Budget Analysis",
+        "description": "Full cost and return calculation including purchase, repairs, holding, closing, loan interest and points, contingency, and net sale to compute profit and investor ROI.",
+        "variables": {
+          "holding_costs": {
+            "expression": "monthly_holding_costs * holding_months",
+            "dependencies": [
+              "monthly_holding_costs",
+              "holding_months"
+            ],
+            "label": "Total holding costs",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "purchase_closing_costs": {
+            "expression": "purchase_price * closing_costs_purchase_percent / 100",
+            "dependencies": [
+              "purchase_price",
+              "closing_costs_purchase_percent"
+            ],
+            "label": "Purchase closing costs",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "loan_interest_total": {
+            "expression": "loan_amount * (loan_interest_annual_percent / 100) * (holding_months / 12)",
+            "dependencies": [
+              "loan_amount",
+              "loan_interest_annual_percent",
+              "holding_months"
+            ],
+            "label": "Estimated loan interest (holding period)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "loan_points_fee": {
+            "expression": "loan_amount * loan_points_percent / 100",
+            "dependencies": [
+              "loan_amount",
+              "loan_points_percent"
+            ],
+            "label": "Loan points / origination fees",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "contingency_amount": {
+            "expression": "repair_costs * contingency_percent / 100",
+            "dependencies": [
+              "repair_costs",
+              "contingency_percent"
+            ],
+            "label": "Contingency",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_project_cost": {
+            "expression": "purchase_price + repair_costs + holding_costs + purchase_closing_costs + loan_interest_total + loan_points_fee + contingency_amount + rehab_management_fee",
+            "dependencies": [
+              "purchase_price",
+              "repair_costs",
+              "holding_costs",
+              "purchase_closing_costs",
+              "loan_interest_total",
+              "loan_points_fee",
+              "contingency_amount",
+              "rehab_management_fee"
+            ],
+            "label": "Total project cost (all-in)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "sale_net": {
+            "expression": "arv * (1 - selling_costs_percent / 100)",
+            "dependencies": [
+              "arv",
+              "selling_costs_percent"
+            ],
+            "label": "Estimated net proceeds (after selling costs)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cash_invested": {
+            "expression": "(purchase_price - loan_amount) + repair_costs + purchase_closing_costs + loan_points_fee + contingency_amount + rehab_management_fee + holding_costs",
+            "dependencies": [
+              "purchase_price",
+              "loan_amount",
+              "repair_costs",
+              "purchase_closing_costs",
+              "loan_points_fee",
+              "contingency_amount",
+              "rehab_management_fee",
+              "holding_costs"
+            ],
+            "label": "Estimated cash invested (equity + fees)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "profit": {
+            "expression": "sale_net - total_project_cost",
+            "dependencies": [
+              "sale_net",
+              "total_project_cost"
+            ],
+            "label": "Estimated pre-tax profit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "roi_percent": {
+            "expression": "if(cash_invested == 0, 0, (profit / cash_invested) * 100)",
+            "dependencies": [
+              "cash_invested",
+              "profit"
+            ],
+            "label": "Estimated ROI (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "profit",
+            "label": "Profit (pre-tax)",
+            "variable": "profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "roi_percent",
+            "label": "ROI",
+            "variable": "roi_percent",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "total_project_cost",
+            "label": "Total Project Cost",
+            "variable": "total_project_cost",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "sale_net",
+            "label": "Net Sale Proceeds",
+            "variable": "sale_net",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "seventy_percent_rule": {
+        "label": "70% Rule Quick Check",
+        "description": "Quick heuristic used by many flippers: maximum purchase price = (ARV * 70%) - estimated repairs. This method returns the maximum offer under that rule and the difference to the entered purchase price.",
+        "variables": {
+          "max_purchase_price_70": {
+            "expression": "arv * 0.7 - repair_costs",
+            "dependencies": [
+              "arv",
+              "repair_costs"
+            ],
+            "label": "Max purchase price (70% rule)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "price_vs_70": {
+            "expression": "max_purchase_price_70 - purchase_price",
+            "dependencies": [
+              "max_purchase_price_70",
+              "purchase_price"
+            ],
+            "label": "Difference between 70% max and your purchase price",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "max_purchase_price_70",
+            "label": "70% Rule Max Purchase Price",
+            "variable": "max_purchase_price_70",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "price_vs_70",
+            "label": "Buffer (70% max minus entered purchase)",
+            "variable": "price_vs_70",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "loan_analysis": {
+        "label": "Loan & Financing Impact",
+        "description": "Focuses on loan-related costs and leverage: interest during hold, points, and loan-to-cost percentage to help evaluate lender terms.",
+        "variables": {
+          "loan_interest_total_la": {
+            "expression": "loan_amount * (loan_interest_annual_percent / 100) * (holding_months / 12)",
+            "dependencies": [
+              "loan_amount",
+              "loan_interest_annual_percent",
+              "holding_months"
+            ],
+            "label": "Loan interest (holding period)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "loan_points_fee_la": {
+            "expression": "loan_amount * loan_points_percent / 100",
+            "dependencies": [
+              "loan_amount",
+              "loan_points_percent"
+            ],
+            "label": "Loan points / fees",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_total_cost_for_ltc": {
+            "expression": "purchase_price + repair_costs + purchase_closing_costs + contingency_amount + rehab_management_fee + holding_costs",
+            "dependencies": [
+              "purchase_price",
+              "repair_costs",
+              "purchase_closing_costs",
+              "contingency_amount",
+              "rehab_management_fee",
+              "holding_costs"
+            ],
+            "label": "Estimated total project cost (excl. loan interest & points)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "loan_to_cost_percent": {
+            "expression": "if(estimated_total_cost_for_ltc == 0, 0, (loan_amount / estimated_total_cost_for_ltc) * 100)",
+            "dependencies": [
+              "loan_amount",
+              "estimated_total_cost_for_ltc"
+            ],
+            "label": "Loan-to-cost (LTC) percent",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "loan_interest_total_la",
+            "label": "Loan Interest (holding)",
+            "variable": "loan_interest_total_la",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "loan_points_fee_la",
+            "label": "Loan Points / Fees",
+            "variable": "loan_points_fee_la",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "loan_to_cost_percent",
+            "label": "Loan-to-Cost (%)",
+            "variable": "loan_to_cost_percent",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "purchase_price",
+        "label": "Purchase price (offer)",
+        "type": "number",
+        "default": 150000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "repair_costs",
+        "label": "Estimated repair / rehab costs",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "arv",
+        "label": "After Repair Value (ARV)",
+        "type": "number",
+        "default": 240000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "selling_costs_percent",
+        "label": "Selling costs (commissions, closing) % of sale",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "holding_months",
+        "label": "Estimated holding time (months)",
+        "type": "integer",
+        "default": 4,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "monthly_holding_costs",
+        "label": "Monthly holding costs (taxes, insurance, utilities)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 120000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "loan_interest_annual_percent",
+        "label": "Loan interest rate (annual %)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "loan_points_percent",
+        "label": "Loan points / origination fees (%)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "closing_costs_purchase_percent",
+        "label": "Closing costs at purchase (%)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "contingency_percent",
+        "label": "Contingency (% of repairs)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "max": 50,
+        "step": 0.1
+      },
+      {
+        "id": "rehab_management_fee",
+        "label": "Project management / subcontractor overhead (flat USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps fix-and-flip investors evaluate deals with multiple analysis methods: a detailed budget for all-in cost and ROI, a quick 70% rule check, and a focused loan impact analysis. Use realistic inputs for purchase, repair, holding, and financing to produce actionable estimates.",
+      "Results are pre-tax estimates intended for deal screening and planning. They do not replace professional appraisal, lender underwriting, tax advice, or local code and safety compliance checks."
+    ],
+    "methodology": [
+      "Calculations combine entered cost line items and standard financial formulas: net sale proceeds are modeled as ARV less selling costs percentage; loan interest during the holding period is prorated annually; points and origination fees are treated as upfront costs; contingency is applied as a percent of repair budget.",
+      "The 70% rule used here is the heuristic: Maximum Purchase = (ARV × 70%) − Estimated Repairs. This is a quick screening tool and does not include holding, closing, or financing costs, so further analysis is recommended before making offers."
+    ],
+    "how_is_calculated": [
+      "Holding costs = monthly_holding_costs × holding_months.",
+      "Loan interest (holding) = loan_amount × (annual_interest_rate / 100) × (holding_months / 12).",
+      "Net sale proceeds = ARV × (1 − selling_costs_percent / 100).",
+      "Profit = Net sale proceeds − Total project cost where Total project cost includes purchase, repairs, holding, closing, loan interest, loan points, contingency, and management fees.",
+      "ROI (%) = (Profit / Cash invested) × 100 where Cash invested approximates equity and fees: (purchase_price − loan_amount) + repair_costs + purchase_closing_costs + loan_points + contingency + rehab_management_fee + holding_costs."
+    ],
+    "faqs": [
+      {
+        "question": "Is the ROI shown pre-tax or after tax?",
+        "answer": "All outputs are pre-tax estimates. Taxes, depreciation recapture, capital gains treatment, and state/local tax rules are not applied. Consult a tax professional for after-tax calculations."
+      },
+      {
+        "question": "Does this calculator consider permitting, code issues, or unexpected structural problems?",
+        "answer": "No. Use the contingency field to model unexpected costs. For structural, environmental, or code issues, obtain inspections and separate professional estimates."
+      },
+      {
+        "question": "How accurate are loan interest estimates for different lender products?",
+        "answer": "Interest is prorated using the annual rate and holding time. Specific loan amortization, draw schedules, or interest-only products may change actual interest paid. Use the loan analysis method and consult lenders for exact terms."
+      },
+      {
+        "question": "What does the 70% rule mean and should I rely on it?",
+        "answer": "The 70% rule is a conservative screening heuristic. It excludes several real costs (holding, closing, financing). Use it for quick triage but always run the detailed budget before offers."
+      },
+      {
+        "question": "How should I handle zero or extreme inputs?",
+        "answer": "The calculator guards division-by-zero in key ratios. Enter realistic, positive values. Extreme inputs may produce misleading percentages; review assumptions and add contingency where uncertainty is high."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - Risk Management Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - Financial Services and Risk Standards",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Standards and Best Practices for Software Quality",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - Construction Safety",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "ARV (After Repair Value)",
+        "definition": "Estimated market value of the property after all repairs and improvements are completed."
+      },
+      {
+        "term": "Contingency",
+        "definition": "A reserve percentage of repair costs set aside for unforeseen expenses during renovation."
+      },
+      {
+        "term": "Loan points",
+        "definition": "Upfront fees charged by a lender expressed as a percentage of the loan amount, often used to buy a lower interest rate or as origination fees."
+      },
+      {
+        "term": "Cash invested",
+        "definition": "Approximate out-of-pocket equity plus fees and holding costs; used as the denominator for ROI calculations in this tool."
+      },
+      {
+        "term": "70% Rule",
+        "definition": "A quick screening heuristic: Maximum purchase = (ARV × 70%) − Estimated repairs. It does not include all transaction or holding costs."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST - Risk Management",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO - Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA - Construction Safety",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

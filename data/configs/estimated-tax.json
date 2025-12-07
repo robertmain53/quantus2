@@ -1,0 +1,597 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Estimated Tax Calculator (Advanced)",
+    "description": "Multi-method estimator for quarterly and annual estimated tax payments. Supports simple quarterly allocation, safe-harbor comparison, and annualized-income method for self-employed taxpayers. Includes calibration notes, regulatory accuracy caveats, and clear per-period payment guidance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "simple_quarterly",
+    "methods": {
+      "simple_quarterly": {
+        "label": "Quarterly estimator (simple)",
+        "description": "Estimate annual tax using an entered effective tax rate, subtract withholding and prior payments, and divide remaining liability across remaining quarters.",
+        "variables": {
+          "taxable_income": {
+            "expression": "annual_income - standard_deductions - other_deductions",
+            "dependencies": [
+              "annual_income",
+              "standard_deductions",
+              "other_deductions"
+            ],
+            "label": "Estimated taxable income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_annual_tax": {
+            "expression": "taxable_income * estimated_effective_tax_rate",
+            "dependencies": [
+              "taxable_income",
+              "estimated_effective_tax_rate"
+            ],
+            "label": "Estimated annual tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_after_credits": {
+            "expression": "estimated_annual_tax - estimated_tax_credits",
+            "dependencies": [
+              "estimated_annual_tax",
+              "estimated_tax_credits"
+            ],
+            "label": "Estimated tax after credits",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_payments_needed": {
+            "expression": "tax_after_credits - tax_withheld_year_to_date - payments_made",
+            "dependencies": [
+              "tax_after_credits",
+              "tax_withheld_year_to_date",
+              "payments_made"
+            ],
+            "label": "Total remaining payment needed",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_quarters": {
+            "expression": "4 - quarters_elapsed",
+            "dependencies": [
+              "quarters_elapsed"
+            ],
+            "label": "Remaining payment periods (quarters)",
+            "unit": "integer",
+            "format": "integer",
+            "display": true
+          },
+          "per_quarter_payment": {
+            "expression": "total_payments_needed / remaining_quarters",
+            "dependencies": [
+              "total_payments_needed",
+              "remaining_quarters"
+            ],
+            "label": "Payment per remaining quarter",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "estimated_annual_tax",
+            "label": "Estimated annual tax",
+            "variable": "estimated_annual_tax",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments_needed",
+            "label": "Total remaining payment needed",
+            "variable": "total_payments_needed",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_quarter_payment",
+            "label": "Payment per remaining quarter",
+            "variable": "per_quarter_payment",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "safe_harbor": {
+        "label": "Safe-harbor comparison",
+        "description": "Compare current-year estimated liability to two standard safe-harbor thresholds derived from prior-year tax to help avoid underpayment penalties.",
+        "variables": {
+          "safe_harbor_100": {
+            "expression": "prior_year_total_tax",
+            "dependencies": [
+              "prior_year_total_tax"
+            ],
+            "label": "100% of prior year tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "safe_harbor_110": {
+            "expression": "prior_year_total_tax * 1.10",
+            "dependencies": [
+              "prior_year_total_tax"
+            ],
+            "label": "110% of prior year tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "amount_to_meet_100": {
+            "expression": "safe_harbor_100 - tax_withheld_year_to_date - payments_made",
+            "dependencies": [
+              "safe_harbor_100",
+              "tax_withheld_year_to_date",
+              "payments_made"
+            ],
+            "label": "Payment needed to meet 100% safe harbor",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "amount_to_meet_110": {
+            "expression": "safe_harbor_110 - tax_withheld_year_to_date - payments_made",
+            "dependencies": [
+              "safe_harbor_110",
+              "tax_withheld_year_to_date",
+              "payments_made"
+            ],
+            "label": "Payment needed to meet 110% safe harbor",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "safe_harbor_100",
+            "label": "100% prior-year tax threshold",
+            "variable": "safe_harbor_100",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "safe_harbor_110",
+            "label": "110% prior-year tax threshold",
+            "variable": "safe_harbor_110",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "amount_to_meet_110",
+            "label": "Payment needed (110% threshold)",
+            "variable": "amount_to_meet_110",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "annualized_income_method": {
+        "label": "Annualized-income method (self-employed)",
+        "description": "Annualize year-to-date self-employment receipts, estimate annual tax, then calculate remaining required payments for the year.",
+        "variables": {
+          "annualized_income": {
+            "expression": "self_employment_income_to_date * (365 / days_elapsed)",
+            "dependencies": [
+              "self_employment_income_to_date",
+              "days_elapsed"
+            ],
+            "label": "Annualized self-employment income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annualized_taxable_income": {
+            "expression": "annualized_income - standard_deductions - other_deductions",
+            "dependencies": [
+              "annualized_income",
+              "standard_deductions",
+              "other_deductions"
+            ],
+            "label": "Annualized taxable income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "estimated_annual_tax": {
+            "expression": "annualized_taxable_income * estimated_effective_tax_rate",
+            "dependencies": [
+              "annualized_taxable_income",
+              "estimated_effective_tax_rate"
+            ],
+            "label": "Estimated annual tax (annualized)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "remaining_payment_due": {
+            "expression": "estimated_annual_tax - tax_withheld_year_to_date - payments_made",
+            "dependencies": [
+              "estimated_annual_tax",
+              "tax_withheld_year_to_date",
+              "payments_made"
+            ],
+            "label": "Remaining payment due for year",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_remaining_quarter": {
+            "expression": "remaining_payment_due / (4 - quarters_elapsed)",
+            "dependencies": [
+              "remaining_payment_due",
+              "quarters_elapsed"
+            ],
+            "label": "Estimated payment per remaining quarter",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annualized_income",
+            "label": "Annualized income",
+            "variable": "annualized_income",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_annual_tax",
+            "label": "Estimated annual tax (annualized)",
+            "variable": "estimated_annual_tax",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_remaining_quarter",
+            "label": "Payment per remaining quarter",
+            "variable": "per_remaining_quarter",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "filing_status",
+        "label": "Filing status",
+        "type": "select",
+        "default": "single",
+        "options": [
+          {
+            "label": "Single",
+            "value": "single"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "married_joint"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "married_separate"
+          },
+          {
+            "label": "Head of household",
+            "value": "hoh"
+          }
+        ]
+      },
+      {
+        "id": "annual_income",
+        "label": "Expected total annual income (all sources)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "self_employment_income_to_date",
+        "label": "Self-employment receipts year-to-date",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "days_elapsed",
+        "label": "Days elapsed in year for annualization",
+        "type": "integer",
+        "default": 90,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "standard_deductions",
+        "label": "Estimated total deductions (standard or itemized)",
+        "type": "number",
+        "default": 13850,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "other_deductions",
+        "label": "Other deductible adjustments",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "estimated_effective_tax_rate",
+        "label": "Estimated effective tax rate (decimal)",
+        "type": "decimal",
+        "default": 0.15,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "estimated_tax_credits",
+        "label": "Estimated nonrefundable tax credits",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "tax_withheld_year_to_date",
+        "label": "Tax withheld year-to-date (from paychecks/withholding)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "payments_made",
+        "label": "Estimated tax payments already made this year",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "prior_year_total_tax",
+        "label": "Total tax shown on prior year return",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "prior_year_agi",
+        "label": "Prior year adjusted gross income (AGI)",
+        "type": "number",
+        "default": 50000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "quarters_elapsed",
+        "label": "Number of quarterly payment periods already passed",
+        "type": "integer",
+        "default": 1,
+        "min": 0,
+        "max": 4,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "self_employed_section",
+        "label": "Self-employed inputs",
+        "fields": [
+          {
+            "id": "annual_income",
+            "label": "Expected total annual income (all sources)",
+            "type": "number",
+            "default": 60000,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "self_employment_income_to_date",
+            "label": "Self-employment receipts year-to-date",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 100
+          },
+          {
+            "id": "days_elapsed",
+            "label": "Days elapsed in year for annualization",
+            "type": "integer",
+            "default": 90,
+            "min": 1,
+            "max": 365,
+            "step": 1
+          },
+          {
+            "id": "standard_deductions",
+            "label": "Estimated total deductions (standard or itemized)",
+            "type": "number",
+            "default": 13850,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "other_deductions",
+            "label": "Other deductible adjustments",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "estimated_effective_tax_rate",
+            "label": "Estimated effective tax rate (decimal)",
+            "type": "decimal",
+            "default": 0.15,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "estimated_tax_credits",
+            "label": "Estimated nonrefundable tax credits",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "tax_withheld_year_to_date",
+            "label": "Tax withheld year-to-date (from paychecks/withholding)",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "payments_made",
+            "label": "Estimated tax payments already made this year",
+            "type": "number",
+            "default": 0,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "prior_year_total_tax",
+            "label": "Total tax shown on prior year return",
+            "type": "number",
+            "default": 5000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "prior_year_agi",
+            "label": "Prior year adjusted gross income (AGI)",
+            "type": "number",
+            "default": 50000,
+            "min": 0,
+            "step": 50
+          },
+          {
+            "id": "quarters_elapsed",
+            "label": "Number of quarterly payment periods already passed",
+            "type": "integer",
+            "default": 1,
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you approximate federal estimated tax payments using three complementary methods: a simple quarterly allocation, a safe-harbor comparison using prior year tax, and an annualized-income approach for self-employed taxpayers. It is designed to provide actionable per-period payment suggestions and highlight where additional documentation or professional advice may be needed.",
+      "The tool emphasizes transparency: you provide expected income, deductions, credits, and withholding; the calculator applies straightforward arithmetic models and exposes intermediate variables so you can see how each number contributes to the result."
+    ],
+    "methodology": [
+      "Calculations use simple algebraic models (taxable income × effective tax rate = estimated tax) and standard allocation across remaining payment periods. The tool intentionally asks for an estimated effective tax rate rather than embedding full tax tables to avoid errors from tax-law changes and filing-status edge cases.",
+      "Quality and security practices for this tool align with recognized standards: software process quality follows ISO 9001 principles, test and documentation practices follow IEEE guidance, and system security controls are informed by NIST recommendations. This tool is not a substitute for official guidance; see citations for authoritative sources.",
+      "Accuracy caveat: results are estimates only. They depend on the accuracy of user inputs and simplify tax complexity (phaseouts, AMT, state taxes, self-employment tax, and refundable credits may require more detailed models). The safe-harbor method compares prior-year tax thresholds (100% and 110%) as reference points; consult a tax professional for complex situations."
+    ],
+    "how_is_calculated": [
+      "Step 1: Compute estimated taxable income = annual income − deductions.",
+      "Step 2: Estimate annual tax = taxable income × estimated effective tax rate.",
+      "Step 3: Subtract credits and year-to-date withholding/payments to get remaining liability.",
+      "Step 4: Allocate remaining liability across remaining payment periods (quarters) or compare to safe-harbor thresholds derived from prior-year tax (100% and 110%)."
+    ],
+    "examples": [
+      "Example 1: If your estimated annual taxable income is $60,000 and you use a 15% effective tax rate, estimated annual tax = $9,000. If you have $2,000 withheld and $500 in payments, remaining = $6,500. With three quarters left, per-quarter = $2,166.67.",
+      "Example 2 (safe-harbor): Prior year tax $8,000. 110% threshold = $8,800. If withholding + payments to date total $4,000, you may need to pay $4,800 to meet the 110% threshold and reduce risk of underpayment penalty."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Accuracy depends on input quality and on simplifications (no phase-in of credits, no AMT, federal-only). Use conservative estimates for income changes and consult a tax professional for complex returns. This tool provides guidance, not a formal tax calculation."
+      },
+      {
+        "question": "What if the calculator shows a negative remaining payment?",
+        "answer": "A negative value indicates estimated withholding and payments exceed the modelled tax liability; you likely do not need additional estimated payments, but review inputs and withholdings and consider adjusting your withholding rather than overpaying estimated taxes."
+      },
+      {
+        "question": "What is the safe-harbor rule?",
+        "answer": "Safe-harbor thresholds shown are 100% and 110% of prior-year tax. Meeting either threshold through withholding and timely payments generally shields you from underpayment penalties. Consult authoritative guidance for detailed eligibility rules."
+      },
+      {
+        "question": "How should I pick the effective tax rate?",
+        "answer": "Use last year’s effective rate (total tax divided by taxable income) as a starting point, or estimate conservatively higher if your income may increase. The tool exposes intermediate values so you can test different rates."
+      },
+      {
+        "question": "Does this include state tax or self-employment tax?",
+        "answer": "No. State taxes, self-employment (SE) tax, and other specialized calculations are not modelled here. For SE tax, estimate separately and include it in the effective tax rate or as an additional payment."
+      },
+      {
+        "question": "How do standards like NIST or ISO relate to this calculator?",
+        "answer": "NIST, ISO, and IEEE references inform the tool’s development practices (security, quality, testing). They do not alter tax calculations but provide confidence in process controls and documentation."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Estimated Taxes",
+        "url": "https://www.irs.gov/payments/estimated-taxes"
+      },
+      {
+        "label": "IRS — Withholding and Estimated Tax",
+        "url": "https://www.irs.gov/individuals"
+      },
+      {
+        "label": "NIST — Computer Security Resource Center",
+        "url": "https://csrc.nist.gov/"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA — Safety and Health Regulations",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Estimated tax",
+        "definition": "Payments made during the year on income not subject to withholding, or when withholding is insufficient, to cover expected tax liability."
+      },
+      {
+        "term": "Safe harbor",
+        "definition": "A threshold based on prior-year tax (commonly 100% or 110%) that, if met with timely payments and withholding, generally reduces the risk of underpayment penalties."
+      },
+      {
+        "term": "Annualized income",
+        "definition": "A projection that scales year-to-date income to an annual figure to estimate tax liability when income is uneven through the year."
+      },
+      {
+        "term": "Effective tax rate",
+        "definition": "Estimated total tax divided by taxable income; used here as a simplifying input instead of full tax-table calculations."
+      },
+      {
+        "term": "Withholding",
+        "definition": "Tax amounts withheld from paychecks or other payments that count toward your annual tax liability."
+      }
+    ]
+  }
+}

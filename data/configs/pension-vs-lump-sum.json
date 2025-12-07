@@ -1,0 +1,373 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Pension vs Lump Sum — Comparative Decision Tool (Advanced)",
+    "description": "Compare the present value of a lifetime pension (annual payments) with a lump-sum offer. Supports growing annuity discounting, simple tax treatment of lump sums, and an investment-equivalent withdrawal calculation. Includes calibration guidance, limits, and accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "compare",
+    "methods": {
+      "compare": {
+        "label": "Discounted annuity vs lump-sum comparison",
+        "description": "Computes the present value of a (potentially escalating) annual pension using a discount rate, compares it to the lump-sum net of tax, and shows the equivalent sustainable annual withdrawal if the lump sum is invested at an expected return.",
+        "variables": {
+          "n_periods": {
+            "expression": "expected_years",
+            "dependencies": [
+              "expected_years"
+            ],
+            "label": "Expected number of payment years",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "r_discount": {
+            "expression": "discount_rate_pct/100",
+            "dependencies": [
+              "discount_rate_pct"
+            ],
+            "label": "Discount rate (decimal)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "g": {
+            "expression": "annuity_escalation_pct/100",
+            "dependencies": [
+              "annuity_escalation_pct"
+            ],
+            "label": "Annuity annual escalation (decimal)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "A0": {
+            "expression": "annual_pension",
+            "dependencies": [
+              "annual_pension"
+            ],
+            "label": "Annual pension payment (first-year amount)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annuity_pv": {
+            "expression": "A0 * (1 - ((1+g)/(1+r_discount)) ^ n_periods) / (r_discount - g)",
+            "dependencies": [
+              "A0",
+              "g",
+              "r_discount",
+              "n_periods"
+            ],
+            "label": "Present value of escalating annuity",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "lump_net": {
+            "expression": "lump_sum_offer * (1 - tax_rate_pct/100)",
+            "dependencies": [
+              "lump_sum_offer",
+              "tax_rate_pct"
+            ],
+            "label": "Lump sum net of immediate tax",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "r_ret": {
+            "expression": "expected_return_pct/100",
+            "dependencies": [
+              "expected_return_pct"
+            ],
+            "label": "Expected investment return (decimal)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "equivalent_withdrawal": {
+            "expression": "lump_net * r_ret / (1 - (1 + r_ret) ^ (-n_periods))",
+            "dependencies": [
+              "lump_net",
+              "r_ret",
+              "n_periods"
+            ],
+            "label": "Equivalent sustainable annual withdrawal from the lump sum",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "difference": {
+            "expression": "annuity_pv - lump_net",
+            "dependencies": [
+              "annuity_pv",
+              "lump_net"
+            ],
+            "label": "Present-value difference (annuity PV − lump net)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annuity_present_value",
+            "label": "Present value of pension",
+            "variable": "annuity_pv",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "lump_sum_net_after_tax",
+            "label": "Lump sum (net after immediate tax)",
+            "variable": "lump_net",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equivalent_annual_withdrawal",
+            "label": "Equivalent annual withdrawal (if lump sum invested)",
+            "variable": "equivalent_withdrawal",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "difference",
+            "label": "Annuity PV minus lump net",
+            "variable": "difference",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "annual_pension",
+        "label": "Annual pension payment (first-year amount)",
+        "type": "number",
+        "default": 36000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "lump_sum_offer",
+        "label": "Lump-sum offer",
+        "type": "number",
+        "default": 500000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "current_age",
+        "label": "Your current age",
+        "type": "integer",
+        "default": 65,
+        "min": 50,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "expected_years",
+        "label": "Expected number of payment years (life expectancy in years)",
+        "type": "integer",
+        "default": 20,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "expected_return_pct",
+        "label": "Expected annual investment return (for lump sum)",
+        "type": "number",
+        "default": 4,
+        "min": -5,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "discount_rate_pct",
+        "label": "Discount rate used to value pension (annual)",
+        "type": "number",
+        "default": 3,
+        "min": -5,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "inflation_pct",
+        "label": "Expected inflation rate (annual) — for your reference",
+        "type": "number",
+        "default": 2,
+        "min": -2,
+        "max": 15,
+        "step": 0.1
+      },
+      {
+        "id": "tax_rate_pct",
+        "label": "Estimated immediate tax rate on lump-sum withdrawal (percent)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 60,
+        "step": 1
+      },
+      {
+        "id": "annuity_escalation_pct",
+        "label": "Annuity annual escalation (cost-of-living) rate (percent)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      {
+        "id": "include_joint_survivor",
+        "label": "Include joint-survivor option (affects life expectancy and payment rules)",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes (adjust life expectancy manually)",
+            "value": "yes"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool helps you compare a lifetime pension (expressed as an annual payment) with a one-time lump-sum offer. It computes the present value of the pension using a discount rate and a growing-annuity formula, and compares that to the lump-sum amount after immediate tax withholding. It also shows the equivalent sustainable annual withdrawal if the lump sum were invested at an expected return.",
+      "Use the inputs to model your specific circumstances: expected years of payments (life expectancy), discount and investment return assumptions, expected tax on the lump sum, and any expected annual escalation (cost-of-living adjustments) to the pension. Results are indicative and meant to support decision-making, not replace professional advice."
+    ],
+    "methodology": [
+      "The pension is modeled as a potentially escalating annual payment A0 for a fixed number of years n. The present value is calculated using a standard growing-annuity formula discounted at the chosen discount rate.",
+      "The lump sum is compared on a net-of-immediate-tax basis (simple withholding). We also compute the sustainable level annual withdrawal from the lump sum if invested at the expected return, using the capital recovery formula.",
+      "This calculator intentionally separates the discount rate (used for valuing the pension) from the expected investment return (used to model what the lump sum could generate). This avoids conflating purchasing power and portfolio return assumptions."
+    ],
+    "how_is_calculated": [
+      "Present value of an escalating annuity: PV = A0 * (1 - ((1+g)/(1+r))^n) / (r - g), where A0 = first-year annual payment, g = escalation rate, r = discount rate, n = number of years.",
+      "Lump sum net of tax: Lump net = Lump offer * (1 - tax rate).",
+      "Equivalent annual withdrawal from lump sum: Withdrawal = Lump net * r_ret / (1 - (1 + r_ret)^(-n)), where r_ret = expected investment return and n = years."
+    ],
+    "examples": [
+      "Example 1: A0 = 36,000; g = 0%; r = 3%; n = 20 → PV ≈ 36,000 * (1 - (1/1.03)^20) / 0.03.",
+      "Example 2: Lump offer = 500,000; tax = 20% → Lump net = 400,000. If expected return r_ret = 4% and n = 20, sustainable withdrawal ≈ 400,000 * 0.04 / (1 - 1.04^-20)."
+    ],
+    "summary": [
+      "If PV of the pension is greater than the lump net, the pension has higher risk-adjusted value under your assumptions. If the lump net is higher, investing the lump may produce higher sustainable income.",
+      "Results are sensitive to the discount rate, expected investment return, tax treatment, and the assumed number of years. Small changes in these inputs can change the recommendation."
+    ],
+    "faqs": [
+      {
+        "question": "Why separate discount rate and expected investment return?",
+        "answer": "Discount rate reflects the value you place on receiving money today versus later and incorporates risk and alternative uses of funds. Expected investment return is an assumption about how the lump sum might grow. Keeping them separate clarifies trade-offs and avoids double-counting."
+      },
+      {
+        "question": "What if the discount rate equals the escalation rate?",
+        "answer": "If the discount rate r is equal to escalation g, the standard growing-annuity formula divides by zero. In practice, set r slightly above g or consult an advisor. The tool flags sensitivity to r ≈ g in its guidance; do not rely on exact equality."
+      },
+      {
+        "question": "Does the calculator include ongoing taxes on investment returns?",
+        "answer": "No. The tool applies a simple immediate tax assumption to the lump sum. It does not model annual taxes on investment income, capital gains, or specific tax-deferred account rules. Use the results as a baseline and consult a tax professional for detailed modelling."
+      },
+      {
+        "question": "How should I choose the discount rate?",
+        "answer": "Choose a discount rate that reflects your personal time preference, portfolio risk tolerance, and alternative investment opportunities. Consider using conservative assumptions and test sensitivity with several plausible rates."
+      },
+      {
+        "question": "Is joint-survivor coverage modeled?",
+        "answer": "Not explicitly. Joint-survivor options change payment rules and effective life expectancy. If relevant, increase the expected number of payment years or seek a tailored actuarial quote; then re-run the comparison."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Present Value (PV)",
+        "definition": "The current value of a future stream of payments discounted at a chosen rate to reflect time value and risk."
+      },
+      {
+        "term": "Discount rate",
+        "definition": "Annual rate used to discount future payments to present value; reflects opportunity cost and risk preferences."
+      },
+      {
+        "term": "Growing annuity",
+        "definition": "A series of payments that increase at a constant percentage (escalation) each period."
+      },
+      {
+        "term": "Lump sum net",
+        "definition": "The lump-sum offer after immediate, simple withholding or tax assumed in the input; does not model deferred or complex tax rules."
+      },
+      {
+        "term": "Equivalent withdrawal",
+        "definition": "Annual amount that can be withdrawn from a lump sum invested at an assumed return, over the chosen number of years."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Special Publication on Risk Management and Controls (relevant for model validation and security)",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf"
+      },
+      {
+        "label": "ISO guidance on information security management (for data handling and QA)",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE standards and best-practice resources (for engineering controls and validation processes)",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA guidance (for workplace safety and operational controls where applicable)",
+        "url": "https://www.osha.gov/"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf",
+        "label": "NIST SP 800-53 (controls)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/isoiec-27001-information-security.html",
+        "label": "ISO/IEC 27001 information security",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

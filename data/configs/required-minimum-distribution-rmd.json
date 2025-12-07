@@ -1,0 +1,373 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Required Minimum Distribution (RMD) Calculator",
+    "description": "Calculate RMD amounts for account owners and beneficiaries using user-supplied distribution periods or common IRS tables. Includes guidance, examples, and accuracy caveats for regulatory compliance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "owner_standard",
+    "methods": {
+      "owner_standard": {
+        "label": "Account owner RMD (Standard - Uniform Lifetime Table)",
+        "description": "Estimate the owner’s RMD using a distribution period (life expectancy divisor). Use the IRS Uniform Lifetime Table value for the owner's age when available. If you prefer, enter a custom distribution period based on your advisor or worksheet.",
+        "variables": {
+          "period": {
+            "expression": "distribution_period",
+            "dependencies": [
+              "distribution_period",
+              "account_owner_age"
+            ],
+            "label": "Distribution period (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "rmd_amount_var": {
+            "expression": "account_balance / period",
+            "dependencies": [
+              "account_balance",
+              "period"
+            ],
+            "label": "Calculated RMD",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "rmd_amount",
+            "label": "Required minimum distribution",
+            "variable": "rmd_amount_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "distribution_period",
+            "label": "Distribution period (used)",
+            "variable": "period",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "spouse_joint": {
+        "label": "Spouse beneficiary (Joint life expectancy)",
+        "description": "Estimate the RMD when the sole designated beneficiary is a spouse who is more than 10 years younger (or otherwise qualifies) and joint life expectancy tables apply. Enter the joint-life distribution period from the applicable table or enter a custom period.",
+        "variables": {
+          "period": {
+            "expression": "distribution_period",
+            "dependencies": [
+              "distribution_period",
+              "beneficiary_is_spouse",
+              "beneficiary_age",
+              "account_owner_age"
+            ],
+            "label": "Joint-life distribution period (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "rmd_amount_var": {
+            "expression": "account_balance / period",
+            "dependencies": [
+              "account_balance",
+              "period"
+            ],
+            "label": "Calculated RMD (spouse joint)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "rmd_amount_spouse",
+            "label": "Required minimum distribution (spouse joint)",
+            "variable": "rmd_amount_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "distribution_period_spouse",
+            "label": "Joint-life distribution period (used)",
+            "variable": "period",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "inherited_nonspouse": {
+        "label": "Inherited account (non-spouse life expectancy)",
+        "description": "Estimate RMDs for a beneficiary taking distributions based on the beneficiary’s life expectancy. For accounts where life-expectancy stretching still applies, enter the appropriate distribution period from the IRS single-life expectancy table or enter a custom period.",
+        "variables": {
+          "period": {
+            "expression": "distribution_period",
+            "dependencies": [
+              "distribution_period",
+              "beneficiary_age"
+            ],
+            "label": "Beneficiary distribution period (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "rmd_amount_var": {
+            "expression": "account_balance / period",
+            "dependencies": [
+              "account_balance",
+              "period"
+            ],
+            "label": "Calculated RMD (beneficiary)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "rmd_amount_beneficiary",
+            "label": "Required minimum distribution (beneficiary)",
+            "variable": "rmd_amount_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "distribution_period_beneficiary",
+            "label": "Beneficiary distribution period (used)",
+            "variable": "period",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "ten_year_rule": {
+        "label": "10-Year Rule (SECURE Act) — equal annual withdraw assumption",
+        "description": "For accounts subject to the 10-year rule, this method shows equal annual distributions over 10 years as one possible pattern. The SECURE Act allows flexibility in timing; consult a tax advisor for permitted timing alternatives.",
+        "variables": {
+          "period": {
+            "expression": "10",
+            "dependencies": [],
+            "label": "Distribution period (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "rmd_amount_var": {
+            "expression": "account_balance / 10",
+            "dependencies": [
+              "account_balance"
+            ],
+            "label": "Equal annual amount over 10 years",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "rmd_amount_10yr",
+            "label": "Equal annual distribution under 10-year rule",
+            "variable": "rmd_amount_var",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "distribution_period_10yr",
+            "label": "Distribution period (used)",
+            "variable": "period",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "account_balance",
+        "label": "Account balance (as of calculation date)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "account_owner_age",
+        "label": "Account owner age (years)",
+        "type": "integer",
+        "default": 72,
+        "min": 18,
+        "max": 130,
+        "step": 1
+      },
+      {
+        "id": "distribution_option",
+        "label": "How to determine distribution period",
+        "type": "select",
+        "default": "manual",
+        "options": [
+          {
+            "label": "Enter distribution period manually (recommended for advisors)",
+            "value": "manual"
+          },
+          {
+            "label": "I will use values from IRS tables (enter table value below)",
+            "value": "irs_table"
+          }
+        ]
+      },
+      {
+        "id": "distribution_period",
+        "label": "Distribution period (life expectancy divisor, years)",
+        "type": "number",
+        "default": 27.4,
+        "min": 1,
+        "max": 120,
+        "step": 0.1
+      },
+      {
+        "id": "beneficiary_is_spouse",
+        "label": "Is the sole designated beneficiary a spouse?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "beneficiary_age",
+        "label": "Beneficiary age (if applicable)",
+        "type": "integer",
+        "default": 68,
+        "min": 18,
+        "max": 130,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates required minimum distributions (RMDs) by dividing an account balance by a distribution period (life expectancy divisor). It supports owner RMDs, spouse joint-life estimates, beneficiary life-expectancy scenarios, and a simple equal-annual 10-year rule illustration.",
+      "Use a distribution period drawn from the applicable IRS table or enter a custom period provided by your tax advisor or plan administrator. This tool provides educational estimates and does not replace tax or legal advice."
+    ],
+    "methodology": [
+      "RMD = Account balance ÷ Distribution period. The distribution period is the life expectancy divisor determined by IRS tables (Uniform Lifetime Table, Joint Life Expectancy Table, or Single-Life Table) or by plan-specific worksheets.",
+      "The calculator uses a user-supplied distribution period so institutions and advisors can apply the exact divisor required by statute or plan rules. This design avoids hard-coded table lookups and reduces stale-data risk.",
+      "Security and accuracy guidance: calculations follow standard arithmetic and numeric best practices. Implementation and deployment should adhere to NIST cybersecurity frameworks for data protection, ISO 9001 principles for quality management of calculation logic, IEEE recommendations for numerical stability where applicable, and OSHA guidance for workplace safety policy compliance when operating production systems that process sensitive data."
+    ],
+    "how_is_calculated": [
+      "Step 1: Enter account balance as of the calculation date.",
+      "Step 2: Enter the distribution period (life expectancy divisor) from the appropriate IRS table or enter a custom period supplied by your advisor.",
+      "Step 3: The calculator computes RMD = account balance ÷ distribution period and presents the result as an annual amount.",
+      "For the 10-year rule illustration, the tool divides the account balance by 10 to show equal annual amounts; actual permitted timing under law may vary."
+    ],
+    "examples": [
+      "Example 1: Account owner age 72, balance $200,000, distribution period 25.6 → RMD = 200000 ÷ 25.6 = $7,812.50.",
+      "Example 2: Non-spouse beneficiary with distribution period 15.2 and balance $150,000 → RMD ≈ 150000 ÷ 15.2 = $9,868.42.",
+      "Example 3: Account subject to 10-year rule, balance $120,000 → equal annual amount = 120000 ÷ 10 = $12,000."
+    ],
+    "faqs": [
+      {
+        "question": "Where do I get the correct distribution period (divisor)?",
+        "answer": "Use the appropriate IRS life expectancy table or your plan administrator’s worksheet. If in doubt, consult a tax professional. This tool accepts the divisor you enter and calculates the resulting RMD."
+      },
+      {
+        "question": "Does this calculator know all special-case IRS rules (spouse exceptions, SECURE Act changes)?",
+        "answer": "No. This calculator provides arithmetic estimates based on the divisor you supply. Special rules and exceptions (spousal elections, SECURE Act 10-year rule, eligible designated beneficiaries) require review of statute and plan documents; consult a tax advisor for applicability to your situation."
+      },
+      {
+        "question": "Is the 10-year rule calculation shown here the only permitted pattern?",
+        "answer": "No. The 10-year rule allows flexibility in timing; this tool shows equal annual withdrawals as one simple illustration. Actual permitted timing may permit different patterns within the 10-year window and can affect tax timing."
+      },
+      {
+        "question": "How accurate are the numbers?",
+        "answer": "Arithmetic accuracy is exact to standard floating-point precision. Results depend entirely on the accuracy of your inputs (balance and distribution period). We recommend cross-checking with the official IRS worksheets and your tax advisor before acting."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS - Required minimum distribution worksheets and instructions",
+        "url": "https://www.irs.gov/retirement-plans/plan-participant-employee/required-minimum-distribution-worksheets"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Required Minimum Distribution (RMD)",
+        "definition": "The minimum amount that must be withdrawn from certain retirement accounts each year, calculated as account balance divided by a life expectancy factor (distribution period)."
+      },
+      {
+        "term": "Distribution period (life expectancy divisor)",
+        "definition": "The life expectancy factor (in years) used as the divisor in the RMD formula. Values come from IRS tables or plan worksheets and depend on age and beneficiary status."
+      },
+      {
+        "term": "Uniform Lifetime Table",
+        "definition": "IRS table commonly used to determine the distribution period for most account owners when calculating RMDs."
+      },
+      {
+        "term": "Joint life expectancy",
+        "definition": "A reduced distribution period used when the sole designated beneficiary is a qualifying younger spouse and joint-life tables apply."
+      },
+      {
+        "term": "10-Year Rule (SECURE Act)",
+        "definition": "A rule that, for many beneficiaries of accounts of individuals who died after 2019, requires the account to be fully distributed within 10 years; timing inside those 10 years can vary."
+      }
+    ],
+    "summary": [
+      "This tool computes RMDs by dividing account balance by a distribution period you provide. It supports multiple common scenarios but does not replace statutory worksheets or professional advice.",
+      "Validate distribution periods against official IRS tables or plan documents and consult a tax professional for special cases and filing requirements."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/retirement-plans/plan-participant-employee/required-minimum-distribution-worksheets",
+        "label": "IRS RMD worksheets and instructions",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST - standards and frameworks",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

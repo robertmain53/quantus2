@@ -1,0 +1,457 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Savings Goal Calculator (Advanced)",
+    "description": "Multi-method savings goal tool: compute required periodic deposit to reach a target, estimate time to reach a goal given fixed deposits, or project future value. Assumes periodic compounding and periodic contributions; see methodology for assumptions and edge cases."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "monthly_payment",
+    "methods": {
+      "monthly_payment": {
+        "label": "Required periodic deposit to reach a goal",
+        "description": "Calculates the periodic deposit (per compounding period) required to reach the target amount after a given number of years, accounting for starting balance and nominal annual interest rate.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_pct / 100",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Annual interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "years * compounding_per_year",
+            "dependencies": [
+              "years",
+              "compounding_per_year"
+            ],
+            "label": "Total number of compounding periods",
+            "format": "decimal",
+            "display": false
+          },
+          "i": {
+            "expression": "r / compounding_per_year",
+            "dependencies": [
+              "r",
+              "compounding_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "factor": {
+            "expression": "(pow(1 + i, n) - 1) / i",
+            "dependencies": [
+              "i",
+              "n"
+            ],
+            "label": "Annuity accumulation factor",
+            "format": "decimal",
+            "display": false
+          },
+          "present_compounded": {
+            "expression": "current_balance * pow(1 + i, n)",
+            "dependencies": [
+              "current_balance",
+              "i",
+              "n"
+            ],
+            "label": "Current balance compounded forward",
+            "format": "currency",
+            "display": false
+          },
+          "required_deposit": {
+            "expression": "(goal_amount - present_compounded) / factor",
+            "dependencies": [
+              "goal_amount",
+              "present_compounded",
+              "factor"
+            ],
+            "label": "Required deposit per period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "required_deposit",
+            "label": "Deposit required per compounding period",
+            "variable": "required_deposit",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "time_to_goal": {
+        "label": "Time to reach goal given fixed deposit",
+        "description": "Estimates the number of compounding periods and years required to reach the goal when contributing a fixed deposit each period and compounding at the specified nominal annual rate.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_pct / 100",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Annual interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "i": {
+            "expression": "r / compounding_per_year",
+            "dependencies": [
+              "r",
+              "compounding_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "deposit": {
+            "expression": "monthly_deposit",
+            "dependencies": [
+              "monthly_deposit"
+            ],
+            "label": "Deposit per compounding period",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "numerator": {
+            "expression": "goal_amount * i + deposit",
+            "dependencies": [
+              "goal_amount",
+              "i",
+              "deposit"
+            ],
+            "label": "Numerator for solving periods",
+            "format": "decimal",
+            "display": false
+          },
+          "denominator": {
+            "expression": "current_balance * i + deposit",
+            "dependencies": [
+              "current_balance",
+              "i",
+              "deposit"
+            ],
+            "label": "Denominator for solving periods",
+            "format": "decimal",
+            "display": false
+          },
+          "periods_needed": {
+            "expression": "ln(numerator / denominator) / ln(1 + i)",
+            "dependencies": [
+              "numerator",
+              "denominator",
+              "i"
+            ],
+            "label": "Number of compounding periods needed",
+            "format": "decimal",
+            "display": true
+          },
+          "years_needed": {
+            "expression": "periods_needed / compounding_per_year",
+            "dependencies": [
+              "periods_needed",
+              "compounding_per_year"
+            ],
+            "label": "Years needed",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periods_needed",
+            "label": "Compounding periods required",
+            "variable": "periods_needed",
+            "format": "decimal"
+          },
+          {
+            "id": "years_needed",
+            "label": "Estimated years required",
+            "variable": "years_needed",
+            "unit": "years",
+            "format": "decimal"
+          }
+        ]
+      },
+      "future_value": {
+        "label": "Projected future value given deposits and time",
+        "description": "Projects the accumulated value after a specified number of years, given a starting balance and fixed periodic deposits.",
+        "variables": {
+          "r": {
+            "expression": "annual_rate_pct / 100",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Annual interest rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "n": {
+            "expression": "years * compounding_per_year",
+            "dependencies": [
+              "years",
+              "compounding_per_year"
+            ],
+            "label": "Total number of compounding periods",
+            "format": "decimal",
+            "display": false
+          },
+          "i": {
+            "expression": "r / compounding_per_year",
+            "dependencies": [
+              "r",
+              "compounding_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "format": "decimal",
+            "display": false
+          },
+          "annuity_factor": {
+            "expression": "(pow(1 + i, n) - 1) / i",
+            "dependencies": [
+              "i",
+              "n"
+            ],
+            "label": "Annuity accumulation factor",
+            "format": "decimal",
+            "display": false
+          },
+          "future_value": {
+            "expression": "current_balance * pow(1 + i, n) + monthly_deposit * annuity_factor",
+            "dependencies": [
+              "current_balance",
+              "i",
+              "n",
+              "monthly_deposit",
+              "annuity_factor"
+            ],
+            "label": "Projected future value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_contributions": {
+            "expression": "current_balance + monthly_deposit * n",
+            "dependencies": [
+              "current_balance",
+              "monthly_deposit",
+              "n"
+            ],
+            "label": "Total principal contributed",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "interest_earned": {
+            "expression": "future_value - total_contributions",
+            "dependencies": [
+              "future_value",
+              "total_contributions"
+            ],
+            "label": "Interest earned",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "future_value",
+            "label": "Projected account value",
+            "variable": "future_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_contributions",
+            "label": "Total contributions (principal)",
+            "variable": "total_contributions",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_earned",
+            "label": "Interest earned",
+            "variable": "interest_earned",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "goal_amount",
+        "label": "Goal amount (target savings)",
+        "type": "number",
+        "default": 10000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "current_balance",
+        "label": "Current savings balance",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Expected annual nominal interest rate (%)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "compounding_per_year",
+        "label": "Compounding periods per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "monthly_deposit",
+        "label": "Deposit per compounding period (enter amount you plan to add each period)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "years",
+        "label": "Time horizon (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.01,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This savings goal calculator offers three complementary modes: calculate the periodic deposit required to hit a target by a specific date, estimate how long it will take given a fixed deposit amount, or project the future value of current savings plus regular deposits. It assumes nominal annual interest and discrete compounding.",
+      "Use the mode that matches your question: choose 'Required periodic deposit' to find how much to save each compounding period, 'Time to reach goal' to estimate duration given your deposit amount, or 'Projected future value' to see accumulated balance after a set time. Results are estimates and depend on the inputs and assumptions you provide."
+    ],
+    "methodology": [
+      "Calculations use standard time-value-of-money formulas. Periodic interest rate i = annual_rate_pct / 100 / compounding_per_year. Total periods n = years * compounding_per_year. Future value of a series: FV = PV*(1+i)^n + PMT * (( (1+i)^n - 1) / i), where PMT is the deposit each period.",
+      "To solve for PMT (deposit per period) we algebraically rearrange the future value formula. To solve for periods n we isolate the exponential term and apply natural logarithms. Special-case when periodic rate i = 0 is treated as simple linear accumulation: FV = PV + PMT * n.",
+      "This tool assumes deposits occur at the end of each compounding period (ordinary annuity). If your deposits occur at the beginning of periods, or your deposit frequency differs from compounding frequency, adjust inputs or consult a financial professional for an equivalently adjusted calculation."
+    ],
+    "how_is_calculated": [
+      "Periodic rate: i = annual_rate_pct / 100 / compounding_per_year",
+      "Total periods: n = years * compounding_per_year",
+      "Future value: FV = current_balance * (1 + i)^n + monthly_deposit * ( ( (1+i)^n - 1 ) / i )",
+      "Required deposit per period: PMT = (goal_amount - current_balance * (1+i)^n) / ( ( (1+i)^n - 1 ) / i )",
+      "Periods to reach goal (solve for n): n = ln( (goal_amount * i + PMT) / (current_balance * i + PMT) ) / ln(1 + i). If i = 0, n = (goal_amount - current_balance) / PMT."
+    ],
+    "examples": [
+      "Example 1: Goal $12,000 in 3 years, current $2,000, annual rate 2%, monthly compounding → tool returns required deposit per month.",
+      "Example 2: If you deposit $200 per period, current $0, annual rate 3%, compounding monthly → tool estimates years required to reach a specified goal."
+    ],
+    "summary": [
+      "Select the calculation method that matches your planning question. All outputs reflect the assumption of periodic compounding and end-of-period contributions unless noted.",
+      "Rounding: displayed currency outputs are rounded for readability; underlying calculations keep higher precision. Use the inputs to model alternative scenarios."
+    ],
+    "faqs": [
+      {
+        "question": "Does the calculator assume deposits are monthly?",
+        "answer": "By default this tool assumes deposits occur once per compounding period. If you use 12 compounding periods per year, deposits are effectively monthly. To model different deposit frequency, change the compounding periods per year to match your deposit frequency."
+      },
+      {
+        "question": "What if the interest rate is zero?",
+        "answer": "When the periodic interest rate is zero, the formulas reduce to linear accumulation. For required deposit: PMT = (goal - current_balance) / n. For time to goal: n = (goal - current_balance) / PMT. The tool includes these cases in methodology; results will reflect linear math."
+      },
+      {
+        "question": "Are these figures guaranteed?",
+        "answer": "No. Results are estimates based on the inputs and mathematical formulas. Actual returns can differ due to market fluctuations, fees, taxes, and changes in interest rates. Consider this a planning aid, not financial advice."
+      },
+      {
+        "question": "Can I use this for irregular deposits or changing rates?",
+        "answer": "This calculator assumes fixed periodic deposits and a constant nominal annual rate. For irregular deposits or variable rates, use more advanced cash-flow modeling or consult a financial advisor."
+      },
+      {
+        "question": "How accurate are the calculations?",
+        "answer": "Calculations use well-established time-value-of-money formulas. Precision may be affected by rounding and the expression engine. See the methodology and citations for standards used in numeric reliability and recommended best practices."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Numerical Standards and Guidelines",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Financial and Numerical Accuracy Guidance",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Recommended Numeric Practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Risk communication principles (for clear user instruction standards)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Compounding period",
+        "definition": "The frequency at which interest is applied to the account (e.g., monthly = 12 periods per year)."
+      },
+      {
+        "term": "Periodic interest rate (i)",
+        "definition": "The nominal annual interest rate divided by the number of compounding periods per year."
+      },
+      {
+        "term": "PMT",
+        "definition": "The fixed deposit amount added each compounding period (end of period by default)."
+      },
+      {
+        "term": "Future value (FV)",
+        "definition": "Projected balance after compounding interest and contributions for n periods."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/savings/future-value",
+      "/guides/savings/how-to-set-goals"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

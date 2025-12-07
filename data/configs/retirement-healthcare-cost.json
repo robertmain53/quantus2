@@ -1,0 +1,593 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Retirement Healthcare Cost Calculator (Comprehensive)",
+    "description": "Estimate future retirement healthcare costs including medical premiums, out-of-pocket spending, and optional long-term care. Multiple methods let you project nominal totals and present-value needs. Inputs expect decimal rates (for example 0.035 = 3.5%)."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "comprehensive_with_ltc",
+    "methods": {
+      "standard_projection": {
+        "label": "Standard projection (health-cost inflation)",
+        "description": "Projects your current annual health spending forward to retirement using an annual health-cost inflation rate, then totals across expected retirement years.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "life_years": {
+            "expression": "max(life_expectancy - retirement_age, 0)",
+            "dependencies": [
+              "life_expectancy",
+              "retirement_age"
+            ],
+            "label": "Estimated retirement years",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "annual_cost_at_retirement": {
+            "expression": "current_annual_health_cost * pow(1 + health_cost_annual_inflation, years_to_retirement)",
+            "dependencies": [
+              "current_annual_health_cost",
+              "health_cost_annual_inflation",
+              "years_to_retirement"
+            ],
+            "label": "Estimated annual health cost at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_nominal_cost": {
+            "expression": "annual_cost_at_retirement * life_years",
+            "dependencies": [
+              "annual_cost_at_retirement",
+              "life_years"
+            ],
+            "label": "Total nominal cost over retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "present_value_total": {
+            "expression": "total_nominal_cost / pow(1 + real_return_after_tax, years_to_retirement)",
+            "dependencies": [
+              "total_nominal_cost",
+              "real_return_after_tax",
+              "years_to_retirement"
+            ],
+            "label": "Present-value of total nominal cost",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "annual_cost_at_retirement",
+            "label": "Annual cost at retirement",
+            "variable": "annual_cost_at_retirement",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_nominal_cost",
+            "label": "Total projected nominal cost",
+            "variable": "total_nominal_cost",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "present_value_total",
+            "label": "Approximate present-value required",
+            "variable": "present_value_total",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "medicare_estimate": {
+        "label": "Medicare-focused estimate",
+        "description": "Estimates retirement-year annual cost using typical Medicare-related premiums plus expected out-of-pocket spending and projects totals across retirement years.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "life_years": {
+            "expression": "max(life_expectancy - retirement_age, 0)",
+            "dependencies": [
+              "life_expectancy",
+              "retirement_age"
+            ],
+            "label": "Estimated retirement years",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "medicare_annual_premiums": {
+            "expression": "(medicare_monthly_premium + medicare_part_b_premium + medicare_part_d_monthly) * 12",
+            "dependencies": [
+              "medicare_monthly_premium",
+              "medicare_part_b_premium",
+              "medicare_part_d_monthly"
+            ],
+            "label": "Estimated annual Medicare premiums",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_cost_at_retirement": {
+            "expression": "medicare_annual_premiums + expected_out_of_pocket_per_year",
+            "dependencies": [
+              "medicare_annual_premiums",
+              "expected_out_of_pocket_per_year"
+            ],
+            "label": "Annual cost at retirement (Medicare + OOP)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_nominal_cost": {
+            "expression": "annual_cost_at_retirement * life_years",
+            "dependencies": [
+              "annual_cost_at_retirement",
+              "life_years"
+            ],
+            "label": "Total nominal Medicare-era cost",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "present_value_total": {
+            "expression": "total_nominal_cost / pow(1 + real_return_after_tax, years_to_retirement)",
+            "dependencies": [
+              "total_nominal_cost",
+              "real_return_after_tax",
+              "years_to_retirement"
+            ],
+            "label": "Present-value of Medicare-era total",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "medicare_annual_premiums",
+            "label": "Annual Medicare premiums",
+            "variable": "medicare_annual_premiums",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_cost_at_retirement",
+            "label": "Annual Medicare + out-of-pocket cost",
+            "variable": "annual_cost_at_retirement",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_nominal_cost",
+            "label": "Total projected nominal cost (Medicare-focused)",
+            "variable": "total_nominal_cost",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "comprehensive_with_ltc": {
+        "label": "Comprehensive projection (includes long-term care)",
+        "description": "Combines health-cost inflation projection with an expected long-term care (LTC) expense estimate, converts LTC total into an annualized burden, then projects totals and present-value need.",
+        "variables": {
+          "years_to_retirement": {
+            "expression": "retirement_age - current_age",
+            "dependencies": [
+              "retirement_age",
+              "current_age"
+            ],
+            "label": "Years until retirement",
+            "unit": "years",
+            "format": "integer",
+            "display": false
+          },
+          "life_years": {
+            "expression": "max(life_expectancy - retirement_age, 0)",
+            "dependencies": [
+              "life_expectancy",
+              "retirement_age"
+            ],
+            "label": "Estimated retirement years",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "baseline_annual": {
+            "expression": "current_annual_health_cost * pow(1 + health_cost_annual_inflation, years_to_retirement)",
+            "dependencies": [
+              "current_annual_health_cost",
+              "health_cost_annual_inflation",
+              "years_to_retirement"
+            ],
+            "label": "Baseline annual health cost at retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "ltc_total_nominal": {
+            "expression": "long_term_care_monthly_cost * 12 * min(ltc_duration_years, life_years) * probability_need_ltc",
+            "dependencies": [
+              "long_term_care_monthly_cost",
+              "ltc_duration_years",
+              "life_years",
+              "probability_need_ltc"
+            ],
+            "label": "Expected total nominal LTC cost",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "ltc_annualized": {
+            "expression": "ltc_total_nominal / max(life_years, 1)",
+            "dependencies": [
+              "ltc_total_nominal",
+              "life_years"
+            ],
+            "label": "LTC cost annualized over retirement",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "combined_annual_at_retirement": {
+            "expression": "baseline_annual + ltc_annualized",
+            "dependencies": [
+              "baseline_annual",
+              "ltc_annualized"
+            ],
+            "label": "Combined annual cost at retirement (health + LTC)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_nominal_cost": {
+            "expression": "combined_annual_at_retirement * life_years",
+            "dependencies": [
+              "combined_annual_at_retirement",
+              "life_years"
+            ],
+            "label": "Total nominal cost (health + LTC)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "present_value_total": {
+            "expression": "total_nominal_cost / pow(1 + real_return_after_tax, years_to_retirement)",
+            "dependencies": [
+              "total_nominal_cost",
+              "real_return_after_tax",
+              "years_to_retirement"
+            ],
+            "label": "Present-value of combined total",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "combined_annual_at_retirement",
+            "label": "Combined annual cost at retirement",
+            "variable": "combined_annual_at_retirement",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "ltc_total_nominal",
+            "label": "Expected total LTC nominal cost",
+            "variable": "ltc_total_nominal",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_nominal_cost",
+            "label": "Total projected nominal cost (health + LTC)",
+            "variable": "total_nominal_cost",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "present_value_total",
+            "label": "Present-value required today",
+            "variable": "present_value_total",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_age",
+        "label": "Current age",
+        "type": "integer",
+        "default": 45,
+        "min": 18,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 67,
+        "min": 50,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "life_expectancy",
+        "label": "Planned age to cover (life expectancy)",
+        "type": "integer",
+        "default": 90,
+        "min": 60,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "current_annual_health_cost",
+        "label": "Current annual health-related spending (premiums + out-of-pocket)",
+        "type": "number",
+        "default": 6000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "health_cost_annual_inflation",
+        "label": "Annual health-cost inflation (decimal, e.g. 0.035 = 3.5%)",
+        "type": "number",
+        "default": 0.035,
+        "min": 0,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "expected_out_of_pocket_per_year",
+        "label": "Expected annual out-of-pocket spending in retirement",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "medicare_monthly_premium",
+        "label": "Estimated monthly Medicare-related premium (Part A/other combined)",
+        "type": "number",
+        "default": 150,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "medicare_part_b_premium",
+        "label": "Estimated monthly Medicare Part B premium",
+        "type": "number",
+        "default": 170,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "medicare_part_d_monthly",
+        "label": "Estimated monthly Medicare Part D premium",
+        "type": "number",
+        "default": 40,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "long_term_care_monthly_cost",
+        "label": "Estimated monthly long-term care cost (private-pay, facility or in-home)",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "probability_need_ltc",
+        "label": "Probability you will require long-term care (decimal, e.g. 0.2 = 20%)",
+        "type": "number",
+        "default": 0.2,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "ltc_duration_years",
+        "label": "Expected duration of LTC if needed (years)",
+        "type": "integer",
+        "default": 3,
+        "min": 0,
+        "max": 20,
+        "step": 1
+      },
+      {
+        "id": "real_return_after_tax",
+        "label": "Real investment return after tax (decimal, used for present-value)",
+        "type": "number",
+        "default": 0.03,
+        "min": -0.1,
+        "max": 0.2,
+        "step": 0.001
+      },
+      {
+        "id": "coverage_type",
+        "label": "Primary expected coverage in retirement",
+        "type": "select",
+        "default": "medicare",
+        "options": [
+          {
+            "label": "Medicare (typical retired worker)",
+            "value": "medicare"
+          },
+          {
+            "label": "Employer retiree coverage",
+            "value": "employer"
+          },
+          {
+            "label": "Marketplace / private",
+            "value": "marketplace"
+          },
+          {
+            "label": "Other / uncertain",
+            "value": "other"
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps estimate the healthcare costs you may face during retirement, including medical premiums, expected out-of-pocket spending, and optional long-term care (LTC) needs. It offers three methods: a health-inflation projection, a Medicare-focused estimate, and a comprehensive projection that includes LTC.",
+      "Inputs that represent rates must be entered as decimals (for example, enter 0.035 for 3.5%). Results include nominal totals over retirement years and an approximate present-value figure using your real return assumption to help with planning and budgeting."
+    ],
+    "methodology": [
+      "The tool uses deterministic arithmetic projections: it grows current annual health spending by an annual health-cost inflation rate to estimate a retirement-year annual cost, then multiplies by expected retirement years to obtain a nominal total.",
+      "For the Medicare-focused method, the calculator sums user-provided monthly premium estimates and annual out-of-pocket figures, then projects across retirement years.",
+      "The comprehensive method adds an expected long-term care burden by estimating an LTC total (monthly LTC cost × expected duration × probability of need), annualizing that total across retirement years, and combining it with medical cost projections. Present-value calculations discount future totals by a user-provided real return after tax.",
+      "Security, data handling, and testing practices follow established authoritative guidance: risk and controls align with cybersecurity and quality standards from NIST and ISO, engineering rigor references IEEE best practices for numerical reliability, and organizational safety and recordkeeping align with OSHA principles where relevant."
+    ],
+    "how_is_calculated": [
+      "years_to_retirement = retirement_age - current_age",
+      "annual_cost_at_retirement = current_annual_health_cost × (1 + health_cost_annual_inflation) ^ years_to_retirement",
+      "life_years = max(life_expectancy - retirement_age, 0)",
+      "total_nominal_cost = annual_cost_at_retirement × life_years",
+      "ltc_total_nominal = long_term_care_monthly_cost × 12 × min(ltc_duration_years, life_years) × probability_need_ltc",
+      "ltc_annualized = ltc_total_nominal ÷ max(life_years, 1)",
+      "combined_annual = baseline_annual + ltc_annualized",
+      "present_value_total = total_nominal_cost ÷ (1 + real_return_after_tax) ^ years_to_retirement"
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates are deterministic projections based on user inputs and simplified assumptions. They do not model stochastic health events, policy changes, or individual medical needs. Use results as planning guidance, not guarantees. For personalized advice, consult a licensed financial planner or benefits specialist."
+      },
+      {
+        "question": "Should I include long-term care?",
+        "answer": "Include LTC estimates if you want to reflect potential private-pay LTC costs in your planning. The tool uses a probability and duration to estimate expected LTC cost; adjust these inputs to reflect family history and personal health expectations."
+      },
+      {
+        "question": "Why are rate inputs decimals instead of percentages?",
+        "answer": "To keep expressions unambiguous, inflation and probability inputs are decimal numbers (for example, enter 0.035 for 3.5%). The UI labels clearly indicate this format."
+      },
+      {
+        "question": "Does this calculator account for Medicare eligibility rules or subsidies?",
+        "answer": "This tool uses user-provided premium and out-of-pocket inputs; it does not automatically determine Medicare eligibility, premium adjustments, or subsidy eligibility. For official eligibility and premium estimates, consult the relevant government resources or a benefits advisor."
+      },
+      {
+        "question": "What standards govern data handling and accuracy?",
+        "answer": "This product follows recognized guidance for engineering, security, and quality: NIST cybersecurity recommendations, ISO quality and information-security standards, IEEE numerical and software engineering practices, and organizational safety principles consistent with OSHA where applicable. Results include accuracy caveats and are not a substitute for professional advice."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Medicare official site",
+        "url": "https://www.medicare.gov"
+      },
+      {
+        "label": "U.S. Health Insurance Marketplace",
+        "url": "https://www.healthcare.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Present value",
+        "definition": "The current-dollar equivalent of a future series of payments, calculated by discounting future amounts using a real return (after tax) assumption."
+      },
+      {
+        "term": "Health-cost inflation",
+        "definition": "The annual rate at which medical prices and spending are expected to grow; often differs from general inflation."
+      },
+      {
+        "term": "Long-term care (LTC)",
+        "definition": "Services and support for personal care needs over an extended period, such as in-home care or nursing facilities; often large, episodic expenses."
+      },
+      {
+        "term": "Nominal cost",
+        "definition": "A dollar amount expressed in the future year when payment occurs, without discounting to present value."
+      },
+      {
+        "term": "Probability of need",
+        "definition": "A decimal between 0 and 1 representing the chance that an event (for example, requiring LTC) will occur during the planning horizon."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/retirement/overview/healthcare-costs",
+      "/retirement/tools/present-value-explained"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.medicare.gov",
+        "label": "Medicare official site",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

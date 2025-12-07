@@ -1,0 +1,554 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Tax Refund & Withholding Estimator",
+    "description": "Estimate your federal tax liability and likely refund (or amount due) for a given tax year, and compute suggested per-paycheck withholding adjustments. Provides clear assumptions, accuracy caveats, and links to authoritative standards and IRS resources."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "estimate_refund",
+    "methods": {
+      "estimate_refund": {
+        "label": "Refund estimate",
+        "description": "Quick estimate of taxable income, estimated federal tax liability, and net refund (payments + credits − tax). Uses standard deduction or itemized deduction, and a simplified progressive tax schedule for a conservative estimate.",
+        "variables": {
+          "adjusted_gross_income": {
+            "expression": "max(0, gross_wages + other_income - pre_tax_contributions - adjustments)",
+            "dependencies": [
+              "gross_wages",
+              "other_income",
+              "pre_tax_contributions",
+              "adjustments"
+            ],
+            "label": "Adjusted gross income (AGI)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "standard_deduction": {
+            "expression": "filing_status=='single'?13950 : filing_status=='married_joint'?27900 : filing_status=='head_household'?20900 : filing_status=='married_separate'?13950 : 27900",
+            "dependencies": [
+              "filing_status"
+            ],
+            "label": "Standard deduction (assumed)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "deduction_used": {
+            "expression": "itemized_deductions>standard_deduction?itemized_deductions:standard_deduction",
+            "dependencies": [
+              "itemized_deductions",
+              "standard_deduction"
+            ],
+            "label": "Deduction used (standard or itemized)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_income": {
+            "expression": "max(0, adjusted_gross_income - deduction_used)",
+            "dependencies": [
+              "adjusted_gross_income",
+              "deduction_used"
+            ],
+            "label": "Taxable income",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "tax_liability": {
+            "expression": "let t=taxable_income; t<=11000 ? t*0.10 : (t<=44725 ? 1100 + (t-11000)*0.12 : (t<=95375 ? 5147 + (t-44725)*0.22 : (t<=182100 ? 16290 + (t-95375)*0.24 : (t<=231250 ? 37104 + (t-182100)*0.32 : (t<=578125 ? 49640 + (t-231250)*0.35 : 174238.75 + (t-578125)*0.37)))))",
+            "dependencies": [
+              "taxable_income"
+            ],
+            "label": "Estimated federal tax liability (approx.)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_payments": {
+            "expression": "max(0, federal_withheld + estimated_payments)",
+            "dependencies": [
+              "federal_withheld",
+              "estimated_payments"
+            ],
+            "label": "Total federal payments (withheld + estimated)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_refund": {
+            "expression": "total_payments + tax_credits - tax_liability",
+            "dependencies": [
+              "total_payments",
+              "tax_credits",
+              "tax_liability"
+            ],
+            "label": "Estimated refund (positive) or amount due (negative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "dependents_credit_effect": {
+            "expression": "dependents * 2000",
+            "dependencies": [
+              "dependents"
+            ],
+            "label": "Estimated dependent credit effect (illustrative)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          }
+        },
+        "outputs": [
+          {
+            "id": "taxable_income",
+            "label": "Taxable income",
+            "variable": "taxable_income",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "tax_liability",
+            "label": "Estimated federal tax liability",
+            "variable": "tax_liability",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments",
+            "label": "Total federal payments",
+            "variable": "total_payments",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_refund",
+            "label": "Estimated refund (positive) or amount due (negative)",
+            "variable": "net_refund",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "deduction_used",
+            "label": "Deduction used (standard or itemized)",
+            "variable": "deduction_used",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "withholding_adjustment": {
+        "label": "Withholding adjustment suggestion",
+        "description": "Estimate suggested annual and per-paycheck withholding change to target zero balance. Repeats taxable income and liability calculation and then divides needed adjustment across pay periods.",
+        "variables": {
+          "adjusted_gross_income": {
+            "expression": "max(0, gross_wages + other_income - pre_tax_contributions - adjustments)",
+            "dependencies": [
+              "gross_wages",
+              "other_income",
+              "pre_tax_contributions",
+              "adjustments"
+            ],
+            "label": "Adjusted gross income (AGI)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "standard_deduction": {
+            "expression": "filing_status=='single'?13950 : filing_status=='married_joint'?27900 : filing_status=='head_household'?20900 : filing_status=='married_separate'?13950 : 27900",
+            "dependencies": [
+              "filing_status"
+            ],
+            "label": "Standard deduction (assumed)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "deduction_used": {
+            "expression": "itemized_deductions>standard_deduction?itemized_deductions:standard_deduction",
+            "dependencies": [
+              "itemized_deductions",
+              "standard_deduction"
+            ],
+            "label": "Deduction used",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "taxable_income": {
+            "expression": "max(0, adjusted_gross_income - deduction_used)",
+            "dependencies": [
+              "adjusted_gross_income",
+              "deduction_used"
+            ],
+            "label": "Taxable income",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "tax_liability": {
+            "expression": "let t=taxable_income; t<=11000 ? t*0.10 : (t<=44725 ? 1100 + (t-11000)*0.12 : (t<=95375 ? 5147 + (t-44725)*0.22 : (t<=182100 ? 16290 + (t-95375)*0.24 : (t<=231250 ? 37104 + (t-182100)*0.32 : (t<=578125 ? 49640 + (t-231250)*0.35 : 174238.75 + (t-578125)*0.37)))))",
+            "dependencies": [
+              "taxable_income"
+            ],
+            "label": "Estimated federal tax liability (approx.)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_payments": {
+            "expression": "max(0, federal_withheld + estimated_payments + 0)",
+            "dependencies": [
+              "federal_withheld",
+              "estimated_payments"
+            ],
+            "label": "Total federal payments",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "annual_shortfall": {
+            "expression": "tax_liability - (total_payments + tax_credits)",
+            "dependencies": [
+              "tax_liability",
+              "total_payments",
+              "tax_credits"
+            ],
+            "label": "Annual shortfall (positive = you may owe)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "pay_periods": {
+            "expression": "pay_frequency=='monthly'?12 : (pay_frequency=='biweekly'?26 : 52)",
+            "dependencies": [
+              "pay_frequency"
+            ],
+            "label": "Pay periods per year",
+            "unit": "count",
+            "format": "integer",
+            "display": false
+          },
+          "suggested_annual_adjustment": {
+            "expression": "annual_shortfall>0?annual_shortfall:0",
+            "dependencies": [
+              "annual_shortfall"
+            ],
+            "label": "Suggested additional annual withholding (if positive)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_paycheck_change": {
+            "expression": "pay_periods>0? suggested_annual_adjustment / pay_periods : 0",
+            "dependencies": [
+              "suggested_annual_adjustment",
+              "pay_periods"
+            ],
+            "label": "Suggested change per paycheck",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "tax_liability",
+            "label": "Estimated federal tax liability",
+            "variable": "tax_liability",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payments",
+            "label": "Total federal payments",
+            "variable": "total_payments",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "annual_shortfall",
+            "label": "Annual shortfall (positive = owe)",
+            "variable": "annual_shortfall",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "suggested_annual_adjustment",
+            "label": "Suggested additional annual withholding",
+            "variable": "suggested_annual_adjustment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_paycheck_change",
+            "label": "Suggested change per paycheck",
+            "variable": "per_paycheck_change",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "tax_year",
+        "label": "Tax year",
+        "type": "integer",
+        "default": 2025,
+        "min": 2020,
+        "max": 2030,
+        "step": 1
+      },
+      {
+        "id": "filing_status",
+        "label": "Filing status",
+        "type": "select",
+        "default": "single",
+        "options": [
+          {
+            "label": "Single",
+            "value": "single"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "married_joint"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "married_separate"
+          },
+          {
+            "label": "Head of household",
+            "value": "head_household"
+          },
+          {
+            "label": "Qualifying widow(er)",
+            "value": "qualifying_widow"
+          }
+        ]
+      },
+      {
+        "id": "gross_wages",
+        "label": "Wages, salaries, tips (gross)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "other_income",
+        "label": "Other taxable income (interest, dividends, self-employment)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "pre_tax_contributions",
+        "label": "Pre-tax retirement / FSA contributions",
+        "type": "number",
+        "default": 5000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "adjustments",
+        "label": "Adjustments to income (educator expenses, student loan interest, etc.)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "itemized_deductions",
+        "label": "Itemized deductions (if any)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "dependents",
+        "label": "Number of dependents",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "tax_credits",
+        "label": "Nonrefundable/ refundable tax credits (total)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "federal_withheld",
+        "label": "Federal tax withheld year-to-date",
+        "type": "number",
+        "default": 8000,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "estimated_payments",
+        "label": "Estimated tax payments made",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
+      },
+      {
+        "id": "pay_frequency",
+        "label": "Pay frequency (for withholding suggestion)",
+        "type": "select",
+        "default": "biweekly",
+        "options": [
+          {
+            "label": "Monthly",
+            "value": "monthly"
+          },
+          {
+            "label": "Biweekly",
+            "value": "biweekly"
+          },
+          {
+            "label": "Weekly",
+            "value": "weekly"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "taxable_income",
+          "label": "Taxable income"
+        },
+        {
+          "id": "tax_liability",
+          "label": "Estimated federal tax liability"
+        },
+        {
+          "id": "total_payments",
+          "label": "Total federal payments"
+        },
+        {
+          "id": "net_refund",
+          "label": "Estimated refund (positive) or amount due (negative)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator gives a practical, conservative approximation of federal tax liability and whether you can expect a refund or will owe tax for the selected year. It is designed for planning, not filing.",
+      "Calculations use a simplified progressive schedule and common adjustments (pre-tax contributions, standard vs itemized deduction). Results are approximate; use IRS publications and your tax professional for filing-level accuracy."
+    ],
+    "methodology": [
+      "The tool computes adjusted gross income by adding wage income and other taxable income, then subtracting pre-tax contributions and allowable adjustments.",
+      "It selects the larger of itemized deductions or an assumed standard deduction based on filing status, computes taxable income, applies a simplified progressive tax schedule to estimate liability, and subtracts payments and credits to estimate refund or amount due.",
+      "A second mode suggests an annual and per-paycheck withholding change by distributing any shortfall across the selected number of pay periods."
+    ],
+    "how_is_calculated": [
+      "Adjusted gross income = gross_wages + other_income − pre_tax_contributions − adjustments",
+      "Deduction used = max(itemized_deductions, assumed standard deduction for filing status)",
+      "Taxable income = max(0, AGI − Deduction)",
+      "Estimated tax liability = simplified progressive schedule applied to taxable income (see citations).",
+      "Estimated refund = total_payments + tax_credits − estimated tax liability"
+    ],
+    "examples": [
+      "Example 1: Single filer, $60,000 wages, $5,000 pre-tax contributions, $8,000 withheld → conservative estimate may show a small refund or near-zero balance depending on credits.",
+      "Example 2: Married filing jointly, $120,000 wages combined, low withholding → estimator may show an amount due and provide per-paycheck adjustment to reduce year-end tax owed."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate is this calculator?",
+        "answer": "This estimator provides an approximate result for planning purposes only. It uses simplified assumptions and an illustrative progressive schedule. It does not model every credit, deduction phase-out, AMT, state taxes, or detailed itemization rules. Expect differences from final IRS calculations; consult official IRS tables or a tax professional for filing-level accuracy."
+      },
+      {
+        "question": "Is my data stored securely?",
+        "answer": "This tool is a client-side estimator and should not be used to submit sensitive documents. For any storage, adhere to recommended security standards such as NIST SP 800-53 and the NIST Cybersecurity Framework. Do not paste full Social Security numbers or banking credentials into calculators."
+      },
+      {
+        "question": "Can this calculate state taxes?",
+        "answer": "No. This focuses on federal tax estimates only. State and local taxes, credits, and withholding rules vary and are not modeled here."
+      },
+      {
+        "question": "Can I use the result to set Form W-4?",
+        "answer": "This tool can inform withholding decisions but is not a substitute for the IRS Withholding Estimator or professional advice. Use calculated per-paycheck suggestions as guidance and confirm changes using official IRS resources."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS Tax Withholding Estimator",
+        "url": "https://www.irs.gov/individuals/tax-withholding-estimator"
+      },
+      {
+        "label": "IRS Publication: Federal Income Tax Rates and Tax Tables",
+        "url": "https://www.irs.gov/pub"
+      },
+      {
+        "label": "NIST Cybersecurity Framework",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO 9001 Quality Management Principles",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Adjusted Gross Income (AGI)",
+        "definition": "Total income after allowable adjustments but before standard or itemized deductions."
+      },
+      {
+        "term": "Taxable income",
+        "definition": "Income subject to federal income tax after deductions."
+      },
+      {
+        "term": "Withholding",
+        "definition": "Amount your employer withholds from paychecks and remits toward your federal tax liability."
+      },
+      {
+        "term": "Estimated tax payments",
+        "definition": "Quarterly payments made directly to the IRS for income not subject to withholding."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.irs.gov/individuals/tax-withholding-estimator",
+        "label": "IRS Withholding Estimator",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov/cyberframework",
+        "label": "NIST Cybersecurity Framework",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

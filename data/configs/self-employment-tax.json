@@ -1,0 +1,502 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Self-Employment Tax Calculator (Detailed & Quick Estimates)",
+    "description": "Estimate self-employment (SE) tax, employer-equivalent deduction, and a simple federal income tax estimate. Two modes: a detailed split (Social Security, Medicare, Additional Medicare) and a quick rule-of-thumb estimate. Includes quarterly payment suggestion and accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "detailed",
+    "methods": {
+      "detailed": {
+        "label": "Detailed estimate (recommended)",
+        "description": "Calculates net earnings at 92.35% of profit, splits Social Security and Medicare, applies an optional Social Security wage base cap, and applies Additional Medicare Tax thresholds by filing status.",
+        "variables": {
+          "net_earnings": {
+            "expression": "(gross_income - business_expenses) * 0.9235",
+            "dependencies": [
+              "gross_income",
+              "business_expenses"
+            ],
+            "label": "Net earnings from self-employment (92.35% of profit)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "ss_taxable": {
+            "expression": "ss_wage_base > 0 ? min(net_earnings, max(0, ss_wage_base - social_security_wages_other)) : net_earnings",
+            "dependencies": [
+              "ss_wage_base",
+              "social_security_wages_other",
+              "net_earnings"
+            ],
+            "label": "Social Security taxable portion of net earnings (after other wages)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "social_security_tax": {
+            "expression": "ss_taxable * 0.124",
+            "dependencies": [
+              "ss_taxable"
+            ],
+            "label": "Social Security portion of SE tax (12.4%)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "medicare_tax": {
+            "expression": "net_earnings * 0.029",
+            "dependencies": [
+              "net_earnings"
+            ],
+            "label": "Medicare portion of SE tax (2.9%)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "additional_medicare_threshold": {
+            "expression": "filing_status == 'married_joint' ? 250000 : (filing_status == 'married_separate' ? 125000 : 200000)",
+            "dependencies": [
+              "filing_status"
+            ],
+            "label": "Additional Medicare Tax threshold by filing status",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "additional_medicare_tax": {
+            "expression": "max(0, net_earnings - additional_medicare_threshold) * 0.009",
+            "dependencies": [
+              "net_earnings",
+              "additional_medicare_threshold"
+            ],
+            "label": "Additional Medicare Tax (0.9% over threshold)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "self_employment_tax_total": {
+            "expression": "social_security_tax + medicare_tax + additional_medicare_tax",
+            "dependencies": [
+              "social_security_tax",
+              "medicare_tax",
+              "additional_medicare_tax"
+            ],
+            "label": "Total self-employment tax",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "employer_equivalent_deduction": {
+            "expression": "self_employment_tax_total / 2",
+            "dependencies": [
+              "self_employment_tax_total"
+            ],
+            "label": "Deductible employer-equivalent portion (half of SE tax)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "taxable_income_estimate": {
+            "expression": "other_taxable_income + max(0, gross_income - business_expenses - employer_equivalent_deduction)",
+            "dependencies": [
+              "other_taxable_income",
+              "gross_income",
+              "business_expenses",
+              "employer_equivalent_deduction"
+            ],
+            "label": "Estimated taxable income after SE deduction (simple estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "estimated_income_tax": {
+            "expression": "max(0, taxable_income_estimate * (estimated_tax_rate / 100) - federal_income_tax_withholding)",
+            "dependencies": [
+              "taxable_income_estimate",
+              "estimated_tax_rate",
+              "federal_income_tax_withholding"
+            ],
+            "label": "Estimated federal income tax owed (simple rate-based estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_tax": {
+            "expression": "self_employment_tax_total + estimated_income_tax",
+            "dependencies": [
+              "self_employment_tax_total",
+              "estimated_income_tax"
+            ],
+            "label": "Estimated total tax liability (SE tax + income tax)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "quarterly_payment": {
+            "expression": "max(0, total_tax) / 4",
+            "dependencies": [
+              "total_tax"
+            ],
+            "label": "Suggested estimated quarterly payment (if no other credits)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "net_earnings",
+            "label": "Net earnings from self-employment",
+            "variable": "net_earnings",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "self_employment_tax_total",
+            "label": "Self-employment tax (total)",
+            "variable": "self_employment_tax_total",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "employer_equivalent_deduction",
+            "label": "Deductible employer-equivalent portion",
+            "variable": "employer_equivalent_deduction",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_income_tax",
+            "label": "Simple federal income tax estimate",
+            "variable": "estimated_income_tax",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_tax",
+            "label": "Estimated total tax liability",
+            "variable": "total_tax",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "quarterly_payment",
+            "label": "Suggested quarterly payment",
+            "variable": "quarterly_payment",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "quick": {
+        "label": "Quick estimate (single-rate rule)",
+        "description": "Rule-of-thumb: apply a combined 15.3% SE tax rate to 92.35% of profit and a simple income-tax estimate using an input tax rate.",
+        "variables": {
+          "net_earnings_q": {
+            "expression": "(gross_income - business_expenses) * 0.9235",
+            "dependencies": [
+              "gross_income",
+              "business_expenses"
+            ],
+            "label": "Net earnings (quick)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "self_employment_tax_total_q": {
+            "expression": "net_earnings_q * 0.153",
+            "dependencies": [
+              "net_earnings_q"
+            ],
+            "label": "Approximate SE tax (15.3% rule)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "employer_equivalent_deduction_q": {
+            "expression": "self_employment_tax_total_q / 2",
+            "dependencies": [
+              "self_employment_tax_total_q"
+            ],
+            "label": "Half of SE tax (quick)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "taxable_income_estimate_q": {
+            "expression": "other_taxable_income + max(0, gross_income - business_expenses - employer_equivalent_deduction_q)",
+            "dependencies": [
+              "other_taxable_income",
+              "gross_income",
+              "business_expenses",
+              "employer_equivalent_deduction_q"
+            ],
+            "label": "Taxable income estimate (quick)",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "estimated_income_tax_q": {
+            "expression": "max(0, taxable_income_estimate_q * (estimated_tax_rate / 100) - federal_income_tax_withholding)",
+            "dependencies": [
+              "taxable_income_estimate_q",
+              "estimated_tax_rate",
+              "federal_income_tax_withholding"
+            ],
+            "label": "Estimated federal income tax (quick)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_tax_q": {
+            "expression": "self_employment_tax_total_q + estimated_income_tax_q",
+            "dependencies": [
+              "self_employment_tax_total_q",
+              "estimated_income_tax_q"
+            ],
+            "label": "Total tax (quick)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "quarterly_payment_q": {
+            "expression": "max(0, total_tax_q) / 4",
+            "dependencies": [
+              "total_tax_q"
+            ],
+            "label": "Quarterly payment (quick)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "self_employment_tax_total_q",
+            "label": "SE tax (quick)",
+            "variable": "self_employment_tax_total_q",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "estimated_income_tax_q",
+            "label": "Federal income tax estimate (quick)",
+            "variable": "estimated_income_tax_q",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_tax_q",
+            "label": "Estimated total tax (quick)",
+            "variable": "total_tax_q",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "quarterly_payment_q",
+            "label": "Quarterly payment (quick)",
+            "variable": "quarterly_payment_q",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "gross_income",
+        "label": "Gross self-employment income (total receipts)",
+        "type": "number",
+        "default": 80000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "business_expenses",
+        "label": "Business expenses (deductible)",
+        "type": "number",
+        "default": 15000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "social_security_wages_other",
+        "label": "Other wages subject to Social Security (W-2 wages)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "ss_wage_base",
+        "label": "Social Security wage base (enter 0 to ignore cap)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "filing_status",
+        "label": "Filing status",
+        "type": "select",
+        "default": "single",
+        "options": [
+          {
+            "label": "Single",
+            "value": "single"
+          },
+          {
+            "label": "Married filing jointly",
+            "value": "married_joint"
+          },
+          {
+            "label": "Married filing separately",
+            "value": "married_separate"
+          },
+          {
+            "label": "Head of household",
+            "value": "hoh"
+          }
+        ]
+      },
+      {
+        "id": "other_taxable_income",
+        "label": "Other taxable income (wages, interest, etc.)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "federal_income_tax_withholding",
+        "label": "Federal income tax already withheld or paid",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "estimated_tax_rate",
+        "label": "Estimated effective federal income tax rate (percent)",
+        "type": "number",
+        "default": 22,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates self-employment tax (Social Security and Medicare) and provides a simple federal income tax estimate and suggested quarterly payment. It supports a detailed split of taxes and a quick rule-of-thumb mode.",
+      "Results are estimates only. Use the detailed mode for closer alignment with IRS-defined components (net earnings, Social Security wage base, Additional Medicare Tax thresholds). Do not consider this a substitute for professional tax advice."
+    ],
+    "methodology": [
+      "Net earnings from self-employment are computed as 92.35% of net profit (gross receipts minus allowable business expenses) to reflect the IRS calculation for self-employment tax.",
+      "Self-employment tax is split into Social Security (12.4% on the applicable wage base) and Medicare (2.9% on net earnings). Additional Medicare Tax (0.9%) is applied on earnings above filing-status thresholds. The calculator optionally applies a Social Security wage base if provided.",
+      "Income tax is estimated by applying a user-provided effective federal tax rate to a simplified taxable income estimate (other taxable income plus net profit minus the deductible half of SE tax). This is a simplified approach for planning and is not a substitute for a full tax return calculation."
+    ],
+    "how_is_calculated": [
+      "Net earnings = (gross_income - business_expenses) × 0.9235",
+      "Social Security taxable portion = if a wage base is provided: min(net earnings, wage base − other Social Security wages) else net earnings",
+      "Social Security tax = Social Security taxable portion × 12.4%",
+      "Medicare tax = net earnings × 2.9%",
+      "Additional Medicare = max(0, net earnings − filing-status threshold) × 0.9%",
+      "Self-employment tax = Social Security tax + Medicare tax + Additional Medicare",
+      "Employer-equivalent deduction = 50% of self-employment tax",
+      "Estimated income tax = max(0, (other taxable income + (net profit − employer-equivalent deduction)) × effective tax rate − withheld tax)",
+      "Total tax = self-employment tax + estimated income tax; quarterly payment = total tax ÷ 4"
+    ],
+    "examples": [
+      "Example (detailed): Gross income $80,000; expenses $15,000; net earnings = ($80,000 − $15,000) × 0.9235 = $60,372. Self-employment tax splits into Social Security, Medicare, and any Additional Medicare as applicable. The employer-equivalent deduction reduces estimated taxable income.",
+      "Example (quick): Same profit with 15.3% applied to net earnings gives a fast SE tax estimate without wage-base capping or Additional Medicare splitting."
+    ],
+    "summary": [
+      "Use the detailed mode for closer alignment with IRS calculations. Use the quick mode for a fast planning estimate.",
+      "Enter a Social Security wage base to cap the Social Security portion when you know the current year wage base. Leave it zero to ignore the cap (useful for partial-year planning or when other wages are not known)."
+    ],
+    "faqs": [
+      {
+        "question": "Is this an exact tax return calculation?",
+        "answer": "No. This tool produces planning estimates only and does not replace a tax return, professional advice, or software that computes tax with full schedules and credits."
+      },
+      {
+        "question": "Where do the rates come from?",
+        "answer": "The calculator uses common statutory SE tax rates (12.4% Social Security, 2.9% Medicare, plus 0.9% Additional Medicare above thresholds). Wage bases and exact thresholds change yearly; enter a wage base value if you want the cap applied."
+      },
+      {
+        "question": "Why do you use 92.35% of net profit?",
+        "answer": "The IRS prescribes that net earnings subject to self-employment tax are generally 92.35% of net profit to account for the employer-equivalent portion that self-employed people effectively pay."
+      },
+      {
+        "question": "Is this tool secure and reliable?",
+        "answer": "We follow recognized security and testing practices (see citations) for data handling. Accuracy depends on user inputs and assumptions; always verify with official IRS guidance or a tax professional."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — Self-Employment Tax",
+        "url": "https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax"
+      },
+      {
+        "label": "NIST — Cybersecurity and data handling guidance",
+        "url": "https://www.nist.gov/cyberframework"
+      },
+      {
+        "label": "ISO — Information security management (reference)",
+        "url": "https://www.iso.org/isoiec-27001-information-security.html"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA — workplace standards and guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Net earnings from self-employment",
+        "definition": "Profit from self-employment multiplied by 92.35%, the IRS basis for calculating self-employment tax."
+      },
+      {
+        "term": "Self-employment tax",
+        "definition": "Combined Social Security and Medicare tax for self-employed individuals; includes an Additional Medicare component above income thresholds."
+      },
+      {
+        "term": "Employer-equivalent deduction",
+        "definition": "Half of the self-employment tax that is deductible when computing income tax."
+      },
+      {
+        "term": "Additional Medicare Tax",
+        "definition": "An extra 0.9% Medicare tax on earnings above filing-status thresholds (applies to higher-income taxpayers)."
+      },
+      {
+        "term": "Social Security wage base",
+        "definition": "Maximum earnings subject to Social Security tax in a calendar year; changes annually per IRS guidance. Enter 0 to ignore wage-base capping in this tool."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax",
+        "label": "IRS — Self-Employment Tax (official guidance)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,439 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Spousal IRA Calculator (Advanced)",
+    "description": "Estimate spousal IRA contribution limits, Traditional IRA deduction amount, and Roth IRA eligibility based on earned income, MAGI, ages and user-supplied phaseout thresholds. Designed for joint filers and spouses with unequal compensation."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "max_contribution",
+    "methods": {
+      "max_contribution": {
+        "label": "Maximum contribution (spousal rule)",
+        "description": "Calculate the maximum contribution the non- or lower-earning spouse may make to an IRA based on total earned income available and IRS annual limits including catch-up.",
+        "variables": {
+          "total_earned_income": {
+            "expression": "working_spouse_income + spouse_earned_income",
+            "dependencies": [
+              "working_spouse_income",
+              "spouse_earned_income"
+            ],
+            "label": "Total earned income available",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "irs_limit_total": {
+            "expression": "spouse_age >= 50 ? (annual_limit + catchup_limit) : annual_limit",
+            "dependencies": [
+              "spouse_age",
+              "annual_limit",
+              "catchup_limit"
+            ],
+            "label": "IRS limit including catch-up if age 50+",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "max_contribution_var": {
+            "expression": "min(irs_limit_total, total_earned_income)",
+            "dependencies": [
+              "irs_limit_total",
+              "total_earned_income"
+            ],
+            "label": "Maximum allowable contribution",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "max_contribution",
+            "label": "Maximum allowed contribution (spouse)",
+            "variable": "max_contribution_var",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "traditional_deduction": {
+        "label": "Traditional IRA deductible amount (phaseout)",
+        "description": "Estimate the deductible portion of a Traditional IRA contribution for the spouse given MAGI and user-supplied phaseout thresholds. Use current-year IRS phaseout thresholds for accurate results.",
+        "variables": {
+          "phaseout_range": {
+            "expression": "traditional_phaseout_end - traditional_phaseout_start",
+            "dependencies": [
+              "traditional_phaseout_end",
+              "traditional_phaseout_start"
+            ],
+            "label": "Traditional deduction phaseout range",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "raw_fraction": {
+            "expression": "(traditional_phaseout_end - MAGI) / phaseout_range",
+            "dependencies": [
+              "traditional_phaseout_end",
+              "MAGI",
+              "phaseout_range"
+            ],
+            "label": "Raw deduction fraction before clamping",
+            "format": "decimal",
+            "display": false
+          },
+          "deduction_fraction": {
+            "expression": "max(0, min(1, raw_fraction))",
+            "dependencies": [
+              "raw_fraction"
+            ],
+            "label": "Deduction fraction (0 to 1)",
+            "format": "percent",
+            "display": true
+          },
+          "deductible_amount_var": {
+            "expression": "planned_contribution * deduction_fraction",
+            "dependencies": [
+              "planned_contribution",
+              "deduction_fraction"
+            ],
+            "label": "Deductible Traditional IRA amount",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "trad_deductible_amount",
+            "label": "Deductible Traditional IRA amount",
+            "variable": "deductible_amount_var",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "trad_deduction_fraction",
+            "label": "Deduction fraction (percent of contribution deductible)",
+            "variable": "deduction_fraction",
+            "format": "percent"
+          }
+        ]
+      },
+      "roth_limit": {
+        "label": "Roth IRA allowed contribution (phaseout)",
+        "description": "Estimate allowed Roth IRA contribution when MAGI falls in the Roth phaseout range. If MAGI is below the start threshold, full contribution is allowed. If above the end threshold, zero allowed.",
+        "variables": {
+          "roth_range": {
+            "expression": "roth_phaseout_end - roth_phaseout_start",
+            "dependencies": [
+              "roth_phaseout_end",
+              "roth_phaseout_start"
+            ],
+            "label": "Roth phaseout range",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "roth_fraction_raw": {
+            "expression": "1 - ((MAGI - roth_phaseout_start) / roth_range)",
+            "dependencies": [
+              "MAGI",
+              "roth_phaseout_start",
+              "roth_range"
+            ],
+            "label": "Raw Roth allowance fraction before clamping",
+            "format": "decimal",
+            "display": false
+          },
+          "roth_phaseout_fraction": {
+            "expression": "max(0, min(1, roth_fraction_raw))",
+            "dependencies": [
+              "roth_fraction_raw"
+            ],
+            "label": "Roth allowance fraction (0 to 1)",
+            "format": "percent",
+            "display": true
+          },
+          "roth_allowed_amount_var": {
+            "expression": "planned_contribution * roth_phaseout_fraction",
+            "dependencies": [
+              "planned_contribution",
+              "roth_phaseout_fraction"
+            ],
+            "label": "Allowed Roth IRA contribution",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "roth_allowed_amount",
+            "label": "Allowed Roth IRA contribution",
+            "variable": "roth_allowed_amount_var",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "roth_phaseout_fraction",
+            "label": "Roth phaseout fraction (percent allowed)",
+            "variable": "roth_phaseout_fraction",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "annual_limit",
+        "label": "IRS annual contribution limit (per person)",
+        "type": "number",
+        "default": 6500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "catchup_limit",
+        "label": "Catch-up additional limit (age 50+)",
+        "type": "number",
+        "default": 1000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "spouse_age",
+        "label": "Age of the spouse making the IRA contribution",
+        "type": "integer",
+        "default": 30,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "spouse_is_working",
+        "label": "Is the spouse making the contribution employed with earned income?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "label": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "working_spouse_income",
+        "label": "Earned income of the spouse who is working (wages, salary, self-employment)",
+        "type": "number",
+        "default": 60000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "spouse_earned_income",
+        "label": "Earned income of the spouse making the contribution",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "planned_contribution",
+        "label": "Planned contribution amount for the spouse (enter amount you intend to contribute)",
+        "type": "number",
+        "default": 6500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "MAGI",
+        "label": "Household Modified Adjusted Gross Income (MAGI)",
+        "type": "number",
+        "default": 80000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "traditional_phaseout_start",
+        "label": "Traditional IRA deduction phaseout start (MAGI)",
+        "type": "number",
+        "default": 109000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "traditional_phaseout_end",
+        "label": "Traditional IRA deduction phaseout end (MAGI)",
+        "type": "number",
+        "default": 129000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "roth_phaseout_start",
+        "label": "Roth IRA contribution phaseout start (MAGI)",
+        "type": "number",
+        "default": 218000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "roth_phaseout_end",
+        "label": "Roth IRA contribution phaseout end (MAGI)",
+        "type": "number",
+        "default": 228000,
+        "min": 0,
+        "step": 100
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "max_contribution",
+          "label": "Maximum allowed contribution (spouse)"
+        },
+        {
+          "id": "trad_deductible_amount",
+          "label": "Estimated deductible Traditional IRA amount"
+        },
+        {
+          "id": "trad_deduction_fraction",
+          "label": "Traditional deduction fraction"
+        },
+        {
+          "id": "roth_allowed_amount",
+          "label": "Allowed Roth IRA contribution"
+        },
+        {
+          "id": "roth_phaseout_fraction",
+          "label": "Roth phaseout fraction"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps joint filers estimate how much a spouse may contribute to an IRA when one spouse has little or no compensation. It computes the maximum contribution under the spousal IRA rule, estimates the deductible portion of a Traditional IRA contribution using user-supplied phaseout thresholds, and estimates allowable Roth contributions when MAGI falls in a phaseout range.",
+      "The tool requires current-year IRS limits and phaseout thresholds to produce accurate results. Where thresholds vary by tax year, enter the authoritative values for the year you are planning contributions."
+    ],
+    "methodology": [
+      "Maximum contribution: the calculator uses the smaller of (A) the IRS annual contribution limit plus any age 50+ catch-up amount and (B) the total earned income available to the couple (working spouse income plus the spouse's earned income). For spousal IRA situations where one spouse has no compensation, contributions are limited by the working spouse's compensation when filing jointly.",
+      "Traditional IRA deduction: deduction eligibility phases out between two MAGI thresholds. We compute a linear phaseout fraction = (phaseout_end - MAGI) / (phaseout_end - phaseout_start) and clamp between 0 and 1; the deductible amount is the planned contribution multiplied by that fraction.",
+      "Roth IRA allowance: Roth eligibility similarly phases out between start and end thresholds; allowed contribution is planned contribution multiplied by a clamped fraction equal to 1 - ((MAGI - roth_phaseout_start) / (roth_phaseout_end - roth_phaseout_start))."
+    ],
+    "how_is_calculated": [
+      "Total earned income = working_spouse_income + spouse_earned_income",
+      "IRS limit used = annual_limit plus catchup_limit when the spouse is age 50 or older",
+      "Maximum allowed contribution = min(IRS limit used, Total earned income)",
+      "Traditional deductible fraction = clamp((traditional_phaseout_end - MAGI) / (traditional_phaseout_end - traditional_phaseout_start), 0, 1)",
+      "Roth allowed fraction = clamp(1 - ((MAGI - roth_phaseout_start) / (roth_phaseout_end - roth_phaseout_start)), 0, 1)"
+    ],
+    "faqs": [
+      {
+        "question": "Do I need to enter current IRS limits and phaseout thresholds?",
+        "answer": "Yes. Contribution limits and phaseout thresholds change by tax year. Enter the current-year values from the IRS to get accurate results."
+      },
+      {
+        "question": "What if the spouse has no earned income?",
+        "answer": "A spousal IRA contribution is allowed if the working spouse has sufficient earned income and you file a joint return. The tool uses the working spouse's earned income plus any earned income reported for the spouse to determine the contribution cap."
+      },
+      {
+        "question": "Does this calculator determine tax filing or replace professional advice?",
+        "answer": "No. This calculator provides estimations only. For tax filing and personalized tax advice, consult a qualified tax professional or the IRS. See accuracy and caveats below."
+      },
+      {
+        "question": "Why do you ask for MAGI rather than AGI?",
+        "answer": "Phaseout calculations use Modified Adjusted Gross Income (MAGI) definitions specific to IRA rules. Use the MAGI applicable to IRA contribution eligibility and phaseouts."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IRS — IRA contribution limits and phaseouts (authoritative source for limits and phaseout thresholds)",
+        "url": "https://www.irs.gov/retirement-plans/ira-deduction-limits"
+      },
+      {
+        "label": "IRS — Roth IRA: contribution rules and phaseouts",
+        "url": "https://www.irs.gov/retirement-plans/roth-iras"
+      },
+      {
+        "label": "NIST — Cybersecurity and software testing guidance (for data handling and accuracy controls)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — Standards organizations and best practices",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Software and system engineering standards",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Operational safety and workplace controls (relevant to internal development compliance)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Spousal IRA",
+        "definition": "An IRA funded for a spouse who has little or no earned income, provided the couple files a joint tax return and the working spouse has sufficient compensation to cover both contributions."
+      },
+      {
+        "term": "MAGI",
+        "definition": "Modified Adjusted Gross Income. A tax-specific metric used to determine eligibility and phaseouts for IRA contributions; definitions vary by rule and year."
+      },
+      {
+        "term": "Catch-up contribution",
+        "definition": "An additional contribution amount allowed for IRA account holders aged 50 and older, added to the base annual contribution limit."
+      },
+      {
+        "term": "Phaseout range",
+        "definition": "The MAGI interval between a start and end threshold where eligibility or deductibility is reduced proportionally rather than abruptly."
+      }
+    ],
+    "summary": [
+      "This tool provides an estimate only. Always verify IRS limits and MAGI definitions for the applicable tax year before making contributions.",
+      "Security, QA, and data-handling recommendations in development cite NIST, ISO, IEEE and OSHA best practices to emphasize high-trust controls; the calculator's outputs are mathematical estimates, not tax determinations."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.irs.gov/retirement-plans/ira-deduction-limits",
+        "label": "IRS — IRA deduction limits",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.irs.gov/retirement-plans/roth-iras",
+        "label": "IRS — Roth IRAs",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

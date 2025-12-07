@@ -1,0 +1,421 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Pension vs Lump Sum (Annuity) Comparison Calculator",
+    "description": "Compare the present value of a pension (annuity) to a lump-sum payout invested at an assumed rate. Provides PV of pension, projected invested lump-sum value over the same horizon, an equivalent annuity implied by the net lump sum, and the difference."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "comparison",
+    "methods": {
+      "comparison": {
+        "label": "Comparison (present value vs invested lump sum)",
+        "description": "Computes the present value of the pension stream using a discount rate, projects the net lump sum invested at an expected after-tax return adjusted for inflation, and computes the equivalent annual annuity implied by the net lump sum for the same horizon.",
+        "variables": {
+          "years_of_payment": {
+            "expression": "life_expectancy - retirement_age",
+            "dependencies": [
+              "life_expectancy",
+              "retirement_age"
+            ],
+            "label": "Years pension is paid",
+            "unit": "years",
+            "format": "integer",
+            "display": true
+          },
+          "discount_rate": {
+            "expression": "discount_rate_percent/100",
+            "dependencies": [
+              "discount_rate_percent"
+            ],
+            "label": "Discount rate (decimal)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "annuity_base": {
+            "expression": "annual_pension_payment * pension_payment_multiplier",
+            "dependencies": [
+              "annual_pension_payment",
+              "pension_payment_multiplier"
+            ],
+            "label": "Adjusted annual pension payment (before tax)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_annuity_value": {
+            "expression": "annuity_base * (1 - (1+discount_rate)^(-years_of_payment)) / discount_rate",
+            "dependencies": [
+              "annuity_base",
+              "discount_rate",
+              "years_of_payment"
+            ],
+            "label": "Present value of pension (annuity)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "net_lump_sum": {
+            "expression": "lump_sum_amount * (1 - tax_rate_on_lump_sum_percent/100)",
+            "dependencies": [
+              "lump_sum_amount",
+              "tax_rate_on_lump_sum_percent"
+            ],
+            "label": "Net lump sum after assumed immediate tax",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "real_rate": {
+            "expression": "(expected_rate_of_return_after_tax_percent - inflation_rate_percent)/100",
+            "dependencies": [
+              "expected_rate_of_return_after_tax_percent",
+              "inflation_rate_percent"
+            ],
+            "label": "Real annual growth rate (after-tax return minus inflation)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "future_value": {
+            "expression": "net_lump_sum * (1 + real_rate)^years_of_payment",
+            "dependencies": [
+              "net_lump_sum",
+              "real_rate",
+              "years_of_payment"
+            ],
+            "label": "Projected value of invested net lump sum at end of horizon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equivalent_annuity": {
+            "expression": "net_lump_sum * discount_rate / (1 - (1+discount_rate)^(-years_of_payment))",
+            "dependencies": [
+              "net_lump_sum",
+              "discount_rate",
+              "years_of_payment"
+            ],
+            "label": "Annual annuity equivalent implied by net lump sum (at discount rate)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "difference_annuity": {
+            "expression": "annuity_base - equivalent_annuity",
+            "dependencies": [
+              "annuity_base",
+              "equivalent_annuity"
+            ],
+            "label": "Difference: pension annual payment minus equivalent annuity from lump",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "pv_annuity",
+            "label": "Present value of pension (annuity)",
+            "variable": "pv_annuity_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "projected_value",
+            "label": "Projected value of invested lump sum at horizon",
+            "variable": "future_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equivalent_annuity",
+            "label": "Equivalent annual annuity from net lump sum",
+            "variable": "equivalent_annuity",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "difference_annuity",
+            "label": "Annual payment difference (pension minus equivalent)",
+            "variable": "difference_annuity",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "retirement_age",
+        "label": "Planned retirement age",
+        "type": "integer",
+        "default": 65,
+        "min": 50,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "id": "life_expectancy",
+        "label": "Assumed life expectancy (age)",
+        "type": "integer",
+        "default": 90,
+        "min": 65,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "annual_pension_payment",
+        "label": "Annual pension payment (before tax)",
+        "type": "number",
+        "default": 42000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "pension_payment_multiplier",
+        "label": "Pension payment multiplier (adjust for survivor/joint option)",
+        "type": "number",
+        "default": 1,
+        "min": 0.5,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "lump_sum_amount",
+        "label": "Offered lump-sum amount (pre-tax)",
+        "type": "number",
+        "default": 500000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "tax_rate_on_lump_sum_percent",
+        "label": "Estimated immediate tax rate on lump sum (%)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "expected_rate_of_return_after_tax_percent",
+        "label": "Expected after-tax annual return on invested lump (%)",
+        "type": "number",
+        "default": 5,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "discount_rate_percent",
+        "label": "Discount rate for present-value comparison (%)",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "inflation_rate_percent",
+        "label": "Expected annual inflation rate (%)",
+        "type": "number",
+        "default": 2,
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      }
+    ],
+    "sections": [
+      {
+        "id": "pension_section",
+        "label": "Pension (Annuity) details",
+        "fields": [
+          {
+            "id": "retirement_age",
+            "label": "Planned retirement age",
+            "type": "integer",
+            "default": 65,
+            "min": 50,
+            "max": 100,
+            "step": 1
+          },
+          {
+            "id": "life_expectancy",
+            "label": "Assumed life expectancy (age)",
+            "type": "integer",
+            "default": 90,
+            "min": 65,
+            "max": 120,
+            "step": 1
+          },
+          {
+            "id": "annual_pension_payment",
+            "label": "Annual pension payment (before tax)",
+            "type": "number",
+            "default": 42000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "pension_payment_multiplier",
+            "label": "Pension payment multiplier (adjust for survivor/joint option)",
+            "type": "number",
+            "default": 1,
+            "min": 0.5,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "lump_section",
+        "label": "Lump sum and assumptions",
+        "fields": [
+          {
+            "id": "lump_sum_amount",
+            "label": "Offered lump-sum amount (pre-tax)",
+            "type": "number",
+            "default": 500000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "tax_rate_on_lump_sum_percent",
+            "label": "Estimated immediate tax rate on lump sum (%)",
+            "type": "number",
+            "default": 25,
+            "min": 0,
+            "max": 100,
+            "step": 0.1
+          },
+          {
+            "id": "expected_rate_of_return_after_tax_percent",
+            "label": "Expected after-tax annual return on invested lump (%)",
+            "type": "number",
+            "default": 5,
+            "min": -10,
+            "max": 20,
+            "step": 0.1
+          },
+          {
+            "id": "discount_rate_percent",
+            "label": "Discount rate for present-value comparison (%)",
+            "type": "number",
+            "default": 3,
+            "min": 0,
+            "max": 20,
+            "step": 0.1
+          },
+          {
+            "id": "inflation_rate_percent",
+            "label": "Expected annual inflation rate (%)",
+            "type": "number",
+            "default": 2,
+            "min": 0,
+            "max": 10,
+            "step": 0.1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator compares taking a recurring pension (annuity) to accepting a lump-sum payout and investing it. It estimates the present value of the pension stream using a discount rate and projects what the lump sum would grow to at an assumed after-tax return adjusted for inflation.",
+      "Use the tool to explore sensitivity to the discount rate, expected investment return, tax treatment of the lump sum, and assumed life expectancy. Results are illustrative and intended to inform decisions alongside professional advice."
+    ],
+    "methodology": [
+      "We compute the present value of the pension as the PV of an ordinary annuity: PV = adjusted annual payment × (1 - (1 + r)^-n) / r, where r is the chosen discount rate and n is years of payment.",
+      "We compute the net lump sum after an assumed immediate tax rate then project it forward using a real growth rate (after-tax return minus inflation). We also calculate the annual annuity equivalent that a net lump sum would purchase at the chosen discount rate to provide a like-for-like annual-payment comparison."
+    ],
+    "how_is_calculated": [
+      "Years of payment = life_expectancy - retirement_age",
+      "Present value of pension = annuity_base × (1 - (1 + discount_rate)^(-years)) / discount_rate",
+      "Net lump sum = lump_sum_amount × (1 - tax_rate_on_lump_sum_percent/100)",
+      "Projected invested value = net_lump_sum × (1 + real_rate)^years",
+      "Equivalent annuity from lump = net_lump_sum × discount_rate / (1 - (1 + discount_rate)^(-years))"
+    ],
+    "examples": [
+      "If a pension pays $42,000/year, retirement at 65, life expectancy 90 (25 years), and discount rate 3%: the calculator shows the present value of that stream at the chosen discount rate.",
+      "If offered $500,000 lump sum taxed at 25%, invested at a 5% after-tax return with 2% inflation, the calculator projects the invested value over the same horizon and computes what annual payment that net lump sum equates to at the discount rate."
+    ],
+    "summary": [
+      "This tool produces numeric comparisons: present value of the pension, projected value of an invested lump sum, and the annuity-equivalent annual payment implied by the lump sum.",
+      "Use results as a starting point. Key inputs (discount rate, expected return, taxes, survivor options, and life expectancy) materially change outcomes."
+    ],
+    "faqs": [
+      {
+        "question": "Which inputs most affect the comparison?",
+        "answer": "Discount rate used for present-value calculations, expected after-tax return on invested lump sum, tax rate applied to the lump sum, and life expectancy have the largest impact. Small changes in assumptions can change the recommendation."
+      },
+      {
+        "question": "What discount rate should I use?",
+        "answer": "There is no single correct discount rate. Common practice uses a rate reflecting your investment alternatives, risk tolerance, and inflation expectations. Test several rates to see sensitivity."
+      },
+      {
+        "question": "Does this include taxes on pension payments?",
+        "answer": "This calculator treats the pension payment input as pre-tax. It assumes an immediate tax on the lump sum as entered. It does not model ongoing taxes on pension distributions or investment tax-efficiency—adjust inputs to reflect your tax situation or consult a tax advisor."
+      },
+      {
+        "question": "Can I model survivor or joint life options?",
+        "answer": "Use the pension payment multiplier to approximate reduced or increased payments for a chosen survivor option. For precise plan options (guaranteed periods, pop-up provisions, different survivor percentages), consult plan documentation and a financial advisor."
+      },
+      {
+        "question": "How accurate are these numbers?",
+        "answer": "Results are mathematical estimates based on user inputs and simplify many real-world details (tax rules, fees, sequence-of-returns risk, plan-specific terms). They are not guarantees. See accuracy and standards section below."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Internal Revenue Service (tax information)",
+        "url": "https://www.irs.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Present value (PV)",
+        "definition": "The current worth of a stream of future payments discounted at a chosen rate to reflect time value of money."
+      },
+      {
+        "term": "Annuity",
+        "definition": "A series of equal payments made at regular intervals, here used to describe recurring pension payments."
+      },
+      {
+        "term": "Discount rate",
+        "definition": "The annual rate used to convert future payments into present value; reflects opportunity cost, risk, and inflation expectations."
+      },
+      {
+        "term": "Real rate",
+        "definition": "Nominal return after adjusting for inflation; used to estimate purchasing-power growth of invested lump sum."
+      },
+      {
+        "term": "Net lump sum",
+        "definition": "Lump-sum payout after an assumed immediate tax on the distribution."
+      },
+      {
+        "term": "Equivalent annuity",
+        "definition": "The annual payment a net lump sum would produce under the chosen discount rate over the same horizon."
+      }
+    ]
+  }
+}

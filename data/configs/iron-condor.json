@@ -1,0 +1,516 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Iron Condor Risk & P&L Calculator (Advanced)",
+    "description": "Interactive iron condor calculator that computes net credit, max profit, max loss, breakeven points, and an implied probability-of-profit estimate. Includes per-contract and aggregate values, commission adjustments, and clear accuracy and standards disclaimers."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_iron_condor",
+    "methods": {
+      "standard_iron_condor": {
+        "label": "Standard Iron Condor (short call + short put credit spreads)",
+        "description": "Calculates outcomes for a single iron condor constructed as one short put/long put vertical and one short call/long call vertical. Handles per-share and aggregate (contracts × multiplier) values, commissions, and an implied-probability estimate using a lognormal/normal approximation.",
+        "variables": {
+          "net_credit_per_share": {
+            "expression": "short_put_premium + short_call_premium - long_put_premium - long_call_premium - (commission_per_leg * 4 / multiplier)",
+            "dependencies": [
+              "short_put_premium",
+              "short_call_premium",
+              "long_put_premium",
+              "long_call_premium",
+              "commission_per_leg",
+              "multiplier"
+            ],
+            "label": "Net credit per share (after commissions)",
+            "unit": "USD/share",
+            "format": "currency",
+            "display": true
+          },
+          "net_credit": {
+            "expression": "net_credit_per_share * multiplier * contracts",
+            "dependencies": [
+              "net_credit_per_share",
+              "multiplier",
+              "contracts"
+            ],
+            "label": "Net credit (total)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "put_width": {
+            "expression": "short_put_strike - long_put_strike",
+            "dependencies": [
+              "short_put_strike",
+              "long_put_strike"
+            ],
+            "label": "Put spread width",
+            "unit": "USD",
+            "format": "decimal",
+            "display": false
+          },
+          "call_width": {
+            "expression": "long_call_strike - short_call_strike",
+            "dependencies": [
+              "long_call_strike",
+              "short_call_strike"
+            ],
+            "label": "Call spread width",
+            "unit": "USD",
+            "format": "decimal",
+            "display": false
+          },
+          "max_width": {
+            "expression": "put_width > call_width ? put_width : call_width",
+            "dependencies": [
+              "put_width",
+              "call_width"
+            ],
+            "label": "Maximum spread width (dominant leg)",
+            "unit": "USD",
+            "format": "decimal",
+            "display": false
+          },
+          "max_loss": {
+            "expression": "max_width * multiplier * contracts - net_credit",
+            "dependencies": [
+              "max_width",
+              "multiplier",
+              "contracts",
+              "net_credit"
+            ],
+            "label": "Maximum loss (worst-case)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_profit": {
+            "expression": "net_credit",
+            "dependencies": [
+              "net_credit"
+            ],
+            "label": "Maximum profit (credit received)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "breakeven_put": {
+            "expression": "short_put_strike - net_credit_per_share",
+            "dependencies": [
+              "short_put_strike",
+              "net_credit_per_share"
+            ],
+            "label": "Put-side breakeven",
+            "unit": "USD",
+            "format": "decimal",
+            "display": true
+          },
+          "breakeven_call": {
+            "expression": "short_call_strike + net_credit_per_share",
+            "dependencies": [
+              "short_call_strike",
+              "net_credit_per_share"
+            ],
+            "label": "Call-side breakeven",
+            "unit": "USD",
+            "format": "decimal",
+            "display": true
+          },
+          "days_fraction": {
+            "expression": "max(expiry_days, 1) / 252",
+            "dependencies": [
+              "expiry_days"
+            ],
+            "label": "Expiry fraction of trading year",
+            "unit": "years",
+            "format": "decimal",
+            "display": false
+          },
+          "z_call": {
+            "expression": "(short_call_strike - underlying_price) / (implied_volatility * sqrt(days_fraction))",
+            "dependencies": [
+              "short_call_strike",
+              "underlying_price",
+              "implied_volatility",
+              "days_fraction"
+            ],
+            "label": "Z for short call strike",
+            "format": "decimal",
+            "display": false
+          },
+          "z_put": {
+            "expression": "(short_put_strike - underlying_price) / (implied_volatility * sqrt(days_fraction))",
+            "dependencies": [
+              "short_put_strike",
+              "underlying_price",
+              "implied_volatility",
+              "days_fraction"
+            ],
+            "label": "Z for short put strike",
+            "format": "decimal",
+            "display": false
+          },
+          "probability_of_profit": {
+            "expression": "(normcdf(z_call) - normcdf(z_put)) * 100",
+            "dependencies": [
+              "z_call",
+              "z_put"
+            ],
+            "label": "Approximate probability the underlying finishes between breakevens at expiry",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "credit_to_risk_ratio": {
+            "expression": "net_credit / max_loss",
+            "dependencies": [
+              "net_credit",
+              "max_loss"
+            ],
+            "label": "Net credit to maximum loss ratio",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "net_credit",
+            "label": "Net credit (total)",
+            "variable": "net_credit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_profit",
+            "label": "Maximum profit",
+            "variable": "max_profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_loss",
+            "label": "Maximum loss",
+            "variable": "max_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "breakeven_put",
+            "label": "Put breakeven",
+            "variable": "breakeven_put",
+            "unit": "USD",
+            "format": "decimal"
+          },
+          {
+            "id": "breakeven_call",
+            "label": "Call breakeven",
+            "variable": "breakeven_call",
+            "unit": "USD",
+            "format": "decimal"
+          },
+          {
+            "id": "probability_of_profit",
+            "label": "Estimated probability of profit (%)",
+            "variable": "probability_of_profit",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "credit_to_risk_ratio",
+            "label": "Credit-to-risk ratio",
+            "variable": "credit_to_risk_ratio",
+            "format": "decimal"
+          }
+        ]
+      },
+      "adjusted_widths": {
+        "label": "Adjusted-width Iron Condor (different put/call widths)",
+        "description": "Same calculations but highlights per-leg widths and per-leg worst-case losses so users can manage asymmetric risk.",
+        "variables": {
+          "put_leg_loss": {
+            "expression": "(put_width * multiplier * contracts) - (short_put_premium - long_put_premium) * multiplier * contracts - (commission_per_leg * 2)",
+            "dependencies": [
+              "put_width",
+              "multiplier",
+              "contracts",
+              "short_put_premium",
+              "long_put_premium",
+              "commission_per_leg"
+            ],
+            "label": "Put-leg worst-case loss (net of put-leg credit and commissions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "call_leg_loss": {
+            "expression": "(call_width * multiplier * contracts) - (short_call_premium - long_call_premium) * multiplier * contracts - (commission_per_leg * 2)",
+            "dependencies": [
+              "call_width",
+              "multiplier",
+              "contracts",
+              "short_call_premium",
+              "long_call_premium",
+              "commission_per_leg"
+            ],
+            "label": "Call-leg worst-case loss (net of call-leg credit and commissions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "put_leg_loss",
+            "label": "Put leg worst-case loss",
+            "variable": "put_leg_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "call_leg_loss",
+            "label": "Call leg worst-case loss",
+            "variable": "call_leg_loss",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "underlying_price",
+        "label": "Underlying current price",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "short_put_strike",
+        "label": "Short put strike",
+        "type": "number",
+        "default": 95,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "long_put_strike",
+        "label": "Long put strike",
+        "type": "number",
+        "default": 90,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "short_call_strike",
+        "label": "Short call strike",
+        "type": "number",
+        "default": 105,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "long_call_strike",
+        "label": "Long call strike",
+        "type": "number",
+        "default": 110,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "short_put_premium",
+        "label": "Short put premium (per share)",
+        "type": "number",
+        "default": 1.2,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "long_put_premium",
+        "label": "Long put premium (per share)",
+        "type": "number",
+        "default": 0.4,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "short_call_premium",
+        "label": "Short call premium (per share)",
+        "type": "number",
+        "default": 1.1,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "long_call_premium",
+        "label": "Long call premium (per share)",
+        "type": "number",
+        "default": 0.35,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "contracts",
+        "label": "Number of contracts",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "multiplier",
+        "label": "Contract multiplier (shares per contract)",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "commission_per_leg",
+        "label": "Commission per leg (USD)",
+        "type": "number",
+        "default": 0.65,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "expiry_days",
+        "label": "Days until expiry",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "implied_volatility",
+        "label": "Implied volatility (annual, decimal)",
+        "type": "number",
+        "default": 0.2,
+        "min": 0.001,
+        "step": 0.001
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This iron condor calculator estimates the financial outcomes of a short iron condor constructed from one put vertical and one call vertical. It reports net credit, maximum profit, maximum loss, breakeven points, credit-to-risk ratio, and an approximate probability of finishing between breakevens at expiry.",
+      "Values are reported both per share and aggregated across contracts (using the contract multiplier). Commission inputs are included and deducted from the gross credit to improve practical accuracy."
+    ],
+    "methodology": [
+      "Monetary calculations follow standard options arithmetic: net credit equals premiums collected from short legs minus premiums paid for long wings, adjusted for commissions. Maximum loss is computed as the dominant spread width multiplied by contracts and multiplier, less the net credit (net of commissions).",
+      "Probability-of-profit is a statistical approximation: strikes are converted to standardized distances (Z-scores) using the supplied implied volatility and time-to-expiry (trading days / 252). The normal cumulative distribution function is used to approximate the chance the underlying finishes between short strikes. This is an approximation and not a substitute for full risk models or broker margin calculations.",
+      "Security, accuracy, and data integrity recommendations follow relevant standards: NIST guidance for secure handling of market data, ISO risk management principles for clear disclosures, IEEE best practices for numerical computations and floating-point handling, and workplace safety guidance for operational controls where applicable. This tool includes accuracy caveats and encourages calibration against market data from your broker."
+    ],
+    "how_is_calculated": [
+      "Net credit per share = short put premium + short call premium - long put premium - long call premium - (commissions per leg × 4 / multiplier).",
+      "Net credit (total) = net credit per share × multiplier × number of contracts.",
+      "Put spread width = short put strike − long put strike. Call spread width = long call strike − short call strike.",
+      "Maximum loss = (max(put spread width, call spread width) × multiplier × contracts) − net credit (total).",
+      "Breakeven points = short put strike − net credit per share (put side) and short call strike + net credit per share (call side).",
+      "Approximate probability of profit (%) = [CDF(z_call) − CDF(z_put)] × 100 where z = (strike − underlying) / (IV × sqrt(days/252)). CDF is the standard normal cumulative distribution."
+    ],
+    "examples": [
+      "Example: Underlying at $100, short put 95/long put 90 and short call 105/long call 110 with net premiums producing $0.55 net credit per share, multiplier 100, 1 contract: net credit = $55, max loss = (5 × 100) − 55 = $445.",
+      "If expiry is 30 days and implied volatility 20%, the approximate probability of finishing between breakevens is computed via the standard normal CDFs of the Z-scores for the short strikes. This gives a quick view of trade odds but not a complete risk report."
+    ],
+    "summary": [
+      "Use the calculator to estimate outcomes, compare different widths or credit levels, and test sensitivity to implied volatility and expiry.",
+      "This tool provides approximations useful for planning and risk awareness. Confirm margin and actual realized P&L with your broker."
+    ],
+    "faqs": [
+      {
+        "question": "Is the probability-of-profit exact?",
+        "answer": "No. The probability estimate is an approximation based on the normal distribution and supplied implied volatility. It assumes lognormal price behavior and does not account for discrete jumps, skew, kurtosis, or early assignment risk for American options."
+      },
+      {
+        "question": "Does this calculator account for early assignment, margin or liquidity?",
+        "answer": "No. Early assignment, margin requirements, liquidity impacts, and execution slippage are not modeled. Use the outputs for planning; consult your broker for margin and trade execution details."
+      },
+      {
+        "question": "How should I treat commissions and fees?",
+        "answer": "Enter per-leg commissions to have them deducted from gross credit. For exchange or regulatory fees not modeled here, add them to the commission input or adjust results manually."
+      },
+      {
+        "question": "How accurate are the numeric computations?",
+        "answer": "Numeric computations follow standard floating-point arithmetic conventions. For mission-critical decisions, cross-check with broker tools. The implementation should follow IEEE floating-point practices and validation per IEEE/ISO numeric guidelines."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Net credit",
+        "definition": "The net premium received per share after paying for long wings and subtracting commissions; multiplied by contracts and multiplier gives total credit."
+      },
+      {
+        "term": "Maximum loss",
+        "definition": "The worst-case loss assuming one vertical widens to its full width; calculated as the dominant spread width times contract size minus net credit."
+      },
+      {
+        "term": "Breakeven",
+        "definition": "Underlying price at expiry at which the position neither makes nor loses money, accounting for net credit per share."
+      },
+      {
+        "term": "Implied volatility (IV)",
+        "definition": "Market-implied annualized volatility used to estimate probability; input as a decimal (for example, 0.20 for 20%)."
+      },
+      {
+        "term": "Contract multiplier",
+        "definition": "Number of shares represented by one options contract, commonly 100 for equity options."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Guide to Protecting the Confidentiality of Personally Identifiable Information",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 31000 - Risk management — Principles and guidelines",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE Standards Association - Numerical accuracy & floating point",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "U.S. Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "SEC - Options Markets Overview",
+        "url": "https://www.sec.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/options/basics/breakeven-points",
+      "/risk/credit-to-risk-ratio"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

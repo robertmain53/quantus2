@@ -1,0 +1,576 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Property Management Fee Calculator (Multi-method)",
+    "description": "Calculate expected management and placement fees for rental properties using multiple common billing methods (percentage of rent, flat fee per unit, hybrid, placement/tenant-find, and lease-renewal). Includes occupancy adjustments, minimum-fee handling, and outputs both monthly and annual views."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "percentage_of_rent",
+    "methods": {
+      "percentage_of_rent": {
+        "label": "Percentage of Rent",
+        "description": "Ongoing monthly fee calculated as a percentage of collected rent (adjusted for occupancy). Shows monthly and annual fee and effective annual rate.",
+        "variables": {
+          "monthly_gross_rent": {
+            "expression": "monthly_rent * number_of_units * (occupancy_rate_percent / 100)",
+            "dependencies": [
+              "monthly_rent",
+              "number_of_units",
+              "occupancy_rate_percent"
+            ],
+            "label": "Estimated collected monthly rent",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "monthly_management_fee": {
+            "expression": "monthly_gross_rent * (management_fee_percent / 100)",
+            "dependencies": [
+              "monthly_gross_rent",
+              "management_fee_percent"
+            ],
+            "label": "Monthly management fee",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_management_fee": {
+            "expression": "monthly_management_fee * 12",
+            "dependencies": [
+              "monthly_management_fee"
+            ],
+            "label": "Annual management fee",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_management_rate": {
+            "expression": "annual_management_fee / (monthly_gross_rent * 12) * 100",
+            "dependencies": [
+              "annual_management_fee",
+              "monthly_gross_rent"
+            ],
+            "label": "Effective management rate (annual % of collected rent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_management_fee",
+            "label": "Monthly management fee",
+            "variable": "monthly_management_fee",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_management_fee",
+            "label": "Annual management fee",
+            "variable": "annual_management_fee",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "effective_management_rate",
+            "label": "Effective management rate",
+            "variable": "effective_management_rate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "flat_fee_per_unit": {
+        "label": "Flat Fee per Unit",
+        "description": "Fixed monthly fee charged per unit, with optional minimum monthly fee applied.",
+        "variables": {
+          "monthly_gross_rent": {
+            "expression": "monthly_rent * number_of_units * (occupancy_rate_percent / 100)",
+            "dependencies": [
+              "monthly_rent",
+              "number_of_units",
+              "occupancy_rate_percent"
+            ],
+            "label": "Estimated collected monthly rent",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_management_fee_raw": {
+            "expression": "flat_fee_per_unit_monthly * number_of_units",
+            "dependencies": [
+              "flat_fee_per_unit_monthly",
+              "number_of_units"
+            ],
+            "label": "Raw monthly fee before minimum",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_management_fee": {
+            "expression": "monthly_management_fee_raw < minimum_monthly_fee ? minimum_monthly_fee : monthly_management_fee_raw",
+            "dependencies": [
+              "monthly_management_fee_raw",
+              "minimum_monthly_fee"
+            ],
+            "label": "Monthly management fee (minimum applied)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_management_fee": {
+            "expression": "monthly_management_fee * 12",
+            "dependencies": [
+              "monthly_management_fee"
+            ],
+            "label": "Annual management fee",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_management_rate": {
+            "expression": "annual_management_fee / (monthly_gross_rent * 12) * 100",
+            "dependencies": [
+              "annual_management_fee",
+              "monthly_gross_rent"
+            ],
+            "label": "Effective management rate (annual % of collected rent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_management_fee",
+            "label": "Monthly management fee",
+            "variable": "monthly_management_fee",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_management_fee",
+            "label": "Annual management fee",
+            "variable": "annual_management_fee",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "effective_management_rate",
+            "label": "Effective management rate",
+            "variable": "effective_management_rate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "hybrid_percent_plus_flat": {
+        "label": "Hybrid (Percent of Rent + Flat Fee per Unit)",
+        "description": "Combine a percentage of rent with a per-unit flat fee. Minimum monthly fee is applied if specified.",
+        "variables": {
+          "monthly_gross_rent": {
+            "expression": "monthly_rent * number_of_units * (occupancy_rate_percent / 100)",
+            "dependencies": [
+              "monthly_rent",
+              "number_of_units",
+              "occupancy_rate_percent"
+            ],
+            "label": "Estimated collected monthly rent",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "percent_component": {
+            "expression": "monthly_gross_rent * (management_fee_percent / 100)",
+            "dependencies": [
+              "monthly_gross_rent",
+              "management_fee_percent"
+            ],
+            "label": "Percent component (monthly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "flat_component": {
+            "expression": "flat_fee_per_unit_monthly * number_of_units",
+            "dependencies": [
+              "flat_fee_per_unit_monthly",
+              "number_of_units"
+            ],
+            "label": "Flat component (monthly)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_management_fee_raw": {
+            "expression": "percent_component + flat_component",
+            "dependencies": [
+              "percent_component",
+              "flat_component"
+            ],
+            "label": "Raw monthly fee before minimum",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "monthly_management_fee": {
+            "expression": "monthly_management_fee_raw < minimum_monthly_fee ? minimum_monthly_fee : monthly_management_fee_raw",
+            "dependencies": [
+              "monthly_management_fee_raw",
+              "minimum_monthly_fee"
+            ],
+            "label": "Monthly management fee (minimum applied)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "annual_management_fee": {
+            "expression": "monthly_management_fee * 12",
+            "dependencies": [
+              "monthly_management_fee"
+            ],
+            "label": "Annual management fee",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "effective_management_rate": {
+            "expression": "annual_management_fee / (monthly_gross_rent * 12) * 100",
+            "dependencies": [
+              "annual_management_fee",
+              "monthly_gross_rent"
+            ],
+            "label": "Effective management rate (annual % of collected rent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "monthly_management_fee",
+            "label": "Monthly management fee",
+            "variable": "monthly_management_fee",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "annual_management_fee",
+            "label": "Annual management fee",
+            "variable": "annual_management_fee",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "effective_management_rate",
+            "label": "Effective management rate",
+            "variable": "effective_management_rate",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "placement_fee": {
+        "label": "Placement / Tenant-Find Fee (one-time)",
+        "description": "One-time fee charged when a new tenant is placed. Can be charged as a percent of first month's rent or a flat fee, whichever applies by input.",
+        "variables": {
+          "placement_fee_per_unit_percent": {
+            "expression": "monthly_rent * (placement_fee_percent / 100)",
+            "dependencies": [
+              "monthly_rent",
+              "placement_fee_percent"
+            ],
+            "label": "Placement fee per unit (percent)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "placement_fee_per_unit": {
+            "expression": "placement_flat_fee > placement_fee_per_unit_percent ? placement_flat_fee : placement_fee_per_unit_percent",
+            "dependencies": [
+              "placement_flat_fee",
+              "placement_fee_per_unit_percent"
+            ],
+            "label": "Placement fee per unit (applied)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_placement_fee": {
+            "expression": "placement_fee_per_unit * number_of_units",
+            "dependencies": [
+              "placement_fee_per_unit",
+              "number_of_units"
+            ],
+            "label": "Total placement fee (all units)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "placement_fee_per_unit",
+            "label": "Placement fee per unit",
+            "variable": "placement_fee_per_unit",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_placement_fee",
+            "label": "Total placement fee",
+            "variable": "total_placement_fee",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "lease_renewal_fee": {
+        "label": "Lease Renewal Fee (one-time per renewal)",
+        "description": "Fee charged when a lease is renewed. Can be a flat fee or percent of monthly rent per renewal event.",
+        "variables": {
+          "renewal_fee_per_unit_percent": {
+            "expression": "monthly_rent * (lease_renewal_fee_percent / 100)",
+            "dependencies": [
+              "monthly_rent",
+              "lease_renewal_fee_percent"
+            ],
+            "label": "Renewal fee per unit (percent)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "renewal_fee_per_unit": {
+            "expression": "lease_renewal_flat_fee > renewal_fee_per_unit_percent ? lease_renewal_flat_fee : renewal_fee_per_unit_percent",
+            "dependencies": [
+              "lease_renewal_flat_fee",
+              "renewal_fee_per_unit_percent"
+            ],
+            "label": "Renewal fee per unit (applied)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_renewal_fee": {
+            "expression": "renewal_fee_per_unit * number_of_units * expected_renewals_per_year",
+            "dependencies": [
+              "renewal_fee_per_unit",
+              "number_of_units",
+              "expected_renewals_per_year"
+            ],
+            "label": "Estimated total renewal fees per year",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "renewal_fee_per_unit",
+            "label": "Renewal fee per unit",
+            "variable": "renewal_fee_per_unit",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_renewal_fee",
+            "label": "Estimated total renewal fees per year",
+            "variable": "total_renewal_fee",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "monthly_rent",
+        "label": "Average monthly rent per unit",
+        "type": "number",
+        "default": 1200,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "number_of_units",
+        "label": "Number of units managed",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "occupancy_rate_percent",
+        "label": "Expected occupancy rate (%)",
+        "type": "number",
+        "default": 95,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "management_fee_percent",
+        "label": "Management fee (%) (for percent-based methods)",
+        "type": "number",
+        "default": 8,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "flat_fee_per_unit_monthly",
+        "label": "Flat fee per unit (monthly)",
+        "type": "number",
+        "default": 75,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "minimum_monthly_fee",
+        "label": "Minimum monthly fee (if applicable)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "placement_fee_percent",
+        "label": "Placement fee (% of one month's rent)",
+        "type": "number",
+        "default": 50,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "placement_flat_fee",
+        "label": "Placement flat fee per unit",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "lease_renewal_fee_percent",
+        "label": "Lease renewal fee (% of one month's rent)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "lease_renewal_flat_fee",
+        "label": "Lease renewal flat fee per unit",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "expected_renewals_per_year",
+        "label": "Expected renewals per unit per year",
+        "type": "number",
+        "default": 0.5,
+        "min": 0,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates property management fees across common billing approaches: percentage of collected rent, flat fee per unit, hybrid models, placement (tenant-find) fees, and lease-renewal charges. Use the inputs to model monthly and annual costs and to compare effective rates against your collected rent.",
+      "Results are for planning and comparison only. Inputs such as occupancy and average rent materially affect outcomes. Always validate final contracts and state-level regulatory requirements with legal counsel."
+    ],
+    "methodology": [
+      "For ongoing monthly fees, the tool first estimates collected rent by adjusting advertised rent for expected occupancy: collected monthly rent = monthly rent × units × occupancy rate. Management fees are then applied to collected rent or calculated as fixed per-unit amounts depending on the chosen method.",
+      "Placement and renewal fees are modeled as one-time events and reported as per-unit and total amounts. Where both percent and flat options exist (placement, renewals), the calculator uses the higher of percent-derived fee or flat fee as the applied amount to reflect common market rules.",
+      "Minimum monthly fees are applied when specified. The effective management rate expresses annual management fees as a percentage of estimated collected annual rent."
+    ],
+    "how_is_calculated": [
+      "Collected monthly rent = monthly_rent × number_of_units × (occupancy_rate_percent / 100).",
+      "Percentage method monthly fee = collected monthly rent × (management_fee_percent / 100). Annual fee = monthly fee × 12.",
+      "Flat per-unit method monthly fee = flat_fee_per_unit_monthly × number_of_units, subject to minimum_monthly_fee if set.",
+      "Hybrid monthly fee = percent component + flat per-unit component, subject to minimum_monthly_fee.",
+      "Placement fee per unit = greater of placement_flat_fee or (monthly_rent × placement_fee_percent / 100). Total placement fee = per-unit × number_of_units.",
+      "Lease renewal estimated annual total = renewal_fee_per_unit × number_of_units × expected_renewals_per_year."
+    ],
+    "examples": [
+      "Example: 10 units at $1,200 rent, 95% occupancy, 8% management fee: collected monthly rent = $1,200 × 10 × 0.95 = $11,400. Monthly management fee = $11,400 × 0.08 = $912. Annual fee = $10,944.",
+      "Example: Flat fee $75 per unit for 10 units produces $750 per month and $9,000 per year. If a minimum fee of $1,000 is set, the applied monthly fee becomes $1,000."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are the results?",
+        "answer": "This tool uses user-provided inputs to model fees. Accuracy depends on the quality of those inputs and on local contractual terms. Use outputs for budgeting and scenario comparison; confirm precise billing rules and legal limits in signed agreements."
+      },
+      {
+        "question": "Do results include maintenance or repair pass-throughs?",
+        "answer": "No. This calculator models management-related fees and placement/renewal charges only. Maintenance, repairs, vendor mark-ups, and reserve accounts should be modeled separately and may be charged differently per contract."
+      },
+      {
+        "question": "How are vacancies handled?",
+        "answer": "Estimated collected rent is adjusted by the occupancy rate you enter. If your actual occupancy differs, recalculate with the updated rate to see the impact on effective management fees."
+      },
+      {
+        "question": "Are there regulatory constraints on management fees?",
+        "answer": "Fee rules and allowable practices vary by jurisdiction. Landlords and managers must comply with state and local laws governing fee disclosures, trust accounting, security deposits, and licensing. This calculator does not replace legal advice."
+      },
+      {
+        "question": "Can I model a minimum monthly fee?",
+        "answer": "Yes. Enter a minimum monthly fee to see how it affects applied monthly and annual fees where specified. The calculator applies the minimum to methods that support it."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Cybersecurity and Risk Management Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Quality management standards overview",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE - Professional and Software Engineering Resources",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - Workplace safety and compliance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Collected rent",
+        "definition": "Estimated rent expected to be collected after accounting for vacancy/occupancy."
+      },
+      {
+        "term": "Management fee (percent)",
+        "definition": "Ongoing fee charged by a management company expressed as a percentage of collected rent."
+      },
+      {
+        "term": "Flat fee per unit",
+        "definition": "Fixed monthly charge applied to each unit regardless of rent amount."
+      },
+      {
+        "term": "Placement fee",
+        "definition": "One-time fee charged for finding and placing a new tenant, often expressed as a percent of first month's rent or a flat amount."
+      },
+      {
+        "term": "Lease renewal fee",
+        "definition": "One-time fee charged when an existing tenant signs a lease renewal; can be flat or percentage-based."
+      },
+      {
+        "term": "Effective management rate",
+        "definition": "Annual management fees expressed as a percentage of estimated collected annual rent."
+      }
+    ],
+    "summary": [
+      "Use this multi-method calculator to compare fee structures on a consistent basis by converting all methods into monthly and annual amounts and by expressing impact as an effective rate relative to collected rent.",
+      "Treat outputs as planning estimates. Validate with actual invoices, signed management agreements, and local regulatory counsel before making contractual decisions."
+    ]
+  }
+}

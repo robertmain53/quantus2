@@ -1,0 +1,574 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Covered Call Calculator (Multi-Mode)",
+    "description": "Interactive covered call calculator supporting owned-stock covered calls and buy-write (simultaneous buy+write). Provides per-contract math, breakeven, capped profit, worst-case loss, and annualized return estimates with explicit commission handling and cautionary accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "covered_call",
+    "methods": {
+      "covered_call": {
+        "label": "Covered Call (You own the shares)",
+        "description": "Write a call option against shares you already own. Calculates premium received, breakeven, capped profit if assigned, theoretical maximum loss if the stock goes to zero, and simple annualized return for the option term.",
+        "variables": {
+          "contracts": {
+            "expression": "shares / 100",
+            "dependencies": [
+              "shares"
+            ],
+            "label": "Options contracts",
+            "unit": "contracts",
+            "format": "integer",
+            "display": true
+          },
+          "gross_premium": {
+            "expression": "option_premium * shares",
+            "dependencies": [
+              "option_premium",
+              "shares"
+            ],
+            "label": "Gross premium received",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "commissions_total": {
+            "expression": "commissions_per_leg * contracts",
+            "dependencies": [
+              "commissions_per_leg",
+              "contracts"
+            ],
+            "label": "Estimated option commissions (sell leg)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_premium": {
+            "expression": "gross_premium - commissions_total",
+            "dependencies": [
+              "gross_premium",
+              "commissions_total"
+            ],
+            "label": "Net premium after commissions",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "breakeven": {
+            "expression": "cost_basis - (net_premium / shares)",
+            "dependencies": [
+              "cost_basis",
+              "net_premium",
+              "shares"
+            ],
+            "label": "Breakeven price per share",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_profit_assigned": {
+            "expression": "((strike - cost_basis) * shares) + net_premium",
+            "dependencies": [
+              "strike",
+              "cost_basis",
+              "shares",
+              "net_premium"
+            ],
+            "label": "Maximum profit if shares assigned at expiry",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_loss": {
+            "expression": "(cost_basis * shares) - net_premium",
+            "dependencies": [
+              "cost_basis",
+              "shares",
+              "net_premium"
+            ],
+            "label": "Maximum loss (stock falls to zero, net of premium)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "return_if_assigned_pct": {
+            "expression": "(max_profit_assigned / (cost_basis * shares)) * 100",
+            "dependencies": [
+              "max_profit_assigned",
+              "cost_basis",
+              "shares"
+            ],
+            "label": "Return if assigned (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "annualized_return_pct": {
+            "expression": "((max_profit_assigned / (cost_basis * shares)) / (days_to_expiration / 365)) * 100",
+            "dependencies": [
+              "max_profit_assigned",
+              "cost_basis",
+              "shares",
+              "days_to_expiration"
+            ],
+            "label": "Simple annualized return if assigned (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "contracts",
+            "label": "Options contracts",
+            "variable": "contracts",
+            "format": "integer"
+          },
+          {
+            "id": "net_premium",
+            "label": "Net premium received",
+            "variable": "net_premium",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "breakeven",
+            "label": "Breakeven price per share",
+            "variable": "breakeven",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_profit_assigned",
+            "label": "Maximum profit if assigned",
+            "variable": "max_profit_assigned",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_loss",
+            "label": "Maximum loss (stock to zero)",
+            "variable": "max_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "return_if_assigned_pct",
+            "label": "Return if assigned (%)",
+            "variable": "return_if_assigned_pct",
+            "format": "percent"
+          },
+          {
+            "id": "annualized_return_pct",
+            "label": "Annualized return (%)",
+            "variable": "annualized_return_pct",
+            "format": "percent"
+          }
+        ]
+      },
+      "buy_write": {
+        "label": "Buy-Write (Buy stock and sell call simultaneously)",
+        "description": "Simultaneous purchase of stock and sale of a call option. Computes net cash outflow, breakeven, capped profit if assigned, worst-case loss, and simple annualized return, including commissions for both stock and option legs.",
+        "variables": {
+          "contracts": {
+            "expression": "shares / 100",
+            "dependencies": [
+              "shares"
+            ],
+            "label": "Options contracts",
+            "unit": "contracts",
+            "format": "integer",
+            "display": true
+          },
+          "gross_premium": {
+            "expression": "option_premium * shares",
+            "dependencies": [
+              "option_premium",
+              "shares"
+            ],
+            "label": "Gross premium received",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "option_commissions": {
+            "expression": "commissions_per_leg * contracts",
+            "dependencies": [
+              "commissions_per_leg",
+              "contracts"
+            ],
+            "label": "Estimated option commissions (sell leg)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "stock_commissions": {
+            "expression": "commissions_per_leg * contracts",
+            "dependencies": [
+              "commissions_per_leg",
+              "contracts"
+            ],
+            "label": "Estimated stock commissions (buy leg estimate)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_commissions": {
+            "expression": "option_commissions + stock_commissions",
+            "dependencies": [
+              "option_commissions",
+              "stock_commissions"
+            ],
+            "label": "Total estimated commissions",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_premium": {
+            "expression": "gross_premium - option_commissions",
+            "dependencies": [
+              "gross_premium",
+              "option_commissions"
+            ],
+            "label": "Net premium after option commissions",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "cash_outflow": {
+            "expression": "(stock_price * shares) - net_premium + stock_commissions",
+            "dependencies": [
+              "stock_price",
+              "shares",
+              "net_premium",
+              "stock_commissions"
+            ],
+            "label": "Net cash outflow at initiation",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "breakeven": {
+            "expression": "cash_outflow / shares",
+            "dependencies": [
+              "cash_outflow",
+              "shares"
+            ],
+            "label": "Breakeven price per share",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_profit_assigned": {
+            "expression": "((strike - stock_price) * shares) + net_premium - total_commissions",
+            "dependencies": [
+              "strike",
+              "stock_price",
+              "shares",
+              "net_premium",
+              "total_commissions"
+            ],
+            "label": "Maximum profit if assigned",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_loss": {
+            "expression": "(stock_price * shares) - net_premium + total_commissions",
+            "dependencies": [
+              "stock_price",
+              "shares",
+              "net_premium",
+              "total_commissions"
+            ],
+            "label": "Maximum loss (stock to zero, net of premium and commissions)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "return_if_assigned_pct": {
+            "expression": "(max_profit_assigned / cash_outflow) * 100",
+            "dependencies": [
+              "max_profit_assigned",
+              "cash_outflow"
+            ],
+            "label": "Return if assigned (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "annualized_return_pct": {
+            "expression": "((max_profit_assigned / cash_outflow) / (days_to_expiration / 365)) * 100",
+            "dependencies": [
+              "max_profit_assigned",
+              "cash_outflow",
+              "days_to_expiration"
+            ],
+            "label": "Simple annualized return if assigned (%)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "contracts",
+            "label": "Options contracts",
+            "variable": "contracts",
+            "format": "integer"
+          },
+          {
+            "id": "net_premium",
+            "label": "Net premium received",
+            "variable": "net_premium",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "cash_outflow",
+            "label": "Net cash outflow at initiation",
+            "variable": "cash_outflow",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "breakeven",
+            "label": "Breakeven price per share",
+            "variable": "breakeven",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_profit_assigned",
+            "label": "Maximum profit if assigned",
+            "variable": "max_profit_assigned",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_loss",
+            "label": "Maximum loss (stock to zero)",
+            "variable": "max_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "return_if_assigned_pct",
+            "label": "Return if assigned (%)",
+            "variable": "return_if_assigned_pct",
+            "format": "percent"
+          },
+          {
+            "id": "annualized_return_pct",
+            "label": "Annualized return (%)",
+            "variable": "annualized_return_pct",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "stock_price",
+        "label": "Current stock price (per share)",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "shares",
+        "label": "Shares owned / to buy (must be multiple of 100)",
+        "type": "integer",
+        "default": 100,
+        "min": 100,
+        "step": 100
+      },
+      {
+        "id": "strike",
+        "label": "Option strike price",
+        "type": "number",
+        "default": 105,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "option_premium",
+        "label": "Option premium (per share)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "days_to_expiration",
+        "label": "Days to option expiration",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "cost_basis",
+        "label": "Your cost basis per share",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "commissions_per_leg",
+        "label": "Estimated commission per contract leg (flat per contract)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "dividend_yield",
+        "label": "Expected annual dividend yield (decimal)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "assignment_probability",
+        "label": "Estimated probability of assignment before/at expiry (0-1)",
+        "type": "number",
+        "default": 0.2,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models covered call and buy-write option outcomes using user-supplied inputs: stock price, strike, premium, shares, days to expiration, commissions, and cost basis. It reports breakeven, theoretical capped profit if assigned, worst-case loss if the stock falls to zero, and a simple annualized return estimate.",
+      "Results are estimates for planning and comparative analysis only. They assume contract sizing in 100-share increments and basic commission handling. This tool does not account for complex scenarios such as early assignment after ex-dividend date, margin interest, tax treatment, or multi-leg commissions beyond the stated inputs."
+    ],
+    "methodology": [
+      "Calculations are deterministic arithmetic based on inputs. For option sizing the calculator assumes 1 contract per 100 shares (contracts = shares / 100). Premiums are treated as per-share values and multiplied by shares for total premium.",
+      "Commissions are applied per contract leg as provided. Breakeven reduces the effective cost basis by net premium received per share. Maximum profit if assigned is computed as the capital gain to the strike plus net premium received. Maximum loss assumes the underlying falls to zero and is net of collected premium and stated commissions.",
+      "Annualized return is a simple scaling of the period return to a 365-day year and does not compound between periods. It is intended for rough comparisons between opportunities and expirations."
+    ],
+    "how_is_calculated": [
+      "contracts = shares / 100",
+      "gross_premium = option_premium * shares",
+      "commissions_total (option sell leg) = commissions_per_leg * contracts",
+      "net_premium = gross_premium - commissions_total",
+      "breakeven = cost_basis - (net_premium / shares)",
+      "max_profit_if_assigned = ((strike - cost_basis) * shares) + net_premium",
+      "max_loss = (cost_basis * shares) - net_premium",
+      "simple annualized return = ((max_profit_if_assigned / (cost_basis * shares)) / (days_to_expiration / 365)) * 100"
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator include early assignment risk and dividends?",
+        "answer": "This tool includes a user field for expected dividend yield but does not simulate early assignment dynamics or daily dividend timing. Early assignment can occur and materially change outcomes; treat these results as pre-assignment estimates."
+      },
+      {
+        "question": "Are taxes included in the calculations?",
+        "answer": "No. Tax treatment varies by jurisdiction, holding period, and account type. Use these outputs for pre-tax planning and consult a tax professional for tax-adjusted estimates."
+      },
+      {
+        "question": "How accurate are the annualized return figures?",
+        "answer": "Annualized return is a simple, non-compounded projection based on the option term. It is an approximation intended for comparison; realized returns will differ due to execution, slippage, early assignment, and follow-up trades."
+      },
+      {
+        "question": "Is this financial advice?",
+        "answer": "No. This calculator provides quantitative estimates for planning and education only. It is not personalized investment advice. Consult a licensed financial professional for advice tailored to your circumstances."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Risk Management Framework",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 31000 Risk management",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission investor resource",
+        "url": "https://www.investor.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Covered Call",
+        "definition": "An options strategy where the investor owns the underlying stock and sells call options against those shares to receive premium income."
+      },
+      {
+        "term": "Call Option Premium",
+        "definition": "The price paid by the option buyer per share for the right to buy the underlying at the strike before expiration."
+      },
+      {
+        "term": "Strike Price",
+        "definition": "The price at which the option buyer may exercise the option to buy the underlying (call) or sell (put)."
+      },
+      {
+        "term": "Breakeven",
+        "definition": "Price level at which the combined position (stock net of premium and commissions) produces zero profit or loss at expiration."
+      },
+      {
+        "term": "Assignment",
+        "definition": "When a short option is exercised by the option holder, obligating the option seller to deliver or receive the underlying stock at the strike."
+      },
+      {
+        "term": "Contracts",
+        "definition": "Standard option contract size. In U.S. equity options, one contract covers 100 shares."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.investor.gov",
+        "label": "Investor.gov (SEC)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  }
+}
