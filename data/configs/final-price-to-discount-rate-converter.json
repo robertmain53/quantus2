@@ -2,28 +2,31 @@
   "version": "1.0.0",
   "metadata": {
     "title": "Convert Final Price to Discount Rate",
-    "description": "Calculate the discount amount and discount rate (percent and decimal) when you provide the original (list) price and the final (sale) price. Includes guidance on rounding, precision, and interpretation for reporting."
+    "description": "Calculate the discount rate and discount amount from an original (pre-discount) price and the final (post-discount) price. Includes supporting outputs and guidance for tax-inclusive pricing, rounding, and measurement limits."
   },
   "logic": {
     "type": "formula",
     "outputs": [
       {
+        "id": "discount_rate",
+        "label": "Discount rate",
+        "expression": "(original_price - final_price) / original_price * 100",
+        "unit": "%",
+        "format": "percent"
+      },
+      {
         "id": "discount_amount",
         "label": "Discount amount",
         "expression": "original_price - final_price",
+        "unit": "",
         "format": "currency"
       },
       {
-        "id": "discount_rate_decimal",
-        "label": "Discount rate (decimal)",
-        "expression": "(original_price - final_price) / original_price",
+        "id": "final_price_ratio",
+        "label": "Final price as fraction of original",
+        "expression": "final_price / original_price",
+        "unit": "",
         "format": "decimal"
-      },
-      {
-        "id": "discount_rate_percent",
-        "label": "Discount rate (%)",
-        "expression": "((original_price - final_price) / original_price) * 100",
-        "format": "percent"
       }
     ]
   },
@@ -31,7 +34,7 @@
     "fields": [
       {
         "id": "original_price",
-        "label": "Original (list) price",
+        "label": "Original price (pre-discount)",
         "type": "number",
         "default": 100,
         "min": 0.01,
@@ -39,29 +42,54 @@
       },
       {
         "id": "final_price",
-        "label": "Final (sale) price",
+        "label": "Final price (after discount)",
         "type": "number",
         "default": 75,
         "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "tax_inclusive",
+        "label": "Are the entered prices tax-inclusive?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No — prices are pre-tax",
+            "value": "no"
+          },
+          {
+            "label": "Yes — prices include sales tax",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "tax_rate",
+        "label": "Sales tax rate (%) — used only if tax-inclusive",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
         "step": 0.01
       }
     ],
     "result": {
       "outputs": [
         {
-          "id": "discount_amount",
-          "label": "Discount amount",
-          "format": "currency"
-        },
-        {
-          "id": "discount_rate_percent",
+          "id": "discount_rate",
           "label": "Discount rate (%)",
           "format": "percent",
           "unit": "%"
         },
         {
-          "id": "discount_rate_decimal",
-          "label": "Discount rate (decimal)",
+          "id": "discount_amount",
+          "label": "Discount amount",
+          "format": "currency"
+        },
+        {
+          "id": "final_price_ratio",
+          "label": "Final price fraction",
           "format": "decimal"
         }
       ]
@@ -69,43 +97,47 @@
   },
   "page_content": {
     "introduction": [
-      "This tool converts a final (sale) price back into the discount amount and discount rate relative to the original (list) price. Enter the original price and the final price to get the absolute savings and the discount expressed both as a percent and as a decimal fraction.",
-      "Results are calculated using straightforward arithmetic widely used in retail and financial reporting. See the methodology and accuracy notes below for guidance on rounding and when a result represents a markdown versus a price increase."
+      "This tool converts an original (pre-discount) price and a final (post-discount) price into a discount amount and discount rate. Enter numeric values for the original and final prices — the calculator returns the proportion and monetary reduction.",
+      "If your input prices include sales tax, indicate this so you can apply the tax adjustment method described below. Read the methodology and FAQs for precision, rounding, and regulatory alignment guidance."
     ],
     "methodology": [
-      "The calculator computes discount amount as the difference between original price and final price. The discount rate is the discount amount divided by the original price.",
-      "For numerical stability and predictable rounding, use cents-level inputs (two decimal places) for currency. Follow your organization's accounting rounding rules when recording results for reporting or taxation purposes."
+      "Primary calculation assumes both inputs are on the same basis (either both pre-tax or both tax-inclusive). The basic formula for discount rate is (original − final) / original × 100.",
+      "When prices are tax-inclusive, first remove tax from both prices using final_net = final_price / (1 + tax_rate/100) and original_net = original_price / (1 + tax_rate/100). Use the net values in the discount formula to measure the merchant discount separate from tax."
     ],
     "how_is_calculated": [
-      "Discount amount = original_price - final_price",
-      "Discount rate (decimal) = (original_price - final_price) / original_price",
-      "Discount rate (%) = Discount rate (decimal) x 100"
+      "Discount amount = original_price − final_price",
+      "Discount rate (%) = (original_price − final_price) / original_price × 100",
+      "If prices include tax: use net_original = original_price / (1 + tax_rate/100) and net_final = final_price / (1 + tax_rate/100) then apply the same formulas to nets"
     ],
     "examples": [
-      "Example 1: Original price 100.00, final price 75.00 → discount amount 25.00, discount rate 25%",
-      "Example 2: Original price 49.99, final price 44.99 → discount amount 5.00, discount rate ≈10.002% (rounded per reporting rules)"
+      "Original price $120, final price $90 → Discount amount $30, Discount rate = (120 − 90) / 120 × 100 = 25%",
+      "If prices are tax-inclusive at 10%: original $110 → net 100; final $99 → net 90; discount rate on nets = (100 − 90) / 100 × 100 = 10%"
     ],
     "faqs": [
       {
-        "question": "What if final price is greater than the original price?",
-        "answer": "If final price is bigger than the original price the formula returns a negative discount (interpreted as a markup). The same formulas apply; a negative percent indicates an increase rather than a reduction."
-      },
-      {
         "question": "What if the original price is zero?",
-        "answer": "Division by zero is undefined. This tool requires a positive original (list) price. Enter an original price greater than zero to compute a discount rate."
+        "answer": "A zero original price makes the discount rate undefined. The calculator requires a positive original price. If original_price is zero or extremely small, treat outputs as invalid and inspect input data."
       },
       {
-        "question": "How should I round results for financial reports?",
-        "answer": "Round according to your applicable accounting or regulatory rules. For display, percentages are commonly rounded to two decimal places; for legal or tax reporting, follow the standards or policies that govern your reporting jurisdiction."
+        "question": "How should I handle tax-inclusive prices?",
+        "answer": "If prices include sales tax, enter tax rate and set tax-inclusive to Yes. Adjust both prices to net (divide by 1 + tax_rate/100) before applying the discount formula so the computed discount reflects the merchant discount rather than tax differences."
       },
       {
-        "question": "Are results exact?",
-        "answer": "Results reflect exact arithmetic on the provided inputs, subject to typical floating-point representation. Very large or very small inputs can be affected by numerical precision; follow the accuracy caveats and validation checks below."
+        "question": "Why do results differ slightly from printed store signage?",
+        "answer": "Differences come from rounding, whether tax was applied before or after discount, and whether the seller displays 'discount off original price' or 'markdown to final price'. Minor discrepancies are expected; follow the explicit formulas here for reproducible results."
+      },
+      {
+        "question": "What accuracy and validation standards does this tool follow?",
+        "answer": "Calculations use elementary arithmetic; users should validate inputs and rounding rules against local regulations and internal controls. Guidance and traceability recommendations align with numerical best practices from NIST for numerical accuracy and IEEE recommendations for numerical computation reporting. For workplace safety and recordkeeping, follow applicable OSHA and ISO procedures for financial record controls where relevant."
+      },
+      {
+        "question": "What if the final price is higher than the original price?",
+        "answer": "If final_price > original_price the computed result will be a negative discount rate, indicating a markup. Verify input correctness if you expected a discount."
       }
     ],
     "citations": [
       {
-        "label": "National Institute of Standards and Technology (NIST)",
+        "label": "National Institute of Standards and Technology (NIST) — Numerical Methods and Standards",
         "url": "https://www.nist.gov"
       },
       {
@@ -113,8 +145,8 @@
         "url": "https://www.iso.org"
       },
       {
-        "label": "IEEE Standards Association",
-        "url": "https://standards.ieee.org"
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
       },
       {
         "label": "Occupational Safety and Health Administration (OSHA)",
@@ -123,52 +155,25 @@
     ],
     "glossary": [
       {
+        "term": "Original price",
+        "definition": "The pre-discount price used as the reference for percentage discount calculations."
+      },
+      {
+        "term": "Final price",
+        "definition": "The price after discount has been applied; may be tax-inclusive or pre-tax depending on inputs."
+      },
+      {
         "term": "Discount amount",
-        "definition": "The absolute difference between the original price and the final price."
+        "definition": "Absolute monetary reduction: original_price minus final_price."
       },
       {
-        "term": "Discount rate (decimal)",
-        "definition": "The discount amount divided by the original price, expressed as a fraction between -inf and 1 (negative values indicate a price increase)."
+        "term": "Discount rate",
+        "definition": "Relative reduction expressed as a percentage of the original price: (original − final) / original × 100."
       },
       {
-        "term": "Discount rate (%)",
-        "definition": "The discount rate expressed as a percentage. Calculated as discount rate (decimal) multiplied by 100."
-      },
-      {
-        "term": "Markup",
-        "definition": "A positive change in price where final price exceeds original price; appears as a negative discount in these calculations."
-      }
-    ],
-    "summary": [
-      "Provide the original (list) price and final (sale) price to compute the discount amount and discount rate.",
-      "Validate inputs: original price must be greater than zero. Interpret negative discount rates as markups.",
-      "Follow organizational and regulatory rounding and reporting rules when using results for accounting, consumer disclosures, or compliance."
-    ]
-  },
-  "links": {
-    "internal": [
-      "/calculators/financial/price-markup-vs-discount",
-      "/guides/financial-rounding-best-practices"
-    ],
-    "external": [
-      {
-        "url": "https://www.nist.gov",
-        "label": "NIST",
-        "rel": ["noopener", "noreferrer"]
-      },
-      {
-        "url": "https://www.iso.org",
-        "label": "ISO",
-        "rel": ["noopener", "noreferrer"]
-      },
-      {
-        "url": "https://standards.ieee.org",
-        "label": "IEEE Standards",
-        "rel": ["noopener", "noreferrer"]
+        "term": "Tax-inclusive price",
+        "definition": "A price that already includes sales tax. To compare discounts separate from tax, remove tax from both original and final prices before computing the discount rate."
       }
     ]
-  },
-  "schema": {
-    "additionalTypes": ["HowTo"]
   }
 }

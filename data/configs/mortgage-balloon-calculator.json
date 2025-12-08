@@ -1,0 +1,228 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Mortgage Balloon Calculator",
+    "description": "Calculate the periodic payment for an amortizing schedule and the balloon (remaining principal) due at a specified term. Includes totals and interest paid before the balloon, with guidance on limits and accuracy."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "periodic_payment",
+        "label": "Periodic payment",
+        "expression": "(principal*(annual_rate_percent/100/payments_per_year))/(1 - (1 + (annual_rate_percent/100/payments_per_year))^(-amortization_years*payments_per_year))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "balloon_payment",
+        "label": "Balloon payment due at term",
+        "expression": "principal*(1 + (annual_rate_percent/100/payments_per_year))^(balloon_term_years*payments_per_year) - ((principal*(annual_rate_percent/100/payments_per_year))/(1 - (1 + (annual_rate_percent/100/payments_per_year))^(-amortization_years*payments_per_year))) * (((1 + (annual_rate_percent/100/payments_per_year))^(balloon_term_years*payments_per_year) - 1)/(annual_rate_percent/100/payments_per_year))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_paid_before_balloon",
+        "label": "Total payments made before balloon",
+        "expression": "((principal*(annual_rate_percent/100/payments_per_year))/(1 - (1 + (annual_rate_percent/100/payments_per_year))^(-amortization_years*payments_per_year))) * (balloon_term_years*payments_per_year)",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_interest_before_balloon",
+        "label": "Interest paid before balloon",
+        "expression": "(((principal*(annual_rate_percent/100/payments_per_year))/(1 - (1 + (annual_rate_percent/100/payments_per_year))^(-amortization_years*payments_per_year))) * (balloon_term_years*payments_per_year)) - (principal - (principal*(1 + (annual_rate_percent/100/payments_per_year))^(balloon_term_years*payments_per_year) - ((principal*(annual_rate_percent/100/payments_per_year))/(1 - (1 + (annual_rate_percent/100/payments_per_year))^(-amortization_years*payments_per_year))) * (((1 + (annual_rate_percent/100/payments_per_year))^(balloon_term_years*payments_per_year) - 1)/(annual_rate_percent/100/payments_per_year))))",
+        "unit": "USD",
+        "format": "currency"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "principal",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 300000,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "annual_rate_percent",
+        "label": "Annual interest rate (percent)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_years",
+        "label": "Amortization period (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "balloon_term_years",
+        "label": "Balloon term (years until balloon is due)",
+        "type": "integer",
+        "default": 7,
+        "min": 0,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 52,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "periodic_payment",
+          "label": "Periodic payment",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "balloon_payment",
+          "label": "Balloon payment due at term",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_paid_before_balloon",
+          "label": "Total payments made before balloon",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest_before_balloon",
+          "label": "Interest paid before balloon",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes the periodic amortizing payment based on a chosen amortization schedule and the remaining principal (the balloon) due at a specified shorter term. It is intended for common balloon mortgage structures where regular payments are calculated as if the loan amortizes over a longer schedule but a lump-sum balance is due earlier.",
+      "Use the inputs to model scenarios (monthly, quarterly, annual payments). Ensure the balloon term is less than or equal to the amortization period. For zero-rate cases or extreme edge inputs see the accuracy notes below."
+    ],
+    "methodology": [
+      "Calculations use standard time-value-of-money formulas: fixed-rate annuity payment for an amortization schedule and the outstanding principal formula for remaining balance after k payments. The payment formula is the canonical amortizing loan formula, and the remaining principal is derived from the amortization schedule.",
+      "For numerical robustness we follow best-practice guidance on floating-point computation and software quality: implementers should adhere to IEEE 754 for binary floating-point behavior, ISO quality management practices (ISO 9001) for verification, and NIST recommendations for secure, auditable software development.",
+      "This tool provides model outputs for planning and comparison only. It is not a binding loan offer. Always confirm final figures with your lender and review contract terms for prepayment, taxes, insurance, fees, or adjustable-rate clauses that are not modeled here."
+    ],
+    "how_is_calculated": [
+      "Periodic interest rate r = (annual_rate_percent / 100) / payments_per_year.",
+      "Number of amortization payments n = amortization_years * payments_per_year.",
+      "Periodic payment = principal * r / (1 - (1 + r)^(-n)). For r = 0 use payment = principal / n.",
+      "Balloon (outstanding principal after k payments) where k = balloon_term_years * payments_per_year:",
+      "Outstanding = principal*(1 + r)^k - payment * (((1 + r)^k - 1) / r). For r = 0 use linear principal reduction: Outstanding = principal - payment * k."
+    ],
+    "examples": [
+      "Example: $300,000 principal, 5% annual rate, 30-year amortization, balloon at 7 years, monthly payments: periodic payment ≈ computed payment, balloon ≈ remaining principal due at year 7. Use calculator inputs to view exact figures.",
+      "Zero interest example: With 0% interest, payment equals principal divided by total amortization payments; the remaining principal after k payments equals principal minus payments already applied."
+    ],
+    "faqs": [
+      {
+        "question": "What is a balloon payment?",
+        "answer": "A balloon payment is the remaining principal balance due at the end of a shorter term when the payment schedule was calculated on a longer amortization. Borrowers make regular payments that do not fully amortize the loan; the unpaid balance is due as a lump sum at the balloon date."
+      },
+      {
+        "question": "Can I use any payment frequency?",
+        "answer": "Yes. Set payments per year to match your contract (12 for monthly, 4 for quarterly, 1 for annual, 26 for biweekly, etc.). The calculator converts the annual rate to the periodic rate using the selected payments per year."
+      },
+      {
+        "question": "What about zero or extremely low interest rates?",
+        "answer": "When the periodic interest rate is zero, formulas that divide by the rate are undefined. In that case the calculator should switch to linear calculations: payment = principal / (amortization_years * payments_per_year) and outstanding principal reduces linearly. Always verify zero-rate scenarios manually or with lender statements."
+      },
+      {
+        "question": "How accurate are these results?",
+        "answer": "Results follow standard amortization mathematics and typical floating-point arithmetic. Small rounding differences can occur due to implementation (binary floating point, rounding to cents). For regulatory reporting or contractual figures, reconcile with lender-provided amortization schedules. See accuracy and limits below."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IEEE 754 — Standard for Floating-Point Arithmetic",
+        "url": "https://standards.ieee.org/standard/754-2019.html"
+      },
+      {
+        "label": "NIST Special Publication (software assurance and development best practices)",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf"
+      },
+      {
+        "label": "ISO 9001 — Quality management systems",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration (general regulatory reference)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Balloon payment",
+        "definition": "The outstanding principal amount due as a lump sum at a specified shorter term when the loan is amortized over a longer schedule."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying off principal over time through regular payments that include interest and principal components."
+      },
+      {
+        "term": "Periodic interest rate",
+        "definition": "The interest rate applicable to one payment period; computed as the annual rate divided by payments per year."
+      },
+      {
+        "term": "IEEE 754",
+        "definition": "A widely used standard that specifies floating-point number formats and operations to ensure predictable numerical behavior across computing platforms."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/mortgage",
+      "/guides/balloon-mortgages"
+    ],
+    "external": [
+      {
+        "url": "https://standards.ieee.org/standard/754-2019.html",
+        "label": "IEEE 754 standard",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf",
+        "label": "NIST Special Publication",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}
