@@ -1,0 +1,344 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Sleep Debt Calculator",
+    "description": "Estimate accumulated sleep debt from recent sleep history, project future debt based on planned sleep, and generate simple repayment plans. Includes conservative accuracy notes and references to quality and safety standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "estimate_debt",
+    "methods": {
+      "estimate_debt": {
+        "label": "Estimate from recent average",
+        "description": "Estimate total sleep debt using your reported average nightly sleep and the number of nights recorded.",
+        "variables": {
+          "nightly_deficit": {
+            "expression": "recommended_hours - avg_sleep",
+            "dependencies": [
+              "recommended_hours",
+              "avg_sleep"
+            ],
+            "label": "Nightly deficit (hours)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "sleep_debt_total": {
+            "expression": "max(0, nightly_deficit * days_recorded)",
+            "dependencies": [
+              "nightly_deficit",
+              "days_recorded"
+            ],
+            "label": "Estimated sleep debt (hours)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "sleep_debt_hours",
+            "label": "Estimated sleep debt (hours)",
+            "variable": "sleep_debt_total",
+            "unit": "hours",
+            "format": "decimal"
+          }
+        ]
+      },
+      "projected_debt": {
+        "label": "Project forward (history + planned nights)",
+        "description": "Combine historical debt with a projection for upcoming nights using a planned average nightly sleep to estimate debt at a future date.",
+        "variables": {
+          "historical_debt": {
+            "expression": "max(0, (recommended_hours - avg_sleep) * days_recorded)",
+            "dependencies": [
+              "recommended_hours",
+              "avg_sleep",
+              "days_recorded"
+            ],
+            "label": "Historical debt (hours)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "future_deficit": {
+            "expression": "recommended_hours - projected_avg_sleep",
+            "dependencies": [
+              "recommended_hours",
+              "projected_avg_sleep"
+            ],
+            "label": "Projected nightly deficit (hours)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "projected_debt_total": {
+            "expression": "max(0, historical_debt + future_deficit * future_days)",
+            "dependencies": [
+              "historical_debt",
+              "future_deficit",
+              "future_days"
+            ],
+            "label": "Projected total debt after planned nights (hours)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "projected_debt_hours",
+            "label": "Projected total sleep debt (hours)",
+            "variable": "projected_debt_total",
+            "unit": "hours",
+            "format": "decimal"
+          }
+        ]
+      },
+      "repayment_plan": {
+        "label": "Repayment plan",
+        "description": "Estimate how many nights or how many extra hours per night are needed to repay current sleep debt. Includes a conservative minimum extra-sleep recommendation.",
+        "variables": {
+          "current_debt": {
+            "expression": "max(0, (recommended_hours - avg_sleep) * days_recorded)",
+            "dependencies": [
+              "recommended_hours",
+              "avg_sleep",
+              "days_recorded"
+            ],
+            "label": "Current estimated debt (hours)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "days_to_repay_using_extra": {
+            "expression": "ceil(current_debt / extra_hours_per_night)",
+            "dependencies": [
+              "current_debt",
+              "extra_hours_per_night"
+            ],
+            "label": "Nights to repay using your chosen extra per night",
+            "unit": "nights",
+            "format": "integer",
+            "display": true
+          },
+          "required_extra_per_night": {
+            "expression": "max(0, current_debt / target_repay_nights)",
+            "dependencies": [
+              "current_debt",
+              "target_repay_nights"
+            ],
+            "label": "Required extra sleep per night to meet your target nights",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "repay_nights",
+            "label": "Estimated nights to repay (based on chosen extra per night)",
+            "variable": "days_to_repay_using_extra",
+            "format": "integer"
+          },
+          {
+            "id": "required_extra",
+            "label": "Required extra sleep per night (to meet target nights)",
+            "variable": "required_extra_per_night",
+            "unit": "hours",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "avg_sleep",
+        "label": "Average sleep per night (hours)",
+        "type": "number",
+        "default": 7,
+        "min": 0,
+        "max": 24,
+        "step": 0.25
+      },
+      {
+        "id": "days_recorded",
+        "label": "Number of nights recorded",
+        "type": "integer",
+        "default": 7,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "recommended_hours",
+        "label": "Recommended sleep need per night (hours)",
+        "type": "number",
+        "default": 8,
+        "min": 4,
+        "max": 12,
+        "step": 0.25
+      },
+      {
+        "id": "projected_avg_sleep",
+        "label": "Planned average sleep per night for projection (hours)",
+        "type": "number",
+        "default": 7,
+        "min": 0,
+        "max": 24,
+        "step": 0.25
+      },
+      {
+        "id": "future_days",
+        "label": "Number of future nights to project",
+        "type": "integer",
+        "default": 7,
+        "min": 0,
+        "max": 365,
+        "step": 1
+      },
+      {
+        "id": "extra_hours_per_night",
+        "label": "Extra sleep per night you plan to add (hours)",
+        "type": "number",
+        "default": 0.5,
+        "min": 0,
+        "max": 6,
+        "step": 0.25
+      },
+      {
+        "id": "target_repay_nights",
+        "label": "Target nights to repay debt",
+        "type": "integer",
+        "default": 7,
+        "min": 1,
+        "max": 365,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This tool helps you estimate accumulated sleep debt from recent nights, project how debt will change under planned sleep, and create simple repayment estimates. It is intended for self-assessment and planning, not medical diagnosis.",
+      "Calculations use your reported average nightly sleep, a user-specified recommended sleep need, and the number of nights observed. Results are conservative estimates and include guidance on interpretation and limits."
+    ],
+    "methodology": [
+      "Sleep debt is estimated as the sum of nightly shortfalls: for each night, shortfall = recommended sleep need − actual sleep (floored at zero). We multiply nightly shortfall by the count of nights in the sample to estimate accumulated debt.",
+      "Projection combines historical debt with future nightly deficits calculated from a planned average sleep. Repayment calculations divide current debt by extra sleep per night or by a target number of nights to yield nights-to-repay or required extra hours per night.",
+      "This calculator follows best-practice software quality and user-safety conventions. Where relevant we reference information-quality and risk-management standards from NIST, ISO, IEEE, and workplace safety guidance from OSHA to inform accuracy caveats and user-facing warnings."
+    ],
+    "how_is_calculated": [
+      "Nightly deficit = max(0, recommended_hours − avg_sleep)",
+      "Estimated historical debt = sum of nightly deficits ≈ max(0, nightly_deficit × days_recorded)",
+      "Projected debt = max(0, historical_debt + (recommended_hours − projected_avg_sleep) × future_days)",
+      "Repayment nights = ceil(current_debt / extra_hours_per_night) or required_extra = current_debt / target_repay_nights"
+    ],
+    "examples": [
+      "If recommended_hours = 8, avg_sleep = 6.5 over 7 nights: nightly deficit = 1.5, estimated debt = 1.5 × 7 = 10.5 hours.",
+      "If historical debt = 10.5 hours and planned future avg_sleep = 7 for 7 nights: future nightly deficit = 1, projected debt = 10.5 + 1 × 7 = 17.5 hours."
+    ],
+    "summary": [
+      "Use the estimate method when you have a representative average and a short history of nights.",
+      "Use projection when you want to know how planned sleep behavior will affect debt.",
+      "Use repayment plan to explore realistic targets; prioritize gradual increases in nightly sleep (for example 0.25–1 hour) rather than extreme additions."
+    ],
+    "faqs": [
+      {
+        "question": "What is 'sleep debt' in this calculator?",
+        "answer": "Sleep debt here is the cumulative shortfall between a user-specified recommended sleep need and reported actual sleep, summed over the recorded nights. Shortfalls do not go negative (extra sleep does not create negative debt in this model)."
+      },
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Estimates are approximate. They depend on the accuracy of your reported sleep hours and the chosen recommended sleep need. Individual physiology, sleep quality, and circadian timing are not modelled. See accuracy caveats and relevant standards below."
+      },
+      {
+        "question": "Should I try to 'repay' all sleep debt quickly?",
+        "answer": "Rapid large increases in nightly sleep can be disruptive. Clinical and occupational guidance generally recommend gradual increases and attention to regular schedules. Use repayment estimates as planning guidance, not clinical prescriptions."
+      },
+      {
+        "question": "When should I consult a professional?",
+        "answer": "If you have persistent daytime impairment, suspected sleep disorders (insomnia, sleep apnea), or workplace-safety concerns, consult a healthcare professional. This tool is not a diagnostic device."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - homepage",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) - homepage",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) - homepage",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - homepage",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Sleep debt",
+        "definition": "Cumulative hours by which actual sleep falls short of a specified recommended sleep need over a period of nights."
+      },
+      {
+        "term": "Recommended sleep need",
+        "definition": "User-specified target sleep duration per night used as the comparator for calculating deficits."
+      },
+      {
+        "term": "Nightly deficit",
+        "definition": "The positive difference between recommended sleep need and the actual sleep on a night; negative differences are treated as zero."
+      },
+      {
+        "term": "Repayment plan",
+        "definition": "An estimate of how many nights or how many extra hours per night are needed to eliminate estimated sleep debt, based on simple arithmetic division."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

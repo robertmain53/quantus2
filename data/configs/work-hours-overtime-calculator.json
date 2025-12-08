@@ -1,0 +1,752 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Work Hours & Overtime Calculator (Multi-Method, US + California)",
+    "description": "Calculate weekly pay and overtime under common rules (Federal FLSA style 40-hour weekly overtime and California daily/weekly overtime rules). Supports per-day hour inputs for an up to 7-day pay period, configurable multipliers, and provides breakdowns and effective hourly rates. Includes regulatory and accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "federal",
+    "methods": {
+      "federal": {
+        "label": "Standard (FLSA-style weekly overtime)",
+        "description": "Applies a single weekly overtime threshold: hours over 40 in the pay week are paid at the overtime multiplier (default 1.5×). Daily rules are not applied in this method.",
+        "variables": {
+          "total_hours": {
+            "expression": "day1_hours + day2_hours + day3_hours + day4_hours + day5_hours + day6_hours + day7_hours",
+            "dependencies": [
+              "day1_hours",
+              "day2_hours",
+              "day3_hours",
+              "day4_hours",
+              "day5_hours",
+              "day6_hours",
+              "day7_hours"
+            ],
+            "label": "Total hours (week)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "overtime_hours": {
+            "expression": "max(total_hours - 40, 0)",
+            "dependencies": [
+              "total_hours"
+            ],
+            "label": "Overtime hours (weekly > 40)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "regular_hours": {
+            "expression": "total_hours - overtime_hours",
+            "dependencies": [
+              "total_hours",
+              "overtime_hours"
+            ],
+            "label": "Regular hours (up to 40)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "regular_pay": {
+            "expression": "regular_hours * hourly_rate",
+            "dependencies": [
+              "regular_hours",
+              "hourly_rate"
+            ],
+            "label": "Regular pay",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "overtime_pay": {
+            "expression": "overtime_hours * hourly_rate * overtime_multiplier",
+            "dependencies": [
+              "overtime_hours",
+              "hourly_rate",
+              "overtime_multiplier"
+            ],
+            "label": "Overtime pay",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_pay": {
+            "expression": "regular_pay + overtime_pay",
+            "dependencies": [
+              "regular_pay",
+              "overtime_pay"
+            ],
+            "label": "Total pay (period)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "effective_hourly": {
+            "expression": "total_pay / max(total_hours, 1)",
+            "dependencies": [
+              "total_pay",
+              "total_hours"
+            ],
+            "label": "Effective hourly rate (total pay divided by hours worked)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "overtime_hours",
+            "label": "Overtime hours",
+            "variable": "overtime_hours",
+            "unit": "hours",
+            "format": "decimal"
+          },
+          {
+            "id": "overtime_pay",
+            "label": "Overtime pay",
+            "variable": "overtime_pay",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "regular_pay",
+            "label": "Regular pay",
+            "variable": "regular_pay",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_pay",
+            "label": "Total pay (period)",
+            "variable": "total_pay",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_hourly",
+            "label": "Effective hourly rate",
+            "variable": "effective_hourly",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "california": {
+        "label": "California (daily + weekly overtime rules)",
+        "description": "Calculates pay using California daily overtime thresholds: hours over 8 up to 12 = 1.5×, hours over 12 = 2×. Also applies weekly overtime for hours over 40. This method attempts to avoid double-counting by treating daily overtime and double time first, then any remaining weekly overtime.",
+        "variables": {
+          "day1_ot1": {
+            "expression": "min(max(day1_hours - 8, 0), 4)",
+            "dependencies": [
+              "day1_hours"
+            ],
+            "label": "Day 1 overtime (1.5×) hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day1_dt": {
+            "expression": "max(day1_hours - 12, 0)",
+            "dependencies": [
+              "day1_hours"
+            ],
+            "label": "Day 1 double-time hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day2_ot1": {
+            "expression": "min(max(day2_hours - 8, 0), 4)",
+            "dependencies": [
+              "day2_hours"
+            ],
+            "label": "Day 2 overtime (1.5×) hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day2_dt": {
+            "expression": "max(day2_hours - 12, 0)",
+            "dependencies": [
+              "day2_hours"
+            ],
+            "label": "Day 2 double-time hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day3_ot1": {
+            "expression": "min(max(day3_hours - 8, 0), 4)",
+            "dependencies": [
+              "day3_hours"
+            ],
+            "label": "Day 3 overtime (1.5×) hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day3_dt": {
+            "expression": "max(day3_hours - 12, 0)",
+            "dependencies": [
+              "day3_hours"
+            ],
+            "label": "Day 3 double-time hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day4_ot1": {
+            "expression": "min(max(day4_hours - 8, 0), 4)",
+            "dependencies": [
+              "day4_hours"
+            ],
+            "label": "Day 4 overtime (1.5×) hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day4_dt": {
+            "expression": "max(day4_hours - 12, 0)",
+            "dependencies": [
+              "day4_hours"
+            ],
+            "label": "Day 4 double-time hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day5_ot1": {
+            "expression": "min(max(day5_hours - 8, 0), 4)",
+            "dependencies": [
+              "day5_hours"
+            ],
+            "label": "Day 5 overtime (1.5×) hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day5_dt": {
+            "expression": "max(day5_hours - 12, 0)",
+            "dependencies": [
+              "day5_hours"
+            ],
+            "label": "Day 5 double-time hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day6_ot1": {
+            "expression": "min(max(day6_hours - 8, 0), 4)",
+            "dependencies": [
+              "day6_hours"
+            ],
+            "label": "Day 6 overtime (1.5×) hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day6_dt": {
+            "expression": "max(day6_hours - 12, 0)",
+            "dependencies": [
+              "day6_hours"
+            ],
+            "label": "Day 6 double-time hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day7_ot1": {
+            "expression": "min(max(day7_hours - 8, 0), 4)",
+            "dependencies": [
+              "day7_hours"
+            ],
+            "label": "Day 7 overtime (1.5×) hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "day7_dt": {
+            "expression": "max(day7_hours - 12, 0)",
+            "dependencies": [
+              "day7_hours"
+            ],
+            "label": "Day 7 double-time hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "daily_ot_hours": {
+            "expression": "day1_ot1 + day2_ot1 + day3_ot1 + day4_ot1 + day5_ot1 + day6_ot1 + day7_ot1",
+            "dependencies": [
+              "day1_ot1",
+              "day2_ot1",
+              "day3_ot1",
+              "day4_ot1",
+              "day5_ot1",
+              "day6_ot1",
+              "day7_ot1"
+            ],
+            "label": "Total daily overtime hours (1.5×)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "daily_dt_hours": {
+            "expression": "day1_dt + day2_dt + day3_dt + day4_dt + day5_dt + day6_dt + day7_dt",
+            "dependencies": [
+              "day1_dt",
+              "day2_dt",
+              "day3_dt",
+              "day4_dt",
+              "day5_dt",
+              "day6_dt",
+              "day7_dt"
+            ],
+            "label": "Total daily double-time hours (2×)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "total_hours": {
+            "expression": "day1_hours + day2_hours + day3_hours + day4_hours + day5_hours + day6_hours + day7_hours",
+            "dependencies": [
+              "day1_hours",
+              "day2_hours",
+              "day3_hours",
+              "day4_hours",
+              "day5_hours",
+              "day6_hours",
+              "day7_hours"
+            ],
+            "label": "Total hours (week)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "weekly_overtime_hours": {
+            "expression": "max(total_hours - 40, 0)",
+            "dependencies": [
+              "total_hours"
+            ],
+            "label": "Weekly overtime hours (hours over 40)",
+            "unit": "hours",
+            "format": "decimal",
+            "display": false
+          },
+          "weekly_ot_extra": {
+            "expression": "max(weekly_overtime_hours - daily_ot_hours - daily_dt_hours, 0)",
+            "dependencies": [
+              "weekly_overtime_hours",
+              "daily_ot_hours",
+              "daily_dt_hours"
+            ],
+            "label": "Additional weekly overtime hours (1.5×) not already covered by daily rules",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "regular_hours": {
+            "expression": "total_hours - daily_ot_hours - daily_dt_hours - weekly_ot_extra",
+            "dependencies": [
+              "total_hours",
+              "daily_ot_hours",
+              "daily_dt_hours",
+              "weekly_ot_extra"
+            ],
+            "label": "Regular hours",
+            "unit": "hours",
+            "format": "decimal",
+            "display": true
+          },
+          "regular_pay": {
+            "expression": "regular_hours * hourly_rate",
+            "dependencies": [
+              "regular_hours",
+              "hourly_rate"
+            ],
+            "label": "Regular pay",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "daily_ot_pay": {
+            "expression": "daily_ot_hours * hourly_rate * overtime_multiplier",
+            "dependencies": [
+              "daily_ot_hours",
+              "hourly_rate",
+              "overtime_multiplier"
+            ],
+            "label": "Daily overtime pay (1.5×)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "daily_dt_pay": {
+            "expression": "daily_dt_hours * hourly_rate * doubletime_multiplier",
+            "dependencies": [
+              "daily_dt_hours",
+              "hourly_rate",
+              "doubletime_multiplier"
+            ],
+            "label": "Daily double-time pay (2×)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "weekly_ot_pay": {
+            "expression": "weekly_ot_extra * hourly_rate * overtime_multiplier",
+            "dependencies": [
+              "weekly_ot_extra",
+              "hourly_rate",
+              "overtime_multiplier"
+            ],
+            "label": "Additional weekly overtime pay (1.5×)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "total_pay": {
+            "expression": "regular_pay + daily_ot_pay + daily_dt_pay + weekly_ot_pay",
+            "dependencies": [
+              "regular_pay",
+              "daily_ot_pay",
+              "daily_dt_pay",
+              "weekly_ot_pay"
+            ],
+            "label": "Total pay (period)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "effective_hourly": {
+            "expression": "total_pay / max(total_hours, 1)",
+            "dependencies": [
+              "total_pay",
+              "total_hours"
+            ],
+            "label": "Effective hourly rate (total pay divided by hours worked)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "daily_ot_hours",
+            "label": "Daily overtime hours (1.5×)",
+            "variable": "daily_ot_hours",
+            "unit": "hours",
+            "format": "decimal"
+          },
+          {
+            "id": "daily_dt_hours",
+            "label": "Daily double-time hours (2×)",
+            "variable": "daily_dt_hours",
+            "unit": "hours",
+            "format": "decimal"
+          },
+          {
+            "id": "weekly_ot_extra",
+            "label": "Additional weekly overtime hours (1.5×)",
+            "variable": "weekly_ot_extra",
+            "unit": "hours",
+            "format": "decimal"
+          },
+          {
+            "id": "daily_ot_pay",
+            "label": "Daily overtime pay (1.5×)",
+            "variable": "daily_ot_pay",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "daily_dt_pay",
+            "label": "Daily double-time pay (2×)",
+            "variable": "daily_dt_pay",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "weekly_ot_pay",
+            "label": "Additional weekly overtime pay (1.5×)",
+            "variable": "weekly_ot_pay",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_pay",
+            "label": "Total pay (period)",
+            "variable": "total_pay",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "effective_hourly",
+            "label": "Effective hourly rate",
+            "variable": "effective_hourly",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "employee_name",
+        "label": "Employee name (optional)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "hourly_rate",
+        "label": "Hourly rate (USD)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "overtime_multiplier",
+        "label": "Overtime multiplier (1.5 = 150%)",
+        "type": "number",
+        "default": 1.5,
+        "min": 1,
+        "step": 0.01
+      },
+      {
+        "id": "doubletime_multiplier",
+        "label": "Double-time multiplier (2 = 200%)",
+        "type": "number",
+        "default": 2,
+        "min": 1,
+        "step": 0.01
+      },
+      {
+        "id": "day1_hours",
+        "label": "Hours on Day 1",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "day2_hours",
+        "label": "Hours on Day 2",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "day3_hours",
+        "label": "Hours on Day 3",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "day4_hours",
+        "label": "Hours on Day 4",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "day5_hours",
+        "label": "Hours on Day 5",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "day6_hours",
+        "label": "Hours on Day 6",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "day7_hours",
+        "label": "Hours on Day 7",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.25
+      },
+      {
+        "id": "method_select",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "federal",
+        "options": [
+          {
+            "label": "Standard weekly overtime (Federal FLSA style)",
+            "value": "federal"
+          },
+          {
+            "label": "California daily + weekly overtime rules",
+            "value": "california"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "total_pay",
+          "label": "Total pay (period)"
+        },
+        {
+          "id": "overtime_pay",
+          "label": "Overtime pay (if applicable)"
+        },
+        {
+          "id": "daily_ot_pay",
+          "label": "Daily overtime pay (California method)"
+        },
+        {
+          "id": "daily_dt_pay",
+          "label": "Daily double-time pay (California method)"
+        },
+        {
+          "id": "effective_hourly",
+          "label": "Effective hourly rate"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator helps estimate wages for hourly workers by applying common overtime rules. It supports two methods: a standard weekly-overtime method (hours over 40 in a workweek at 1.5×) and a California-specific method that applies daily overtime and double-time rules in addition to weekly overtime.",
+      "Enter hours worked for each day of the pay period and the applicable hourly pay and multipliers. The tool returns hour breakdowns, pay for each bucket, and an effective hourly rate to help verify payroll calculations and spot-check employer payrolls."
+    ],
+    "methodology": [
+      "The calculator uses per-day inputs combined into weekly totals. For the Federal-style method, overtime is calculated as hours exceeding 40 in the week multiplied by the overtime multiplier (default 1.5).",
+      "For the California method, the calculator first computes daily overtime: hours over 8 and up to 12 are paid at 1.5×; hours over 12 are paid at 2×. It then computes weekly overtime (hours over 40) and treats any remaining weekly overtime not already compensated by daily rules as additional overtime at 1.5×. This is an algorithmic approach intended to approximate employer payroll logic used to avoid double-counting payouts."
+    ],
+    "how_is_calculated": [
+      "Federal-style: total_hours = sum(day1..day7); overtime_hours = max(total_hours − 40, 0); overtime_pay = overtime_hours × hourly_rate × overtime_multiplier; total_pay = regular_pay + overtime_pay.",
+      "California: for each day compute daily 1.5× hours = min(max(day_hours − 8, 0), 4) and daily 2× hours = max(day_hours − 12, 0). Sum these across days to get daily_ot_hours and daily_dt_hours. weekly_overtime = max(total_hours − 40, 0). weekly_ot_extra = max(weekly_overtime − daily_ot_hours − daily_dt_hours, 0). Pay buckets are regular_pay, daily_ot_pay (1.5×), daily_dt_pay (2×), and weekly_ot_pay (1.5×). Total pay is the sum of all buckets."
+    ],
+    "faqs": [
+      {
+        "question": "Is this calculator legal advice?",
+        "answer": "No. This tool provides an estimate for common overtime scenarios and is not a substitute for legal counsel or official payroll systems. Employers must follow applicable federal, state, and local laws and may have additional contractual obligations."
+      },
+      {
+        "question": "Which standard applies to my situation?",
+        "answer": "If you are in the United States, the Fair Labor Standards Act (FLSA) sets federal minimums; some states (for example California) impose stricter daily or weekly rules. Use the method that matches your jurisdiction and employment contract."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are algorithmic estimates. They assume every hour entered is compensable work time and do not account for exemptions, shift differentials, paid/unpaid breaks, rounding policies, collective bargaining adjustments, or complex rate-of-pay calculations under multi-rate rules. See accuracy caveats below."
+      },
+      {
+        "question": "How do rounding and time clocks affect results?",
+        "answer": "Rounding rules (e.g., to nearest 5 minutes) and employer timekeeping policies materially affect payroll outcomes. This calculator does not apply any time-rounding unless you manually adjust inputs to reflect rounded time."
+      },
+      {
+        "question": "What if I have multiple pay rates or piece-rate work?",
+        "answer": "This tool currently assumes a single hourly rate for the period. For multiple rates or piece-rate work, employers must determine the regular rate under applicable rules; consult payroll guidance or legal counsel."
+      }
+    ],
+    "citations": [
+      {
+        "label": "U.S. Department of Labor — Fair Labor Standards Act (FLSA) overview",
+        "url": "https://www.dol.gov/agencies/whd/flsa"
+      },
+      {
+        "label": "California Department of Industrial Relations — Overtime",
+        "url": "https://www.dir.ca.gov/dlse/FAQ_Overtime.htm"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST) — guidance on software assurance and accuracy expectations",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Regular rate",
+        "definition": "The hourly rate used to calculate overtime; for single-rate hourly workers this is the stated hourly wage. For multiple rates the regular rate is typically a weighted average computed per law."
+      },
+      {
+        "term": "Overtime hours",
+        "definition": "Hours worked above a jurisdictional threshold paid at a premium multiplier (commonly hours over 40 in a week under FLSA)."
+      },
+      {
+        "term": "Daily overtime (California)",
+        "definition": "Under California law, hours over 8 up to 12 in a single day are paid at 1.5×; hours over 12 in a day are paid at 2×, with additional rules for the seventh consecutive workday."
+      },
+      {
+        "term": "Double time",
+        "definition": "Pay at two times the regular rate, commonly applied to hours over a daily threshold in some jurisdictions."
+      }
+    ],
+    "summary": [
+      "Use the Federal method for a simple weekly-overtime check (hours over 40 at 1.5×). Use the California method when daily overtime rules may apply.",
+      "This tool provides estimates and a clear breakdown of pay buckets to help verify payrolls and detect anomalies. For definitive payroll and legal determinations, consult payroll professionals or legal counsel."
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.dol.gov/agencies/whd/flsa",
+        "label": "FLSA (U.S. Dept. of Labor)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.dir.ca.gov",
+        "label": "California Department of Industrial Relations",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,366 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Seller Discretionary Earnings (SDE) Calculator",
+    "description": "Interactive SDE calculator with reconciled add-backs and multiple input workflows. Produces SDE, SDE margin, and reconciled profit figures with guidance and accuracy caveats aligned to recognised instrumentation and security standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "standard_sde",
+    "methods": {
+      "standard_sde": {
+        "label": "Standard SDE (from Net Income)",
+        "description": "Compute SDE starting from reported net income and adding back owner-specific compensation, financing, tax, accounting and one-time items to estimate cash flow available to an owner-operator.",
+        "variables": {
+          "sde": {
+            "expression": "net_income + owner_salary + owner_benefits + interest_expense + taxes + depreciation_amortization + nonrecurring_expenses + rent_paid_to_owner + other_adjustments - nonoperating_income",
+            "dependencies": [
+              "net_income",
+              "owner_salary",
+              "owner_benefits",
+              "interest_expense",
+              "taxes",
+              "depreciation_amortization",
+              "nonrecurring_expenses",
+              "rent_paid_to_owner",
+              "other_adjustments",
+              "nonoperating_income"
+            ],
+            "label": "Seller's Discretionary Earnings (raw)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "sde_margin": {
+            "expression": "sde / total_revenue * 100",
+            "dependencies": [
+              "sde",
+              "total_revenue"
+            ],
+            "label": "SDE Margin",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "sde_value",
+            "label": "Seller's Discretionary Earnings (SDE)",
+            "variable": "sde",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "sde_margin_pct",
+            "label": "SDE margin (%)",
+            "variable": "sde_margin",
+            "unit": "%",
+            "format": "percent"
+          }
+        ]
+      },
+      "addbacks_reconciled": {
+        "label": "Reconciled Net Profit and Add-backs",
+        "description": "Reconcile reported net income to a profit figure that excludes non-operating items then apply owner add-backs to estimate normalized SDE.",
+        "variables": {
+          "reconciled_net_profit": {
+            "expression": "net_income + nonrecurring_expenses + owner_personal_expenses + other_adjustments - nonoperating_income",
+            "dependencies": [
+              "net_income",
+              "nonrecurring_expenses",
+              "owner_personal_expenses",
+              "other_adjustments",
+              "nonoperating_income"
+            ],
+            "label": "Reconciled net profit (prior to owner add-backs)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "sde_from_reconciled": {
+            "expression": "reconciled_net_profit + owner_salary + owner_benefits + interest_expense + depreciation_amortization + taxes + rent_paid_to_owner",
+            "dependencies": [
+              "reconciled_net_profit",
+              "owner_salary",
+              "owner_benefits",
+              "interest_expense",
+              "depreciation_amortization",
+              "taxes",
+              "rent_paid_to_owner"
+            ],
+            "label": "Seller's Discretionary Earnings (reconciled)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "reconciled_net_profit",
+            "label": "Reconciled net profit",
+            "variable": "reconciled_net_profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "sde_reconciled_value",
+            "label": "SDE (reconciled)",
+            "variable": "sde_from_reconciled",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "from_ebit": {
+        "label": "SDE from EBIT (alternate)",
+        "description": "Start from EBIT when interest and taxes are already removed from the input set; add owner compensation and nonrecurring adjustments to reach SDE.",
+        "variables": {
+          "sde_from_ebit_var": {
+            "expression": "ebit + owner_salary + owner_benefits + nonrecurring_expenses + other_adjustments + rent_paid_to_owner - nonoperating_income",
+            "dependencies": [
+              "ebit",
+              "owner_salary",
+              "owner_benefits",
+              "nonrecurring_expenses",
+              "other_adjustments",
+              "rent_paid_to_owner",
+              "nonoperating_income"
+            ],
+            "label": "SDE estimated from EBIT",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "sde_from_ebit",
+            "label": "Seller's Discretionary Earnings (from EBIT)",
+            "variable": "sde_from_ebit_var",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "net_income",
+        "label": "Net income (after-tax profit)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "ebit",
+        "label": "EBIT (if using EBIT workflow)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "owner_salary",
+        "label": "Owner salary / draw (add-back)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "owner_benefits",
+        "label": "Owner benefits (insurance, personal vehicle benefit, etc.)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "owner_personal_expenses",
+        "label": "Owner personal expenses paid by the business",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "interest_expense",
+        "label": "Interest expense (add back if owner financing)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "taxes",
+        "label": "Income taxes (company-level)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "depreciation_amortization",
+        "label": "Depreciation & amortization",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "nonrecurring_expenses",
+        "label": "One-time / nonrecurring expenses (add-backs)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "rent_paid_to_owner",
+        "label": "Rent paid to owner (add-back if applicable)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "nonoperating_income",
+        "label": "Non-operating income (to deduct)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "other_adjustments",
+        "label": "Other adjustments (legal, one-off credits/debits)",
+        "type": "number",
+        "default": 0,
+        "min": -100000000,
+        "step": 1
+      },
+      {
+        "id": "total_revenue",
+        "label": "Total revenue (for margin calculation)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "Seller's Discretionary Earnings (SDE) is a commonly used cash-flow proxy for small owner-operated businesses. It starts from reported profit and adds back owner-specific compensation, nonrecurring items, and financing or tax effects that are not required by a new owner.",
+      "This calculator offers three workflows: a standard SDE built from net income, a reconciliation-first workflow for careful add-backs, and an alternate path starting from EBIT. Use the workflow that matches your accounts and reconciling documentation."
+    ],
+    "methodology": [
+      "Primary formula: SDE = Net income + Owner compensation + Owner benefits + Interest + Taxes + Depreciation & amortization + One-time expenses + Owner rent (if applicable) + Other approved add-backs − Non-operating income.",
+      "Reconciled workflows separate non-operating and one-time items first, then add owner-specific costs to reduce double-counting and improve comparability across buyers.",
+      "Security, data handling, and reporting recommendations follow controls and documentation best practices cited by leading standards bodies to support traceability and auditability of inputs."
+    ],
+    "how_is_calculated": [
+      "Step 1: Choose the input workflow that matches your financial statements (Net Income, Reconciled Add-backs, or EBIT).",
+      "Step 2: Enter reported figures in the input fields. Provide supporting notes for any nonrecurring or owner-specific items used as add-backs.",
+      "Step 3: Review outputs: SDE value and SDE margin. If total revenue is zero or not provided, margin will be zero or not meaningful; rely on SDE absolute value instead.",
+      "Step 4: Keep a reconciliation memo and source documents; buyers and professional valuers typically require supporting schedules for add-backs."
+    ],
+    "faqs": [
+      {
+        "question": "Is SDE the same as EBITDA?",
+        "answer": "No. EBITDA excludes owner compensation and some owner-specific add-backs. SDE is intended for small owner-operated businesses and typically adds back owner salary and benefits to estimate cash available to an owner-operator."
+      },
+      {
+        "question": "Which inputs need documentation?",
+        "answer": "Nonrecurring expenses, owner personal expenses paid by the business, and unusual adjustments require source documents such as invoices, contracts, or written explanations to be credible to buyers or advisors."
+      },
+      {
+        "question": "How accurate is this calculator?",
+        "answer": "This tool provides an estimation framework. Accuracy depends on the quality of inputs and the completeness of reconciliations. Use this for preliminary analysis and engage a qualified accountant or valuation professional for transaction-level valuation. See accuracy and compliance notes below."
+      },
+      {
+        "question": "Can I use tax-deductible items as add-backs?",
+        "answer": "Only when they are owner-specific or non-operating in nature. Items required for ongoing operations should not be added back. Consult a tax professional for tax treatment implications."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov/"
+      },
+      {
+        "label": "Internal Revenue Service (IRS) - guidance and forms",
+        "url": "https://www.irs.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Seller's Discretionary Earnings (SDE)",
+        "definition": "A cash-flow proxy for small owner-operated businesses that adds owner compensation and other discretionary or nonrecurring items back to reported profit."
+      },
+      {
+        "term": "Add-back",
+        "definition": "An expense that is added back to reported earnings because it is nonrecurring, owner-specific, or non-operational and is not expected to recur for a new owner."
+      },
+      {
+        "term": "Reconciled net profit",
+        "definition": "Reported net income adjusted to remove non-operating items and one-time events before applying owner add-backs."
+      },
+      {
+        "term": "EBIT",
+        "definition": "Earnings before interest and taxes; useful as an alternate starting point when interest and taxes are already excluded."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST Home",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.irs.gov/",
+        "label": "IRS",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ],
+    "internal": []
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculator"
+    ]
+  }
+}

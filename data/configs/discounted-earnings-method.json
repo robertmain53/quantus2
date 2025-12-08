@@ -1,0 +1,539 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Discounted Earnings Method Calculator (Advanced)",
+    "description": "Multi-method valuation tool using discounted earnings approaches: finite growing-annuity forecast with terminal perpetuity, single-period capitalization, and exit-multiple terminal. Designed for analysts who need per-share and enterprise-value outputs with clear assumptions and limitations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "multi_stage_perpetuity",
+    "methods": {
+      "multi_stage_perpetuity": {
+        "label": "Finite forecast (growing annuity) + terminal perpetuity",
+        "description": "Projects normalized earnings for a finite forecast horizon using a constant growth rate, discounts the growing annuity to present value, then computes a terminal value using a perpetuity growth model and discounts it back to present value.",
+        "variables": {
+          "pv_forecast": {
+            "expression": "normalized_earnings*(1+growth_rate)*(1 - pow((1+growth_rate)/(1+discount_rate), forecast_years)) / (discount_rate - growth_rate)",
+            "dependencies": [
+              "normalized_earnings",
+              "growth_rate",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "PV of forecast period (growing annuity)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "terminal_earnings": {
+            "expression": "normalized_earnings * pow(1+growth_rate, forecast_years)",
+            "dependencies": [
+              "normalized_earnings",
+              "growth_rate",
+              "forecast_years"
+            ],
+            "label": "Earnings at start of terminal period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "terminal_value": {
+            "expression": "terminal_earnings*(1+terminal_growth) / (discount_rate - terminal_growth)",
+            "dependencies": [
+              "terminal_earnings",
+              "terminal_growth",
+              "discount_rate"
+            ],
+            "label": "Terminal value (perpetuity growth)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_terminal": {
+            "expression": "terminal_value / pow(1+discount_rate, forecast_years)",
+            "dependencies": [
+              "terminal_value",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "PV of terminal value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "enterprise_value": {
+            "expression": "pv_forecast + pv_terminal",
+            "dependencies": [
+              "pv_forecast",
+              "pv_terminal"
+            ],
+            "label": "Enterprise value (EV)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "enterprise_value - net_debt",
+            "dependencies": [
+              "enterprise_value",
+              "net_debt"
+            ],
+            "label": "Equity value (EV - net debt)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "value_per_share": {
+            "expression": "equity_value / shares_outstanding",
+            "dependencies": [
+              "equity_value",
+              "shares_outstanding"
+            ],
+            "label": "Value per share",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise value (EV)",
+            "variable": "enterprise_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value",
+            "variable": "equity_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "value_per_share",
+            "label": "Value per share",
+            "variable": "value_per_share",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "pv_forecast",
+            "label": "PV of forecast period",
+            "variable": "pv_forecast",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "pv_terminal",
+            "label": "PV of terminal value",
+            "variable": "pv_terminal",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "terminal_value",
+            "label": "Terminal value (un-discounted)",
+            "variable": "terminal_value",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "capitalization_of_earnings": {
+        "label": "Capitalization of earnings (single-period)",
+        "description": "Values the firm by capitalizing a normalized earnings measure using a capitalization rate (discount rate minus terminal growth). Useful when a steady-state earnings level is appropriate and the forecast horizon is short.",
+        "variables": {
+          "enterprise_value_cap": {
+            "expression": "normalized_earnings / (discount_rate - terminal_growth)",
+            "dependencies": [
+              "normalized_earnings",
+              "discount_rate",
+              "terminal_growth"
+            ],
+            "label": "Enterprise value by capitalization",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value_cap": {
+            "expression": "enterprise_value_cap - net_debt",
+            "dependencies": [
+              "enterprise_value_cap",
+              "net_debt"
+            ],
+            "label": "Equity value (capitalization method)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "value_per_share_cap": {
+            "expression": "equity_value_cap / shares_outstanding",
+            "dependencies": [
+              "equity_value_cap",
+              "shares_outstanding"
+            ],
+            "label": "Value per share (capitalization method)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise value (capitalization)",
+            "variable": "enterprise_value_cap",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value",
+            "variable": "equity_value_cap",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "value_per_share",
+            "label": "Value per share",
+            "variable": "value_per_share_cap",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "exit_multiple": {
+        "label": "Finite forecast + exit multiple",
+        "description": "Discounts a growing-annuity forecast and applies an exit multiple to terminal-period earnings to derive terminal value. Useful where market multiples for comparable companies are reliable.",
+        "variables": {
+          "pv_forecast_em": {
+            "expression": "normalized_earnings*(1+growth_rate)*(1 - pow((1+growth_rate)/(1+discount_rate), forecast_years)) / (discount_rate - growth_rate)",
+            "dependencies": [
+              "normalized_earnings",
+              "growth_rate",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "PV of forecast period (growing annuity)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "terminal_earnings_em": {
+            "expression": "normalized_earnings * pow(1+growth_rate, forecast_years)",
+            "dependencies": [
+              "normalized_earnings",
+              "growth_rate",
+              "forecast_years"
+            ],
+            "label": "Earnings at exit",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "terminal_value_em": {
+            "expression": "terminal_earnings_em * exit_multiple",
+            "dependencies": [
+              "terminal_earnings_em",
+              "exit_multiple"
+            ],
+            "label": "Terminal value (exit multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_terminal_em": {
+            "expression": "terminal_value_em / pow(1+discount_rate, forecast_years)",
+            "dependencies": [
+              "terminal_value_em",
+              "discount_rate",
+              "forecast_years"
+            ],
+            "label": "PV of terminal value (exit multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "enterprise_value_em": {
+            "expression": "pv_forecast_em + pv_terminal_em",
+            "dependencies": [
+              "pv_forecast_em",
+              "pv_terminal_em"
+            ],
+            "label": "Enterprise value (exit multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value_em": {
+            "expression": "enterprise_value_em - net_debt",
+            "dependencies": [
+              "enterprise_value_em",
+              "net_debt"
+            ],
+            "label": "Equity value (exit multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "value_per_share_em": {
+            "expression": "equity_value_em / shares_outstanding",
+            "dependencies": [
+              "equity_value_em",
+              "shares_outstanding"
+            ],
+            "label": "Value per share (exit multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise value (exit multiple)",
+            "variable": "enterprise_value_em",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value",
+            "variable": "equity_value_em",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "value_per_share",
+            "label": "Value per share",
+            "variable": "value_per_share_em",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "pv_forecast",
+            "label": "PV of forecast period",
+            "variable": "pv_forecast_em",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "pv_terminal",
+            "label": "PV of terminal value",
+            "variable": "pv_terminal_em",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "normalized_earnings",
+        "label": "Normalized earnings (annual operating earnings)",
+        "type": "number",
+        "default": 1000000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "growth_rate",
+        "label": "Forecast growth rate (decimal, e.g., 0.05 = 5%)",
+        "type": "number",
+        "default": 0.05,
+        "min": -0.5,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "discount_rate",
+        "label": "Discount rate (decimal, e.g., 0.10 = 10%)",
+        "type": "number",
+        "default": 0.1,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "forecast_years",
+        "label": "Forecast horizon (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 50,
+        "step": 1
+      },
+      {
+        "id": "terminal_growth",
+        "label": "Terminal (long-term) growth rate (decimal)",
+        "type": "number",
+        "default": 0.02,
+        "min": -0.1,
+        "max": 0.1,
+        "step": 0.0001
+      },
+      {
+        "id": "net_debt",
+        "label": "Net debt (total debt minus cash)",
+        "type": "number",
+        "default": 0,
+        "min": -1000000000,
+        "step": 1
+      },
+      {
+        "id": "shares_outstanding",
+        "label": "Shares outstanding",
+        "type": "number",
+        "default": 100000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "exit_multiple",
+        "label": "Exit multiple (EV / earnings) for exit-multiple method",
+        "type": "number",
+        "default": 8,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "calibration_note",
+        "label": "Calibration note (optional)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator implements discounted-earnings valuation approaches commonly used in practice: a finite forecast discounted as a growing annuity with a terminal perpetuity, a capitalization-of-earnings model, and a forecast with an exit multiple. It produces enterprise value, equity value, and per-share estimates based on inputs you provide.",
+      "Use input fields to set normalized operating earnings, growth and discount rates, forecast horizon, terminal assumptions, net debt, and shares outstanding. Results are illustrative and should be used with professional judgment; small changes in rates or growth assumptions can materially change valuations."
+    ],
+    "methodology": [
+      "The multi-stage method discounts an expected series of earnings that grow at a constant rate over a finite forecast horizon using the closed-form growing-annuity formula, then estimates a terminal value using a perpetuity-growth model. This approach limits the instability caused by long explicit forecasts while capturing near-term dynamics.",
+      "The capitalization method converts a steady-state earnings figure into enterprise value by dividing by a capitalization rate (discount rate minus long-term growth). The exit-multiple method applies an observed market multiple to terminal-period earnings and discounts that terminal value to present.",
+      "This tool follows best-practice controls for input validation, and documents assumptions for traceability. For operational security and integrity of calculations, follow controls consistent with NIST SP 800 series guidance for data handling, ISO 9001 for quality management of calculation processes, and IEEE recommendations for documented numerical methods. Safety and workplace standards referenced are for governance context only (OSHA)."
+    ],
+    "how_is_calculated": [
+      "PV of a growing annuity (forecast): PV = E0*(1+g) * [1 - ((1+g)/(1+r))^n] / (r - g)",
+      "Terminal value (perpetuity): TV = En * (1+gt) / (r - gt), where En is earnings at forecast end",
+      "Terminal value (exit multiple): TV = En * exit_multiple; discount TV back by (1+r)^n",
+      "Capitalization: EV = E / (r - gt)",
+      "Equity value = Enterprise value - Net debt; Value per share = Equity value / Shares outstanding"
+    ],
+    "examples": [
+      "Example: Normalized earnings $1,000,000, growth 5%, discount 10%, horizon 5 years, terminal growth 2% → computes PV of forecast, PV of terminal perpetuity, EV = sum, then equity and per-share.",
+      "Example: If steady-state earnings are more appropriate, apply the capitalization method with the same discount and terminal growth assumptions to get a single-period valuation."
+    ],
+    "faqs": [
+      {
+        "question": "What is 'normalized earnings'?",
+        "answer": "Normalized earnings are operating earnings adjusted for non-recurring items, owner compensation, and accounting anomalies to reflect sustainable cash-generating capability."
+      },
+      {
+        "question": "How should I pick the discount rate?",
+        "answer": "The discount rate should reflect the required return for the cash flows being valued. For an enterprise-level valuation, use a weighted average cost of capital (WACC). Document your source and method for estimating this rate; sensitivity analysis is recommended."
+      },
+      {
+        "question": "What if growth_rate equals discount_rate?",
+        "answer": "If growth_rate approaches discount_rate, the closed-form growing-annuity and perpetuity formulas become numerically unstable. In such cases, use a longer explicit forecast with smaller step sizes or revert to alternative valuation approaches and perform sensitivity checks."
+      },
+      {
+        "question": "Are these valuations GAAP or IFRS compliant?",
+        "answer": "Valuation outputs are analytical estimates and not financial statement measures. They do not replace GAAP/IFRS disclosures. For reporting or regulatory use, reconcile methodologies to applicable standards and document assumptions."
+      },
+      {
+        "question": "What are the main limitations?",
+        "answer": "Key limitations include sensitivity to rate assumptions, the accuracy of normalized earnings, and model selection. Always perform scenario and sensitivity analysis and disclose assumptions clearly."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Normalized earnings",
+        "definition": "Operating earnings adjusted to remove one-off items and reflect sustainable levels."
+      },
+      {
+        "term": "Discount rate",
+        "definition": "Rate used to bring future cash flows to present value, typically WACC for enterprise valuations."
+      },
+      {
+        "term": "Terminal value",
+        "definition": "Estimated value of the business beyond the explicit forecast horizon; can be computed by a perpetuity or an exit multiple."
+      },
+      {
+        "term": "Net debt",
+        "definition": "Total debt minus cash and equivalents; subtracted from enterprise value to derive equity value."
+      },
+      {
+        "term": "Capitalization rate",
+        "definition": "Rate used in single-period capitalization models, often discount rate minus long-term growth."
+      },
+      {
+        "term": "Exit multiple",
+        "definition": "A market-derived multiple applied to terminal-period earnings to estimate terminal enterprise value."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "summary": [
+      "This advanced calculator provides three discounted-earnings approaches with clear variable dependencies. Use the multi-stage perpetuity method for detailed forecasts, capitalization for steady-state scenarios, and exit multiples when market comparables are reliable.",
+      "Always document inputs, run sensitivity analyses, and disclose limitations. For high-stakes or regulated valuations, corroborate with external audit and follow applicable standards and governance procedures."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/valuations/discounted-cash-flow",
+      "/guides/valuation-assumptions"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

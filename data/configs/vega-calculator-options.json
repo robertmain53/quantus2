@@ -1,0 +1,211 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Vega Calculator (Options — Black-Scholes)",
+    "description": "Compute option Vega (sensitivity of option price to volatility) using the Black‑Scholes model. Includes intermediate values (d1, standard normal PDF) and clear accuracy and calibration guidance."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "d1",
+        "label": "d1 (Black‑Scholes intermediate)",
+        "expression": "(ln(S / K) + (r - q + 0.5 * pow(sigma, 2)) * T) / (sigma * sqrt(T))",
+        "unit": "",
+        "format": "decimal"
+      },
+      {
+        "id": "nd1",
+        "label": "Standard normal PDF at d1 (φ(d1))",
+        "expression": "(1 / sqrt(2 * pi)) * exp(-0.5 * pow((ln(S / K) + (r - q + 0.5 * pow(sigma, 2)) * T) / (sigma * sqrt(T)), 2))",
+        "unit": "",
+        "format": "decimal"
+      },
+      {
+        "id": "vega",
+        "label": "Vega (price change per 1.0 = 100 percentage points of volatility)",
+        "expression": "S * exp(-q * T) * sqrt(T) * ((1 / sqrt(2 * pi)) * exp(-0.5 * pow((ln(S / K) + (r - q + 0.5 * pow(sigma, 2)) * T) / (sigma * sqrt(T)), 2)))",
+        "unit": "",
+        "format": "decimal"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "S",
+        "label": "Underlying price (S)",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "K",
+        "label": "Strike price (K)",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "sigma",
+        "label": "Volatility (annual, decimal, σ). Example: 0.20 = 20%",
+        "type": "number",
+        "default": 0.2,
+        "min": 0.0001,
+        "step": 0.0001
+      },
+      {
+        "id": "T",
+        "label": "Time to expiry (years, T). Example: 0.5 = 6 months",
+        "type": "number",
+        "default": 0.5,
+        "min": 0.0001,
+        "step": 0.0001
+      },
+      {
+        "id": "r",
+        "label": "Risk-free rate (annual, decimal). Example: 0.03 = 3%",
+        "type": "number",
+        "default": 0.03,
+        "min": -0.5,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "q",
+        "label": "Continuous dividend yield (annual, decimal). Example: 0.00 = 0%",
+        "type": "number",
+        "default": 0.0,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "d1",
+          "label": "d1 (unitless)",
+          "format": "decimal"
+        },
+        {
+          "id": "nd1",
+          "label": "φ(d1) (unitless)",
+          "format": "decimal"
+        },
+        {
+          "id": "vega",
+          "label": "Vega (price change per 1.0 = 100 percentage points of volatility)",
+          "format": "decimal"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes Vega — the sensitivity of a European option price to a small change in implied volatility — using the Black‑Scholes closed‑form formula. Vega is commonly used by traders and risk managers to estimate how option prices move as implied volatility changes.",
+      "The tool returns intermediate values (d1 and the standard normal probability density at d1) to aid verification and calibration. Results assume continuous compounding and the Black‑Scholes model assumptions described below; use caution for instruments that violate those assumptions."
+    ],
+    "methodology": [
+      "Vega is calculated from the Black‑Scholes model: Vega = S * e^(−qT) * sqrt(T) * φ(d1), where φ is the standard normal probability density and d1 is the usual Black‑Scholes intermediate.",
+      "Key assumptions: underlying returns are lognormal, volatility is constant over the remaining life, and option is European (no early exercise). For American options, discrete dividends, or stochastic volatility, model error can be material.",
+      "Operational guidance: validate input units (annualized volatility, time in years, decimal rates), perform sensitivity checks around the chosen volatility, and if using outputs for automated trading or reporting, implement regression and unit tests following software engineering and risk-management standards."
+    ],
+    "how_is_calculated": [
+      "Step 1 — compute d1: d1 = (ln(S/K) + (r − q + 0.5 * σ^2) * T) / (σ * sqrt(T)).",
+      "Step 2 — compute φ(d1): φ(d1) = (1 / sqrt(2π)) * exp(−0.5 * d1^2).",
+      "Step 3 — compute Vega: Vega = S * exp(−q * T) * sqrt(T) * φ(d1).",
+      "Interpretation note: The Vega value produced is the change in option price per 1.0 (i.e., per 100 percentage points) of volatility. To get change per 1 percentage point, divide Vega by 100."
+    ],
+    "examples": [
+      "Example: S=100, K=100, σ=0.20, T=0.5, r=0.03, q=0.00 → Vega ≈ S * exp(−qT) * sqrt(T) * φ(d1). Use the calculator to compute numeric result and verify by small finite-difference of option price if desired.",
+      "Calibration check: if implied vol is low and T is short, Vega will be small; for at-the-money options with longer T, Vega increases roughly with sqrt(T)."
+    ],
+    "faqs": [
+      {
+        "question": "What unit is Vega expressed in?",
+        "answer": "Vega here is expressed as price units per 1.0 change in volatility (i.e., per 100 percentage points). To convert to price change per 1 percentage point, divide the Vega value by 100."
+      },
+      {
+        "question": "Does this work for American options or for options on assets with discrete dividends?",
+        "answer": "Black‑Scholes is for European options with continuous yields. For American options or discrete dividends, Black‑Scholes may be inaccurate and you should use specialized pricing or numerical methods (binomial, finite difference, or Monte Carlo)."
+      },
+      {
+        "question": "How accurate is this calculator?",
+        "answer": "The calculator implements the analytical Black‑Scholes formula; numerical rounding and input errors can produce small deviations. Model risk arises from violated assumptions (nonconstant volatility, jumps). Follow testing and validation practices aligned with standards referenced below."
+      },
+      {
+        "question": "How should I validate outputs before using them in production systems?",
+        "answer": "Perform unit tests, regression tests, and finite-difference checks (bump volatility by a small delta and recompute option price) to confirm Vega matches numerical derivatives. Maintain change control and logging for inputs and results as part of operational risk controls."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Vega",
+        "definition": "The partial derivative of the option price with respect to volatility. Measures how much the option price changes for a change in implied volatility."
+      },
+      {
+        "term": "Black‑Scholes model",
+        "definition": "A closed‑form model for pricing European options assuming lognormal underlying returns, constant volatility, and continuous compounding."
+      },
+      {
+        "term": "d1",
+        "definition": "An intermediate variable in the Black‑Scholes formula used to compute option deltas and Greeks: d1 = (ln(S/K) + (r − q + 0.5σ^2)T) / (σ√T)."
+      },
+      {
+        "term": "Standard normal PDF (φ)",
+        "definition": "The probability density function of a standard normal distribution. Appears in Greeks formulas as φ(d1)."
+      },
+      {
+        "term": "Implied volatility (σ)",
+        "definition": "The volatility value which, when input into a pricing model, yields the market option price. Here expressed as an annual decimal (0.20 = 20%)."
+      }
+    ],
+    "citations": [
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO homepage (standards for management and quality controls)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage (recommendations for testing and validation practices)",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

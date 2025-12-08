@@ -1,0 +1,244 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "World Time Zone Converter",
+    "description": "Convert a specific date and time from one IANA time zone to another, accounting for daylight saving transitions and date changes. Includes guidance on data sources, accuracy limits, and best practices for scheduling across regions."
+  },
+  "logic": {
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "converted_dt",
+        "label": "Converted date and time (target timezone)",
+        "expression": "convert_timezone(from_dt, from_timezone, to_timezone)",
+        "unit": "ISO 8601 datetime"
+      },
+      {
+        "id": "offset_difference",
+        "label": "Offset difference (target minus source)",
+        "expression": "offset_seconds(to_timezone, from_dt) - offset_seconds(from_timezone, from_dt)",
+        "unit": "seconds"
+      },
+      {
+        "id": "date_shift",
+        "label": "Calendar date shift",
+        "expression": "sign(date_difference_in_days(converted_dt, from_dt))",
+        "unit": "days",
+        "format": "integer"
+      }
+    ]
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "from_dt",
+        "label": "Date & time (ISO 8601)",
+        "type": "text",
+        "default": "2025-12-03T15:00:00"
+      },
+      {
+        "id": "from_timezone",
+        "label": "From time zone (IANA)",
+        "type": "select",
+        "default": "UTC",
+        "options": [
+          {
+            "label": "UTC",
+            "value": "UTC"
+          },
+          {
+            "label": "America/New_York (Eastern Time)",
+            "value": "America/New_York"
+          },
+          {
+            "label": "America/Los_Angeles (Pacific Time)",
+            "value": "America/Los_Angeles"
+          },
+          {
+            "label": "Europe/London",
+            "value": "Europe/London"
+          },
+          {
+            "label": "Europe/Paris",
+            "value": "Europe/Paris"
+          },
+          {
+            "label": "Asia/Tokyo",
+            "value": "Asia/Tokyo"
+          },
+          {
+            "label": "Asia/Kolkata",
+            "value": "Asia/Kolkata"
+          },
+          {
+            "label": "Australia/Sydney",
+            "value": "Australia/Sydney"
+          }
+        ]
+      },
+      {
+        "id": "to_timezone",
+        "label": "To time zone (IANA)",
+        "type": "select",
+        "default": "America/New_York",
+        "options": [
+          {
+            "label": "UTC",
+            "value": "UTC"
+          },
+          {
+            "label": "America/New_York (Eastern Time)",
+            "value": "America/New_York"
+          },
+          {
+            "label": "America/Los_Angeles (Pacific Time)",
+            "value": "America/Los_Angeles"
+          },
+          {
+            "label": "Europe/London",
+            "value": "Europe/London"
+          },
+          {
+            "label": "Europe/Paris",
+            "value": "Europe/Paris"
+          },
+          {
+            "label": "Asia/Tokyo",
+            "value": "Asia/Tokyo"
+          },
+          {
+            "label": "Asia/Kolkata",
+            "value": "Asia/Kolkata"
+          },
+          {
+            "label": "Australia/Sydney",
+            "value": "Australia/Sydney"
+          }
+        ]
+      },
+      {
+        "id": "assume_instant",
+        "label": "Interpret input as instant (ignore local ambiguous/invalid times)",
+        "type": "select",
+        "default": "yes",
+        "options": [
+          {
+            "label": "Yes — treat input as an absolute instant",
+            "value": "yes"
+          },
+          {
+            "label": "No — validate local wall time (flag ambiguous/invalid)",
+            "value": "no"
+          }
+        ]
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "converted_dt",
+          "label": "Converted date & time"
+        },
+        {
+          "id": "offset_difference",
+          "label": "Offset difference (seconds)"
+        },
+        {
+          "id": "date_shift",
+          "label": "Calendar day change"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This converter maps a specific date and time from one IANA time zone to another, including adjustments for daylight saving time and calendar changes. Provide the input as an ISO 8601 timestamp (for example 2025-12-03T15:00:00) and choose the IANA zone names for source and target.",
+      "The tool relies on official time zone rules and synchronized reference clocks. It is designed for scheduling, publishing timestamps, and coordinating across regions; it is not a substitute for authoritative timekeeping systems used in regulated instrumentation or safety-critical controls."
+    ],
+    "methodology": [
+      "Time zone rules are taken from the IANA time zone database, which encodes historical and future transitions for named zones. The converter resolves the input instant against the zone's rules for the specified date.",
+      "Input timestamps should follow ISO 8601 to avoid ambiguity. For interpretation it either treats the input as an absolute instant (recommended) or validates the local wall time and flags ambiguous or invalid local times that occur during DST transitions.",
+      "For synchronization and accuracy considerations the tool references NIST time and common network time protocols. For networked systems use NTP or IEEE 1588 (PTP) as appropriate; see citations. Changes to local laws or late updates to the time zone database may cause offsets to change; keep the underlying zone database up to date."
+    ],
+    "how_is_calculated": [
+      "1) Parse input string as ISO 8601 to obtain an absolute instant or a local wall time according to user selection.",
+      "2) Look up source zone rules (IANA) for the input date to compute the source UTC offset at that instant.",
+      "3) Convert the instant to UTC, then apply the target zone rules for the same instant to compute the target local time and offset.",
+      "4) Report the converted ISO 8601 timestamp, the offset difference in seconds, and whether the calendar date shifted (previous day, same day, next day)."
+    ],
+    "examples": [
+      "Example 1: Convert 2025-03-10T02:30:00 from America/New_York to Europe/London. If 02:30 is invalid due to a DST spring-forward, choose validation mode to receive a flag, or choose instant mode if you mean the UTC instant.",
+      "Example 2: Convert 2025-12-03T15:00:00 from UTC to Asia/Tokyo. The output will add the target offset and may move the calendar date forward depending on the offset difference."
+    ],
+    "faqs": [
+      {
+        "question": "Which time zone names should I use?",
+        "answer": "Use IANA time zone identifiers (for example America/New_York, Europe/London, Asia/Tokyo). These names include historical DST rules and are the recommended standard for programming and scheduling."
+      },
+      {
+        "question": "How accurate are the conversions?",
+        "answer": "Conversions are accurate given the current IANA time zone database and correct parsing of the input timestamp. Accuracy depends on timely updates to the zone database and system clock synchronization; allow for possible differences of up to one minute if the local rules were changed recently and the database or system is not updated."
+      },
+      {
+        "question": "How does the tool handle daylight saving transitions?",
+        "answer": "You can choose to treat the input as an absolute instant (recommended) or validate against local wall time. Ambiguous or invalid wall times during DST transitions will be flagged when validation is enabled."
+      },
+      {
+        "question": "Can I rely on this for regulated timekeeping or safety systems?",
+        "answer": "No. For regulated or safety-critical systems use certified time sources and protocols such as NTP with authenticated servers or IEEE 1588 (PTP), and follow applicable standards and regulatory controls. This tool is intended for scheduling, planning, and general-purpose conversions."
+      },
+      {
+        "question": "Why might two conversions made on different days give different results for the same zones?",
+        "answer": "Time zone rules change over time for political or legislative reasons. The IANA database records historical changes; if a conversion is for a future date, results depend on the latest published rules. Always update your zone database regularly."
+      }
+    ],
+    "citations": [
+      {
+        "label": "IANA Time Zone Database",
+        "url": "https://www.iana.org/time-zones"
+      },
+      {
+        "label": "ISO 8601 Date and Time Format",
+        "url": "https://www.iso.org/standard/70907.html"
+      },
+      {
+        "label": "RFC 3339 (Timestamp format)",
+        "url": "https://www.rfc-editor.org/rfc/rfc3339"
+      },
+      {
+        "label": "NIST Time and Frequency Division",
+        "url": "https://www.nist.gov/pml/time-and-frequency-division"
+      },
+      {
+        "label": "IEEE 1588 Precision Time Protocol",
+        "url": "https://standards.ieee.org/standard/1588-2019.html"
+      },
+      {
+        "label": "OSHA — workplace scheduling guidance",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "IANA time zone",
+        "definition": "A region name (for example America/New_York) in the IANA time zone database that carries historical and current offset and DST rules."
+      },
+      {
+        "term": "ISO 8601",
+        "definition": "An international standard for representing dates and times in a clear, unambiguous format (for example 2025-12-03T15:00:00)."
+      },
+      {
+        "term": "UTC offset",
+        "definition": "The amount of time added to UTC to get local time for a zone at a particular instant; expressed in hours/minutes."
+      },
+      {
+        "term": "Ambiguous local time",
+        "definition": "A clock time that occurs twice (typically when clocks fall back at DST end), requiring additional context to resolve."
+      },
+      {
+        "term": "Invalid local time",
+        "definition": "A clock time that does not exist (typically when clocks jump forward at DST start)."
+      }
+    ]
+  }
+}

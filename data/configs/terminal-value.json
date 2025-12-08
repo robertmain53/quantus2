@@ -1,0 +1,272 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Terminal Value Calculator (Perpetuity & Exit Multiple)",
+    "description": "Estimate a company's terminal value using the Gordon Growth (perpetuity) method or an Exit Multiple method. Includes per-share conversion, clear inputs, calibration notes, and regulatory accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "gordon_growth",
+    "methods": {
+      "gordon_growth": {
+        "label": "Perpetuity (Gordon Growth)",
+        "description": "Terminal value calculated by capitalizing the final forecast cash flow with a perpetual growth rate: TV = FCF_last × (1 + g) / (WACC − g). Use when long-term cash flows are expected to grow at a stable rate.",
+        "variables": {
+          "tv_terminal": {
+            "expression": "final_cashflow * (1 + g) / (wacc - g)",
+            "dependencies": [
+              "final_cashflow",
+              "wacc",
+              "g"
+            ],
+            "label": "Terminal value at terminal year (undiscounted)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "tv_per_share": {
+            "expression": "tv_terminal / shares_outstanding",
+            "dependencies": [
+              "tv_terminal",
+              "shares_outstanding"
+            ],
+            "label": "Terminal value per share",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "tv_terminal",
+            "label": "Terminal value (at terminal year)",
+            "variable": "tv_terminal",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "tv_per_share",
+            "label": "Terminal value per share",
+            "variable": "tv_per_share",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "exit_multiple": {
+        "label": "Exit Multiple",
+        "description": "Terminal value estimated by applying an exit multiple to a terminal-year performance measure (commonly EBITDA or revenue). TV = Measure_last × Exit_Multiple. Use when comparable-company multiples are available and stable.",
+        "variables": {
+          "tv_multiple": {
+            "expression": "final_ebitda * terminal_multiple",
+            "dependencies": [
+              "final_ebitda",
+              "terminal_multiple"
+            ],
+            "label": "Terminal value by multiple",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "tv_multiple_per_share": {
+            "expression": "tv_multiple / shares_outstanding",
+            "dependencies": [
+              "tv_multiple",
+              "shares_outstanding"
+            ],
+            "label": "Terminal value per share (by multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "tv_multiple",
+            "label": "Terminal value (by multiple)",
+            "variable": "tv_multiple",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "tv_multiple_per_share",
+            "label": "Terminal value per share (by multiple)",
+            "variable": "tv_multiple_per_share",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "final_cashflow",
+        "label": "Final projected free cash flow (FCF) at terminal year",
+        "type": "number",
+        "default": 1000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "final_ebitda",
+        "label": "Final projected EBITDA (for exit multiple method)",
+        "type": "number",
+        "default": 2000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "wacc",
+        "label": "Discount rate (WACC, in decimal form: 10% = 0.10)",
+        "type": "number",
+        "default": 0.1,
+        "min": 0,
+        "max": 1,
+        "step": 0.001
+      },
+      {
+        "id": "g",
+        "label": "Perpetual growth rate (g, in decimal form: 2% = 0.02)",
+        "type": "number",
+        "default": 0.02,
+        "min": -0.5,
+        "max": 0.5,
+        "step": 0.001
+      },
+      {
+        "id": "terminal_multiple",
+        "label": "Exit multiple (e.g., Enterprise Value / EBITDA)",
+        "type": "number",
+        "default": 8,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "shares_outstanding",
+        "label": "Shares outstanding (for per-share result)",
+        "type": "number",
+        "default": 100000,
+        "min": 1,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides two standard approaches to estimate terminal value in discounted cash flow analysis: the perpetuity (Gordon Growth) method and an exit multiple method. Use the Gordon Growth when a stable long-term growth rate is a reasonable assumption; use the exit multiple when comparable-company multiples are available and applicable.",
+      "Inputs expect decimals for rates (for example, enter 10% as 0.10 and 2% as 0.02). Results show terminal value at the end of the projection period (undiscounted) and a per-share equivalent when shares outstanding is provided."
+    ],
+    "methodology": [
+      "Perpetuity (Gordon Growth): Terminal value capitalizes the final projected cash flow using a perpetual growth rate. Formula: TV equals final-period free cash flow times (1 + growth) divided by (discount rate minus growth). This assumes the company can sustain a constant growth rate into perpetuity and that the discount rate exceeds the growth rate.",
+      "Exit Multiple: Terminal value equals a chosen performance metric in the terminal year (commonly EBITDA) multiplied by an empirically derived exit multiple. Select the multiple based on a robust comparable-company analysis and adjust for differences in scale, growth, and risk.",
+      "Calibration and stress-testing: Always test multiple reasonable scenarios for WACC, growth, and exit multiples. Small changes in WACC − g materially affect perpetuity TV. Provide low/central/high cases and document the rationale for chosen parameters."
+    ],
+    "how_is_calculated": [
+      "Perpetuity (Gordon Growth) formula: TV = final_cashflow × (1 + g) / (wacc − g). Enter rates as decimals.",
+      "Exit Multiple formula: TV = final_ebitda × terminal_multiple.",
+      "Per-share conversion: TV per share = TV / shares_outstanding."
+    ],
+    "examples": [
+      "Example 1 (Gordon): Final FCF = 1,000,000; WACC = 0.10; g = 0.02 → TV = 1,000,000 × 1.02 / (0.10 − 0.02) = 12,750,000; TV per share (100,000 shares) = 127.50.",
+      "Example 2 (Multiple): Final EBITDA = 2,000,000; Exit multiple = 7.5 → TV = 2,000,000 × 7.5 = 15,000,000; TV per share (100,000 shares) = 150.00."
+    ],
+    "faqs": [
+      {
+        "question": "Should I enter rates as percentages or decimals?",
+        "answer": "Enter rates as decimals: for example, 8% = 0.08. The calculator treats inputs numerically; entering 8 will be interpreted as 8.0 and yield incorrect results."
+      },
+      {
+        "question": "What if WACC is equal to or less than the growth rate?",
+        "answer": "If WACC ≤ g the Gordon Growth formula is invalid and will produce nonsensical or infinite results. Use alternative approaches (exit multiple) or revisit assumptions about risk and long-term growth."
+      },
+      {
+        "question": "When is the exit multiple method preferred?",
+        "answer": "Use exit multiples when there is a credible set of comparables and consensus around multiples for similar businesses and when the final-year performance metric is reliable and representative."
+      },
+      {
+        "question": "Does the calculator discount the terminal value back to present value?",
+        "answer": "This tool reports terminal value at the terminal year (undiscounted). To obtain present value, discount the terminal value by the cumulative discount factors from your projection period to today using your model's discounting schedule."
+      },
+      {
+        "question": "How should I document assumptions and uncertainty?",
+        "answer": "Document data sources, comparable selection, and sensitivity ranges. Provide low/central/high scenarios for WACC, growth, and multiples. Record why a chosen long-term growth rate is credible given macroeconomic and industry constraints."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (National Institute of Standards & Technology)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (International Organization for Standardization)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (Institute of Electrical and Electronics Engineers) standards repository",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA (Occupational Safety and Health Administration)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Terminal Value (TV)",
+        "definition": "Estimated value of a business at the end of the explicit forecasting period, representing the present value of all future cash flows beyond that period."
+      },
+      {
+        "term": "WACC",
+        "definition": "Weighted Average Cost of Capital: a discount rate that reflects the company’s cost of debt and equity weighted by their market values."
+      },
+      {
+        "term": "Perpetuity (Gordon Growth)",
+        "definition": "A valuation approach that assumes cash flows grow at a constant rate into perpetuity, used to calculate terminal value."
+      },
+      {
+        "term": "Exit Multiple",
+        "definition": "A multiple (such as EV/EBITDA) applied to a terminal-year metric to estimate terminal enterprise value based on comparables."
+      },
+      {
+        "term": "FCF",
+        "definition": "Free Cash Flow: cash that a company generates after accounting for cash outflows to support operations and maintain capital assets."
+      }
+    ],
+    "summary": [
+      "This calculator supports two widely used terminal value approaches, shows per-share equivalents, and emphasizes careful calibration of WACC, growth, and multiples.",
+      "Always run sensitivity tests and document the assumptions, and remember that small parameter changes can produce large valuation shifts. Use external governance and data-handling best practices in line with NIST, ISO, and IEEE guidance when storing or sharing valuation data."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/valuation/wacc-calculator",
+      "/valuation/dcf-guide"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialCalculation"
+    ]
+  }
+}

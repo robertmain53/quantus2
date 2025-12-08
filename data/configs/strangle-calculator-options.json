@@ -1,0 +1,508 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Strangle Options Calculator",
+    "description": "Interactive calculator for long and short strangle option strategies. Computes net cost/credit, breakeven points, P/L at a specified underlying price, and key trade characteristics. Includes calibration guidance and regulatory accuracy caveats."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "long_strangle",
+    "methods": {
+      "long_strangle": {
+        "label": "Long Strangle",
+        "description": "Buy one out-of-the-money put and one out-of-the-money call with the same expiration. Limited downside equal to net premium paid; upside is effectively unlimited.",
+        "variables": {
+          "total_premium": {
+            "expression": "(put_premium + call_premium) * contracts * contract_size",
+            "dependencies": [
+              "put_premium",
+              "call_premium",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Total premium paid",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_commission": {
+            "expression": "commission_per_contract * contracts",
+            "dependencies": [
+              "commission_per_contract",
+              "contracts"
+            ],
+            "label": "Total commission",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "net_cost": {
+            "expression": "total_premium + total_commission",
+            "dependencies": [
+              "total_premium",
+              "total_commission"
+            ],
+            "label": "Net cost (total)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "net_cost_per_share": {
+            "expression": "net_cost / (contracts * contract_size)",
+            "dependencies": [
+              "net_cost",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Net cost per share",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "breakeven_lower": {
+            "expression": "put_strike - net_cost_per_share",
+            "dependencies": [
+              "put_strike",
+              "net_cost_per_share"
+            ],
+            "label": "Lower breakeven",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "breakeven_upper": {
+            "expression": "call_strike + net_cost_per_share",
+            "dependencies": [
+              "call_strike",
+              "net_cost_per_share"
+            ],
+            "label": "Upper breakeven",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_at_price": {
+            "expression": "(max(put_strike - price_scenario, 0) + max(price_scenario - call_strike, 0)) * contracts * contract_size - net_cost",
+            "dependencies": [
+              "put_strike",
+              "call_strike",
+              "price_scenario",
+              "contracts",
+              "contract_size",
+              "net_cost"
+            ],
+            "label": "Profit / Loss at price scenario",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "max_loss": {
+            "expression": "net_cost",
+            "dependencies": [
+              "net_cost"
+            ],
+            "label": "Maximum loss",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "max_loss",
+            "label": "Max loss (total)",
+            "variable": "max_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_cost",
+            "label": "Net cost (total)",
+            "variable": "net_cost",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_cost_per_share",
+            "label": "Net cost per share",
+            "variable": "net_cost_per_share",
+            "unit": "USD",
+            "format": "decimal"
+          },
+          {
+            "id": "breakeven_lower",
+            "label": "Lower breakeven",
+            "variable": "breakeven_lower",
+            "format": "decimal"
+          },
+          {
+            "id": "breakeven_upper",
+            "label": "Upper breakeven",
+            "variable": "breakeven_upper",
+            "format": "decimal"
+          },
+          {
+            "id": "payoff_at_price",
+            "label": "P/L at price scenario",
+            "variable": "payoff_at_price",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "short_strangle": {
+        "label": "Short Strangle",
+        "description": "Sell one OTM put and one OTM call with the same expiration. Net credit received is the maximum potential profit; downside risk is unlimited in naked positions.",
+        "variables": {
+          "total_premium_received": {
+            "expression": "(put_premium + call_premium) * contracts * contract_size",
+            "dependencies": [
+              "put_premium",
+              "call_premium",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Total premium received",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_commission": {
+            "expression": "commission_per_contract * contracts",
+            "dependencies": [
+              "commission_per_contract",
+              "contracts"
+            ],
+            "label": "Total commission",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "net_credit": {
+            "expression": "total_premium_received - total_commission",
+            "dependencies": [
+              "total_premium_received",
+              "total_commission"
+            ],
+            "label": "Net credit (total)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "net_credit_per_share": {
+            "expression": "net_credit / (contracts * contract_size)",
+            "dependencies": [
+              "net_credit",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Net credit per share",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "breakeven_lower": {
+            "expression": "put_strike - net_credit_per_share",
+            "dependencies": [
+              "put_strike",
+              "net_credit_per_share"
+            ],
+            "label": "Lower breakeven",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "breakeven_upper": {
+            "expression": "call_strike + net_credit_per_share",
+            "dependencies": [
+              "call_strike",
+              "net_credit_per_share"
+            ],
+            "label": "Upper breakeven",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "payoff_at_price": {
+            "expression": "net_credit - ((max(price_scenario - call_strike, 0) + max(put_strike - price_scenario, 0)) * contracts * contract_size)",
+            "dependencies": [
+              "net_credit",
+              "price_scenario",
+              "call_strike",
+              "put_strike",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Profit / Loss at price scenario",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "max_profit": {
+            "expression": "net_credit",
+            "dependencies": [
+              "net_credit"
+            ],
+            "label": "Maximum profit (total)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "max_profit",
+            "label": "Max profit (total)",
+            "variable": "max_profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_credit_per_share",
+            "label": "Net credit per share",
+            "variable": "net_credit_per_share",
+            "format": "decimal"
+          },
+          {
+            "id": "breakeven_lower",
+            "label": "Lower breakeven",
+            "variable": "breakeven_lower",
+            "format": "decimal"
+          },
+          {
+            "id": "breakeven_upper",
+            "label": "Upper breakeven",
+            "variable": "breakeven_upper",
+            "format": "decimal"
+          },
+          {
+            "id": "payoff_at_price",
+            "label": "P/L at price scenario",
+            "variable": "payoff_at_price",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "underlying_price",
+        "label": "Current underlying price",
+        "type": "number",
+        "default": 100
+      },
+      {
+        "id": "price_scenario",
+        "label": "Price scenario for P/L calculation",
+        "type": "number",
+        "default": 100
+      },
+      {
+        "id": "put_strike",
+        "label": "Put strike price",
+        "type": "number",
+        "default": 95
+      },
+      {
+        "id": "call_strike",
+        "label": "Call strike price",
+        "type": "number",
+        "default": 105
+      },
+      {
+        "id": "put_premium",
+        "label": "Put premium (per share)",
+        "type": "number",
+        "default": 1.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "call_premium",
+        "label": "Call premium (per share)",
+        "type": "number",
+        "default": 1.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "contracts",
+        "label": "Number of contracts",
+        "type": "integer",
+        "default": 1,
+        "min": 1
+      },
+      {
+        "id": "contract_size",
+        "label": "Shares per contract",
+        "type": "integer",
+        "default": 100,
+        "min": 1
+      },
+      {
+        "id": "commission_per_contract",
+        "label": "Commission per contract (total)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "days_to_expiry",
+        "label": "Days to expiration",
+        "type": "integer",
+        "default": 30,
+        "min": 1
+      },
+      {
+        "id": "risk_free_rate",
+        "label": "Annual risk-free rate (decimal)",
+        "type": "number",
+        "default": 0.02,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "implied_volatility",
+        "label": "Implied volatility (annual, decimal)",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "step": 0.001
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Strangle Options Calculator helps you evaluate long and short strangle trades by computing net premium or credit, breakeven points, maximum loss or profit where applicable, and profit or loss at a specified underlying price. It is designed for rapid scenario analysis and trade rehearsal.",
+      "Use the Long Strangle mode to model buying both an out-of-the-money put and call. Use Short Strangle to model selling both options. Enter premiums, strikes, contract count, commissions and a price scenario to see trade outcomes. This tool does not place trades and is for education and planning only."
+    ],
+    "methodology": [
+      "Calculations are deterministic arithmetic built from input fields: premiums, strikes, contracts and commissions. Net cost/credit equals the total options premium plus or minus commissions, scaled by contract size. Breakeven points are strike ± net cost or credit per share.",
+      "This calculator is not a substitute for professional risk management. For model validation and data handling we follow general guidance from standards bodies: NIST best practices for data integrity and validation, ISO guidance for risk management (ISO 31000), IEEE recommendations for algorithmic transparency, and OSHA principles for operational safety awareness. See citations for links.",
+      "Inputs like implied volatility and days to expiry are provided for context and sanity checks; the core payoff, breakeven and net cost/credit computations use explicit cash flows and do not attempt to price options using Black-Scholes or other models unless you use an external pricing routine."
+    ],
+    "how_is_calculated": [
+      "Total premium (total_premium) = (put_premium + call_premium) × contracts × contract_size",
+      "Total commission (total_commission) = commission_per_contract × contracts",
+      "Net cost (long) = total_premium + total_commission",
+      "Net credit (short) = total_premium_received - total_commission",
+      "Net cost/credit per share = net cost or net credit ÷ (contracts × contract_size)",
+      "Lower breakeven = put_strike − net_cost_per_share (long) or put_strike − net_credit_per_share (short)",
+      "Upper breakeven = call_strike + net_cost_per_share (long) or call_strike + net_credit_per_share (short)",
+      "P/L at price scenario = option intrinsic values at expiration scaled to contracts minus net cost (long) or plus net credit minus losses (short)"
+    ],
+    "examples": [
+      "Example 1 — Long strangle: underlying 100, put strike 95, call strike 105, put premium 1.50, call premium 1.50, 1 contract: Net cost = (1.5+1.5)*1*100 + commission; lower breakeven ≈ 95 − (net_cost/100), upper breakeven ≈ 105 + (net_cost/100).",
+      "Example 2 — Short strangle: same strikes and premiums: Net credit = (1.5+1.5)*1*100 − commission; maximum profit = net credit; risk is unlimited for uncovered naked positions beyond breakevens."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator price options using Black‑Scholes?",
+        "answer": "No. Payoff, breakeven and net premium/credit are computed directly from traded premiums and strikes. This tool does not perform theoretical option pricing unless paired with an external pricing function; implied volatility and days to expiry are provided for user reference and external model inputs."
+      },
+      {
+        "question": "How is commission handled?",
+        "answer": "Commission_per_contract is multiplied by the number of contracts to compute total commission which is added to (long) or subtracted from (short) the premium total to produce net cost or net credit."
+      },
+      {
+        "question": "Can the short strangle lose more than the displayed numbers?",
+        "answer": "Yes. A short strangle has effectively unlimited downside if uncovered. The calculator shows breakeven points and net credit; unlimited theoretical loss is explained in the methodology. Consider defined-risk alternatives or hedges to limit exposure."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Arithmetic results are exact given the inputs. Model-based estimates (for pricing or Greeks) are approximations and depend on external models and data quality. Follow NIST and ISO best practices for data validation and model governance and consult licensed professionals for trade execution."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - National Institute of Standards and Technology",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO - International Organization for Standardization",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE - Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA - Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Strangle",
+        "definition": "An options strategy that involves buying or selling an out-of-the-money put and an out-of-the-money call with the same expiration date."
+      },
+      {
+        "term": "Long strangle",
+        "definition": "Buying both an OTM put and an OTM call. Shows limited loss equal to premiums paid and unlimited upside."
+      },
+      {
+        "term": "Short strangle",
+        "definition": "Selling both an OTM put and an OTM call. Generates a net credit as maximum profit and exposes the seller to potentially large losses."
+      },
+      {
+        "term": "Breakeven",
+        "definition": "Underlying price at expiration at which the net profit/loss equals zero; for strangles there is a lower and upper breakeven."
+      },
+      {
+        "term": "Net premium / Net credit",
+        "definition": "Total premium paid (long) or received (short) adjusted for commissions, scaled to the number of contracts and contract size."
+      },
+      {
+        "term": "Contract size",
+        "definition": "Number of shares represented by one option contract, typically 100 for standard US equity options."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "Finance"
+    ]
+  }
+}

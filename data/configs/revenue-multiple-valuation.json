@@ -1,0 +1,437 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Revenue Multiple Valuation Calculator",
+    "description": "Multi-method valuation tool to estimate enterprise and equity value using revenue multiples. Supports direct application of a chosen multiple, derivation from comparable companies, and SaaS/ARR adjusted multiples. Includes calibration guidance and accuracy caveats aligned with recognized standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "apply_multiple",
+    "methods": {
+      "apply_multiple": {
+        "label": "Apply Revenue Multiple",
+        "description": "Apply a user-specified revenue multiple to the chosen revenue measure to estimate enterprise value and reconcile to equity value.",
+        "variables": {
+          "enterprise_value": {
+            "expression": "revenue * multiple",
+            "dependencies": [
+              "revenue",
+              "multiple"
+            ],
+            "label": "Enterprise value (EV)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "enterprise_value - net_debt + cash",
+            "dependencies": [
+              "enterprise_value",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Implied equity value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "ev_to_revenue": {
+            "expression": "enterprise_value / (revenue + 1e-9)",
+            "dependencies": [
+              "enterprise_value",
+              "revenue"
+            ],
+            "label": "Resulting EV / Revenue",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise value (EV)",
+            "variable": "enterprise_value",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Implied equity value",
+            "variable": "equity_value",
+            "unit": "",
+            "format": "currency"
+          },
+          {
+            "id": "ev_to_revenue",
+            "label": "EV / Revenue (implied)",
+            "variable": "ev_to_revenue",
+            "format": "decimal"
+          }
+        ]
+      },
+      "derive_multiple": {
+        "label": "Derive Multiple from Comparable",
+        "description": "Derive an implied revenue multiple from a comparable company's enterprise value and revenue, then apply it to the subject company.",
+        "variables": {
+          "implied_multiple": {
+            "expression": "comparable_ev / (comparable_revenue + 1e-9)",
+            "dependencies": [
+              "comparable_ev",
+              "comparable_revenue"
+            ],
+            "label": "Implied revenue multiple from comparable",
+            "format": "decimal",
+            "display": true
+          },
+          "suggested_ev": {
+            "expression": "revenue * implied_multiple",
+            "dependencies": [
+              "revenue",
+              "implied_multiple"
+            ],
+            "label": "Suggested enterprise value using implied multiple",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value_from_comps": {
+            "expression": "suggested_ev - net_debt + cash",
+            "dependencies": [
+              "suggested_ev",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Implied equity value (from comps)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "implied_multiple",
+            "label": "Implied multiple (comparable)",
+            "variable": "implied_multiple",
+            "format": "decimal"
+          },
+          {
+            "id": "suggested_ev",
+            "label": "Suggested enterprise value (using implied multiple)",
+            "variable": "suggested_ev",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value_from_comps",
+            "label": "Implied equity value (from comps)",
+            "variable": "equity_value_from_comps",
+            "format": "currency"
+          }
+        ]
+      },
+      "saas_arr_adjusted": {
+        "label": "SaaS / ARR Adjusted Multiple",
+        "description": "Adjust a base revenue multiple for SaaS businesses using growth-based premium. Intended for ARR or run-rate revenue inputs where recurring revenue dynamics materially impact multiples.",
+        "variables": {
+          "adjusted_multiple": {
+            "expression": "base_multiple * (1 + (growth_rate / 100) * 0.5)",
+            "dependencies": [
+              "base_multiple",
+              "growth_rate"
+            ],
+            "label": "Adjusted revenue multiple (growth premium applied)",
+            "format": "decimal",
+            "display": true
+          },
+          "saas_enterprise_value": {
+            "expression": "revenue * adjusted_multiple",
+            "dependencies": [
+              "revenue",
+              "adjusted_multiple"
+            ],
+            "label": "EV using adjusted SaaS multiple",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "saas_equity_value": {
+            "expression": "saas_enterprise_value - net_debt + cash",
+            "dependencies": [
+              "saas_enterprise_value",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Implied equity value (SaaS adjusted)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_multiple",
+            "label": "Adjusted revenue multiple",
+            "variable": "adjusted_multiple",
+            "format": "decimal"
+          },
+          {
+            "id": "saas_enterprise_value",
+            "label": "Enterprise value (SaaS adjusted)",
+            "variable": "saas_enterprise_value",
+            "format": "currency"
+          },
+          {
+            "id": "saas_equity_value",
+            "label": "Implied equity value (SaaS adjusted)",
+            "variable": "saas_equity_value",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "revenue",
+        "label": "Revenue (numeric; e.g., TTM or ARR amount)",
+        "type": "number",
+        "default": 1000000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "revenue_period",
+        "label": "Revenue type",
+        "type": "select",
+        "default": "ttm",
+        "options": [
+          {
+            "label": "TTM (trailing twelve months)",
+            "value": "ttm"
+          },
+          {
+            "label": "LTM (last twelve months)",
+            "value": "ltm"
+          },
+          {
+            "label": "ARR (annual recurring revenue)",
+            "value": "arr"
+          },
+          {
+            "label": "Run-rate",
+            "value": "run_rate"
+          }
+        ]
+      },
+      {
+        "id": "multiple",
+        "label": "Revenue multiple to apply (EV / Revenue)",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "base_multiple",
+        "label": "Base multiple (for SaaS adjustments)",
+        "type": "number",
+        "default": 4,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "growth_rate",
+        "label": "Revenue growth rate (annual %)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 500,
+        "step": 0.1
+      },
+      {
+        "id": "net_debt",
+        "label": "Net debt (debt - cash equivalents)",
+        "type": "number",
+        "default": 0,
+        "step": 1
+      },
+      {
+        "id": "cash",
+        "label": "Cash and cash equivalents",
+        "type": "number",
+        "default": 0,
+        "step": 1
+      },
+      {
+        "id": "comparable_ev",
+        "label": "Comparable company enterprise value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "comparable_revenue",
+        "label": "Comparable company revenue (same period type)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "company_stage",
+        "label": "Company stage (informational)",
+        "type": "select",
+        "default": "growth",
+        "options": [
+          {
+            "label": "Startup / Pre-revenue",
+            "value": "startup"
+          },
+          {
+            "label": "Early",
+            "value": "early"
+          },
+          {
+            "label": "Growth",
+            "value": "growth"
+          },
+          {
+            "label": "Mature",
+            "value": "mature"
+          }
+        ]
+      },
+      {
+        "id": "currency_code",
+        "label": "Currency code (informational)",
+        "type": "text",
+        "default": "USD"
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates enterprise and equity value using revenue multiples across multiple workflows: direct application of a chosen multiple, derivation of a multiple from a comparable company, and an ARR-adjusted approach for subscription/SaaS businesses.",
+      "Use the appropriate revenue measure (TTM, LTM, ARR, or run-rate) and ensure comparable inputs match the same period and accounting basis. Results are estimates intended for screening and scenario analysis, not formal valuation opinions."
+    ],
+    "methodology": [
+      "The primary method multiplies the selected company revenue by a revenue multiple to estimate enterprise value (EV = Revenue × Multiple). Equity value is reconciled by subtracting net debt and adding cash.",
+      "When deriving a multiple from a comparable, this tool computes the comparable's EV / Revenue and applies that ratio to the subject company. For subscription/ARR businesses the tool can adjust a base multiple by a growth-based premium to reflect recurring revenue dynamics.",
+      "This tool follows best practices for data integrity and traceability. For operational controls and data handling, consider guidance from NIST and quality management principles from ISO when preparing inputs. Software accuracy and testing approaches should align with recognized engineering standards."
+    ],
+    "how_is_calculated": [
+      "Apply Multiple method: EV = revenue × multiple. Equity value = EV − net_debt + cash. EV / Revenue (implied) = EV / revenue.",
+      "Derive Multiple method: Implied multiple = comparable_ev / comparable_revenue. Suggested EV = revenue × implied multiple. Equity value = Suggested EV − net_debt + cash.",
+      "SaaS/ARR adjusted method: Adjusted multiple = base_multiple × (1 + 0.5 × growth_rate%). EV (adjusted) = revenue × adjusted multiple. Equity value = EV (adjusted) − net_debt + cash."
+    ],
+    "faqs": [
+      {
+        "question": "Which revenue measure should I use?",
+        "answer": "Choose the measure that best reflects the company's recurring economics and the multiple source. Use ARR or run-rate for subscription businesses, and TTM/LTM for historically reported revenues. Ensure comparables use the same period and accounting basis."
+      },
+      {
+        "question": "How should I calibrate the multiple?",
+        "answer": "Calibrate using recent, industry-specific comparables adjusted for size, growth, profitability, and one-time items. Review a range of multiples and run sensitivity scenarios rather than relying on a single figure."
+      },
+      {
+        "question": "Are results suitable for financial reporting or regulatory filings?",
+        "answer": "No. Outputs are indicative models for screening and internal analysis. For financial reporting, transaction negotiation, or regulatory purposes obtain a formal valuation by a qualified professional and follow applicable accounting and regulatory standards."
+      },
+      {
+        "question": "What are the main accuracy risks?",
+        "answer": "Key risks include mismatched revenue definitions, stale or non-comparable transaction data, incorrect net debt accounting, and ignoring company-specific adjustments (nonrecurring items, seasonality). Document assumptions and validate inputs against source documents."
+      },
+      {
+        "question": "Does the tool account for taxes, minority interest, or other adjustments?",
+        "answer": "No. This calculator provides a streamlined EV and equity reconciliation. Adjust for taxes, minority interests, working capital, or other post-valuation items outside the model as required by your analysis."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Enterprise Value (EV)",
+        "definition": "Total company value including equity and net debt; commonly estimated as revenue times an EV/Revenue multiple."
+      },
+      {
+        "term": "Equity Value",
+        "definition": "Value available to shareholders after adjusting enterprise value for net debt and other capital structure items."
+      },
+      {
+        "term": "Revenue Multiple (EV/Revenue)",
+        "definition": "A valuation ratio equal to enterprise value divided by revenue for a specified period or metric (TTM, LTM, ARR, run-rate)."
+      },
+      {
+        "term": "ARR",
+        "definition": "Annual recurring revenue; common for subscription businesses to express run-rate revenue on an annual basis."
+      },
+      {
+        "term": "Net Debt",
+        "definition": "Total interest-bearing debt minus cash and cash equivalents; used to reconcile enterprise value to equity value."
+      }
+    ],
+    "summary": [
+      "Use this tool to produce quick, reproducible EV and equity estimates using revenue multiples across three workflows: apply a chosen multiple, derive a multiple from comparables, or apply an ARR-adjusted multiple for SaaS.",
+      "Always document inputs, check comparability of revenue definitions, run sensitivity tests, and treat outputs as indicative. For formal valuations, engage a qualified valuation professional."
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

@@ -1,0 +1,544 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Perpetuity Growth Model Calculator",
+    "description": "Multi-method calculator for level perpetuities, growing perpetuities (Gordon), single-stage terminal value from free cash flow, and two-stage terminal models with geometric growth. Includes input validation guidance and notes on model limits and calibration."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "growing_perpetuity",
+    "methods": {
+      "growing_perpetuity": {
+        "label": "Growing perpetuity (Gordon)",
+        "description": "Present value of a perpetuity that grows at a constant rate g: PV = C / (r - g). Use when growth is expected to continue indefinitely at a steady rate lower than the discount rate.",
+        "variables": {
+          "denom": {
+            "expression": "discount_rate - growth_rate",
+            "dependencies": [
+              "discount_rate",
+              "growth_rate"
+            ],
+            "label": "Discount rate minus growth rate (r - g)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "pv": {
+            "expression": "cash_flow / denom",
+            "dependencies": [
+              "cash_flow",
+              "denom"
+            ],
+            "label": "Present value of growing perpetuity",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "pv",
+            "label": "Present value (C / (r - g))",
+            "variable": "pv",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "level_perpetuity": {
+        "label": "Level perpetuity",
+        "description": "Present value of an infinite fixed cash flow: PV = C / r. Use when the payment is expected to remain constant in perpetuity.",
+        "variables": {
+          "denom": {
+            "expression": "discount_rate",
+            "dependencies": [
+              "discount_rate"
+            ],
+            "label": "Discount rate (r)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "pv": {
+            "expression": "cash_flow / denom",
+            "dependencies": [
+              "cash_flow",
+              "denom"
+            ],
+            "label": "Present value of level perpetuity",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "pv",
+            "label": "Present value (C / r)",
+            "variable": "pv",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "terminal_value_from_fcf": {
+        "label": "Terminal value from next-year FCF",
+        "description": "Terminal value using next-year free cash flow with perpetual growth: TV = FCF1 / (r - g). Use when you have an explicitly forecast next-year free cash flow.",
+        "variables": {
+          "denom": {
+            "expression": "discount_rate - growth_rate",
+            "dependencies": [
+              "discount_rate",
+              "growth_rate"
+            ],
+            "label": "Discount rate minus growth rate (r - g)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "tv": {
+            "expression": "fcf1 / denom",
+            "dependencies": [
+              "fcf1",
+              "denom"
+            ],
+            "label": "Terminal value at valuation date (FCF1 / (r - g))",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "tv",
+            "label": "Terminal value",
+            "variable": "tv",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "two_stage_terminal": {
+        "label": "Two-stage terminal (explicit high-growth then perpetual)",
+        "description": "Explicit high-growth period followed by perpetual stable growth. Uses closed-form geometric series for the high-growth PV and a Gordon-style terminal at the transition point.",
+        "variables": {
+          "ratio": {
+            "expression": "(1 + high_growth_rate) / (1 + discount_rate)",
+            "dependencies": [
+              "high_growth_rate",
+              "discount_rate"
+            ],
+            "label": "Growth-to-discount ratio ((1+hg)/(1+r))",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "ratio_pow_N": {
+            "expression": "pow(ratio, high_growth_years)",
+            "dependencies": [
+              "ratio",
+              "high_growth_years"
+            ],
+            "label": "Ratio^N",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": false
+          },
+          "sum_high_pv": {
+            "expression": "base_cash_flow * ratio * (1 - ratio_pow_N) / (1 - ratio)",
+            "dependencies": [
+              "base_cash_flow",
+              "ratio",
+              "ratio_pow_N"
+            ],
+            "label": "PV of explicit high-growth stage",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "cash_flow_N": {
+            "expression": "base_cash_flow * pow(1 + high_growth_rate, high_growth_years)",
+            "dependencies": [
+              "base_cash_flow",
+              "high_growth_rate",
+              "high_growth_years"
+            ],
+            "label": "Cash flow at end of high-growth stage (year N)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "terminal_cash_Nplus1": {
+            "expression": "cash_flow_N * (1 + long_term_growth)",
+            "dependencies": [
+              "cash_flow_N",
+              "long_term_growth"
+            ],
+            "label": "Cash flow in year N+1 used for terminal calculation",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "tv_at_N": {
+            "expression": "terminal_cash_Nplus1 / (discount_rate - long_term_growth)",
+            "dependencies": [
+              "terminal_cash_Nplus1",
+              "discount_rate",
+              "long_term_growth"
+            ],
+            "label": "Terminal value at year N (TV_N)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "pv_tv": {
+            "expression": "tv_at_N / pow(1 + discount_rate, high_growth_years)",
+            "dependencies": [
+              "tv_at_N",
+              "discount_rate",
+              "high_growth_years"
+            ],
+            "label": "Present value of terminal value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_value": {
+            "expression": "sum_high_pv + pv_tv",
+            "dependencies": [
+              "sum_high_pv",
+              "pv_tv"
+            ],
+            "label": "Total present value (explicit stage PV + PV of terminal)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "total_value",
+            "label": "Total present value (explicit PV + terminal PV)",
+            "variable": "total_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "sum_high_pv",
+            "label": "PV of high-growth stage",
+            "variable": "sum_high_pv",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "pv_tv",
+            "label": "PV of terminal value",
+            "variable": "pv_tv",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method",
+        "label": "Method",
+        "type": "select",
+        "default": "growing_perpetuity",
+        "options": [
+          {
+            "label": "Growing perpetuity (Gordon)",
+            "value": "growing_perpetuity"
+          },
+          {
+            "label": "Level perpetuity",
+            "value": "level_perpetuity"
+          },
+          {
+            "label": "Terminal value from next-year FCF",
+            "value": "terminal_value_from_fcf"
+          },
+          {
+            "label": "Two-stage terminal (explicit high-growth then perpetuity)",
+            "value": "two_stage_terminal"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "growing_section",
+        "label": "Growing perpetuity inputs",
+        "show_when": {
+          "field": "method",
+          "is": "growing_perpetuity"
+        },
+        "fields": [
+          {
+            "id": "cash_flow",
+            "label": "Cash flow C (next payment)",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "discount_rate",
+            "label": "Discount rate (r) — decimal (e.g., 0.10 = 10%)",
+            "type": "number",
+            "default": 0.1,
+            "min": 0,
+            "max": 1,
+            "step": 0.0001
+          },
+          {
+            "id": "growth_rate",
+            "label": "Growth rate (g) — decimal (e.g., 0.03 = 3%)",
+            "type": "number",
+            "default": 0.03,
+            "min": -0.5,
+            "max": 0.5,
+            "step": 0.0001
+          }
+        ]
+      },
+      {
+        "id": "level_section",
+        "label": "Level perpetuity inputs",
+        "show_when": {
+          "field": "method",
+          "is": "level_perpetuity"
+        },
+        "fields": [
+          {
+            "id": "cash_flow",
+            "label": "Cash flow C (next payment)",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "discount_rate",
+            "label": "Discount rate (r) — decimal",
+            "type": "number",
+            "default": 0.1,
+            "min": 0,
+            "max": 1,
+            "step": 0.0001
+          }
+        ]
+      },
+      {
+        "id": "fcf_section",
+        "label": "Terminal from FCF inputs",
+        "show_when": {
+          "field": "method",
+          "is": "terminal_value_from_fcf"
+        },
+        "fields": [
+          {
+            "id": "fcf1",
+            "label": "Next-year free cash flow (FCF1)",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "discount_rate",
+            "label": "Discount rate (r) — decimal",
+            "type": "number",
+            "default": 0.1,
+            "min": 0,
+            "max": 1,
+            "step": 0.0001
+          },
+          {
+            "id": "growth_rate",
+            "label": "Terminal growth rate (g) — decimal",
+            "type": "number",
+            "default": 0.03,
+            "min": -0.5,
+            "max": 0.5,
+            "step": 0.0001
+          }
+        ]
+      },
+      {
+        "id": "two_stage_section",
+        "label": "Two-stage terminal inputs",
+        "show_when": {
+          "field": "method",
+          "is": "two_stage_terminal"
+        },
+        "fields": [
+          {
+            "id": "base_cash_flow",
+            "label": "Base cash flow (current-year or most recent)",
+            "type": "number",
+            "default": 1000,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "high_growth_rate",
+            "label": "High-stage growth rate (hg) — decimal",
+            "type": "number",
+            "default": 0.15,
+            "min": -0.5,
+            "max": 0.5,
+            "step": 0.0001
+          },
+          {
+            "id": "high_growth_years",
+            "label": "High-growth years (N)",
+            "type": "integer",
+            "default": 5,
+            "min": 0,
+            "max": 50,
+            "step": 1
+          },
+          {
+            "id": "long_term_growth",
+            "label": "Long-term stable growth rate (g) — decimal",
+            "type": "number",
+            "default": 0.03,
+            "min": -0.5,
+            "max": 0.5,
+            "step": 0.0001
+          },
+          {
+            "id": "discount_rate",
+            "label": "Discount rate (r) — decimal",
+            "type": "number",
+            "default": 0.1,
+            "min": 0,
+            "max": 1,
+            "step": 0.0001
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes present values and terminal values using common perpetuity formulas and a two-stage terminal model. It supports level perpetuities, growing perpetuities (Gordon), single-stage terminal values from next-year free cash flow, and an explicit high-growth stage followed by a perpetual steady-state.",
+      "Use the method selector to pick the assumption set that matches your forecast horizon and available inputs. The tool provides closed-form formulas and geometric-series calculations so you can reproduce results in spreadsheets or audit logs."
+    ],
+    "methodology": [
+      "Mathematical core: a growing perpetuity uses present value equals cash flow divided by (r minus g) when the discount rate r exceeds the growth rate g; a level perpetuity uses present value equals cash flow divided by r. Two-stage models discount an explicit high-growth series using a geometric series and then apply a Gordon-style perpetuity at the transition point.",
+      "Operational controls and model governance: validate discount and growth rate inputs and run sensitivity checks. Follow risk-management frameworks such as ISO 31000 and NIST guidance for secure handling of financial models and data.",
+      "Accuracy caveats: formulas assume constant rates and infinite horizon where specified. Small denominators (r minus g near zero) create unstable results; avoid or document scenarios where r is less than or equal to g. Preserve calculation logs for auditability."
+    ],
+    "how_is_calculated": [
+      "Growing perpetuity: PV = C / (r - g). Precondition: discount rate r must be greater than growth rate g for a finite PV.",
+      "Level perpetuity: PV = C / r. Precondition: r must be positive.",
+      "Terminal from FCF: TV = FCF1 / (r - g). Treat FCF1 as the free cash flow one period after the valuation date.",
+      "Two-stage terminal: PV(high-growth) = base_cash_flow * ratio * (1 - ratio^N) / (1 - ratio) where ratio = (1 + hg) / (1 + r). Terminal at N: TV_N = (cash_flow_N * (1 + g_long)) / (r - g_long). Discount TV_N back to present by dividing by (1 + r)^N. Total PV = PV(high-growth) + PV(TV_N)."
+    ],
+    "faqs": [
+      {
+        "question": "What should I watch for when choosing r and g?",
+        "answer": "Ensure the discount rate reflects the appropriate risk and horizon. For growing perpetuities and terminals, require the discount rate to exceed the growth rate; if the two are close the result is highly sensitive and should be stress-tested. Document assumptions and run sensitivity tables."
+      },
+      {
+        "question": "Can I use negative growth rates?",
+        "answer": "Yes. The formulas accept negative g values. Negative long-term growth may be realistic for declining industries but check whether a perpetuity assumption remains appropriate."
+      },
+      {
+        "question": "How do I interpret the two-stage model outputs?",
+        "answer": "The two-stage model separates value generated during an explicit high-growth period from the continuing value after that period. Use the PV of the explicit stage and the PV of the terminal separately for transparency and reconciliation to underlying forecasts."
+      },
+      {
+        "question": "What accuracy and governance standards should I follow?",
+        "answer": "Adopt model risk and data-security practices aligned with ISO 31000 for risk management and relevant NIST guidelines for secure data handling. Maintain versioned input records and calculation logs for audit. For engineering or technical standards consult IEEE where relevant and follow workplace safety record practices per OSHA when handling physical data systems."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (National Institute of Standards and Technology)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 31000 — Risk management",
+        "url": "https://www.iso.org/iso-31000-risk-management.html"
+      },
+      {
+        "label": "IEEE Standards and guidance",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Perpetuity",
+        "definition": "An infinite series of identical cash flows occurring at regular intervals."
+      },
+      {
+        "term": "Growing perpetuity",
+        "definition": "A perpetuity whose payments increase at a constant rate g each period."
+      },
+      {
+        "term": "Discount rate (r)",
+        "definition": "The rate used to discount future cash flows to present value, reflecting time value and risk."
+      },
+      {
+        "term": "Terminal value",
+        "definition": "An estimate of an asset's value at the end of an explicit forecast period, often calculated using perpetuity formulas."
+      },
+      {
+        "term": "Geometric series",
+        "definition": "A mathematical series used to sum discounted, growing cash flows over a finite number of periods."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-31000-risk-management.html",
+        "label": "ISO 31000",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

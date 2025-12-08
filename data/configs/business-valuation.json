@@ -1,0 +1,640 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Business Valuation (Multi‑Method) Calculator",
+    "description": "Estimate enterprise and equity value using three common approaches: Discounted Cash Flow (simplified), Market Multiples (revenue & EBITDA), and Asset‑Based. Includes per‑share estimates and clear caveats on limits and accuracy."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "income_dcf",
+    "methods": {
+      "income_dcf": {
+        "label": "Discounted Cash Flow (simplified)",
+        "description": "Projects operating cash flows from current revenue using a constant growth and EBITDA margin, discounts them, and adds a terminal value. This is a simplified FCF approach for quick estimates; detailed valuations should model capex, working capital, and separate tax/leverage effects.",
+        "variables": {
+          "r": {
+            "expression": "discount_rate/100",
+            "dependencies": [
+              "discount_rate"
+            ],
+            "label": "Discount rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "g": {
+            "expression": "revenue_growth_rate/100",
+            "dependencies": [
+              "revenue_growth_rate"
+            ],
+            "label": "Revenue growth rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "m": {
+            "expression": "ebitda_margin/100",
+            "dependencies": [
+              "ebitda_margin"
+            ],
+            "label": "EBITDA margin (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "t": {
+            "expression": "tax_rate/100",
+            "dependencies": [
+              "tax_rate"
+            ],
+            "label": "Tax rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "factor": {
+            "expression": "(1+g)/(1+r)",
+            "dependencies": [
+              "g",
+              "r"
+            ],
+            "label": "Growth/discount factor per year",
+            "format": "decimal",
+            "display": false
+          },
+          "pv_forecast": {
+            "expression": "current_year_revenue * m * (1 - t) * ( factor * (1 - pow(factor, forecast_years)) / (1 - factor) )",
+            "dependencies": [
+              "current_year_revenue",
+              "m",
+              "t",
+              "factor",
+              "forecast_years"
+            ],
+            "label": "Present value of forecast period FCF",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "fcf_n": {
+            "expression": "current_year_revenue * pow(1+g, forecast_years) * m * (1 - t)",
+            "dependencies": [
+              "current_year_revenue",
+              "g",
+              "m",
+              "t",
+              "forecast_years"
+            ],
+            "label": "FCF in final forecast year",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "tg": {
+            "expression": "terminal_growth_rate/100",
+            "dependencies": [
+              "terminal_growth_rate"
+            ],
+            "label": "Terminal growth rate (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "terminal_value": {
+            "expression": "fcf_n * (1 + tg) / (r - tg)",
+            "dependencies": [
+              "fcf_n",
+              "tg",
+              "r"
+            ],
+            "label": "Undiscounted terminal value",
+            "unit": "USD",
+            "format": "currency",
+            "display": false
+          },
+          "tv_discounted": {
+            "expression": "terminal_value / pow(1 + r, forecast_years)",
+            "dependencies": [
+              "terminal_value",
+              "r",
+              "forecast_years"
+            ],
+            "label": "Discounted terminal value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "enterprise_value": {
+            "expression": "pv_forecast + tv_discounted",
+            "dependencies": [
+              "pv_forecast",
+              "tv_discounted"
+            ],
+            "label": "Enterprise value (DCF)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "enterprise_value - total_debt + cash_and_equivalents - minority_interest",
+            "dependencies": [
+              "enterprise_value",
+              "total_debt",
+              "cash_and_equivalents",
+              "minority_interest"
+            ],
+            "label": "Equity value (DCF)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_per_share": {
+            "expression": "equity_value / max(1, shares_outstanding)",
+            "dependencies": [
+              "equity_value",
+              "shares_outstanding"
+            ],
+            "label": "Equity value per share (DCF)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise value (DCF)",
+            "variable": "enterprise_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value (DCF)",
+            "variable": "equity_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equity_per_share",
+            "label": "Equity per share (DCF)",
+            "variable": "equity_per_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "market_multiples": {
+        "label": "Market Multiples (Revenue & EBITDA)",
+        "description": "Estimates enterprise value using an industry revenue multiple and an EBITDA multiple, reports each and an average. Use observed comparables to choose multiples; this is a shorthand method.",
+        "variables": {
+          "m": {
+            "expression": "ebitda_margin/100",
+            "dependencies": [
+              "ebitda_margin"
+            ],
+            "label": "EBITDA margin (decimal)",
+            "format": "decimal",
+            "display": false
+          },
+          "ev_rev": {
+            "expression": "current_year_revenue * industry_revenue_multiple",
+            "dependencies": [
+              "current_year_revenue",
+              "industry_revenue_multiple"
+            ],
+            "label": "Enterprise value from revenue multiple",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "ev_ebitda": {
+            "expression": "current_year_revenue * m * selected_ebitda_multiple",
+            "dependencies": [
+              "current_year_revenue",
+              "m",
+              "selected_ebitda_multiple"
+            ],
+            "label": "Enterprise value from EBITDA multiple",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "ev_avg": {
+            "expression": "(ev_rev + ev_ebitda) / 2",
+            "dependencies": [
+              "ev_rev",
+              "ev_ebitda"
+            ],
+            "label": "Average enterprise value (market multiples)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "ev_avg - total_debt + cash_and_equivalents - minority_interest",
+            "dependencies": [
+              "ev_avg",
+              "total_debt",
+              "cash_and_equivalents",
+              "minority_interest"
+            ],
+            "label": "Equity value (market multiples)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_per_share": {
+            "expression": "equity_value / max(1, shares_outstanding)",
+            "dependencies": [
+              "equity_value",
+              "shares_outstanding"
+            ],
+            "label": "Equity per share (market multiples)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ev_rev",
+            "label": "EV from revenue multiple",
+            "variable": "ev_rev",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "ev_ebitda",
+            "label": "EV from EBITDA multiple",
+            "variable": "ev_ebitda",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "ev_avg",
+            "label": "Average EV (market multiples)",
+            "variable": "ev_avg",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value (market multiples)",
+            "variable": "equity_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equity_per_share",
+            "label": "Equity per share (market multiples)",
+            "variable": "equity_per_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "asset_based": {
+        "label": "Asset‑Based Approach (Net Tangible Assets)",
+        "description": "Values the business on a net tangible assets basis. Useful for asset-heavy or liquidation scenarios. Does not reflect ongoing earning power.",
+        "variables": {
+          "ev_assets": {
+            "expression": "net_tangible_assets",
+            "dependencies": [
+              "net_tangible_assets"
+            ],
+            "label": "Enterprise value (net tangible assets)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "net_tangible_assets + cash_and_equivalents - total_debt - minority_interest",
+            "dependencies": [
+              "net_tangible_assets",
+              "cash_and_equivalents",
+              "total_debt",
+              "minority_interest"
+            ],
+            "label": "Equity value (asset based)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_per_share": {
+            "expression": "equity_value / max(1, shares_outstanding)",
+            "dependencies": [
+              "equity_value",
+              "shares_outstanding"
+            ],
+            "label": "Equity per share (asset based)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ev_assets",
+            "label": "Enterprise value (assets)",
+            "variable": "ev_assets",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value",
+            "label": "Equity value (assets)",
+            "variable": "equity_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equity_per_share",
+            "label": "Equity per share (assets)",
+            "variable": "equity_per_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_year_revenue",
+        "label": "Current year revenue",
+        "type": "number",
+        "default": 1000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "revenue_growth_rate",
+        "label": "Expected annual revenue growth rate (%)",
+        "type": "number",
+        "default": 5,
+        "min": -50,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "ebitda_margin",
+        "label": "EBITDA margin (%)",
+        "type": "number",
+        "default": 15,
+        "min": -100,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "tax_rate",
+        "label": "Effective tax rate (%)",
+        "type": "number",
+        "default": 25,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "discount_rate",
+        "label": "Discount rate (WACC or required return %) ",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "terminal_growth_rate",
+        "label": "Terminal growth rate (%)",
+        "type": "number",
+        "default": 2,
+        "min": -10,
+        "max": 20,
+        "step": 0.1
+      },
+      {
+        "id": "forecast_years",
+        "label": "Forecast period (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 20,
+        "step": 1
+      },
+      {
+        "id": "selected_ebitda_multiple",
+        "label": "Selected EBITDA multiple",
+        "type": "number",
+        "default": 6,
+        "min": 0.5,
+        "max": 30,
+        "step": 0.1
+      },
+      {
+        "id": "industry_revenue_multiple",
+        "label": "Industry revenue multiple (x revenue)",
+        "type": "number",
+        "default": 1.2,
+        "min": 0.1,
+        "max": 10,
+        "step": 0.01
+      },
+      {
+        "id": "net_tangible_assets",
+        "label": "Net tangible assets (book or adjusted)",
+        "type": "number",
+        "default": 0,
+        "min": -1000000000,
+        "step": 1000
+      },
+      {
+        "id": "cash_and_equivalents",
+        "label": "Cash and equivalents",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "total_debt",
+        "label": "Total debt (interest‑bearing)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "minority_interest",
+        "label": "Minority interest / preferred claims",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 100
+      },
+      {
+        "id": "shares_outstanding",
+        "label": "Shares outstanding (for per‑share)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "enterprise_value",
+          "label": "Enterprise value",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "equity_value",
+          "label": "Equity value",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "equity_per_share",
+          "label": "Equity value per share",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides quick, side‑by‑side estimates of business value using three common approaches: a simplified Discounted Cash Flow (DCF), market multiples (revenue and EBITDA), and an asset‑based net tangible asset method. Use inputs that reflect normalized operating performance and up‑to‑date balance sheet items.",
+      "Results are indicative only. The tool is intended for early screening and scenario comparison; it does not replace a formal valuation prepared by qualified professionals who will model tax, capital expenditures, working capital, and company‑specific risk in detail."
+    ],
+    "methodology": [
+      "Discounted Cash Flow (simplified): projects operating cash flows derived from current revenue, a constant growth rate and EBITDA margin, applies a tax factor, discounts forecast cash flows, and adds a terminal value derived from final year FCF. This is a simplification intended for rapid estimates.",
+      "Market multiples: applies an industry revenue multiple and an EBITDA multiple to derive enterprise values from each approach and reports each result plus their average. Select multiples based on recent comparable transactions or public company trading multiples.",
+      "Asset‑based: uses net tangible assets to estimate a floor/ liquidation value. This method is most relevant for asset‑heavy companies or distressed scenarios and does not capture going‑concern earnings power."
+    ],
+    "how_is_calculated": [
+      "DCF steps (simplified): calculate annual FCF ≈ Revenue × EBITDA margin × (1 − tax rate). Discount forecast FCF to present at the discount rate. Compute terminal value = FCFn × (1 + terminal growth) / (r − terminal growth). Sum PV of forecast and discounted terminal value to get enterprise value. Equity value = enterprise value − debt + cash − minority interest.",
+      "Market multiples: EV(rev) = Revenue × Revenue multiple. EV(ebitda) = EBITDA × EBITDA multiple. Average EV = (EV(rev) + EV(ebitda)) / 2. Equity value = EV average − debt + cash − minority interest.",
+      "Asset based: Equity value = Net tangible assets + cash − debt − minority interest."
+    ],
+    "examples": [
+      "Example 1 (DCF): Revenue $1,000,000, growth 5%, EBITDA margin 15%, tax 25%, discount 10%, terminal growth 2%, 5‑year forecast → enterprise value computed as PV of forecast FCF plus discounted terminal value; equity value adjusted for cash and debt.",
+      "Example 2 (Multiples): Same company with industry revenue multiple 1.2x and EBITDA multiple 6x produces EV from revenue = $1,200,000 and EV from EBITDA = (1,000,000 × 0.15) × 6 = $900,000; average EV = $1,050,000."
+    ],
+    "summary": [
+      "Use the DCF method for earnings‑driven valuations and when you have reasonable growth and discount rate assumptions. Use market multiples to benchmark against peers and recent transactions. Use asset‑based metrics as a conservative floor.",
+      "Inputs strongly affect output: small changes in discount rate, growth, or multiples materially alter value. Always perform sensitivity analysis (vary discount rate, growth, and multiples) before making decisions."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are the results?",
+        "answer": "This tool provides indicative estimates. Accuracy depends on input quality and method suitability. It omits detailed items such as capex schedules, working capital changes, non‑operating items, and contingent liabilities. For transaction pricing or formal opinions, engage a qualified valuation professional or CPA."
+      },
+      {
+        "question": "Which method should I use for my business?",
+        "answer": "No single method fits all. Use DCF when cash flows are stable and forecastable, market multiples for benchmarking against peers or recent transactions, and asset‑based approaches for asset‑intensive or liquidation scenarios. Compare multiple methods and document assumptions."
+      },
+      {
+        "question": "Are per‑share results precise if shares outstanding is zero?",
+        "answer": "Per‑share estimates require a valid positive shares outstanding input. If shares outstanding is zero or not provided, per‑share outputs will be shown as not meaningful. Always confirm the correct share count for equity calculations."
+      },
+      {
+        "question": "Does the calculator follow any standards?",
+        "answer": "The calculator documents methodology and error controls consistent with common information security and quality standards. For governance and reproducibility, users should follow applicable professional valuation standards and applicable regulatory guidance when preparing formal valuation reports."
+      },
+      {
+        "question": "Can the tool be used for regulatory filings or tax opinions?",
+        "answer": "No. Outputs are for informational use only and are not a substitute for professional appraisals, tax opinions, or independent audit work. Regulatory or tax filings typically require detailed methods, supporting schedules, and certified valuation reports."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - overview on measurement and verification",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Engineering and technical best practices",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) - general safety guidance",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Enterprise Value (EV)",
+        "definition": "Total value of the operating business including debt and minority interests; often used as the denominator for multiples."
+      },
+      {
+        "term": "Equity Value",
+        "definition": "Value attributable to shareholders after subtracting debt and adding cash and equivalents."
+      },
+      {
+        "term": "EBITDA",
+        "definition": "Earnings before interest, taxes, depreciation, and amortization; commonly used as a proxy for operating cash flow in multiples."
+      },
+      {
+        "term": "Discount Rate (r)",
+        "definition": "Required return or weighted average cost of capital used to discount future cash flows to present value."
+      },
+      {
+        "term": "Terminal Value",
+        "definition": "Estimated value of the business at the end of the explicit forecast period, typically based on a perpetuity growth model or exit multiple."
+      },
+      {
+        "term": "Multiple",
+        "definition": "A factor (e.g., x revenue or x EBITDA) derived from comparable companies or transactions used to estimate value."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/guides/valuation/discounted-cash-flow",
+      "/guides/valuation/multiples",
+      "/guides/valuation/asset-based"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

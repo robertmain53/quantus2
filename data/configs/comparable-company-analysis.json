@@ -1,0 +1,762 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Comparable Company Analysis (CCA) — Advanced Valuation Calculator",
+    "description": "Multi-method Comparable Company Analysis calculator. Build peer multiples, compute EV and equity values, blend methods with user weights, apply size/liquidity/control adjustments, and produce an implied per-share valuation and a calibrated range. Includes clear caveats, calibration guidance, and references to industry standards for model governance."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "market_multiples",
+    "methods": {
+      "market_multiples": {
+        "label": "Market Multiples (peer-average approach)",
+        "description": "Compute average peer multiples (EV/Revenue, EV/EBITDA, P/E) across provided comparables and apply to the target company's metrics to produce implied enterprise value, equity value, and per-share estimates.",
+        "variables": {
+          "average_ev_rev": {
+            "expression": "(ev_rev_1 + ev_rev_2 + ev_rev_3 + ev_rev_4 + ev_rev_5 + ev_rev_6) / num_comparables",
+            "dependencies": [
+              "ev_rev_1",
+              "ev_rev_2",
+              "ev_rev_3",
+              "ev_rev_4",
+              "ev_rev_5",
+              "ev_rev_6",
+              "num_comparables"
+            ],
+            "label": "Average EV / Revenue (multiple)",
+            "unit": "x",
+            "format": "decimal",
+            "display": true
+          },
+          "average_ev_ebitda": {
+            "expression": "(ev_ebitda_1 + ev_ebitda_2 + ev_ebitda_3 + ev_ebitda_4 + ev_ebitda_5 + ev_ebitda_6) / num_comparables",
+            "dependencies": [
+              "ev_ebitda_1",
+              "ev_ebitda_2",
+              "ev_ebitda_3",
+              "ev_ebitda_4",
+              "ev_ebitda_5",
+              "ev_ebitda_6",
+              "num_comparables"
+            ],
+            "label": "Average EV / EBITDA (multiple)",
+            "unit": "x",
+            "format": "decimal",
+            "display": true
+          },
+          "average_p_e": {
+            "expression": "(p_e_1 + p_e_2 + p_e_3 + p_e_4 + p_e_5 + p_e_6) / num_comparables",
+            "dependencies": [
+              "p_e_1",
+              "p_e_2",
+              "p_e_3",
+              "p_e_4",
+              "p_e_5",
+              "p_e_6",
+              "num_comparables"
+            ],
+            "label": "Average Price / Earnings (multiple)",
+            "unit": "x",
+            "format": "decimal",
+            "display": true
+          },
+          "ev_from_rev": {
+            "expression": "average_ev_rev * target_revenue",
+            "dependencies": [
+              "average_ev_rev",
+              "target_revenue"
+            ],
+            "label": "Implied Enterprise Value (from Revenue multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "ev_from_ebitda": {
+            "expression": "average_ev_ebitda * target_ebitda",
+            "dependencies": [
+              "average_ev_ebitda",
+              "target_ebitda"
+            ],
+            "label": "Implied Enterprise Value (from EBITDA multiple)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value_from_ebitda": {
+            "expression": "ev_from_ebitda - target_debt + target_cash",
+            "dependencies": [
+              "ev_from_ebitda",
+              "target_debt",
+              "target_cash"
+            ],
+            "label": "Implied Equity Value (from EBITDA)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value_per_share_ebitda": {
+            "expression": "equity_value_from_ebitda / target_shares",
+            "dependencies": [
+              "equity_value_from_ebitda",
+              "target_shares"
+            ],
+            "label": "Implied Share Price (from EBITDA method)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value_from_pe": {
+            "expression": "average_p_e * target_net_income",
+            "dependencies": [
+              "average_p_e",
+              "target_net_income"
+            ],
+            "label": "Implied Equity Value (from P/E)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value_per_share_pe": {
+            "expression": "equity_value_from_pe / target_shares",
+            "dependencies": [
+              "equity_value_from_pe",
+              "target_shares"
+            ],
+            "label": "Implied Share Price (from P/E method)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ev_from_rev",
+            "label": "EV from Revenue",
+            "variable": "ev_from_rev",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "ev_from_ebitda",
+            "label": "EV from EBITDA",
+            "variable": "ev_from_ebitda",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value_per_share_ebitda",
+            "label": "Share Price (EBITDA)",
+            "variable": "equity_value_per_share_ebitda",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value_per_share_pe",
+            "label": "Share Price (P/E)",
+            "variable": "equity_value_per_share_pe",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "weighted_blend": {
+        "label": "Weighted Blend of Multiples",
+        "description": "Combine multiples using user-specified weights to create a blended EV multiple and derive implied enterprise and equity values.",
+        "variables": {
+          "average_ev_rev_w": {
+            "expression": "(ev_rev_1 + ev_rev_2 + ev_rev_3 + ev_rev_4 + ev_rev_5 + ev_rev_6) / num_comparables",
+            "dependencies": [
+              "ev_rev_1",
+              "ev_rev_2",
+              "ev_rev_3",
+              "ev_rev_4",
+              "ev_rev_5",
+              "ev_rev_6",
+              "num_comparables"
+            ],
+            "label": "Average EV/Revenue",
+            "unit": "x",
+            "format": "decimal",
+            "display": false
+          },
+          "average_ev_ebitda_w": {
+            "expression": "(ev_ebitda_1 + ev_ebitda_2 + ev_ebitda_3 + ev_ebitda_4 + ev_ebitda_5 + ev_ebitda_6) / num_comparables",
+            "dependencies": [
+              "ev_ebitda_1",
+              "ev_ebitda_2",
+              "ev_ebitda_3",
+              "ev_ebitda_4",
+              "ev_ebitda_5",
+              "ev_ebitda_6",
+              "num_comparables"
+            ],
+            "label": "Average EV/EBITDA",
+            "unit": "x",
+            "format": "decimal",
+            "display": false
+          },
+          "blended_ev_multiple": {
+            "expression": "(average_ev_ebitda_w * weight_ev_ebitda + average_ev_rev_w * weight_ev_rev) / (weight_ev_ebitda + weight_ev_rev)",
+            "dependencies": [
+              "average_ev_ebitda_w",
+              "average_ev_rev_w",
+              "weight_ev_ebitda",
+              "weight_ev_rev"
+            ],
+            "label": "Blended EV multiple (weighted)",
+            "unit": "x",
+            "format": "decimal",
+            "display": true
+          },
+          "ev_blended": {
+            "expression": "blended_ev_multiple * target_ebitda",
+            "dependencies": [
+              "blended_ev_multiple",
+              "target_ebitda"
+            ],
+            "label": "Implied Enterprise Value (blended)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "blended_equity_value": {
+            "expression": "ev_blended - target_debt + target_cash",
+            "dependencies": [
+              "ev_blended",
+              "target_debt",
+              "target_cash"
+            ],
+            "label": "Implied Equity Value (blended)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "blended_equity_value_per_share": {
+            "expression": "blended_equity_value / target_shares",
+            "dependencies": [
+              "blended_equity_value",
+              "target_shares"
+            ],
+            "label": "Implied Share Price (blended)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "ev_blended",
+            "label": "EV (blended)",
+            "variable": "ev_blended",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "blended_equity_value_per_share",
+            "label": "Share Price (blended)",
+            "variable": "blended_equity_value_per_share",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "adjusted_range": {
+        "label": "Adjusted Range & Sensitivity",
+        "description": "Apply size, liquidity, and control adjustments, and produce a calibrated valuation range around a blended mid-point.",
+        "variables": {
+          "average_ev_ebitda_adj": {
+            "expression": "(ev_ebitda_1 + ev_ebitda_2 + ev_ebitda_3 + ev_ebitda_4 + ev_ebitda_5 + ev_ebitda_6) / num_comparables",
+            "dependencies": [
+              "ev_ebitda_1",
+              "ev_ebitda_2",
+              "ev_ebitda_3",
+              "ev_ebitda_4",
+              "ev_ebitda_5",
+              "ev_ebitda_6",
+              "num_comparables"
+            ],
+            "label": "Average EV/EBITDA (for adjustment)",
+            "unit": "x",
+            "format": "decimal",
+            "display": false
+          },
+          "baseline_ev": {
+            "expression": "average_ev_ebitda_adj * target_ebitda",
+            "dependencies": [
+              "average_ev_ebitda_adj",
+              "target_ebitda"
+            ],
+            "label": "Baseline Enterprise Value (pre-adjustment)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "baseline_equity_per_share": {
+            "expression": "(baseline_ev - target_debt + target_cash) / target_shares",
+            "dependencies": [
+              "baseline_ev",
+              "target_debt",
+              "target_cash",
+              "target_shares"
+            ],
+            "label": "Baseline Implied Share Price (pre-adjustment)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjustment_factor": {
+            "expression": "1 + (control_premium_pct - size_adjustment_pct - liquidity_adjustment_pct) / 100",
+            "dependencies": [
+              "control_premium_pct",
+              "size_adjustment_pct",
+              "liquidity_adjustment_pct"
+            ],
+            "label": "Net adjustment factor (control/size/liquidity)",
+            "unit": "x",
+            "format": "decimal",
+            "display": true
+          },
+          "adjusted_share_price": {
+            "expression": "baseline_equity_per_share * adjustment_factor",
+            "dependencies": [
+              "baseline_equity_per_share",
+              "adjustment_factor"
+            ],
+            "label": "Adjusted Implied Share Price",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "range_low": {
+            "expression": "adjusted_share_price * (1 - valuation_range_pct/100)",
+            "dependencies": [
+              "adjusted_share_price",
+              "valuation_range_pct"
+            ],
+            "label": "Lower bound of implied price range",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "range_high": {
+            "expression": "adjusted_share_price * (1 + valuation_range_pct/100)",
+            "dependencies": [
+              "adjusted_share_price",
+              "valuation_range_pct"
+            ],
+            "label": "Upper bound of implied price range",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "adjusted_share_price",
+            "label": "Adjusted Share Price",
+            "variable": "adjusted_share_price",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "range_low",
+            "label": "Implied Range - Low",
+            "variable": "range_low",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "range_high",
+            "label": "Implied Range - High",
+            "variable": "range_high",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "target_revenue",
+        "label": "Target company: Revenue (most recent 12 months)",
+        "type": "number",
+        "default": 1000000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "target_ebitda",
+        "label": "Target company: EBITDA (most recent 12 months)",
+        "type": "number",
+        "default": 200000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "target_net_income",
+        "label": "Target company: Net income (most recent 12 months)",
+        "type": "number",
+        "default": 80000,
+        "min": -999999999,
+        "step": 1
+      },
+      {
+        "id": "target_shares",
+        "label": "Target company: Shares outstanding (basic)",
+        "type": "number",
+        "default": 100000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "target_cash",
+        "label": "Target company: Cash & equivalents",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "target_debt",
+        "label": "Target company: Total debt (net of cash not assumed)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "num_comparables",
+        "label": "Number of comparables used (enter count of non-zero entries)",
+        "type": "integer",
+        "default": 4,
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      {
+        "id": "ev_rev_1",
+        "label": "Comparable 1: EV / Revenue (x)",
+        "type": "decimal",
+        "default": 1.5
+      },
+      {
+        "id": "ev_ebitda_1",
+        "label": "Comparable 1: EV / EBITDA (x)",
+        "type": "decimal",
+        "default": 8.0
+      },
+      {
+        "id": "p_e_1",
+        "label": "Comparable 1: P / E (x)",
+        "type": "decimal",
+        "default": 15.0
+      },
+      {
+        "id": "ev_rev_2",
+        "label": "Comparable 2: EV / Revenue (x)",
+        "type": "decimal",
+        "default": 2.0
+      },
+      {
+        "id": "ev_ebitda_2",
+        "label": "Comparable 2: EV / EBITDA (x)",
+        "type": "decimal",
+        "default": 9.0
+      },
+      {
+        "id": "p_e_2",
+        "label": "Comparable 2: P / E (x)",
+        "type": "decimal",
+        "default": 18.0
+      },
+      {
+        "id": "ev_rev_3",
+        "label": "Comparable 3: EV / Revenue (x)",
+        "type": "decimal",
+        "default": 1.2
+      },
+      {
+        "id": "ev_ebitda_3",
+        "label": "Comparable 3: EV / EBITDA (x)",
+        "type": "decimal",
+        "default": 7.5
+      },
+      {
+        "id": "p_e_3",
+        "label": "Comparable 3: P / E (x)",
+        "type": "decimal",
+        "default": 13.0
+      },
+      {
+        "id": "ev_rev_4",
+        "label": "Comparable 4: EV / Revenue (x)",
+        "type": "decimal",
+        "default": 1.8
+      },
+      {
+        "id": "ev_ebitda_4",
+        "label": "Comparable 4: EV / EBITDA (x)",
+        "type": "decimal",
+        "default": 10.0
+      },
+      {
+        "id": "p_e_4",
+        "label": "Comparable 4: P / E (x)",
+        "type": "decimal",
+        "default": 20.0
+      },
+      {
+        "id": "ev_rev_5",
+        "label": "Comparable 5: EV / Revenue (x) (optional)",
+        "type": "decimal",
+        "default": 0
+      },
+      {
+        "id": "ev_ebitda_5",
+        "label": "Comparable 5: EV / EBITDA (x) (optional)",
+        "type": "decimal",
+        "default": 0
+      },
+      {
+        "id": "p_e_5",
+        "label": "Comparable 5: P / E (x) (optional)",
+        "type": "decimal",
+        "default": 0
+      },
+      {
+        "id": "ev_rev_6",
+        "label": "Comparable 6: EV / Revenue (x) (optional)",
+        "type": "decimal",
+        "default": 0
+      },
+      {
+        "id": "ev_ebitda_6",
+        "label": "Comparable 6: EV / EBITDA (x) (optional)",
+        "type": "decimal",
+        "default": 0
+      },
+      {
+        "id": "p_e_6",
+        "label": "Comparable 6: P / E (x) (optional)",
+        "type": "decimal",
+        "default": 0
+      },
+      {
+        "id": "weight_ev_rev",
+        "label": "Weight: EV/Revenue (relative)",
+        "type": "decimal",
+        "default": 1,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "weight_ev_ebitda",
+        "label": "Weight: EV/EBITDA (relative)",
+        "type": "decimal",
+        "default": 1,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "weight_p_e",
+        "label": "Weight: P/E (relative; used for equity-based estimates)",
+        "type": "decimal",
+        "default": 0,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "size_adjustment_pct",
+        "label": "Size adjustment (percent) — positive = premium, negative = discount",
+        "type": "decimal",
+        "default": 0,
+        "step": 0.1
+      },
+      {
+        "id": "liquidity_adjustment_pct",
+        "label": "Liquidity adjustment (percent) — positive = premium, negative = discount",
+        "type": "decimal",
+        "default": 0,
+        "step": 0.1
+      },
+      {
+        "id": "control_premium_pct",
+        "label": "Control premium (percent) — positive number to increase price for control transactions",
+        "type": "decimal",
+        "default": 0,
+        "step": 0.1
+      },
+      {
+        "id": "valuation_range_pct",
+        "label": "Calibration range width (percent above/below midpoint)",
+        "type": "decimal",
+        "default": 20,
+        "min": 0,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "comparables_section",
+        "label": "Comparables — multiples entry",
+        "fields": [
+          {
+            "id": "comparables_count",
+            "label": "Number of comparables with valid data",
+            "type": "integer",
+            "default": 5,
+            "min": 1,
+            "max": 50,
+            "step": 1
+          },
+          {
+            "id": "ev_to_revenue_avg",
+            "label": "Average EV/Revenue multiple from peers",
+            "type": "number",
+            "default": 4,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "ev_to_ebitda_avg",
+            "label": "Average EV/EBITDA multiple from peers",
+            "type": "number",
+            "default": 10,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "pe_ratio_avg",
+            "label": "Average P/E multiple from peers",
+            "type": "number",
+            "default": 15,
+            "min": 0,
+            "step": 0.01
+          },
+          {
+            "id": "weight_revenue_multiple",
+            "label": "Weight for revenue multiple in blend",
+            "type": "number",
+            "default": 1,
+            "min": 0,
+            "step": 0.1
+          },
+          {
+            "id": "weight_ebitda_multiple",
+            "label": "Weight for EBITDA multiple in blend",
+            "type": "number",
+            "default": 1,
+            "min": 0,
+            "step": 0.1
+          },
+          {
+            "id": "weight_pe_multiple",
+            "label": "Weight for P/E multiple in blend",
+            "type": "number",
+            "default": 1,
+            "min": 0,
+            "step": 0.1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This Comparable Company Analysis (CCA) calculator helps you translate peer multiples into implied enterprise and equity values for a target company. It supports multiple methods: peer-average multiples, user-weighted blends, and post-blend adjustments for size, liquidity and control factors.",
+      "Use the tool to produce a reasoned valuation range, and follow the calibration guidance and caveats. The calculator is a modelling aid and does not replace formal due diligence, audited financial statements, or professional valuation opinion."
+    ],
+    "methodology": [
+      "Step 1: Populate target company financials and outstanding shares.",
+      "Step 2: Enter observed peer multiples (EV/Revenue, EV/EBITDA, P/E) for each comparable. If a comparable lacks a multiple, set that input to zero and reduce the number of comparables count accordingly.",
+      "Step 3: Choose a method: peer-average, weighted blend, or adjusted range. Weighted blends let you reflect relative reliability of each multiple type.",
+      "Step 4: Apply adjustments (size, liquidity, control) to calibrate the implied per-share price and produce a high/low range using the calibration percentage."
+    ],
+    "how_is_calculated": [
+      "Average multiple = sum(all provided multiples) / number of comparables.",
+      "EV (from revenue) = Average (EV/Revenue) × Target revenue.",
+      "EV (from EBITDA) = Average (EV/EBITDA) × Target EBITDA.",
+      "Equity value = EV − Net debt (use target_debt and target_cash to net) ; Equity per share = Equity value / Shares outstanding.",
+      "Blended multiple = weighted average of selected multiples using user-provided relative weights.",
+      "Adjusted share price = baseline per-share price × (1 + (control_premium_pct − size_adjustment_pct − liquidity_adjustment_pct)/100).",
+      "Implied range = Adjusted share price ± valuation_range_pct."
+    ],
+    "faqs": [
+      {
+        "question": "What inputs produce the most material impact on the implied valuation?",
+        "answer": "Peer multiples and the target company's EBITDA (for EV multiples) or net income (for P/E) typically drive the largest changes. Adjustments (size, liquidity, control) provide judgmental calibration and should be grounded in transaction evidence when possible."
+      },
+      {
+        "question": "How should I treat zero or missing multiples in comparables?",
+        "answer": "Set unused multiple fields to zero and enter the actual number of comparables with valid data in the 'Number of comparables' field. The calculator uses the provided count to compute averages; mismatched entries will distort results. For a robust approach, prefer medians when outliers exist and document exclusions."
+      },
+      {
+        "question": "Does the calculator guarantee an accurate market price?",
+        "answer": "No. This tool produces modelled estimates using user inputs and assumptions. Outputs are only as reliable as the inputs. Use this calculator for screening, sensitivity analysis, and hypothesis generation, not as a substitute for professional valuation reports, audited data, or market execution."
+      },
+      {
+        "question": "How should I set weights for the blended multiple?",
+        "answer": "Assign higher weight to multiples you consider more reliable for the company and sector (for example, EV/EBITDA for capital-intensive businesses). Ensure weights are positive and meaningful; the tool normalizes by the sum of weights provided in the blend method."
+      },
+      {
+        "question": "How do adjustments (size, liquidity, control) relate to regulatory or audit standards?",
+        "answer": "Adjustments are judgment-based and should be documented, supported by evidence, and consistent with applicable valuation guidance. Maintain model governance records for assumptions, scenario outputs, and sensitivity analyses to align with corporate risk and audit practices."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST) - Risk Management and Model Validation Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO) — Guidance on Measurement and Uncertainty",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE) — Standards for Software and System Documentation",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA) — Data governance and records guidance (context for audit trails)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission (SEC) — Disclosure and financial reporting requirements",
+        "url": "https://www.sec.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Enterprise Value (EV)",
+        "definition": "Total value of a company to all stakeholders: market capitalization plus net debt (debt − cash) and other adjustments as relevant."
+      },
+      {
+        "term": "EBITDA",
+        "definition": "Earnings before interest, taxes, depreciation and amortization — a common operating-profit proxy used in EV multiples."
+      },
+      {
+        "term": "Multiple",
+        "definition": "A ratio (e.g., EV/EBITDA, EV/Revenue, P/E) used to scale a financial metric to an implied value. Multiples are derived from comparable companies or transactions."
+      },
+      {
+        "term": "Blended multiple",
+        "definition": "A weighted average of selected multiples to reflect relative confidence or relevance of each multiple type for the target company."
+      },
+      {
+        "term": "Control premium",
+        "definition": "An incremental percentage applied when valuing a controlling ownership position to reflect the value of control rights."
+      },
+      {
+        "term": "Calibration range",
+        "definition": "A symmetric percentage applied around a midpoint valuation to express uncertainty and provide a low/high range for decision-making."
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

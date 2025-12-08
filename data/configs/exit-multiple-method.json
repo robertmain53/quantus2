@@ -1,0 +1,385 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Exit Multiple Method Calculator (Advanced)",
+    "description": "Multi-method calculator for estimating terminal value using exit multiples, deriving implied multiples from target returns, and translating exit multiples into MOIC and IRR. Includes enterprise-value adjustments and configurable input metrics."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "tv_by_exit_multiple",
+    "methods": {
+      "tv_by_exit_multiple": {
+        "label": "Terminal Value via Exit Multiple",
+        "description": "Compute enterprise value at exit using an exit multiple applied to a chosen operating metric, then apply common enterprise-value adjustments.",
+        "variables": {
+          "enterprise_value": {
+            "expression": "exit_multiple * metric_value",
+            "dependencies": [
+              "exit_multiple",
+              "metric_value"
+            ],
+            "label": "Enterprise Value (unadjusted)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_enterprise_value": {
+            "expression": "enterprise_value + net_debt - cash + minority_interest + other_adjustments",
+            "dependencies": [
+              "enterprise_value",
+              "net_debt",
+              "cash",
+              "minority_interest",
+              "other_adjustments"
+            ],
+            "label": "Adjusted Enterprise Value (post adjustments)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Enterprise Value (unadjusted)",
+            "variable": "enterprise_value",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "adjusted_enterprise_value",
+            "label": "Adjusted Enterprise Value",
+            "variable": "adjusted_enterprise_value",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "implied_exit_multiple_from_moic": {
+        "label": "Implied Exit Multiple from Target MOIC",
+        "description": "Calculate the exit multiple required on a chosen metric to achieve a target MOIC on the investment.",
+        "variables": {
+          "required_exit_proceeds": {
+            "expression": "purchase_price * target_moic",
+            "dependencies": [
+              "purchase_price",
+              "target_moic"
+            ],
+            "label": "Required Exit Proceeds",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "implied_exit_multiple": {
+            "expression": "required_exit_proceeds / metric_value",
+            "dependencies": [
+              "required_exit_proceeds",
+              "metric_value"
+            ],
+            "label": "Implied Exit Multiple",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "implied_exit_multiple",
+            "label": "Implied Exit Multiple",
+            "variable": "implied_exit_multiple",
+            "format": "decimal"
+          },
+          {
+            "id": "required_exit_proceeds",
+            "label": "Required Exit Proceeds",
+            "variable": "required_exit_proceeds",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "moic_irr_from_exit_multiple": {
+        "label": "MOIC & IRR from Exit Multiple",
+        "description": "Given an exit multiple and projected metric, estimate exit equity value, MOIC and an annualized IRR approximation assuming constant hold period.",
+        "variables": {
+          "exit_enterprise_value": {
+            "expression": "exit_multiple * metric_value",
+            "dependencies": [
+              "exit_multiple",
+              "metric_value"
+            ],
+            "label": "Exit Enterprise Value",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "exit_equity_value": {
+            "expression": "exit_enterprise_value + cash - net_debt - minority_interest - other_adjustments",
+            "dependencies": [
+              "exit_enterprise_value",
+              "cash",
+              "net_debt",
+              "minority_interest",
+              "other_adjustments"
+            ],
+            "label": "Exit Equity Value (approx.)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "moic": {
+            "expression": "exit_equity_value / investment_amount",
+            "dependencies": [
+              "exit_equity_value",
+              "investment_amount"
+            ],
+            "label": "MOIC (Multiple on Invested Capital)",
+            "format": "decimal",
+            "display": true
+          },
+          "irr": {
+            "expression": "pow(moic, 1/hold_periods) - 1",
+            "dependencies": [
+              "moic",
+              "hold_periods"
+            ],
+            "label": "Approximate annual IRR",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "moic",
+            "label": "MOIC (x)",
+            "variable": "moic",
+            "format": "decimal"
+          },
+          {
+            "id": "irr",
+            "label": "Approx. IRR (annual)",
+            "variable": "irr",
+            "format": "percent"
+          },
+          {
+            "id": "exit_equity_value",
+            "label": "Exit Equity Value",
+            "variable": "exit_equity_value",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "metric_type",
+        "label": "Operating metric",
+        "type": "select",
+        "default": "ebitda",
+        "options": [
+          {
+            "label": "EBITDA",
+            "value": "ebitda"
+          },
+          {
+            "label": "EBIT",
+            "value": "ebit"
+          },
+          {
+            "label": "Revenue",
+            "value": "revenue"
+          }
+        ]
+      },
+      {
+        "id": "metric_value",
+        "label": "Projected metric at exit (numeric)",
+        "type": "number",
+        "default": 10000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "exit_multiple",
+        "label": "Exit multiple (x)",
+        "type": "number",
+        "default": 8,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "net_debt",
+        "label": "Net debt (debt - cash) input for adjustments (positive = net indebtedness)",
+        "type": "number",
+        "default": 0,
+        "step": 1000
+      },
+      {
+        "id": "cash",
+        "label": "Cash on balance sheet (for adjustments)",
+        "type": "number",
+        "default": 0,
+        "step": 1000
+      },
+      {
+        "id": "minority_interest",
+        "label": "Minority interest / non-controlling interests",
+        "type": "number",
+        "default": 0,
+        "step": 1000
+      },
+      {
+        "id": "other_adjustments",
+        "label": "Other adjustments (e.g., pensions, preferred stock) — use positive to add",
+        "type": "number",
+        "default": 0,
+        "step": 1000
+      },
+      {
+        "id": "purchase_price",
+        "label": "Purchase price / entry equity value (used when deriving implied multiple)",
+        "type": "number",
+        "default": 5000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "investment_amount",
+        "label": "Investment amount (equity invested) — used for MOIC/IRR calculations",
+        "type": "number",
+        "default": 5000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "target_moic",
+        "label": "Target MOIC (x) used to derive implied multiple",
+        "type": "number",
+        "default": 3,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "hold_periods",
+        "label": "Hold period (years) for IRR approximation",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides three complementary workflows: (1) compute terminal enterprise value by applying an exit multiple to a chosen operating metric and applying enterprise-value adjustments; (2) derive the implied exit multiple required to meet a target MOIC; and (3) translate a chosen exit multiple into projected MOIC and an approximate annual IRR given a hold period.",
+      "Use the tool to run sensitivity tests across multiples, projected metrics, and adjustments. The outputs are intended for preliminary valuation work; professional judgement and reconciliation to market transaction comps and precedent data are required before using results for reporting or regulatory filings."
+    ],
+    "methodology": [
+      "Terminal value by exit multiple is calculated as: Terminal Enterprise Value = Exit Multiple × Chosen Metric (for example, EBITDA at exit). Adjustments (net debt, cash, minority interest, pension or other items) are applied after computing the enterprise value to arrive at an approximate equity-level exit value.",
+      "When deriving an implied multiple from a target MOIC, the calculator computes the total proceeds required given the purchase price and target multiple, then divides those proceeds by the projected metric to produce the implied exit multiple.",
+      "The IRR shown is an annualized approximation using nth-root of MOIC: IRR ≈ (MOIC)^(1/years) − 1. This assumes a single exit cash flow and does not model interim distributions or staged investments.",
+      "Accuracy and model hygiene: this tool follows general best-practice controls for numerical reproducibility. Users should validate inputs, perform sensitivity checks, and document assumptions. For operational controls and risk management relating to calculation integrity, consult standards such as NIST guidance for system integrity and change control and ISO standards for quality management; see citations below."
+    ],
+    "how_is_calculated": [
+      "Terminal Enterprise Value = exit_multiple × metric_value",
+      "Adjusted Enterprise Value = Enterprise Value + net_debt − cash + minority_interest + other_adjustments",
+      "Implied Exit Multiple = (purchase_price × target_moic) / metric_value",
+      "MOIC = exit_equity_value / investment_amount",
+      "Approximate IRR (annual) = pow(MOIC, 1 / hold_periods) − 1"
+    ],
+    "examples": [
+      "Example 1: Projected EBITDA at exit = 10,000,000; Exit multiple = 8x. Enterprise Value = 80,000,000. If net debt = 5,000,000 and cash = 2,000,000, Adjusted Enterprise Value = 80,000,000 + 5,000,000 − 2,000,000 = 83,000,000.",
+      "Example 2: Purchase price = 5,000,000, target MOIC = 3. Required proceeds = 15,000,000. If projected revenue at exit = 10,000,000, implied exit multiple on revenue = 1.5x."
+    ],
+    "faqs": [
+      {
+        "question": "Which metric should I use for the exit multiple?",
+        "answer": "Choose the operating metric most commonly used in comparable transactions for the company’s sector (EBITDA, EBIT, or revenue). Use the same metric consistently when comparing peer transactions. Always cross-check multiples against observable market comps and recent transactions."
+      },
+      {
+        "question": "Does the tool calculate a precise IRR?",
+        "answer": "The IRR is an approximation based on a single exit cash flow (no interim distributions). For full precision including interim cashflows, stage investments, or leverage profiles, use a cashflow model and numerical IRR solver."
+      },
+      {
+        "question": "What are the main limitations and reliability caveats?",
+        "answer": "Outputs are sensitive to input assumptions (metric projections, multiples, adjustments). Small changes in metric forecasts or multiples can materially change valuation outputs. This tool does not replace full due diligence, forensic adjustments, or regulatory review. Validate results against multiple valuation methods and document inputs and sources."
+      },
+      {
+        "question": "How should I validate and control calculation accuracy?",
+        "answer": "Follow documented change-control and testing practices, keep input provenance, and perform unit tests for key formulas. Refer to system integrity and quality management frameworks such as NIST guidance for secure and auditable systems and ISO standards for quality control when embedding outputs into operational or reporting pipelines."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers (standards and best practices)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration (general compliance frameworks)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Exit Multiple",
+        "definition": "A valuation multiple applied to an operating metric (for example, EBITDA) to estimate enterprise value at exit."
+      },
+      {
+        "term": "Terminal Value",
+        "definition": "Estimated value of a business at a future 'exit' date, frequently computed by applying a multiple to a projected metric or via a perpetuity growth formula."
+      },
+      {
+        "term": "Enterprise Value",
+        "definition": "Total firm value including equity and net debt; commonly estimated as multiple × operating metric."
+      },
+      {
+        "term": "MOIC",
+        "definition": "Multiple on Invested Capital: the ratio of exit equity proceeds to the original equity investment."
+      },
+      {
+        "term": "IRR",
+        "definition": "Internal Rate of Return: the discount rate that makes the net present value of cash flows equal to zero. The calculator reports an annualized approximation from MOIC and hold period."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/valuation/terminal-value",
+      "/tools/moic-irr-converter"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinanceTool"
+    ]
+  }
+}

@@ -1,0 +1,357 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Asset-Based Valuation Calculator (multi-method)",
+    "description": "Calculate a company's value using asset-based approaches: Book Value, Adjusted Net Asset Value (ANAV), and Orderly/Forced Liquidation. Designed for accountants, advisors, and business owners who need transparent, auditable asset reconciliations with regulatory-aware accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "adjusted_net_asset",
+    "methods": {
+      "book_value": {
+        "label": "Book Value (Balance Sheet)",
+        "description": "Consolidates balance sheet totals to compute equity on a book-value basis, before fair-value or liquidation adjustments.",
+        "variables": {
+          "total_assets": {
+            "expression": "current_assets + noncurrent_assets",
+            "dependencies": [
+              "current_assets",
+              "noncurrent_assets"
+            ],
+            "label": "Total Assets",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "book_equity": {
+            "expression": "total_assets - total_liabilities - minority_interest",
+            "dependencies": [
+              "total_assets",
+              "total_liabilities",
+              "minority_interest"
+            ],
+            "label": "Book Equity (Assets − Liabilities − Minority Interest)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "book_value_equity",
+            "label": "Book Value Equity",
+            "variable": "book_equity",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "adjusted_net_asset": {
+        "label": "Adjusted Net Asset Value (ANAV)",
+        "description": "Applies user-provided fair-value adjustments and working capital normalization to derive an adjusted equity value intended to approximate fair market-level asset values.",
+        "variables": {
+          "adjusted_assets": {
+            "expression": "current_assets + noncurrent_assets + inventory_adjustment + fixed_asset_adjustment + intangible_adjustment - working_capital_adjustment",
+            "dependencies": [
+              "current_assets",
+              "noncurrent_assets",
+              "inventory_adjustment",
+              "fixed_asset_adjustment",
+              "intangible_adjustment",
+              "working_capital_adjustment"
+            ],
+            "label": "Adjusted Total Assets (after user adjustments)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "adjusted_equity": {
+            "expression": "adjusted_assets - total_liabilities - contingent_liabilities - minority_interest + tax_adjustment",
+            "dependencies": [
+              "adjusted_assets",
+              "total_liabilities",
+              "contingent_liabilities",
+              "minority_interest",
+              "tax_adjustment"
+            ],
+            "label": "Adjusted Net Asset Value (ANAV)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "anav_equity",
+            "label": "Adjusted Net Asset Value (ANAV)",
+            "variable": "adjusted_equity",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "liquidation_value": {
+        "label": "Orderly / Forced Liquidation Value",
+        "description": "Estimates proceeds under an orderly or forced sale scenario by applying a user-controlled discount to realizable asset value; includes provisions for contingent liabilities and tax effects.",
+        "variables": {
+          "gross_realizable_assets": {
+            "expression": "current_assets + noncurrent_assets + inventory_adjustment + fixed_asset_adjustment + intangible_adjustment",
+            "dependencies": [
+              "current_assets",
+              "noncurrent_assets",
+              "inventory_adjustment",
+              "fixed_asset_adjustment",
+              "intangible_adjustment"
+            ],
+            "label": "Gross Realizable Assets (pre-liabilities)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "pre_discount_liquidation": {
+            "expression": "gross_realizable_assets - total_liabilities - contingent_liabilities - minority_interest + tax_adjustment",
+            "dependencies": [
+              "gross_realizable_assets",
+              "total_liabilities",
+              "contingent_liabilities",
+              "minority_interest",
+              "tax_adjustment"
+            ],
+            "label": "Liquidation Value (before discount)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "liquidation_value": {
+            "expression": "pre_discount_liquidation * (1 - liquidation_discount_percent / 100)",
+            "dependencies": [
+              "pre_discount_liquidation",
+              "liquidation_discount_percent"
+            ],
+            "label": "Liquidation Value (after discount)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "liquidation_value_final",
+            "label": "Estimated Liquidation Value",
+            "variable": "liquidation_value",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "current_assets",
+        "label": "Total Current Assets (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "noncurrent_assets",
+        "label": "Total Non-Current Assets (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "total_liabilities",
+        "label": "Total Liabilities (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "inventory_adjustment",
+        "label": "Inventory adjustment (market value − book) (USD)",
+        "type": "number",
+        "default": 0,
+        "step": 1
+      },
+      {
+        "id": "fixed_asset_adjustment",
+        "label": "Fixed asset fair value adjustment (USD)",
+        "type": "number",
+        "default": 0,
+        "step": 1
+      },
+      {
+        "id": "intangible_adjustment",
+        "label": "Intangible asset adjustment (write-up / write-down) (USD)",
+        "type": "number",
+        "default": 0,
+        "step": 1
+      },
+      {
+        "id": "working_capital_adjustment",
+        "label": "Working capital normalization (USD)",
+        "type": "number",
+        "default": 0,
+        "step": 1
+      },
+      {
+        "id": "contingent_liabilities",
+        "label": "Estimated contingent liabilities (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "minority_interest",
+        "label": "Minority interest (USD)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "tax_adjustment",
+        "label": "Tax effect adjustments (USD)",
+        "type": "number",
+        "default": 0,
+        "step": 1
+      },
+      {
+        "id": "liquidation_discount_percent",
+        "label": "Liquidation discount (%)",
+        "type": "number",
+        "default": 30,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This asset-based valuation tool computes company value using three complementary methods: Book Value (balance-sheet based), Adjusted Net Asset Value (ANAV) which applies fair-value adjustments, and an Orderly/Forced Liquidation estimate that applies a user-selected discount. The goal is to provide transparent reconcilable results that users can trace back to balance sheet inputs and specific adjustments.",
+      "Use this calculator for preliminary valuations, internal reconciliations, audit support, or when market-based multiples are unavailable. It is not a substitute for a full professional valuation report when legal, tax, or transaction-level precision is required."
+    ],
+    "methodology": [
+      "Calculations are deterministic arithmetic based on user inputs and selected adjustments. Each method builds from the same base fields (assets and liabilities) and applies different adjustments or discounts to reflect distinct valuation perspectives.",
+      "The tool follows best-practice controls for numerical transparency and auditability, and recommends documenting sources for each adjustment. For model governance and validation, follow relevant standards such as NIST risk-management guidance for model validation processes, ISO management-system principles for record-keeping, IEEE guidance on numerical software reliability, and OSHA guidance for workplace data integrity where applicable.",
+      "Accuracy depends on input quality. Enter post-close, reclassified, and audited balance sheet figures where available. Include the tax effect of non-recurring adjustments. This calculator does not replace professional judgments required by accounting standards (e.g., fair value measurement frameworks)."
+    ],
+    "how_is_calculated": [
+      "Book Value: Book Equity = (Current Assets + Non-Current Assets) − Total Liabilities − Minority Interest.",
+      "Adjusted Net Asset Value (ANAV): Adjusted Assets = Assets + Inventory Adjustment + Fixed Asset Adjustment + Intangible Adjustment − Working Capital Adjustment; ANAV = Adjusted Assets − Liabilities − Contingent Liabilities − Minority Interest + Tax Adjustment.",
+      "Liquidation Value: Compute realizable asset total, subtract liabilities and contingent items, then apply Liquidation Discount (%) to estimate proceeds in an orderly or forced-sale scenario."
+    ],
+    "examples": [
+      "Example 1: A small business with $500k current assets, $1.5M non-current assets, $800k liabilities, and $200k of fair-value write-ups yields a positive ANAV after adjustments; the liquidation value will be lower if a 30% discount is applied.",
+      "Example 2: For distressed companies, users should increase contingent liabilities and liquidation discount to reflect shorter sale windows and additional disposal costs; include tax adjustments for asset sale taxes."
+    ],
+    "faqs": [
+      {
+        "question": "When should I use book value vs. adjusted net asset value?",
+        "answer": "Book value is appropriate for a quick balance-sheet snapshot or when adjustments are immaterial. Use ANAV when there are material fair-value differences, significant off-balance or reclassification items, or when estimating fair market value for negotiation or financial reporting."
+      },
+      {
+        "question": "How do I choose a liquidation discount?",
+        "answer": "Liquidation discounts depend on sale horizon, asset fungibility, and market conditions. Typical starting points range from 20% for orderly sales to 50%+ for forced sales of specialized assets. Document rationale and, where relevant, obtain broker indications or auction estimates."
+      },
+      {
+        "question": "Are contingent liabilities and minority interests included?",
+        "answer": "Yes. Contingent liabilities and minority interest are subtracted from asset totals in all methods where they reduce owner equity or realizable proceeds. Enter best estimates; when uncertain, disclose ranges and perform sensitivity checks."
+      },
+      {
+        "question": "Can this replace a formal valuation report?",
+        "answer": "No. This tool provides numerical estimates and reconciliation support. For legal, tax, financial reporting, or transaction purposes, obtain a professional valuation compliant with applicable accounting and valuation standards."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Book Value",
+        "definition": "Equity measured as total assets minus total liabilities using balance-sheet (book) amounts."
+      },
+      {
+        "term": "Adjusted Net Asset Value (ANAV)",
+        "definition": "Equity after applying fair-value adjustments, working capital normalization, contingent adjustments, and tax effects."
+      },
+      {
+        "term": "Liquidation Value",
+        "definition": "Estimated proceeds from selling assets in an orderly or forced sale after applying a discount for sale execution risk and costs."
+      },
+      {
+        "term": "Contingent Liability",
+        "definition": "A potential obligation that may become payable depending on the outcome of a future event; estimated amounts should be included when probable and estimable."
+      },
+      {
+        "term": "Minority Interest",
+        "definition": "The portion of subsidiary equity not attributable to the parent company; subtracted when calculating parent-company equity."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

@@ -1,0 +1,575 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Option Theta Calculator (Advanced)",
+    "description": "Estimate option time decay (Theta) using Black-Scholes and an American-option approximation. Shows per-day and annualized Theta, with clear assumptions, per-contract scaling, and guidance on accuracy and limits."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "black_scholes_european",
+    "methods": {
+      "black_scholes_european": {
+        "label": "Black-Scholes (European)",
+        "description": "Standard Black-Scholes analytic Theta for European call and put options. Use for non-dividend or continuous-dividend underlying where early exercise is not allowed.",
+        "variables": {
+          "S": {
+            "expression": "S",
+            "dependencies": [
+              "S"
+            ],
+            "label": "Underlying price",
+            "unit": "currency",
+            "format": "decimal",
+            "display": false
+          },
+          "K": {
+            "expression": "K",
+            "dependencies": [
+              "K"
+            ],
+            "label": "Strike price",
+            "unit": "currency",
+            "format": "decimal",
+            "display": false
+          },
+          "T": {
+            "expression": "days_to_expiry/365",
+            "dependencies": [
+              "days_to_expiry"
+            ],
+            "label": "Time to expiry (years)",
+            "unit": "years",
+            "format": "decimal",
+            "display": true
+          },
+          "sigma": {
+            "expression": "sigma_pct/100",
+            "dependencies": [
+              "sigma_pct"
+            ],
+            "label": "Volatility (annual, decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "r": {
+            "expression": "r_pct/100",
+            "dependencies": [
+              "r_pct"
+            ],
+            "label": "Risk-free rate (annual, decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "q": {
+            "expression": "q_pct/100",
+            "dependencies": [
+              "q_pct"
+            ],
+            "label": "Continuous dividend yield (annual, decimal)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "sqrtT": {
+            "expression": "sqrt(T)",
+            "dependencies": [
+              "T"
+            ],
+            "label": "Square root of time to expiry",
+            "format": "decimal",
+            "display": false
+          },
+          "d1": {
+            "expression": "(ln(S/K) + (r - q + 0.5*sigma^2) * T) / (sigma * sqrtT)",
+            "dependencies": [
+              "S",
+              "K",
+              "r",
+              "q",
+              "sigma",
+              "T",
+              "sqrtT"
+            ],
+            "label": "d1 (Black-Scholes)",
+            "format": "decimal",
+            "display": false
+          },
+          "d2": {
+            "expression": "d1 - sigma * sqrtT",
+            "dependencies": [
+              "d1",
+              "sigma",
+              "sqrtT"
+            ],
+            "label": "d2 (Black-Scholes)",
+            "format": "decimal",
+            "display": false
+          },
+          "pdf_d1": {
+            "expression": "norm_pdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "Standard normal PDF at d1",
+            "format": "decimal",
+            "display": false
+          },
+          "cdf_d1": {
+            "expression": "norm_cdf(d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "Standard normal CDF at d1",
+            "format": "decimal",
+            "display": false
+          },
+          "cdf_d2": {
+            "expression": "norm_cdf(d2)",
+            "dependencies": [
+              "d2"
+            ],
+            "label": "Standard normal CDF at d2",
+            "format": "decimal",
+            "display": false
+          },
+          "cdf_minus_d1": {
+            "expression": "norm_cdf(-d1)",
+            "dependencies": [
+              "d1"
+            ],
+            "label": "Standard normal CDF at -d1",
+            "format": "decimal",
+            "display": false
+          },
+          "cdf_minus_d2": {
+            "expression": "norm_cdf(-d2)",
+            "dependencies": [
+              "d2"
+            ],
+            "label": "Standard normal CDF at -d2",
+            "format": "decimal",
+            "display": false
+          },
+          "theta_annual_call": {
+            "expression": "-(S * pdf_d1 * sigma * exp(-q * T)) / (2 * sqrtT) - r * K * exp(-r * T) * cdf_d2 + q * S * exp(-q * T) * cdf_d1",
+            "dependencies": [
+              "S",
+              "pdf_d1",
+              "sigma",
+              "q",
+              "T",
+              "r",
+              "K",
+              "cdf_d2",
+              "cdf_d1"
+            ],
+            "label": "Theta (annualized) for call",
+            "unit": "currency/year",
+            "format": "decimal",
+            "display": false
+          },
+          "theta_annual_put": {
+            "expression": "-(S * pdf_d1 * sigma * exp(-q * T)) / (2 * sqrtT) + r * K * exp(-r * T) * cdf_minus_d2 - q * S * exp(-q * T) * cdf_minus_d1",
+            "dependencies": [
+              "S",
+              "pdf_d1",
+              "sigma",
+              "q",
+              "T",
+              "r",
+              "K",
+              "cdf_minus_d2",
+              "cdf_minus_d1"
+            ],
+            "label": "Theta (annualized) for put",
+            "unit": "currency/year",
+            "format": "decimal",
+            "display": false
+          },
+          "theta_annual": {
+            "expression": "option_type == 'call' ? theta_annual_call : theta_annual_put",
+            "dependencies": [
+              "option_type",
+              "theta_annual_call",
+              "theta_annual_put"
+            ],
+            "label": "Theta (annualized) selected",
+            "unit": "currency/year",
+            "format": "decimal",
+            "display": true
+          },
+          "theta_per_day": {
+            "expression": "theta_annual / 365",
+            "dependencies": [
+              "theta_annual"
+            ],
+            "label": "Theta per calendar day (single option)",
+            "unit": "currency/day",
+            "format": "decimal",
+            "display": true
+          },
+          "theta_per_day_per_contract": {
+            "expression": "theta_per_day * contract_multiplier",
+            "dependencies": [
+              "theta_per_day",
+              "contract_multiplier"
+            ],
+            "label": "Theta per calendar day (per contract)",
+            "unit": "currency/day",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "theta_per_day_per_contract",
+            "label": "Theta per day (per contract)",
+            "variable": "theta_per_day_per_contract",
+            "unit": "currency/day",
+            "format": "decimal"
+          },
+          {
+            "id": "theta_per_day",
+            "label": "Theta per day (single option)",
+            "variable": "theta_per_day",
+            "unit": "currency/day",
+            "format": "decimal"
+          },
+          {
+            "id": "theta_annual",
+            "label": "Theta (annualized per option)",
+            "variable": "theta_annual",
+            "unit": "currency/year",
+            "format": "decimal"
+          }
+        ]
+      },
+      "approximate_american": {
+        "label": "American option (approximate)",
+        "description": "Estimate Theta for American-style options by using the European Black-Scholes Theta as a baseline. American options can have early-exercise premium; use a lattice (binomial/trinomial) model for firm-grade results. This method provides a quick estimate only.",
+        "variables": {
+          "base_theta_annual": {
+            "expression": "option_type == 'call' ? theta_annual_call : theta_annual_put",
+            "dependencies": [
+              "option_type",
+              "theta_annual_call",
+              "theta_annual_put"
+            ],
+            "label": "Baseline European Theta (annual)",
+            "unit": "currency/year",
+            "format": "decimal",
+            "display": false
+          },
+          "american_adjustment": {
+            "expression": "1",
+            "dependencies": [],
+            "label": "Heuristic adjustment factor for American early exercise (user note)",
+            "format": "decimal",
+            "display": false
+          },
+          "theta_annual_approx": {
+            "expression": "base_theta_annual * american_adjustment",
+            "dependencies": [
+              "base_theta_annual",
+              "american_adjustment"
+            ],
+            "label": "Approximate Theta (annualized) for American option",
+            "unit": "currency/year",
+            "format": "decimal",
+            "display": true
+          },
+          "theta_per_day_approx": {
+            "expression": "theta_annual_approx / 365",
+            "dependencies": [
+              "theta_annual_approx"
+            ],
+            "label": "Approximate Theta per calendar day (single option)",
+            "unit": "currency/day",
+            "format": "decimal",
+            "display": true
+          },
+          "theta_per_day_per_contract_approx": {
+            "expression": "theta_per_day_approx * contract_multiplier",
+            "dependencies": [
+              "theta_per_day_approx",
+              "contract_multiplier"
+            ],
+            "label": "Approximate Theta per calendar day (per contract)",
+            "unit": "currency/day",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "theta_per_day_per_contract_approx",
+            "label": "Approximate Theta per day (per contract)",
+            "variable": "theta_per_day_per_contract_approx",
+            "unit": "currency/day",
+            "format": "decimal"
+          },
+          {
+            "id": "theta_per_day_approx",
+            "label": "Approximate Theta per day (single option)",
+            "variable": "theta_per_day_approx",
+            "unit": "currency/day",
+            "format": "decimal"
+          },
+          {
+            "id": "theta_annual_approx",
+            "label": "Approximate Theta (annualized)",
+            "variable": "theta_annual_approx",
+            "unit": "currency/year",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "S",
+        "label": "Underlying price (S)",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "K",
+        "label": "Strike price (K)",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "days_to_expiry",
+        "label": "Days to expiry",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 3650,
+        "step": 1
+      },
+      {
+        "id": "sigma_pct",
+        "label": "Volatility (annual, %)",
+        "type": "number",
+        "default": 20,
+        "min": 0.1,
+        "max": 1000,
+        "step": 0.1
+      },
+      {
+        "id": "r_pct",
+        "label": "Risk-free rate (annual, %)",
+        "type": "number",
+        "default": 5,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "q_pct",
+        "label": "Continuous dividend yield (annual, %)",
+        "type": "number",
+        "default": 0,
+        "min": -100,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "option_type",
+        "label": "Option type",
+        "type": "select",
+        "default": "call",
+        "options": [
+          {
+            "label": "Call",
+            "value": "call"
+          },
+          {
+            "label": "Put",
+            "value": "put"
+          }
+        ]
+      },
+      {
+        "id": "option_style",
+        "label": "Option style",
+        "type": "select",
+        "default": "european",
+        "options": [
+          {
+            "label": "European",
+            "value": "european"
+          },
+          {
+            "label": "American",
+            "value": "american"
+          }
+        ]
+      },
+      {
+        "id": "contract_multiplier",
+        "label": "Contract multiplier (contracts per option)",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "max": 10000,
+        "step": 1
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "theta_per_day_per_contract",
+          "label": "Theta per day (per contract)"
+        },
+        {
+          "id": "theta_per_day",
+          "label": "Theta per day (single option)"
+        },
+        {
+          "id": "theta_annual",
+          "label": "Theta (annualized per option)"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates Theta, the time decay of an option's value, using the Black-Scholes analytic formula for European options and an approximate method for American options. Outputs include annualized Theta and Theta per calendar day, displayed per option and scaled per contract.",
+      "Use this tool for quick, principled estimates. For settlement, margining, regulatory reporting, or trading decisions that require high precision for American options, perform a lattice (binomial/trinomial) pricing or use vendor-validated systems."
+    ],
+    "methodology": [
+      "European Theta is computed from the Black-Scholes model assuming continuous dividend yield. The formula uses standard normal cumulative and density functions (N and N').",
+      "American options may have an early-exercise premium; this tool provides a baseline approximation by reusing the European result. For precise American results, a discrete lattice model with convergence testing is recommended."
+    ],
+    "how_is_calculated": [
+      "Convert user inputs: volatility, rates, and yields are expressed as decimals (percent value divided by 100). Time to expiration is converted to years as days_to_expiry / 365.",
+      "Compute d1 and d2: d1 = (ln(S/K) + (r - q + 0.5*sigma^2)*T) / (sigma*sqrt(T)), d2 = d1 - sigma*sqrt(T).",
+      "European Theta (annual): For calls: Theta = -(S * N'(d1) * sigma * e^{-qT}) / (2*sqrt(T)) - r*K*e^{-rT}*N(d2) + q*S*e^{-qT}*N(d1). For puts: Theta = -(S * N'(d1) * sigma * e^{-qT}) / (2*sqrt(T)) + r*K*e^{-rT}*N(-d2) - q*S*e^{-qT}*N(-d1).",
+      "Theta per day = Theta annual / 365. Per-contract Theta multiplies per-option Theta by the contract multiplier."
+    ],
+    "examples": [
+      "Example 1: S=100, K=100, 30 days to expiry, vol=20%, r=1%, q=0% → Theta per day (per contract) estimates the expected daily time decay in currency units.",
+      "Example 2: For an American put on a high-dividend stock, expect European-based Theta to understate early-exercise effects. Use a binomial model for a production-ready number."
+    ],
+    "summary": [
+      "Black-Scholes provides a closed-form Theta for European options; use it as the authoritative analytic baseline.",
+      "American-option results returned here are approximations; use lattice pricing for firm-grade accuracy."
+    ],
+    "faqs": [
+      {
+        "question": "Is Theta here per trading day or calendar day?",
+        "answer": "Theta per day is calculated on a calendar-day basis (annual Theta divided by 365). Adjust manually if you require trading-day convention."
+      },
+      {
+        "question": "Does the calculator handle American early exercise exactly?",
+        "answer": "No. American-style options can have early-exercise value that this calculator does not model exactly. The 'American' method provides an approximation; use a binomial or trinomial model for exact valuation."
+      },
+      {
+        "question": "What is the meaning of a negative Theta?",
+        "answer": "Negative Theta indicates the option is expected to lose value as time passes, all else equal. Positive Theta is possible for some short option positions or under special conditions."
+      },
+      {
+        "question": "How accurate are results and what are the model limits?",
+        "answer": "Results follow model assumptions: lognormal underlying returns, constant volatility, constant rates and yields, and continuous dividend yield. Real markets violate these assumptions; see the accuracy and calibration guidance in citations."
+      },
+      {
+        "question": "How should I use contract multiplier?",
+        "answer": "Multiply per-option Theta by the contract multiplier to express Theta per listed contract (standard equity options typically use 100)."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Theta",
+        "definition": "The sensitivity of an option's price to the passage of time, typically expressed as currency per day or annualized currency per year."
+      },
+      {
+        "term": "Black-Scholes",
+        "definition": "A closed-form model for pricing European options under assumptions of lognormal returns, constant volatility, and continuous dividend yield."
+      },
+      {
+        "term": "N(x) and N'(x)",
+        "definition": "N(x) is the standard normal cumulative distribution function (CDF). N'(x) is the standard normal probability density function (PDF)."
+      },
+      {
+        "term": "Annualized vs per-day Theta",
+        "definition": "Annualized Theta is the model output expressed per year. Per-day Theta divides the annualized value by 365 to give an average daily decay."
+      }
+    ],
+    "citations": [
+      {
+        "label": "Black and Scholes, The Pricing of Options and Corporate Liabilities (1973)",
+        "url": "https://www.jstor.org/stable/1831029"
+      },
+      {
+        "label": "NIST (Numerical standards and guidance)",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO (Standards for quality and measurement traceability)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE (Standards and best practices for numerical computations)",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA (Regulatory compliance guidance for workplace processes)",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/options/greeks",
+      "/conventions/options-contracts"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA homepage",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

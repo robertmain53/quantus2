@@ -1,0 +1,518 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Protein Intake Calculator (Evidence-based, Multi-method)",
+    "description": "Calculate daily protein needs using multiple validated methods: weight-based, Dietary Reference Intake (DRI), activity- and goal-adjusted, and a clinical (kidney-adjusted) pathway. Includes accuracy caveats and references to standards for measurement and reporting."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "by_bodyweight",
+    "methods": {
+      "by_bodyweight": {
+        "label": "Weight-based recommendation (g/kg)",
+        "description": "Estimate protein as grams per kilogram of body weight adjusted for activity level and goal.",
+        "variables": {
+          "body_weight_kg": {
+            "expression": "weight_kg > 0 ? weight_kg : (weight_lb > 0 ? weight_lb / 2.20462 : 0)",
+            "dependencies": [
+              "weight_kg",
+              "weight_lb"
+            ],
+            "label": "Body weight (kg)",
+            "unit": "kg",
+            "format": "decimal",
+            "display": true
+          },
+          "protein_per_kg": {
+            "expression": "pregnant == 'yes' ? 1.1 : lactating == 'yes' ? 1.3 : (activity_level == 'low' && goal == 'lose' ? 1.6 : activity_level == 'low' && goal == 'gain' ? 1.8 : activity_level == 'moderate' && goal == 'gain' ? 2.0 : activity_level == 'high' && goal == 'gain' ? 2.2 : activity_level == 'moderate' && goal == 'lose' ? 1.6 : activity_level == 'high' && goal == 'lose' ? 1.8 : 1.2)",
+            "dependencies": [
+              "activity_level",
+              "goal",
+              "pregnant",
+              "lactating"
+            ],
+            "label": "Recommended grams per kg (adaptive)",
+            "unit": "g/kg",
+            "format": "decimal",
+            "display": true
+          },
+          "protein_g_total": {
+            "expression": "body_weight_kg * protein_per_kg",
+            "dependencies": [
+              "body_weight_kg",
+              "protein_per_kg"
+            ],
+            "label": "Total protein per day",
+            "unit": "g",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "protein_g_total",
+            "label": "Daily protein (grams)",
+            "variable": "protein_g_total",
+            "unit": "g",
+            "format": "decimal"
+          },
+          {
+            "id": "protein_per_kg",
+            "label": "Protein per kg",
+            "variable": "protein_per_kg",
+            "unit": "g/kg",
+            "format": "decimal"
+          }
+        ]
+      },
+      "by_dri": {
+        "label": "Dietary Reference Intake (RDA-based)",
+        "description": "RDA-based estimate (general adult population). Adjusts for age and pregnancy/lactation status per standard nutrient reference guidance.",
+        "variables": {
+          "body_weight_kg": {
+            "expression": "weight_kg > 0 ? weight_kg : (weight_lb > 0 ? weight_lb / 2.20462 : 0)",
+            "dependencies": [
+              "weight_kg",
+              "weight_lb"
+            ],
+            "label": "Body weight (kg)",
+            "unit": "kg",
+            "format": "decimal",
+            "display": true
+          },
+          "dri_per_kg": {
+            "expression": "age < 1 ? 1.5 : age < 3 ? 1.1 : age < 10 ? 0.95 : (pregnant == 'yes' ? 1.1 : lactating == 'yes' ? 1.3 : 0.8)",
+            "dependencies": [
+              "age",
+              "pregnant",
+              "lactating"
+            ],
+            "label": "DRI-based grams per kg",
+            "unit": "g/kg",
+            "format": "decimal",
+            "display": true
+          },
+          "protein_g_total": {
+            "expression": "body_weight_kg * dri_per_kg",
+            "dependencies": [
+              "body_weight_kg",
+              "dri_per_kg"
+            ],
+            "label": "DRI-based total protein",
+            "unit": "g",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "protein_g_total",
+            "label": "Daily protein (grams) — DRI estimate",
+            "variable": "protein_g_total",
+            "unit": "g",
+            "format": "decimal"
+          },
+          {
+            "id": "dri_per_kg",
+            "label": "DRI grams per kg",
+            "variable": "dri_per_kg",
+            "unit": "g/kg",
+            "format": "decimal"
+          }
+        ]
+      },
+      "by_activity_goal": {
+        "label": "Calories and goal-based approach",
+        "description": "Estimate protein from percent of daily calories using energy intake and goal. Useful when calories are the primary planning variable.",
+        "variables": {
+          "protein_percent": {
+            "expression": "goal == 'gain' ? 0.22 : goal == 'lose' ? 0.30 : 0.18",
+            "dependencies": [
+              "goal"
+            ],
+            "label": "Percent of calories from protein",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "protein_g_total": {
+            "expression": "daily_calories > 0 ? (daily_calories * protein_percent) / 4 : 0",
+            "dependencies": [
+              "daily_calories",
+              "protein_percent"
+            ],
+            "label": "Protein from calories",
+            "unit": "g",
+            "format": "decimal",
+            "display": true
+          },
+          "protein_per_kg": {
+            "expression": "body_weight_kg > 0 ? protein_g_total / body_weight_kg : 0",
+            "dependencies": [
+              "protein_g_total",
+              "weight_kg",
+              "weight_lb"
+            ],
+            "label": "Equivalent g/kg",
+            "unit": "g/kg",
+            "format": "decimal",
+            "display": true
+          },
+          "body_weight_kg": {
+            "expression": "weight_kg > 0 ? weight_kg : (weight_lb > 0 ? weight_lb / 2.20462 : 0)",
+            "dependencies": [
+              "weight_kg",
+              "weight_lb"
+            ],
+            "label": "Body weight (kg)",
+            "unit": "kg",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "protein_g_total",
+            "label": "Daily protein (grams) from calories",
+            "variable": "protein_g_total",
+            "unit": "g",
+            "format": "decimal"
+          },
+          {
+            "id": "protein_percent",
+            "label": "Protein as percent of calories",
+            "variable": "protein_percent",
+            "unit": "%",
+            "format": "percent"
+          },
+          {
+            "id": "protein_per_kg",
+            "label": "Equivalent grams per kg",
+            "variable": "protein_per_kg",
+            "unit": "g/kg",
+            "format": "decimal"
+          }
+        ]
+      },
+      "clinical_kidney": {
+        "label": "Clinical: Kidney-function adjusted",
+        "description": "Clinical pathway for reduced kidney function. Intended for informational use only; clinical decisions must be made with a healthcare professional.",
+        "variables": {
+          "body_weight_kg": {
+            "expression": "weight_kg > 0 ? weight_kg : (weight_lb > 0 ? weight_lb / 2.20462 : 0)",
+            "dependencies": [
+              "weight_kg",
+              "weight_lb"
+            ],
+            "label": "Body weight (kg)",
+            "unit": "kg",
+            "format": "decimal",
+            "display": true
+          },
+          "kidney_protein_per_kg": {
+            "expression": "egfr <= 29 ? 0.6 : egfr <= 59 ? 0.8 : 0.8",
+            "dependencies": [
+              "egfr"
+            ],
+            "label": "Recommended g/kg for kidney function",
+            "unit": "g/kg",
+            "format": "decimal",
+            "display": true
+          },
+          "protein_g_total": {
+            "expression": "body_weight_kg * kidney_protein_per_kg",
+            "dependencies": [
+              "body_weight_kg",
+              "kidney_protein_per_kg"
+            ],
+            "label": "Kidney-adjusted total protein",
+            "unit": "g",
+            "format": "decimal",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "protein_g_total",
+            "label": "Daily protein (grams) — clinical estimate",
+            "variable": "protein_g_total",
+            "unit": "g",
+            "format": "decimal"
+          },
+          {
+            "id": "kidney_protein_per_kg",
+            "label": "g per kg (kidney-adjusted)",
+            "variable": "kidney_protein_per_kg",
+            "unit": "g/kg",
+            "format": "decimal"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "weight_kg",
+        "label": "Weight (kg)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "weight_lb",
+        "label": "Weight (lb)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "age",
+        "label": "Age (years)",
+        "type": "integer",
+        "default": 30,
+        "min": 0,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "sex",
+        "label": "Sex",
+        "type": "select",
+        "default": "other",
+        "options": [
+          {
+            "label": "Male",
+            "value": "male"
+          },
+          {
+            "label": "Female",
+            "value": "female"
+          },
+          {
+            "label": "Other / Prefer not to say",
+            "value": "other"
+          }
+        ]
+      },
+      {
+        "id": "activity_level",
+        "label": "Activity level",
+        "type": "select",
+        "default": "moderate",
+        "options": [
+          {
+            "label": "Low (sedentary/light)",
+            "value": "low"
+          },
+          {
+            "label": "Moderate (regular exercise)",
+            "value": "moderate"
+          },
+          {
+            "label": "High (intense training)",
+            "value": "high"
+          }
+        ]
+      },
+      {
+        "id": "goal",
+        "label": "Primary goal",
+        "type": "select",
+        "default": "maintain",
+        "options": [
+          {
+            "label": "Lose weight / cut",
+            "value": "lose"
+          },
+          {
+            "label": "Maintain weight",
+            "value": "maintain"
+          },
+          {
+            "label": "Gain weight / build muscle",
+            "value": "gain"
+          }
+        ]
+      },
+      {
+        "id": "pregnant",
+        "label": "Pregnant?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "lactating",
+        "label": "Lactating?",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No",
+            "value": "no"
+          },
+          {
+            "label": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "daily_calories",
+        "label": "Daily energy intake (kcal)",
+        "type": "number",
+        "default": 2000,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "egfr",
+        "label": "Estimated GFR (mL/min/1.73 m²)",
+        "type": "number",
+        "default": 90,
+        "min": 0,
+        "max": 200,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator provides multiple evidence-informed ways to estimate daily protein needs: weight-based (grams per kilogram), DRI-based, calorie- and goal-based, and a clinical pathway adjusted for kidney function. It is designed for transparency and reproducibility.",
+      "Results are estimates for planning and discussion. They are not a substitute for individualized medical or dietetic advice, especially for clinical conditions. Refer to the citations for primary sources and measurement standards."
+    ],
+    "methodology": [
+      "Weight-based method multiplies body mass (kg) by a recommended rate (g/kg) adjusted for activity level and training goals. Rates reflect ranges commonly used in nutrition science and sports nutrition literature.",
+      "DRI-based method follows recommended population intakes (RDA) expressed per kg of body weight and adjusts for life stages like pregnancy and lactation.",
+      "Calorie-based method converts a chosen percent of energy to grams of protein using 4 kcal per gram. This is useful when macronutrient distribution is driven by overall energy targets.",
+      "Clinical kidney-adjusted method reduces protein targets according to estimated glomerular filtration rate (eGFR). This pathway is informational and should be applied only under clinical supervision."
+    ],
+    "how_is_calculated": [
+      "Weight conversion: if weight in lb provided and kg is empty, kg = lb / 2.20462.",
+      "Weight-based: total protein (g) = body weight (kg) × recommended g/kg (adjusted by activity and goal).",
+      "DRI-based: total protein (g) = body weight (kg) × DRI g/kg (age and life-stage adjusted).",
+      "Calories-based: total protein (g) = (daily calories × chosen protein percent) / 4 (kcal per g).",
+      "Kidney-adjusted: total protein (g) = body weight (kg) × clinical g/kg (dependent on eGFR band)."
+    ],
+    "faqs": [
+      {
+        "question": "Is this calculator appropriate for people with medical conditions?",
+        "answer": "This tool provides informational estimates. People with chronic illnesses, renal disease, liver disease, or other medical conditions should consult a healthcare professional before changing protein intake."
+      },
+      {
+        "question": "Why are there different methods and different results?",
+        "answer": "Protein needs vary by age, life stage, activity, clinical condition, and planning approach (population RDA vs performance-oriented targets). Methods reflect different use cases; choose the method aligned with your goal."
+      },
+      {
+        "question": "How precise are the numbers?",
+        "answer": "Estimates are rounded and depend on input accuracy. Measurement and reporting follow principles from standards organizations, but biological variability means results are approximate. See accuracy caveats in citations."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Academies — Dietary Reference Intakes",
+        "url": "https://www.nal.usda.gov/human-nutrition-and-food-safety/dri-calculator"
+      },
+      {
+        "label": "NIST guidance on measurement and uncertainty",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO standards for measurement and reporting (overview)",
+        "url": "https://www.iso.org/standards.html"
+      },
+      {
+        "label": "IEEE guidance on measurement systems and data quality",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA: workplace nutrition and safety resources",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "DRI (Dietary Reference Intake)",
+        "definition": "Population-level nutrient intake recommendations used for planning and assessing diets."
+      },
+      {
+        "term": "eGFR",
+        "definition": "Estimated glomerular filtration rate, a standard clinical estimate of kidney function measured in mL/min/1.73 m²."
+      },
+      {
+        "term": "g/kg",
+        "definition": "Grams of protein per kilogram of body weight per day, a common way to express protein needs."
+      },
+      {
+        "term": "kcal",
+        "definition": "Kilocalorie, a unit of energy commonly used to express food energy. 1 g protein ≈ 4 kcal."
+      },
+      {
+        "term": "Accuracy caveat",
+        "definition": "Estimates depend on input accuracy, biological variability, and chosen methodology. Use as a planning aid, not a definitive clinical prescription."
+      }
+    ],
+    "summary": [
+      "Select the method that best matches your use case: population guidance (DRI), personal performance goals (weight-based or activity/goal), or clinical considerations (kidney-adjusted).",
+      "Consult qualified health professionals for personalized recommendations. Measurement and reporting should follow recognized standards for quality and uncertainty."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/nutrition/protein/guide",
+      "/tools/body-weight-conversion"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standards.html",
+        "label": "ISO standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "MedicalWebPage"
+    ]
+  }
+}

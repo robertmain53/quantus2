@@ -1,0 +1,585 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Precedent Transaction Analysis Calculator (Advanced)",
+    "description": "An advanced precedent-transaction valuation tool that estimates implied enterprise value, equity value and per-share ranges from selected transaction multiples and applies common adjustments (control premium, minority/illiquidity discounts, date and FX adjustments). Includes model validation notes, sensitivity cautions and references to standards for accuracy and security."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "comps_multiples",
+    "methods": {
+      "comps_multiples": {
+        "label": "Median Multiple (Primary)",
+        "description": "Compute implied enterprise value and per-share implied equity using the selected median comparable multiple and adjust for transaction date and FX.",
+        "variables": {
+          "adjusted_metric": {
+            "expression": "target_metric_value * (1 + transaction_date_adjustment_pct/100) * fx_rate",
+            "dependencies": [
+              "target_metric_value",
+              "transaction_date_adjustment_pct",
+              "fx_rate"
+            ],
+            "label": "Adjusted target metric (currency)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "implied_ev": {
+            "expression": "median_multiple * adjusted_metric",
+            "dependencies": [
+              "median_multiple",
+              "adjusted_metric"
+            ],
+            "label": "Implied Enterprise Value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "implied_equity": {
+            "expression": "implied_ev - net_debt + cash",
+            "dependencies": [
+              "implied_ev",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Implied Equity Value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_share": {
+            "expression": "implied_equity / shares_outstanding",
+            "dependencies": [
+              "implied_equity",
+              "shares_outstanding"
+            ],
+            "label": "Implied Equity Value per Share",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "implied_ev",
+            "label": "Implied Enterprise Value",
+            "variable": "implied_ev",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "implied_equity",
+            "label": "Implied Equity Value",
+            "variable": "implied_equity",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_share",
+            "label": "Implied Equity per Share",
+            "variable": "per_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "range_multiples": {
+        "label": "Multiple Range (Low/Median/High)",
+        "description": "Compute low and high implied values using a selected low and high multiple to give a per-share range.",
+        "variables": {
+          "adjusted_metric": {
+            "expression": "target_metric_value * (1 + transaction_date_adjustment_pct/100) * fx_rate",
+            "dependencies": [
+              "target_metric_value",
+              "transaction_date_adjustment_pct",
+              "fx_rate"
+            ],
+            "label": "Adjusted target metric (currency)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "implied_ev_low": {
+            "expression": "low_multiple * adjusted_metric",
+            "dependencies": [
+              "low_multiple",
+              "adjusted_metric"
+            ],
+            "label": "Implied EV (Low)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "implied_ev_high": {
+            "expression": "high_multiple * adjusted_metric",
+            "dependencies": [
+              "high_multiple",
+              "adjusted_metric"
+            ],
+            "label": "Implied EV (High)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "implied_equity_low": {
+            "expression": "implied_ev_low - net_debt + cash",
+            "dependencies": [
+              "implied_ev_low",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Implied Equity (Low)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "implied_equity_high": {
+            "expression": "implied_ev_high - net_debt + cash",
+            "dependencies": [
+              "implied_ev_high",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Implied Equity (High)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_share_low": {
+            "expression": "implied_equity_low / shares_outstanding",
+            "dependencies": [
+              "implied_equity_low",
+              "shares_outstanding"
+            ],
+            "label": "Implied Equity per Share (Low)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_share_high": {
+            "expression": "implied_equity_high / shares_outstanding",
+            "dependencies": [
+              "implied_equity_high",
+              "shares_outstanding"
+            ],
+            "label": "Implied Equity per Share (High)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "per_share_low",
+            "label": "Per-Share (Low)",
+            "variable": "per_share_low",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_share_high",
+            "label": "Per-Share (High)",
+            "variable": "per_share_high",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "control_adjustment": {
+        "label": "Apply Control Premium",
+        "description": "Apply a control premium to a base implied equity value to estimate an acquirer control price.",
+        "variables": {
+          "base_equity": {
+            "expression": "median_multiple * target_metric_value * (1 + transaction_date_adjustment_pct/100) * fx_rate - net_debt + cash",
+            "dependencies": [
+              "median_multiple",
+              "target_metric_value",
+              "transaction_date_adjustment_pct",
+              "fx_rate",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Base implied equity (pre-control)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "control_value": {
+            "expression": "base_equity * (1 + control_premium_pct/100)",
+            "dependencies": [
+              "base_equity",
+              "control_premium_pct"
+            ],
+            "label": "Implied Equity with Control Premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "control_per_share": {
+            "expression": "control_value / shares_outstanding",
+            "dependencies": [
+              "control_value",
+              "shares_outstanding"
+            ],
+            "label": "Per-Share with Control Premium",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "control_value",
+            "label": "Implied Equity (Control)",
+            "variable": "control_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "control_per_share",
+            "label": "Per-Share (Control)",
+            "variable": "control_per_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "private_company_adjustment": {
+        "label": "Private Company / Minority Discount Adjustment",
+        "description": "Apply minority/illiquidity discounts to convert control or market implied equity into an indicative marketable minority value.",
+        "variables": {
+          "base_equity2": {
+            "expression": "median_multiple * target_metric_value * (1 + transaction_date_adjustment_pct/100) * fx_rate - net_debt + cash",
+            "dependencies": [
+              "median_multiple",
+              "target_metric_value",
+              "transaction_date_adjustment_pct",
+              "fx_rate",
+              "net_debt",
+              "cash"
+            ],
+            "label": "Base implied equity (pre-discount)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_after_minority_discount": {
+            "expression": "base_equity2 * (1 - minority_discount_pct/100)",
+            "dependencies": [
+              "base_equity2",
+              "minority_discount_pct"
+            ],
+            "label": "Equity after minority/illiquidity discount",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_share_after_discounts": {
+            "expression": "equity_after_minority_discount / shares_outstanding",
+            "dependencies": [
+              "equity_after_minority_discount",
+              "shares_outstanding"
+            ],
+            "label": "Per-Share after Discounts",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "equity_after_minority_discount",
+            "label": "Equity after Minority Discount",
+            "variable": "equity_after_minority_discount",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_share_after_discounts",
+            "label": "Per-Share after Discounts",
+            "variable": "per_share_after_discounts",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "shares_outstanding",
+        "label": "Shares Outstanding",
+        "type": "number",
+        "default": 10000000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "net_debt",
+        "label": "Net Debt (Debt - Cash equivalents) (negative for net cash)",
+        "type": "number",
+        "default": 50000000,
+        "step": 1000
+      },
+      {
+        "id": "cash",
+        "label": "Cash & Cash Equivalents",
+        "type": "number",
+        "default": 10000000,
+        "step": 1000
+      },
+      {
+        "id": "target_metric_value",
+        "label": "Target company metric (e.g., LTM EBITDA or Revenue)",
+        "type": "number",
+        "default": 20000000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "median_multiple",
+        "label": "Median transaction multiple (e.g., EV/EBITDA median)",
+        "type": "number",
+        "default": 8,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "low_multiple",
+        "label": "Low multiple (selected comp)",
+        "type": "number",
+        "default": 6,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "high_multiple",
+        "label": "High multiple (selected comp)",
+        "type": "number",
+        "default": 10,
+        "min": 0,
+        "step": 0.1
+      },
+      {
+        "id": "control_premium_pct",
+        "label": "Control premium (%)",
+        "type": "number",
+        "default": 20,
+        "min": 0,
+        "max": 200,
+        "step": 0.1
+      },
+      {
+        "id": "minority_discount_pct",
+        "label": "Minority/illiquidity discount (%)",
+        "type": "number",
+        "default": 15,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "transaction_date_adjustment_pct",
+        "label": "Transaction date adjustment (%) (to normalize timing differences)",
+        "type": "number",
+        "default": 0,
+        "min": -100,
+        "max": 100,
+        "step": 0.1
+      },
+      {
+        "id": "fx_rate",
+        "label": "FX rate (transaction currency → reporting currency)",
+        "type": "number",
+        "default": 1,
+        "min": 0.0001,
+        "step": 0.0001
+      }
+    ],
+    "result": {
+      "outputs": [
+        {
+          "id": "implied_ev",
+          "label": "Implied Enterprise Value (median)"
+        },
+        {
+          "id": "implied_equity",
+          "label": "Implied Equity Value (median)"
+        },
+        {
+          "id": "per_share",
+          "label": "Implied Equity per Share (median)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "per_share_low",
+          "label": "Implied Equity per Share (low)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "per_share_high",
+          "label": "Implied Equity per Share (high)",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "control_per_share",
+          "label": "Per-Share with Control Premium",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "per_share_after_discounts",
+          "label": "Per-Share after Minority/Illiquidity Discounts",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
+  },
+  "page_content": {
+    "introduction": [
+      "This advanced precedent transaction analysis tool estimates implied enterprise value, equity value and per-share indications using selected transaction multiples and common adjustments such as control premiums, minority discounts, transaction date normalizations and FX conversion.",
+      "The tool is intended for valuation analysts and deal teams as an indicative, model-driven starting point. It is not a substitute for professional judgement, and results depend critically on the choice of comparable transactions and the quality of input data."
+    ],
+    "methodology": [
+      "Select comparable transactions and extract the relevant multiples (EV/EBITDA, EV/Revenue, EV/EBIT, etc.). Use the median multiple as the primary central estimate and optionally use a low/high multiple to show a value range.",
+      "Adjust the target company's metric to the transaction date and convert currencies using an FX rate when necessary. Subtract net debt and add cash to convert enterprise value into implied equity value. Apply control premiums or minority/illiquidity discounts where appropriate to reflect transaction context.",
+      "Document and preserve all comparables, data sources and adjustment rationales. Run sensitivity checks by varying multiples, control premium and discounts to understand model stability."
+    ],
+    "how_is_calculated": [
+      "Adjusted metric = target_metric_value × (1 + transaction_date_adjustment_pct / 100) × fx_rate",
+      "Implied enterprise value = selected_multiple × Adjusted metric",
+      "Implied equity value = Implied enterprise value − Net debt + Cash",
+      "Per-share value = Implied equity value / Shares outstanding",
+      "Control-adjusted equity = Base equity × (1 + control_premium_pct / 100); Minority-adjusted equity = Base equity × (1 − minority_discount_pct / 100)"
+    ],
+    "examples": [
+      "Example 1: Using median EV/EBITDA = 8× on LTM EBITDA of 20m yields EV = 160m. With net debt 50m and cash 10m, implied equity = 120m; with 10m shares outstanding, implied per-share = 12.00 USD.",
+      "Example 2: Apply a 20% control premium to the base equity of 120m to estimate an acquirer control price: 120m × 1.20 = 144m, or 14.40 USD per share."
+    ],
+    "faqs": [
+      {
+        "question": "How should I pick comparable transactions?",
+        "answer": "Choose transactions with similar industry, scale, growth profile, profitability and deal structure. Adjust for timing (economic cycle) and accounting differences. Document selection criteria and avoid mixing materially different sub-sectors without rationale."
+      },
+      {
+        "question": "When should I apply a control premium or a minority discount?",
+        "answer": "Apply a control premium when estimating a takeover price for a control stake; apply a minority/illiquidity discount when estimating a non-control, non-marketable minority stake for private-company contexts. Supporting empirical evidence should be cited for the chosen percentages."
+      },
+      {
+        "question": "What are the limitations of this model?",
+        "answer": "This model provides mechanical estimates based on selected multiples and simple adjustments. It does not replace detailed due diligence, forecasts, transaction-specific synergies, or legal/tax adjustments. Outputs are sensitive to input multiples and adjustments; perform sensitivity analysis and disclose assumptions."
+      },
+      {
+        "question": "How should I validate and document model outputs?",
+        "answer": "Validate inputs against primary sources, cross-check implied values against other valuation methods (DCF, public comps), and keep an audit trail of comparable transactions, multiples, and adjustment rationale. Follow internal model validation policies and industry best practices."
+      },
+      {
+        "question": "How accurate are per-share outputs when shares outstanding are estimated?",
+        "answer": "Per-share outputs scale linearly with share count. Use fully diluted share counts where appropriate and note potential dilution from options, warrants or convertible instruments. If share count is uncertain, present a range or run sensitivity analysis."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST - Frameworks and guidance for data integrity and model risk management",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO - Quality management and information security standards (e.g., ISO 9001, ISO/IEC 27001)",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE - Standards for software verification, validation and trustworthy systems (see IEEE standards library)",
+        "url": "https://standards.ieee.org"
+      },
+      {
+        "label": "OSHA - Workplace safety and operational controls (refer to organizational compliance obligations)",
+        "url": "https://www.osha.gov"
+      },
+      {
+        "label": "International Valuation Standards Foundation (IVS) - Guidance on valuation reporting and transparency",
+        "url": "https://www.ivsc.org"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Enterprise Value (EV)",
+        "definition": "Total value of the company including equity, net debt and minority interests; used with transaction multiples (EV/EBITDA, EV/Revenue)."
+      },
+      {
+        "term": "Equity Value",
+        "definition": "Value attributable to shareholders after subtracting net debt from enterprise value and adding cash."
+      },
+      {
+        "term": "Control Premium",
+        "definition": "Percentage uplift applied to a market or implied equity value to reflect the additional value an acquirer may pay for control."
+      },
+      {
+        "term": "Minority Discount",
+        "definition": "Percentage reduction to reflect lack of control and potential illiquidity when valuing a minority stake or private-company interest."
+      },
+      {
+        "term": "Adjusted Metric",
+        "definition": "Target company financial metric adjusted for timing, one-time items, or FX to align with the comparables' basis."
+      },
+      {
+        "term": "Multiple",
+        "definition": "A valuation ratio (e.g., EV/EBITDA) derived from comparable transactions used to value the target."
+      }
+    ],
+    "summary": [
+      "This tool produces indicative values derived from precedent transactions using median and range multiples, and supports common adjustments for control and minority contexts. Use as part of a triangulated valuation approach and disclose all inputs and assumptions.",
+      "For model governance and security, follow organizational and industry standards such as NIST, ISO and IEEE guidance; retain versioning, data sources and an audit trail for regulatory or internal review."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/valuation/dcf-calculator",
+      "/valuation/public-comps"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialModel"
+    ]
+  }
+}
