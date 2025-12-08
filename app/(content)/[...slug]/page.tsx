@@ -40,7 +40,7 @@ export async function generateStaticParams() {
   const limit =
     Number.parseInt(process.env.STATIC_CALCULATOR_LIMIT ?? "", 10) > 0
       ? Number.parseInt(process.env.STATIC_CALCULATOR_LIMIT ?? "", 10)
-      : 200;
+      : 150;
 
   return getPublishedCalculators()
     .slice()
@@ -48,14 +48,7 @@ export async function generateStaticParams() {
     .slice(0, limit)
     .map((calculator) => ({
       slug: calculator.fullPath.split("/").filter(Boolean)
-    }))
-    .concat(
-      getCalculatorPaths()
-        .slice(0, 10)
-        .map((path) => ({
-          slug: path.split("/").filter(Boolean)
-        }))
-    );
+    }));
 }
 
 export async function generateMetadata(
