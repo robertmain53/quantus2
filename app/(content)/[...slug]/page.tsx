@@ -40,7 +40,7 @@ export async function generateStaticParams() {
   const limit =
     Number.parseInt(process.env.STATIC_CALCULATOR_LIMIT ?? "", 10) > 0
       ? Number.parseInt(process.env.STATIC_CALCULATOR_LIMIT ?? "", 10)
-      : 150;
+      : 80;
 
   return getPublishedCalculators()
     .slice()
