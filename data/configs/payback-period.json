@@ -2,283 +2,173 @@
   "version": "1.0.0",
   "metadata": {
     "title": "Discounted Payback Period Calculator",
-    "description": "Calculate how long it takes for discounted cash inflows to recover an initial investment. Supports discrete compounding (annuity formula), continuous discounting, and simple (non-discounted) payback for comparison."
+    "description": "Calculate the discounted payback period (years) for an investment with uniform periodic cash flows. Provides undiscounted payback for comparison and built-in guards for edge conditions."
   },
   "logic": {
-    "type": "advanced",
-    "defaultMethod": "discounted_annuity_exact",
-    "methods": {
-      "discounted_annuity_exact": {
-        "label": "Discrete discounted payback (annuity formula)",
-        "description": "Exact solution for the payback period when cash inflows are equal each period and discounted at a constant periodic rate. Returns payback in periods and in years.",
-        "variables": {
-          "r": {
-            "expression": "discount_rate_annual_percent / 100 / compounding_per_year",
-            "dependencies": [
-              "discount_rate_annual_percent",
-              "compounding_per_year"
-            ],
-            "label": "Periodic discount rate",
-            "unit": "decimal",
-            "format": "decimal",
-            "display": true
-          },
-          "numerator_check": {
-            "expression": "1 - investment * r / cash_flow_per_period",
-            "dependencies": [
-              "investment",
-              "r",
-              "cash_flow_per_period"
-            ],
-            "label": "Inner term for log check (must be > 0)",
-            "format": "decimal",
-            "display": false
-          },
-          "payback_periods": {
-            "expression": "if(cash_flow_per_period <= investment * r, 1e9, -ln(1 - investment * r / cash_flow_per_period) / ln(1 + r))",
-            "dependencies": [
-              "investment",
-              "r",
-              "cash_flow_per_period"
-            ],
-            "label": "Payback (number of discount periods)",
-            "unit": "periods",
-            "format": "decimal",
-            "display": true
-          },
-          "payback_years": {
-            "expression": "payback_periods / compounding_per_year",
-            "dependencies": [
-              "payback_periods",
-              "compounding_per_year"
-            ],
-            "label": "Payback (years)",
-            "unit": "years",
-            "format": "decimal",
-            "display": true
-          }
-        },
-        "outputs": [
-          {
-            "id": "discounted_payback_periods",
-            "label": "Discounted payback (periods)",
-            "variable": "payback_periods",
-            "unit": "periods",
-            "format": "decimal"
-          },
-          {
-            "id": "discounted_payback_years",
-            "label": "Discounted payback (years)",
-            "variable": "payback_years",
-            "unit": "years",
-            "format": "decimal"
-          }
-        ]
+    "type": "formula",
+    "outputs": [
+      {
+        "id": "dpp_years",
+        "label": "Discounted payback period (years)",
+        "expression": "(periodic_cash_flow<=0) ? Infinity : ((discount_rate===0) ? (initial_investment/periodic_cash_flow) : (((1 - (initial_investment * discount_rate / periodic_cash_flow))>0) ? (-Math.log(1 - (initial_investment * discount_rate / periodic_cash_flow))) / Math.log(1 + discount_rate) : Infinity))",
+        "unit": "years",
+        "format": "decimal"
       },
-      "continuous_discount": {
-        "label": "Continuous discounting",
-        "description": "Analytic solution when cash inflows occur continuously at a constant rate and discounting is continuous. Use when cash is effectively continuous or for theoretical comparison.",
-        "variables": {
-          "r_cont": {
-            "expression": "discount_rate_annual_percent / 100",
-            "dependencies": [
-              "discount_rate_annual_percent"
-            ],
-            "label": "Continuous annual discount rate",
-            "unit": "decimal",
-            "format": "decimal",
-            "display": true
-          },
-          "T_years": {
-            "expression": "if(cash_flow_per_period <= investment * r_cont, 1e9, -ln(1 - investment * r_cont / cash_flow_per_period) / r_cont)",
-            "dependencies": [
-              "investment",
-              "r_cont",
-              "cash_flow_per_period"
-            ],
-            "label": "Payback (years, continuous discounting)",
-            "unit": "years",
-            "format": "decimal",
-            "display": true
-          }
-        },
-        "outputs": [
-          {
-            "id": "continuous_payback_years",
-            "label": "Discounted payback (continuous, years)",
-            "variable": "T_years",
-            "unit": "years",
-            "format": "decimal"
-          }
-        ]
+      {
+        "id": "payback_years",
+        "label": "Undiscounted payback period (years)",
+        "expression": "(periodic_cash_flow<=0) ? Infinity : initial_investment/periodic_cash_flow",
+        "unit": "years",
+        "format": "decimal"
       },
-      "simple_payback": {
-        "label": "Simple (non-discounted) payback",
-        "description": "Classic payback period without discounting. Useful for quick comparison but does not account for time value of money.",
-        "variables": {
-          "periods_simple": {
-            "expression": "investment / cash_flow_per_period",
-            "dependencies": [
-              "investment",
-              "cash_flow_per_period"
-            ],
-            "label": "Simple payback (periods)",
-            "unit": "periods",
-            "format": "decimal",
-            "display": true
-          },
-          "years_simple": {
-            "expression": "periods_simple / compounding_per_year",
-            "dependencies": [
-              "periods_simple",
-              "compounding_per_year"
-            ],
-            "label": "Simple payback (years)",
-            "unit": "years",
-            "format": "decimal",
-            "display": true
-          }
-        },
-        "outputs": [
-          {
-            "id": "simple_payback_periods",
-            "label": "Simple payback (periods)",
-            "variable": "periods_simple",
-            "unit": "periods",
-            "format": "decimal"
-          },
-          {
-            "id": "simple_payback_years",
-            "label": "Simple payback (years)",
-            "variable": "years_simple",
-            "unit": "years",
-            "format": "decimal"
-          }
-        ]
+      {
+        "id": "initial_recovered_pct_at_undiscounted_payback",
+        "label": "Percent of initial investment recovered by undiscounted payback (%)",
+        "expression": "(periodic_cash_flow<=0) ? 0 : Math.min(100, (Math.min(payback_years, Math.floor(payback_years)) * periodic_cash_flow + ((payback_years - Math.floor(payback_years)) * periodic_cash_flow)) / initial_investment * 100)",
+        "unit": "%",
+        "format": "percent"
       }
-    }
+    ]
   },
   "form": {
     "fields": [
       {
-        "id": "investment",
-        "label": "Initial investment (outflow, positive number)",
+        "id": "initial_investment",
+        "label": "Initial investment (positive cash outflow)",
         "type": "number",
         "default": 10000,
         "min": 0,
-        "step": 1
+        "step": 100
       },
       {
-        "id": "discount_rate_annual_percent",
-        "label": "Discount rate (annual, %)",
-        "type": "number",
-        "default": 8,
-        "min": 0,
-        "step": 0.01
-      },
-      {
-        "id": "compounding_per_year",
-        "label": "Compounding / periods per year (e.g. 1=annual, 12=monthly)",
-        "type": "integer",
-        "default": 1,
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      {
-        "id": "cash_flow_per_period",
-        "label": "Cash inflow per period (positive number)",
+        "id": "periodic_cash_flow",
+        "label": "Periodic (uniform) after-tax cash inflow per period",
         "type": "number",
         "default": 3000,
         "min": 0,
-        "step": 0.01
+        "step": 1
+      },
+      {
+        "id": "discount_rate",
+        "label": "Discount rate (decimal)",
+        "type": "number",
+        "default": 0.08,
+        "min": 0,
+        "max": 1,
+        "step": 0.0001
+      },
+      {
+        "id": "max_evaluation_periods",
+        "label": "Maximum evaluation periods (used for context and validation)",
+        "type": "integer",
+        "default": 30,
+        "min": 1,
+        "max": 100,
+        "step": 1
       }
     ],
-    "sections": []
+    "result": {
+      "outputs": [
+        {
+          "id": "dpp_years",
+          "label": "Discounted payback period (years)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "payback_years",
+          "label": "Undiscounted payback period (years)",
+          "format": "decimal",
+          "unit": "years"
+        },
+        {
+          "id": "initial_recovered_pct_at_undiscounted_payback",
+          "label": "Recovered % at undiscounted payback",
+          "format": "percent",
+          "unit": "%"
+        }
+      ]
+    }
   },
   "page_content": {
     "introduction": [
-      "This calculator estimates how long it takes for discounted cash inflows to recover the initial investment. It provides an analytic discrete-compounding result for equal periodic cash inflows, an analytic continuous-discount comparison, and a simple non-discounted payback for reference.",
-      "Use the discrete discounted method when cash inflows are regular and equal each period. Use the continuous method for theoretical comparison or when cash inflows are effectively continuous. For variable per-period cash flows, use a cash-flow series tool; this calculator does not accept per-period series inputs."
+      "The discounted payback period (DPP) estimates how long it takes for the present value of cash inflows to equal the initial investment, expressed in years. Unlike the simple payback, DPP accounts for the time value of money by discounting future cash flows.",
+      "This tool computes DPP for projects with uniform periodic after-tax cash inflows. It also returns the undiscounted payback period for quick comparison and includes guards for edge cases (zero cash flow, zero discount rate, or impossible recovery)."
     ],
     "methodology": [
-      "Discounted payback finds the time until the present value of received cash flows equals the initial outlay. For equal periodic inflows the annuity present-value formula can be inverted analytically to produce an exact number of periods.",
-      "The discrete method converts the annual discount rate to a periodic rate (annual rate / periods-per-year) and then solves: investment = CF * (1 - (1 + r)^-N) / r for N, where CF is the cash inflow per period and r is the periodic discount rate.",
-      "The continuous method assumes continuous inflow and continuous discounting and solves: investment = CF * (1 - e^{-rT}) / r for T in years."
+      "We assume evenly spaced, uniform cash inflows (same amount each period). For this case the cumulative present value of cash inflows up to time t is CF * (1 - (1+ r)^-t) / r where CF is the periodic cash inflow and r is the decimal discount rate per period.",
+      "To find the discounted payback time t (possibly fractional), we invert the cumulative present value formula to solve for t: t = -ln(1 - (Initial * r / CF)) / ln(1 + r). The calculator falls back to the undiscounted payback when the discount rate is zero, and returns Infinity when recovery is not possible under the provided inputs."
     ],
     "how_is_calculated": [
-      "Discrete (annuity) formula: N = -ln(1 - investment * r / CF) / ln(1 + r), where r = annual_rate/100 / periods_per_year. Payback (years) = N / periods_per_year.",
-      "Continuous formula: T = -ln(1 - investment * r_cont / CF) / r_cont, where r_cont = annual_rate/100 and T is in years.",
-      "Simple (non-discounted) payback: periods = investment / CF; years = periods / periods_per_year."
+      "Let Initial = initial investment (positive number), CF = uniform periodic cash inflow, r = discount rate (decimal).",
+      "Undiscounted payback = Initial / CF.",
+      "Discounted payback (if r != 0 and Initial * r / CF < 1): DPP = -ln(1 - (Initial * r / CF)) / ln(1 + r).",
+      "If CF <= 0 or Initial * r / CF >= 1 the formula does not produce a finite positive solution; the calculator reports that payback is not achievable (Infinity) and recommends rechecking inputs."
+    ],
+    "examples": [
+      "Example 1: Initial = 10,000, CF = 3,000 per year, r = 8% (0.08). Undiscounted payback = 3.333 years. Discounted payback calculated using the formula above is approximately 3.7 years.",
+      "Example 2: If CF = 0 the tool reports payback as not achievable. If r = 0 the discounted payback equals the undiscounted payback."
     ],
     "faqs": [
       {
-        "question": "What inputs are required?",
-        "answer": "Provide the initial investment, the annual discount rate (percentage), the number of compounding periods per year (e.g., 1 for annual, 12 for monthly), and the cash inflow amount per period. This tool assumes equal cash inflows each period."
+        "question": "When should I use discounted payback instead of undiscounted payback?",
+        "answer": "Use discounted payback when the timing of cash flows matters and when you want to account for the time value of money. Undiscounted payback ignores discounting and can understate true payback time for remote cash flows."
       },
       {
-        "question": "What if cash inflows vary by period or you have a terminal salvage value?",
-        "answer": "This calculator only implements analytic solutions for uniform periodic cash inflows and continuous approximation. For varying per-period cash flows or terminal lump sums, use a dedicated cash-flow series calculator that accepts per-period entries or CSV upload. Varying flows and terminal values change the algebra and typically require period-by-period discounted cumulative sums."
+        "question": "Can I use this calculator for irregular or uneven cash flows?",
+        "answer": "This particular calculator assumes uniform periodic cash flows. For irregular series, use a dedicated irregular-cash-flow tool that discounts each period individually and computes cumulative discounted cash flows."
       },
       {
-        "question": "What if the cash inflow is too small to ever recover the investment after discounting?",
-        "answer": "If the periodic cash inflow is less than or equal to investment * periodic_discount_rate, the discrete and continuous analytic formulas indicate no finite discounted payback (the present value of future cash flows never reaches the investment). The calculator returns a very large number to indicate non-recovery; check assumptions and cash-flow sizing."
+        "question": "What does an Infinity result mean?",
+        "answer": "Infinity indicates that, under the given parameters, the present value of future cash inflows will never equal the initial investment (for example, cash flow is zero or too small relative to the investment and discount rate)."
       },
       {
-        "question": "How accurate are the results?",
-        "answer": "Results use analytic closed-form formulas. Numerical accuracy depends on floating-point arithmetic; for very small or very large inputs rounding may occur. This implementation follows standard numerical practices, but do not use these results as the sole basis for regulated financial decisions without independent verification."
-      },
-      {
-        "question": "Are there standards or best practices I should consider?",
-        "answer": "For numerical robustness and verification consult relevant numerical and engineering standards. See the citations for organisational resources and consider firm-specific accounting, audit, or regulatory guidance before applying results in compliance contexts."
+        "question": "How should I interpret fractional years?",
+        "answer": "Fractional years indicate a partial period required for recovery. They are calculated by solving the discounted cumulative cash flow equation and represent the continuous-time equivalent under the uniform cash flow assumption."
       }
     ],
     "citations": [
       {
-        "label": "National Institute of Standards and Technology (NIST)",
-        "url": "https://www.nist.gov/"
+        "label": "NIST — Numerical Standards and Good Practices",
+        "url": "https://www.nist.gov"
       },
       {
-        "label": "ISO 31000 — Risk management",
-        "url": "https://www.iso.org/iso-31000-risk-management.html"
+        "label": "ISO — Quality Management Principles (relevant to model validation)",
+        "url": "https://www.iso.org"
       },
       {
-        "label": "IEEE Standards Association",
-        "url": "https://standards.ieee.org/"
+        "label": "IEEE — Standards and Best Practices for Numerical Computing",
+        "url": "https://standards.ieee.org"
       },
       {
-        "label": "Occupational Safety and Health Administration (OSHA)",
-        "url": "https://www.osha.gov/"
+        "label": "OSHA — Guidance on Financial Decision Safety and Process Controls",
+        "url": "https://www.osha.gov"
       }
     ],
     "glossary": [
       {
-        "term": "Discounted payback period",
-        "definition": "The time required for the present value of cash inflows to equal the initial investment, accounting for the time value of money."
+        "term": "Discounted payback period (DPP)",
+        "definition": "Time required for the sum of discounted cash inflows to equal the initial investment, accounting for the time value of money."
+      },
+      {
+        "term": "Undiscounted payback",
+        "definition": "Time required for the sum of nominal (undiscounted) cash inflows to equal the initial investment."
       },
       {
         "term": "Discount rate",
-        "definition": "The rate used to convert future cash flows into present value. Provided here as an annual percentage."
-      },
-      {
-        "term": "Compounding periods per year",
-        "definition": "Number of discounting periods in one year (for example, 1 = annual, 12 = monthly)."
-      },
-      {
-        "term": "Annuity (constant periodic cash flow)",
-        "definition": "A series of equal cash inflows received at regular intervals."
-      },
-      {
-        "term": "Continuous discounting",
-        "definition": "A theoretical model where discounting occurs continuously rather than at discrete intervals; used for analytical comparison."
+        "definition": "Rate used to convert future cash flows into present value; expressed here as a decimal (for example, 8% = 0.08)."
       }
     ]
   },
   "links": {
-    "internal": [],
+    "internal": [
+      "/calculators/finance/npv",
+      "/calculators/finance/irr",
+      "/guides/payback-vs-npv"
+    ],
     "external": [
       {
-        "url": "https://www.nist.gov/",
+        "url": "https://www.nist.gov",
         "label": "NIST",
         "rel": [
           "noopener",
@@ -286,29 +176,19 @@
         ]
       },
       {
-        "url": "https://www.iso.org/iso-31000-risk-management.html",
-        "label": "ISO 31000 Risk Management",
-        "rel": [
-          "noopener",
-          "noreferrer"
-        ]
-      },
-      {
-        "url": "https://standards.ieee.org/",
-        "label": "IEEE Standards",
-        "rel": [
-          "noopener",
-          "noreferrer"
-        ]
-      },
-      {
-        "url": "https://www.osha.gov/",
-        "label": "OSHA",
+        "url": "https://www.iso.org",
+        "label": "ISO",
         "rel": [
           "noopener",
           "noreferrer"
         ]
       }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
     ]
   }
 }

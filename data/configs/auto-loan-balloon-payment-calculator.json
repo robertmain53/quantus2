@@ -1,0 +1,614 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan — Balloon Payment Calculator (Monthly & Bi‑Weekly)",
+    "description": "Estimate scheduled periodic payments and the balloon (remaining) balance for auto loans using monthly or bi‑weekly schedules. Supports explicit balloon amount or balloon as a percentage, upfront fees, and down payment. Includes interest and total cash outlay summaries and clearly stated assumptions and accuracy notes."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "biweekly_balloon",
+    "methods": {
+      "biweekly_balloon": {
+        "label": "Bi‑weekly payments with balloon",
+        "description": "Computes level bi‑weekly payment using either a target balloon (if provided) or the amortization schedule; then reports the balance at the balloon due date and totals to that date.",
+        "variables": {
+          "payments_per_year": {
+            "expression": "26",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "amort_periods": {
+            "expression": "amortization_months * payments_per_year / 12",
+            "dependencies": [
+              "amortization_months",
+              "payments_per_year"
+            ],
+            "label": "Amortization periods (count)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "balloon_due_periods": {
+            "expression": "balloon_due_in_months * payments_per_year / 12",
+            "dependencies": [
+              "balloon_due_in_months",
+              "payments_per_year"
+            ],
+            "label": "Balloon due (period index)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "balloon_amount_calc": {
+            "expression": "if(balloon_amount>0, balloon_amount, if(balloon_percent>0, loan_amount * balloon_percent / 100, 0))",
+            "dependencies": [
+              "balloon_amount",
+              "balloon_percent",
+              "loan_amount"
+            ],
+            "label": "Effective balloon amount",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_standard": {
+            "expression": "if(periodic_rate==0, loan_amount / amort_periods, loan_amount * periodic_rate / (1 - pow(1 + periodic_rate, -amort_periods)))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "amort_periods"
+            ],
+            "label": "Level periodic payment (standard amortization)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_balloon_target": {
+            "expression": "if(periodic_rate==0, (loan_amount - balloon_amount_calc) / balloon_due_periods, (loan_amount * pow(1 + periodic_rate, balloon_due_periods) - balloon_amount_calc) * periodic_rate / (pow(1 + periodic_rate, balloon_due_periods) - 1))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "balloon_due_periods",
+              "balloon_amount_calc"
+            ],
+            "label": "Level periodic payment (target balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment": {
+            "expression": "if(balloon_amount_calc>0, payment_balloon_target, payment_standard)",
+            "dependencies": [
+              "balloon_amount_calc",
+              "payment_balloon_target",
+              "payment_standard"
+            ],
+            "label": "Periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_at_balloon": {
+            "expression": "if(periodic_rate==0, loan_amount - payment * balloon_due_periods, loan_amount * pow(1 + periodic_rate, balloon_due_periods) - payment * ( (pow(1 + periodic_rate, balloon_due_periods) - 1) / periodic_rate ))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "balloon_due_periods",
+              "payment"
+            ],
+            "label": "Remaining balance at balloon due date",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "principal_repaid_until_balloon": {
+            "expression": "loan_amount - balance_at_balloon",
+            "dependencies": [
+              "loan_amount",
+              "balance_at_balloon"
+            ],
+            "label": "Principal repaid by balloon date",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_paid_until_balloon": {
+            "expression": "payment * balloon_due_periods - principal_repaid_until_balloon",
+            "dependencies": [
+              "payment",
+              "balloon_due_periods",
+              "principal_repaid_until_balloon"
+            ],
+            "label": "Interest paid by balloon date",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payments_until_balloon": {
+            "expression": "payment * balloon_due_periods",
+            "dependencies": [
+              "payment",
+              "balloon_due_periods"
+            ],
+            "label": "Sum of periodic payments until balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_cash_outlay_until_balloon": {
+            "expression": "down_payment + fees + total_payments_until_balloon + balloon_amount_calc",
+            "dependencies": [
+              "down_payment",
+              "fees",
+              "total_payments_until_balloon",
+              "balloon_amount_calc"
+            ],
+            "label": "Total cash outlay up to and including balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Periodic payment (bi‑weekly)",
+            "variable": "payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payments_per_year",
+            "label": "Payments per year",
+            "variable": "payments_per_year",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "balloon_amount",
+            "label": "Balloon amount due",
+            "variable": "balloon_amount_calc",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon",
+            "label": "Remaining balance at balloon due date",
+            "variable": "balance_at_balloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid_until_balloon",
+            "label": "Interest paid through balloon date",
+            "variable": "interest_paid_until_balloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_cash_outlay_until_balloon",
+            "label": "Total cash outlay (down payment + fees + payments + balloon)",
+            "variable": "total_cash_outlay_until_balloon",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      },
+      "monthly_balloon": {
+        "label": "Monthly payments with balloon",
+        "description": "Same calculations as bi‑weekly method but using monthly periods (12 payments per year).",
+        "variables": {
+          "payments_per_year": {
+            "expression": "12",
+            "dependencies": [],
+            "label": "Payments per year",
+            "unit": "payments",
+            "format": "integer",
+            "display": true
+          },
+          "periodic_rate": {
+            "expression": "annual_rate / 100 / payments_per_year",
+            "dependencies": [
+              "annual_rate",
+              "payments_per_year"
+            ],
+            "label": "Periodic interest rate",
+            "unit": "",
+            "format": "decimal",
+            "display": false
+          },
+          "amort_periods": {
+            "expression": "amortization_months * payments_per_year / 12",
+            "dependencies": [
+              "amortization_months",
+              "payments_per_year"
+            ],
+            "label": "Amortization periods (count)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "balloon_due_periods": {
+            "expression": "balloon_due_in_months * payments_per_year / 12",
+            "dependencies": [
+              "balloon_due_in_months",
+              "payments_per_year"
+            ],
+            "label": "Balloon due (period index)",
+            "unit": "periods",
+            "format": "integer",
+            "display": false
+          },
+          "balloon_amount_calc": {
+            "expression": "if(balloon_amount>0, balloon_amount, if(balloon_percent>0, loan_amount * balloon_percent / 100, 0))",
+            "dependencies": [
+              "balloon_amount",
+              "balloon_percent",
+              "loan_amount"
+            ],
+            "label": "Effective balloon amount",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_standard": {
+            "expression": "if(periodic_rate==0, loan_amount / amort_periods, loan_amount * periodic_rate / (1 - pow(1 + periodic_rate, -amort_periods)))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "amort_periods"
+            ],
+            "label": "Level periodic payment (standard amortization)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment_balloon_target": {
+            "expression": "if(periodic_rate==0, (loan_amount - balloon_amount_calc) / balloon_due_periods, (loan_amount * pow(1 + periodic_rate, balloon_due_periods) - balloon_amount_calc) * periodic_rate / (pow(1 + periodic_rate, balloon_due_periods) - 1))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "balloon_due_periods",
+              "balloon_amount_calc"
+            ],
+            "label": "Level periodic payment (target balloon)",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "payment": {
+            "expression": "if(balloon_amount_calc>0, payment_balloon_target, payment_standard)",
+            "dependencies": [
+              "balloon_amount_calc",
+              "payment_balloon_target",
+              "payment_standard"
+            ],
+            "label": "Periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "balance_at_balloon": {
+            "expression": "if(periodic_rate==0, loan_amount - payment * balloon_due_periods, loan_amount * pow(1 + periodic_rate, balloon_due_periods) - payment * ( (pow(1 + periodic_rate, balloon_due_periods) - 1) / periodic_rate ))",
+            "dependencies": [
+              "loan_amount",
+              "periodic_rate",
+              "balloon_due_periods",
+              "payment"
+            ],
+            "label": "Remaining balance at balloon due date",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "principal_repaid_until_balloon": {
+            "expression": "loan_amount - balance_at_balloon",
+            "dependencies": [
+              "loan_amount",
+              "balance_at_balloon"
+            ],
+            "label": "Principal repaid by balloon date",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "interest_paid_until_balloon": {
+            "expression": "payment * balloon_due_periods - principal_repaid_until_balloon",
+            "dependencies": [
+              "payment",
+              "balloon_due_periods",
+              "principal_repaid_until_balloon"
+            ],
+            "label": "Interest paid by balloon date",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payments_until_balloon": {
+            "expression": "payment * balloon_due_periods",
+            "dependencies": [
+              "payment",
+              "balloon_due_periods"
+            ],
+            "label": "Sum of periodic payments until balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_cash_outlay_until_balloon": {
+            "expression": "down_payment + fees + total_payments_until_balloon + balloon_amount_calc",
+            "dependencies": [
+              "down_payment",
+              "fees",
+              "total_payments_until_balloon",
+              "balloon_amount_calc"
+            ],
+            "label": "Total cash outlay up to and including balloon",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "periodic_payment",
+            "label": "Periodic payment (monthly)",
+            "variable": "payment",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "payments_per_year",
+            "label": "Payments per year",
+            "variable": "payments_per_year",
+            "unit": "payments",
+            "format": "integer"
+          },
+          {
+            "id": "balloon_amount",
+            "label": "Balloon amount due",
+            "variable": "balloon_amount_calc",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "balance_at_balloon",
+            "label": "Remaining balance at balloon due date",
+            "variable": "balance_at_balloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "interest_paid_until_balloon",
+            "label": "Interest paid through balloon date",
+            "variable": "interest_paid_until_balloon",
+            "unit": "currency",
+            "format": "currency"
+          },
+          {
+            "id": "total_cash_outlay_until_balloon",
+            "label": "Total cash outlay (down payment + fees + payments + balloon)",
+            "variable": "total_cash_outlay_until_balloon",
+            "unit": "currency",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal financed)",
+        "type": "number",
+        "default": 25000,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "down_payment",
+        "label": "Down payment",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "fees",
+        "label": "Upfront fees (taxes, origination, doc fees)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "annual_rate",
+        "label": "Annual interest rate (APR %) ",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "amortization_months",
+        "label": "Amortization period (months used to calculate payment)",
+        "type": "integer",
+        "default": 60,
+        "min": 1,
+        "max": 480,
+        "step": 1
+      },
+      {
+        "id": "balloon_due_in_months",
+        "label": "When balloon is due (months from loan start)",
+        "type": "integer",
+        "default": 36,
+        "min": 1,
+        "max": 480,
+        "step": 1
+      },
+      {
+        "id": "balloon_amount",
+        "label": "Balloon amount (enter 0 to use balloon % instead)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      },
+      {
+        "id": "balloon_percent",
+        "label": "Balloon as % of loan (used if balloon amount = 0)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "extra_payment",
+        "label": "Extra payment per period (optional)",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments and the remaining (balloon) balance for auto loans using either a bi‑weekly or monthly schedule. You can provide a specific balloon amount or a balloon percentage; if neither is supplied the tool computes standard level payments using the amortization period.",
+      "Outputs include the periodic payment, how many payments per year, the remaining balance at the balloon due date, interest paid to that date, and total cash outlay including down payment and fees. Use conservative inputs and verify final figures with your lender before signing any contract."
+    ],
+    "methodology": [
+      "We compute periodic interest as annual_rate / payments_per_year and convert the amortization period from months to the number of payment periods for the chosen schedule (monthly or bi‑weekly).",
+      "If a target balloon amount is provided, the tool solves for the level periodic payment that produces that remaining balance at the balloon due date. If no target balloon is provided, the standard amortizing payment is computed for the full amortization period. Remaining balances use closed‑form formulas (no iterative simulation required)."
+    ],
+    "how_is_calculated": [
+      "payments_per_year = 26 for bi‑weekly or 12 for monthly.",
+      "periodic_rate = annual_rate / 100 / payments_per_year.",
+      "amort_periods = amortization_months * payments_per_year / 12.",
+      "Standard payment when no target balloon: P = principal * r / (1 - (1+r)^-N) if r>0, else P = principal / N.",
+      "If a balloon amount B is targeted at period n: solve for P from B = principal*(1+r)^n - P * ( ( (1+r)^n - 1) / r ). Rearranged: P = (principal*(1+r)^n - B) * r / ( (1+r)^n - 1 ).",
+      "Remaining balance at balloon date uses the closed form B_n = principal*(1+r)^n - P * ( ( (1+r)^n - 1) / r ). For r=0 simplified linear formulas are used."
+    ],
+    "examples": [
+      "Example 1: $25,000 loan, 5.0% APR, 60‑month amortization, balloon due at 36 months, bi‑weekly schedule. If balloon amount not specified the calculator returns the bi‑weekly level payment based on a 60‑month amortization and the balance remaining after 36 months.",
+      "Example 2: Same loan but specify a $10,000 balloon due at 36 months. The tool computes the lower periodic payment required so the remaining balance equals $10,000 at that date, then reports total interest and cash outlay."
+    ],
+    "summary": [
+      "This calculator uses closed‑form amortization formulas to provide deterministic estimates for payments and remaining balance at a balloon date. It supports both monthly and bi‑weekly conventions and allows either an explicit balloon amount or a balloon expressed as a percent of the loan.",
+      "Always treat results as estimates. Actual lender schedules can differ due to day count conventions, rounding rules, periodicity differences, fees applied to principal, and local regulation."
+    ],
+    "faqs": [
+      {
+        "question": "What is a balloon payment?",
+        "answer": "A balloon payment is a larger-than-normal payment due at a specified date that pays off the remaining loan balance. Balloon loans typically have lower periodic payments but a large final obligation."
+      },
+      {
+        "question": "Should I use bi‑weekly or monthly for the calculator?",
+        "answer": "Use the schedule that matches your loan contract. Bi‑weekly schedules assume 26 equal payments per year (every two weeks); monthly assumes 12 equal payments. Using the wrong schedule will misestimate the timing and amounts."
+      },
+      {
+        "question": "If I enter both balloon amount and balloon percent, which is used?",
+        "answer": "The calculator gives precedence to the explicit balloon amount. If balloon amount is zero, the balloon percent is applied to the loan principal to derive the balloon."
+      },
+      {
+        "question": "How precise are the results?",
+        "answer": "Results are numerical estimates using closed‑form formulas. They are subject to rounding, floating point precision, and the assumptions listed. The calculator reports rounded currency values — for contractual figures confirm with your lender."
+      },
+      {
+        "question": "Does this include taxes, registration, or gap insurance?",
+        "answer": "No. Include taxes, titles, registration, and voluntary insurance only if you add them as upfront fees or adjust the loan amount as appropriate. The calculator does not model escrow accounts or post‑balloon refinancing."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Amortization",
+        "definition": "The schedule of periodic payments that reduces the outstanding principal balance of a loan over time."
+      },
+      {
+        "term": "Balloon payment",
+        "definition": "A single large payment due at a specified date that pays the remaining loan balance."
+      },
+      {
+        "term": "Periodic rate",
+        "definition": "The interest rate applied each payment period; calculated as annual APR divided by the number of payments per year."
+      },
+      {
+        "term": "Bi‑weekly payments",
+        "definition": "A payment cadence with 26 payments per year (every two weeks). Many lenders treat bi‑weekly differently; confirm your contract."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — Usability & Numerical Precision Guidance",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO 9001 — Quality Management Principles (relevant to calculation QA)",
+        "url": "https://www.iso.org/iso-9001-quality-management.html"
+      },
+      {
+        "label": "IEEE — Recommended Practices for Numerical Computing",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Not directly applicable to finance; included for enterprise compliance awareness",
+        "url": "https://www.osha.gov"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/calculators/loan/amortization-overview",
+      "/help/loan-terms/balloon-payment"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/iso-9001-quality-management.html",
+        "label": "ISO 9001 overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE standards overview",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

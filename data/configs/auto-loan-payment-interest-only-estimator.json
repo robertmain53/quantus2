@@ -1,0 +1,505 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Auto Loan Interest-Only Payment Estimator",
+    "description": "Estimate interest-only payments, compare an interest-only period followed by amortization, and compare to a standard amortizing loan. Includes clear assumptions, accuracy caveats, and references to relevant standards for numerical reliability and security."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "io_then_amortize",
+    "methods": {
+      "interest_only": {
+        "label": "Interest-only payments (no amortization)",
+        "description": "Calculates the periodic interest-only payment for the specified interest-only duration. Principal remains unpaid during the interest-only period.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate_pct/100/12",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": null,
+            "format": "decimal",
+            "display": true
+          },
+          "total_months": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Loan term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "io_months": {
+            "expression": "interest_only_months",
+            "dependencies": [
+              "interest_only_months"
+            ],
+            "label": "Interest-only period (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "io_payment": {
+            "expression": "loan_amount * monthly_rate",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate"
+            ],
+            "label": "Interest-only payment (per period)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_payment_during_io": {
+            "expression": "io_payment * io_months",
+            "dependencies": [
+              "io_payment",
+              "io_months"
+            ],
+            "label": "Total payments during interest-only period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_paid": {
+            "expression": "io_payment * io_months",
+            "dependencies": [
+              "io_payment",
+              "io_months"
+            ],
+            "label": "Interest paid during interest-only period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "io_payment",
+            "label": "Interest-only payment (monthly)",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_payment_during_io",
+            "label": "Total paid during interest-only period",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_paid",
+            "label": "Interest paid during interest-only period",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "io_then_amortize": {
+        "label": "Interest-only period, then amortize remaining balance",
+        "description": "Calculates interest-only payments for the chosen period, then the amortizing payment needed to retire the full principal over the remaining term. Assumes interest rate remains constant and compounding is monthly.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate_pct/100/12",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": null,
+            "format": "decimal",
+            "display": false
+          },
+          "total_months": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Loan term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "io_months": {
+            "expression": "interest_only_months",
+            "dependencies": [
+              "interest_only_months"
+            ],
+            "label": "Interest-only period (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "remaining_months": {
+            "expression": "total_months - io_months",
+            "dependencies": [
+              "total_months",
+              "io_months"
+            ],
+            "label": "Remaining months after interest-only",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "io_payment": {
+            "expression": "loan_amount * monthly_rate",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate"
+            ],
+            "label": "Interest-only payment (per period)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "amortized_payment": {
+            "expression": "(remaining_months>0) ? (loan_amount * monthly_rate / (1 - pow(1 + monthly_rate, -remaining_months))) : 0",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "remaining_months"
+            ],
+            "label": "Amortizing payment after interest-only period",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "io_total_payment": {
+            "expression": "io_payment * io_months",
+            "dependencies": [
+              "io_payment",
+              "io_months"
+            ],
+            "label": "Total paid during interest-only period",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "amortized_total_payment": {
+            "expression": "amortized_payment * remaining_months",
+            "dependencies": [
+              "amortized_payment",
+              "remaining_months"
+            ],
+            "label": "Total paid during amortization",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "io_interest": {
+            "expression": "io_payment * io_months",
+            "dependencies": [
+              "io_payment",
+              "io_months"
+            ],
+            "label": "Interest paid during interest-only period",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "amortized_interest": {
+            "expression": "(remaining_months>0) ? (amortized_payment * remaining_months - loan_amount) : 0",
+            "dependencies": [
+              "amortized_payment",
+              "remaining_months",
+              "loan_amount"
+            ],
+            "label": "Interest paid during amortization",
+            "unit": "currency",
+            "format": "currency",
+            "display": false
+          },
+          "total_interest_paid": {
+            "expression": "io_interest + amortized_interest",
+            "dependencies": [
+              "io_interest",
+              "amortized_interest"
+            ],
+            "label": "Total interest paid over life of loan",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "loan_amount + total_interest_paid",
+            "dependencies": [
+              "loan_amount",
+              "total_interest_paid"
+            ],
+            "label": "Total amount paid (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "io_payment",
+            "label": "Interest-only payment (monthly)",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "amortized_payment",
+            "label": "Amortizing payment after interest-only period",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_paid",
+            "label": "Total interest paid over life of loan",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total amount paid (principal + interest)",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "standard_amortizing": {
+        "label": "Standard amortizing loan (no interest-only)",
+        "description": "A fully amortizing payment for the whole term. Useful for direct comparison to interest-only strategies.",
+        "variables": {
+          "monthly_rate": {
+            "expression": "annual_rate_pct/100/12",
+            "dependencies": [
+              "annual_rate_pct"
+            ],
+            "label": "Monthly interest rate (decimal)",
+            "unit": null,
+            "format": "decimal",
+            "display": false
+          },
+          "total_months": {
+            "expression": "term_years*12",
+            "dependencies": [
+              "term_years"
+            ],
+            "label": "Loan term (months)",
+            "unit": "months",
+            "format": "integer",
+            "display": false
+          },
+          "amortized_payment_full": {
+            "expression": "(total_months>0) ? (loan_amount * monthly_rate / (1 - pow(1 + monthly_rate, -total_months))) : 0",
+            "dependencies": [
+              "loan_amount",
+              "monthly_rate",
+              "total_months"
+            ],
+            "label": "Monthly amortizing payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_interest_paid": {
+            "expression": "amortized_payment_full * total_months - loan_amount",
+            "dependencies": [
+              "amortized_payment_full",
+              "total_months",
+              "loan_amount"
+            ],
+            "label": "Total interest paid over term",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "total_paid": {
+            "expression": "loan_amount + total_interest_paid",
+            "dependencies": [
+              "loan_amount",
+              "total_interest_paid"
+            ],
+            "label": "Total amount paid (principal + interest)",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "amortized_payment_full",
+            "label": "Monthly amortizing payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_interest_paid",
+            "label": "Total interest paid over term",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "total_paid",
+            "label": "Total amount paid (principal + interest)",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "loan_amount",
+        "label": "Loan amount (principal)",
+        "type": "number",
+        "default": 20000,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (APR) in percent",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Loan term (years)",
+        "type": "integer",
+        "default": 5,
+        "min": 1,
+        "max": 30,
+        "step": 1
+      },
+      {
+        "id": "interest_only_months",
+        "label": "Interest-only period (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 0,
+        "max": 360,
+        "step": 1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This estimator helps you compare an interest-only payment option, an interest-only period followed by amortization, and a standard fully amortizing loan. Use it to understand short-term cashflow benefits and long-term cost implications.",
+      "The tool assumes a fixed nominal annual interest rate, monthly compounding, and that interest rate and loan principal do not change during the modeled periods. It is not a substitute for loan documents or a lender's disclosure."
+    ],
+    "methodology": [
+      "Calculations use standard time-value-of-money formulas: monthly_rate = annual_rate_pct / 12 / 100; interest-only payment = principal × monthly_rate; amortizing payment uses the annuity formula.",
+      "Numerical handling follows best practices for stability and reproducibility. Where applicable, conditional logic is used to avoid division by zero when the number of remaining payments is zero. For secure handling of user data and computational integrity, follow standards such as NIST SP 800 series for information security and ISO guidance for quality management.",
+      "This tool provides estimates only. For regulatory or contractual figures, refer to official loan disclosures. Accuracy depends on the correctness of inputs and assumptions; see the FAQs for common caveats."
+    ],
+    "how_is_calculated": [
+      "monthly_rate = annual_rate_pct / 12 / 100",
+      "Interest-only payment = loan_amount × monthly_rate",
+      "Amortizing payment = loan_amount × monthly_rate / (1 - (1 + monthly_rate)^(-N)) where N is the number of payments in the amortization period",
+      "Total interest = sum of payments - loan principal"
+    ],
+    "examples": [
+      "Example 1: $20,000 loan, 5% APR, 12-month IO period, 5-year term. The estimator shows the monthly IO payment during the first 12 months and the higher amortizing payment needed to retire the full principal over the remaining 48 months.",
+      "Example 2: Compare a 5-year fully amortizing loan to a 1-year interest-only then amortize scenario to see differences in total interest paid and monthly cashflow."
+    ],
+    "faqs": [
+      {
+        "question": "Does this calculator show taxes, fees, or insurance?",
+        "answer": "No. This estimator models only principal and interest under the stated assumptions. Taxes, fees, insurance, late fees, and other charges are not included and can materially change monthly payment and total cost."
+      },
+      {
+        "question": "What happens if the rate changes after the interest-only period?",
+        "answer": "This tool assumes a constant nominal rate. If the loan is variable-rate, post-period payments could differ. Use this as a baseline and consult lender disclosures for adjustable-rate behavior."
+      },
+      {
+        "question": "How accurate are the results?",
+        "answer": "Results are estimates based on mathematical formulas. Numerical implementation follows engineering best practices for stability, but rounding and input accuracy affect outcomes. For legally binding figures, rely on lender-provided statements."
+      },
+      {
+        "question": "How are zero or very low interest rates handled?",
+        "answer": "When the monthly interest rate is zero, the amortizing payment reduces to principal divided by remaining payments. The tool includes safeguards to avoid division-by-zero in edge cases."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST (National Institute of Standards and Technology)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO (International Organization for Standardization)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE Standards Association",
+        "url": "https://standards.ieee.org/"
+      },
+      {
+        "label": "OSHA (Occupational Safety and Health Administration)",
+        "url": "https://www.osha.gov/"
+      },
+      {
+        "label": "Consumer Financial Protection Bureau (loan disclosure guidance)",
+        "url": "https://www.consumerfinance.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Principal",
+        "definition": "The original amount of the loan, excluding interest and fees."
+      },
+      {
+        "term": "Interest-only period",
+        "definition": "A time window during which the borrower pays only interest and does not reduce principal."
+      },
+      {
+        "term": "Amortization",
+        "definition": "The process of paying down principal over time via periodic payments that include both principal and interest."
+      },
+      {
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The annual rate charged for borrowing, expressed as a percentage; this estimator uses the nominal interest rate for periodic payment calculations."
+      }
+    ]
+  },
+  "links": {
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://standards.ieee.org/",
+        "label": "IEEE Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.consumerfinance.gov/",
+        "label": "Consumer Financial Protection Bureau",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}

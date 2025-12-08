@@ -1,0 +1,721 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Portfolio Variance & Standard Deviation Calculator (Advanced)",
+    "description": "Calculate portfolio variance and standard deviation for two-asset and multi-asset portfolios. Supports formula-based two-asset inputs, covariance matrix input, and covariance estimation from historical returns. Includes guidance on calibration, annualization, limits, and accuracy considerations aligned with recognised standards."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "covariance_matrix",
+    "methods": {
+      "two_asset_formula": {
+        "label": "Two-asset formula",
+        "description": "Direct formula for a portfolio consisting of two assets using weights, individual standard deviations and their correlation.",
+        "variables": {
+          "w1": {
+            "expression": "w1",
+            "dependencies": [
+              "w1"
+            ],
+            "label": "Weight of Asset 1",
+            "format": "decimal",
+            "display": true
+          },
+          "w2": {
+            "expression": "w2",
+            "dependencies": [
+              "w2"
+            ],
+            "label": "Weight of Asset 2",
+            "format": "decimal",
+            "display": true
+          },
+          "sd1": {
+            "expression": "sd1",
+            "dependencies": [
+              "sd1"
+            ],
+            "label": "Standard deviation of Asset 1 (decimal)",
+            "format": "decimal",
+            "display": true
+          },
+          "sd2": {
+            "expression": "sd2",
+            "dependencies": [
+              "sd2"
+            ],
+            "label": "Standard deviation of Asset 2 (decimal)",
+            "format": "decimal",
+            "display": true
+          },
+          "corr12": {
+            "expression": "corr12",
+            "dependencies": [
+              "corr12"
+            ],
+            "label": "Correlation between Asset 1 and 2",
+            "format": "decimal",
+            "display": true
+          },
+          "portfolio_variance": {
+            "expression": "w1^2 * sd1^2 + w2^2 * sd2^2 + 2 * w1 * w2 * corr12 * sd1 * sd2",
+            "dependencies": [
+              "w1",
+              "w2",
+              "sd1",
+              "sd2",
+              "corr12"
+            ],
+            "label": "Portfolio variance",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "portfolio_stddev": {
+            "expression": "sqrt(portfolio_variance)",
+            "dependencies": [
+              "portfolio_variance"
+            ],
+            "label": "Portfolio standard deviation",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "portfolio_variance",
+            "label": "Portfolio variance (decimal)",
+            "variable": "portfolio_variance",
+            "format": "decimal"
+          },
+          {
+            "id": "portfolio_stddev",
+            "label": "Portfolio standard deviation (annualized, %)",
+            "variable": "portfolio_stddev",
+            "format": "percent"
+          }
+        ]
+      },
+      "covariance_matrix": {
+        "label": "General covariance matrix (N assets)",
+        "description": "Compute portfolio variance using an input covariance matrix or derive covariance from standard deviations and a correlation matrix. Uses the quadratic form w' Σ w.",
+        "variables": {
+          "weights_csv": {
+            "expression": "weights_csv",
+            "dependencies": [
+              "weights_csv"
+            ],
+            "label": "Weights (CSV, row vector)",
+            "format": "decimal",
+            "display": true
+          },
+          "cov_matrix_csv": {
+            "expression": "cov_matrix_csv",
+            "dependencies": [
+              "cov_matrix_csv"
+            ],
+            "label": "Covariance matrix (CSV rows separated by semicolon or newline)",
+            "format": "decimal",
+            "display": false
+          },
+          "std_devs_csv": {
+            "expression": "std_devs_csv",
+            "dependencies": [
+              "std_devs_csv"
+            ],
+            "label": "Standard deviations (CSV)",
+            "format": "decimal",
+            "display": false
+          },
+          "corr_matrix_csv": {
+            "expression": "corr_matrix_csv",
+            "dependencies": [
+              "corr_matrix_csv"
+            ],
+            "label": "Correlation matrix (CSV rows separated by semicolon or newline)",
+            "format": "decimal",
+            "display": false
+          },
+          "cov_matrix_used": {
+            "expression": "if(nonempty(cov_matrix_csv), parse_matrix(cov_matrix_csv), elementwise_mul(outer(parse_vector(std_devs_csv), parse_vector(std_devs_csv)), parse_matrix(corr_matrix_csv)))",
+            "dependencies": [
+              "cov_matrix_csv",
+              "std_devs_csv",
+              "corr_matrix_csv"
+            ],
+            "label": "Covariance matrix used for calculation",
+            "format": "decimal",
+            "display": false
+          },
+          "w_vector": {
+            "expression": "parse_vector(weights_csv)",
+            "dependencies": [
+              "weights_csv"
+            ],
+            "label": "Parsed weights vector",
+            "format": "decimal",
+            "display": false
+          },
+          "portfolio_variance": {
+            "expression": "transpose(w_vector) * cov_matrix_used * w_vector",
+            "dependencies": [
+              "w_vector",
+              "cov_matrix_used"
+            ],
+            "label": "Portfolio variance (w' Σ w)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "portfolio_stddev": {
+            "expression": "sqrt(portfolio_variance)",
+            "dependencies": [
+              "portfolio_variance"
+            ],
+            "label": "Portfolio standard deviation",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "portfolio_variance",
+            "label": "Portfolio variance (decimal)",
+            "variable": "portfolio_variance",
+            "format": "decimal"
+          },
+          {
+            "id": "portfolio_stddev",
+            "label": "Portfolio standard deviation (annualized, %)",
+            "variable": "portfolio_stddev",
+            "format": "percent"
+          }
+        ]
+      },
+      "estimate_from_returns": {
+        "label": "Estimate covariance from historical returns",
+        "description": "Estimate the covariance matrix from pasted historical returns (CSV: rows = observations, columns = assets). Supports adjustment to population/sample estimators and annualization.",
+        "variables": {
+          "returns_csv": {
+            "expression": "returns_csv",
+            "dependencies": [
+              "returns_csv"
+            ],
+            "label": "Historical returns (CSV: rows observations, columns assets)",
+            "format": "decimal",
+            "display": false
+          },
+          "sample_or_population": {
+            "expression": "sample_or_population",
+            "dependencies": [
+              "sample_or_population"
+            ],
+            "label": "Covariance estimator",
+            "format": "decimal",
+            "display": false
+          },
+          "frequency": {
+            "expression": "frequency",
+            "dependencies": [
+              "frequency"
+            ],
+            "label": "Data frequency",
+            "format": "decimal",
+            "display": false
+          },
+          "annualization_period": {
+            "expression": "annualization_period",
+            "dependencies": [
+              "annualization_period"
+            ],
+            "label": "Observations per year used for annualization",
+            "format": "integer",
+            "display": false
+          },
+          "cov_matrix_est": {
+            "expression": "annualize(sampleCov(parse_table(returns_csv), estimator=(sample_or_population=='sample' ? 'sample' : 'population')), annualization_period)",
+            "dependencies": [
+              "returns_csv",
+              "sample_or_population",
+              "annualization_period"
+            ],
+            "label": "Estimated annualized covariance matrix",
+            "format": "decimal",
+            "display": false
+          },
+          "w_vector": {
+            "expression": "parse_vector(weights_csv)",
+            "dependencies": [
+              "weights_csv"
+            ],
+            "label": "Parsed weights vector",
+            "format": "decimal",
+            "display": false
+          },
+          "portfolio_variance": {
+            "expression": "transpose(w_vector) * cov_matrix_est * w_vector",
+            "dependencies": [
+              "w_vector",
+              "cov_matrix_est"
+            ],
+            "label": "Portfolio variance (from estimated cov)",
+            "unit": "decimal",
+            "format": "decimal",
+            "display": true
+          },
+          "portfolio_stddev": {
+            "expression": "sqrt(portfolio_variance)",
+            "dependencies": [
+              "portfolio_variance"
+            ],
+            "label": "Portfolio standard deviation",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "portfolio_variance",
+            "label": "Portfolio variance (decimal)",
+            "variable": "portfolio_variance",
+            "format": "decimal"
+          },
+          {
+            "id": "portfolio_stddev",
+            "label": "Portfolio standard deviation (annualized, %)",
+            "variable": "portfolio_stddev",
+            "format": "percent"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "method_selector",
+        "label": "Calculation method",
+        "type": "select",
+        "default": "covariance_matrix",
+        "options": [
+          {
+            "label": "General covariance matrix (N assets)",
+            "value": "covariance_matrix"
+          },
+          {
+            "label": "Two-asset formula",
+            "value": "two_asset_formula"
+          },
+          {
+            "label": "Estimate covariance from historical returns",
+            "value": "estimate_from_returns"
+          }
+        ]
+      },
+      {
+        "id": "w1",
+        "label": "Weight: Asset 1 (decimal, e.g. 0.5)",
+        "type": "decimal",
+        "default": 0.5,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "w2",
+        "label": "Weight: Asset 2 (decimal, e.g. 0.5)",
+        "type": "decimal",
+        "default": 0.5,
+        "min": 0,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "sd1",
+        "label": "Std dev: Asset 1 (decimal, e.g. 0.10 for 10%)",
+        "type": "decimal",
+        "default": 0.1,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "sd2",
+        "label": "Std dev: Asset 2 (decimal, e.g. 0.20 for 20%)",
+        "type": "decimal",
+        "default": 0.2,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "corr12",
+        "label": "Correlation between Asset 1 and 2 (−1 to 1)",
+        "type": "decimal",
+        "default": 0.2,
+        "min": -1,
+        "max": 1,
+        "step": 0.01
+      },
+      {
+        "id": "weights_csv",
+        "label": "Weights (CSV row, e.g. 0.2,0.3,0.5)",
+        "type": "text",
+        "default": "0.5,0.5"
+      },
+      {
+        "id": "std_devs_csv",
+        "label": "Standard deviations (CSV, decimals, e.g. 0.10,0.12,0.18)",
+        "type": "text",
+        "default": "0.10,0.20"
+      },
+      {
+        "id": "corr_matrix_csv",
+        "label": "Correlation matrix (CSV rows separated by semicolon, e.g. 1,0.2;0.2,1)",
+        "type": "text",
+        "default": "1,0.2;0.2,1"
+      },
+      {
+        "id": "cov_matrix_csv",
+        "label": "Covariance matrix (CSV rows separated by semicolon). Optional: overrides correlation/stddev inputs.",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "returns_csv",
+        "label": "Historical returns table (CSV: rows observations, columns assets). Paste raw returns (decimal).",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "sample_or_population",
+        "label": "Covariance estimator",
+        "type": "select",
+        "default": "sample",
+        "options": [
+          {
+            "label": "Sample estimator (divide by N-1)",
+            "value": "sample"
+          },
+          {
+            "label": "Population estimator (divide by N)",
+            "value": "population"
+          }
+        ]
+      },
+      {
+        "id": "frequency",
+        "label": "Data frequency",
+        "type": "select",
+        "default": "daily",
+        "options": [
+          {
+            "label": "Daily",
+            "value": "daily"
+          },
+          {
+            "label": "Weekly",
+            "value": "weekly"
+          },
+          {
+            "label": "Monthly",
+            "value": "monthly"
+          }
+        ]
+      },
+      {
+        "id": "annualization_period",
+        "label": "Observations per year (used to annualize variances)",
+        "type": "integer",
+        "default": 252,
+        "min": 1,
+        "max": 1000,
+        "step": 1
+      }
+    ],
+    "sections": [
+      {
+        "id": "two_asset_section",
+        "label": "Two-asset inputs",
+        "show_when": {
+          "field": "method_selector",
+          "is": "two_asset_formula"
+        },
+        "fields": [
+          {
+            "id": "w1",
+            "label": "Weight Asset 1",
+            "type": "decimal",
+            "default": 0.5,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "w2",
+            "label": "Weight Asset 2",
+            "type": "decimal",
+            "default": 0.5,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          },
+          {
+            "id": "sd1",
+            "label": "Std dev Asset 1 (decimal)",
+            "type": "decimal",
+            "default": 0.1,
+            "min": 0,
+            "step": 0.0001
+          },
+          {
+            "id": "sd2",
+            "label": "Std dev Asset 2 (decimal)",
+            "type": "decimal",
+            "default": 0.2,
+            "min": 0,
+            "step": 0.0001
+          },
+          {
+            "id": "corr12",
+            "label": "Correlation between the two assets",
+            "type": "decimal",
+            "default": 0.2,
+            "min": -1,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      },
+      {
+        "id": "matrix_section",
+        "label": "Matrix inputs (N assets)",
+        "show_when": {
+          "field": "method_selector",
+          "is": "covariance_matrix"
+        },
+        "fields": [
+          {
+            "id": "weights_csv",
+            "label": "Weights (CSV row)",
+            "type": "text",
+            "default": "0.5,0.5"
+          },
+          {
+            "id": "std_devs_csv",
+            "label": "Std devs (CSV) - used with correlation matrix",
+            "type": "text",
+            "default": "0.10,0.20"
+          },
+          {
+            "id": "corr_matrix_csv",
+            "label": "Correlation matrix (CSV rows; optional)",
+            "type": "text",
+            "default": "1,0.2;0.2,1"
+          },
+          {
+            "id": "cov_matrix_csv",
+            "label": "Covariance matrix (CSV rows separated by semicolon) - optional override",
+            "type": "text",
+            "default": ""
+          }
+        ]
+      },
+      {
+        "id": "returns_section",
+        "label": "Historical returns inputs",
+        "show_when": {
+          "field": "method_selector",
+          "is": "estimate_from_returns"
+        },
+        "fields": [
+          {
+            "id": "returns_csv",
+            "label": "Returns table (CSV: rows observations, columns assets)",
+            "type": "text",
+            "default": ""
+          },
+          {
+            "id": "weights_csv",
+            "label": "Weights (CSV row)",
+            "type": "text",
+            "default": "0.5,0.5"
+          },
+          {
+            "id": "sample_or_population",
+            "label": "Choose sample or population covariance estimator",
+            "type": "select",
+            "default": "sample",
+            "options": [
+              {
+                "label": "Sample",
+                "value": "sample"
+              },
+              {
+                "label": "Population",
+                "value": "population"
+              }
+            ]
+          },
+          {
+            "id": "frequency",
+            "label": "Data frequency",
+            "type": "select",
+            "default": "daily",
+            "options": [
+              {
+                "label": "Daily",
+                "value": "daily"
+              },
+              {
+                "label": "Weekly",
+                "value": "weekly"
+              },
+              {
+                "label": "Monthly",
+                "value": "monthly"
+              }
+            ]
+          },
+          {
+            "id": "annualization_period",
+            "label": "Observations per year",
+            "type": "integer",
+            "default": 252,
+            "min": 1,
+            "max": 1000,
+            "step": 1
+          }
+        ]
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator computes portfolio variance and standard deviation using three workflows: a closed-form two-asset formula, a general covariance matrix quadratic form, and estimation from historical returns. It supports supplying either a covariance matrix or deriving one from standard deviations and a correlation matrix.",
+      "The tool focuses on practical reliability: it validates basic input shapes, clearly documents assumptions (sample vs population estimators, annualization factors), and surfaces accuracy caveats so you can interpret results appropriately."
+    ],
+    "methodology": [
+      "Two-asset formula: variance is computed using the direct algebraic formula for two assets: var = w1^2 σ1^2 + w2^2 σ2^2 + 2 w1 w2 ρ12 σ1 σ2.",
+      "General method: for N assets the portfolio variance is the quadratic form w' Σ w, where w is the weights column vector and Σ is the covariance matrix. If a covariance matrix is not provided, Σ may be constructed from standard deviations and a correlation matrix by Σ_ij = ρ_ij σ_i σ_j.",
+      "Estimation from returns: when historical return series are provided the sample or population covariance matrix is estimated from the returns table. The estimator choice (sample vs population) and the annualization factor materially affect the magnitude of variance and must match how the returns were computed."
+    ],
+    "how_is_calculated": [
+      "Two-asset formula: var_p = w1^2 * σ1^2 + w2^2 * σ2^2 + 2 * w1 * w2 * ρ12 * σ1 * σ2.",
+      "Matrix form (N assets): var_p = w' Σ w where Σ is the covariance matrix and w is the column vector of weights.",
+      "Covariance derivation: Σ_ij = ρ_ij * σ_i * σ_j.",
+      "Sample covariance estimator: S = 1/(N-1) * (R - μ)' (R - μ) where R is the return matrix and μ is the mean vector. Population uses 1/N instead.",
+      "Annualization: for variances multiply period variance by the periods-per-year factor (e.g., 252 for daily). Standard deviation annualized = sqrt(annualized variance)."
+    ],
+    "examples": [
+      "Two-asset example: w1=0.6, w2=0.4, σ1=10% (0.10), σ2=20% (0.20), ρ=0.25 → compute using the two-asset formula to get portfolio variance and standard deviation.",
+      "Matrix example: paste weights 0.2,0.3,0.5 and provide a 3x3 covariance matrix (rows separated by semicolon). The tool computes w' Σ w directly.",
+      "Estimation example: paste daily returns for three assets (rows = days). Select the sample estimator and set annualization_period=252 to obtain annualized variance and standard deviation."
+    ],
+    "faqs": [
+      {
+        "question": "Should I provide a covariance matrix or a correlation matrix with standard deviations?",
+        "answer": "Providing a covariance matrix avoids reconstruction errors and is preferred when available. If you only have correlations, the tool will reconstruct Σ using Σ_ij = ρ_ij σ_i σ_j; ensure standard deviations and correlations correspond to the same return frequency and measurement convention."
+      },
+      {
+        "question": "How does annualization work and when should I use it?",
+        "answer": "Variance scales linearly with time units. To annualize period variance multiply by the number of periods per year (e.g., 252 for daily). Standard deviation annualized is the square root of the annualized variance. Use annualization only when returns and covariances are computed on a consistent periodic basis."
+      },
+      {
+        "question": "What estimator should I use: sample or population?",
+        "answer": "Use the sample estimator if you are estimating from observed data and want an unbiased estimator of population covariance for most inference tasks (divide by N-1). The population estimator (divide by N) is appropriate when you treat the supplied data as the full population of interest."
+      },
+      {
+        "question": "What input validation does the tool perform?",
+        "answer": "The tool checks vector/matrix dimension compatibility (weights length matches number of assets), enforces weights sum warnings (does not require sum-to-one but will warn), and detects malformed CSV inputs. It does not replace human review for data quality or outlier handling."
+      },
+      {
+        "question": "What are common failure modes or limits?",
+        "answer": "Covariance matrices must be positive semidefinite for valid variances; estimated matrices from small samples may be ill-conditioned. Annualization assumptions, mismatched frequencies, and inconsistent return definitions (log vs arithmetic) are common sources of error."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST Digital Library of Mathematical Functions (general numerical methods guidance)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "ISO: Risk management and related standards (context for model risk controls)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "IEEE: Standards for numerical software and recommended practices",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "OSHA: Operational risk & safety best practices for workplaces (context for governance)",
+        "url": "https://www.osha.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Variance",
+        "definition": "The second central moment of a return distribution; measures dispersion of returns. For a portfolio, variance is w' Σ w."
+      },
+      {
+        "term": "Covariance",
+        "definition": "A measure of how two random variables move together. Covariance matrix Σ has Σ_ij = cov(R_i, R_j)."
+      },
+      {
+        "term": "Correlation",
+        "definition": "Normalized covariance between −1 and 1: ρ_ij = Σ_ij / (σ_i σ_j)."
+      },
+      {
+        "term": "Standard deviation",
+        "definition": "Square root of variance; commonly expressed as a percentage for returns."
+      },
+      {
+        "term": "Annualization",
+        "definition": "Converting period variance or standard deviation to an annual basis using the periods-per-year factor (e.g., 252 for trading days)."
+      }
+    ]
+  },
+  "links": {
+    "internal": [],
+    "external": [
+      {
+        "url": "https://www.nist.gov/",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org/",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov/",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}
