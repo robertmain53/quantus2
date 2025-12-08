@@ -33,10 +33,29 @@ interface CalculatorPageProps {
   }>;
 }
 
+export const revalidate = 60 * 60 * 24; // revalidate daily for fresh content/publish dates
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
-  return getCalculatorPaths().map((path) => ({
-    slug: path.split("/").filter(Boolean)
-  }));
+  const limit =
+    Number.parseInt(process.env.STATIC_CALCULATOR_LIMIT ?? "", 10) > 0
+      ? Number.parseInt(process.env.STATIC_CALCULATOR_LIMIT ?? "", 10)
+      : 200;
+
+  return getPublishedCalculators()
+    .slice()
+    .sort((a, b) => b.trafficEstimate - a.trafficEstimate)
+    .slice(0, limit)
+    .map((calculator) => ({
+      slug: calculator.fullPath.split("/").filter(Boolean)
+    }))
+    .concat(
+      getCalculatorPaths()
+        .slice(0, 10)
+        .map((path) => ({
+          slug: path.split("/").filter(Boolean)
+        }))
+    );
 }
 
 export async function generateMetadata(

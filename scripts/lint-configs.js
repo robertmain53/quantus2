@@ -251,6 +251,98 @@ function checkFormSections(form, filePath) {
   });
 }
 
+function checkSelectOptions(form, filePath) {
+  if (!form || !Array.isArray(form.fields)) return;
+
+  form.fields.forEach((field, fIdx) => {
+    if (!field || typeof field !== "object") return;
+    if (field.type !== "select") return;
+
+    if (!Array.isArray(field.options) || field.options.length === 0) {
+      errorCount++;
+      console.error(
+        `[lint-configs] ERROR: form.fields[${fIdx}] select missing options in ${path.relative(
+          PROJECT_ROOT,
+          filePath
+        )}`
+      );
+      return;
+    }
+
+    field.options.forEach((opt, oIdx) => {
+      if (!opt || typeof opt !== "object") {
+        errorCount++;
+        console.error(
+          `[lint-configs] ERROR: form.fields[${fIdx}].options[${oIdx}] is not an object in ${path.relative(
+            PROJECT_ROOT,
+            filePath
+          )}`
+        );
+        return;
+      }
+      const missing = [];
+      if (!Object.prototype.hasOwnProperty.call(opt, "label")) missing.push("label");
+      if (!Object.prototype.hasOwnProperty.call(opt, "value")) missing.push("value");
+      if (missing.length > 0) {
+        errorCount++;
+        console.error(
+          `[lint-configs] ERROR: form.fields[${fIdx}].options[${oIdx}] missing ${missing.join(
+            ", "
+          )} in ${path.relative(PROJECT_ROOT, filePath)}`
+        );
+      }
+    });
+  });
+}
+
+const HTML_TOKEN_REGEX = /<|>/;
+
+function checkTextForHtml(pageContent, filePath) {
+  if (!pageContent || typeof pageContent !== "object") return;
+
+  const textArrays = [
+    "introduction",
+    "methodology",
+    "examples",
+    "summary",
+    "glossary",
+    "faqs",
+    "citations",
+    "how_is_calculated"
+  ];
+
+  for (const key of textArrays) {
+    const block = pageContent[key];
+    if (!block) continue;
+
+    if (Array.isArray(block)) {
+      block.forEach((item, idx) => {
+        if (typeof item === "string" && HTML_TOKEN_REGEX.test(item)) {
+          errorCount++;
+          console.error(
+            `[lint-configs] ERROR: page_content.${key}[${idx}] contains HTML-like tokens in ${path.relative(
+              PROJECT_ROOT,
+              filePath
+            )}`
+          );
+        } else if (item && typeof item === "object") {
+          Object.entries(item).forEach(([prop, val]) => {
+            if (typeof val === "string" && HTML_TOKEN_REGEX.test(val)) {
+              errorCount++;
+              console.error(
+                `[lint-configs] ERROR: page_content.${key}[${idx}].${prop} contains HTML-like tokens in ${path.relative(
+                  PROJECT_ROOT,
+                  filePath
+                )}`
+              );
+            }
+          });
+        }
+      });
+    }
+  }
+}
+
 /**
  * Main per-file linter
  */
@@ -295,6 +387,8 @@ function lintConfigFile(filePath) {
 
   // 3) Check form.sections structure
   checkFormSections(json.form, filePath);
+  checkSelectOptions(json.form, filePath);
+  checkTextForHtml(pageContent, filePath);
 
   if (dirty) {
     fs.writeFileSync(filePath, JSON.stringify(json, null, 2));
