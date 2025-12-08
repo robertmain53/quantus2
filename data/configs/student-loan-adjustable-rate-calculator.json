@@ -1,282 +1,315 @@
 {
   "version": "1.0.0",
   "metadata": {
-    "title": "Student Loan Adjustable-Rate Calculator (Advanced)",
-    "description": "Estimate payments for adjustable-rate student loans including hybrid fixed-then-adjustable scenarios, fully variable loans, and a fixed-only comparison. Includes caps, margins, index inputs, and clear accuracy and compliance notes."
+    "title": "Student Loan Adjustable-Rate Calculator (Amortizing & Interest-Only)",
+    "description": "Estimate initial and post-adjustment payments for adjustable-rate student loans. Supports index+margin or full-rate input, initial fixed period, adjustment intervals, and caps. Includes calibration notes, limits, and references to standards."
   },
   "logic": {
     "type": "advanced",
-    "defaultMethod": "hybrid_fixed_then_adjustable",
+    "defaultMethod": "amortizing",
     "methods": {
-      "hybrid_fixed_then_adjustable": {
-        "label": "Fixed period then adjustable (common student loan ARMs)",
-        "description": "Initial fixed-rate period followed by rate adjustments at each adjustment interval. Adjusted rate is index + margin and is limited by per-adjustment caps and a lifetime cap.",
+      "amortizing": {
+        "label": "Amortizing Adjustable-Rate Loan",
+        "description": "Standard amortizing loan that uses an initial rate for a fixed period then adjusts according to index/margin and caps. Calculates initial payment, outstanding balance at first reset, and example re-set payment.",
         "variables": {
-          "initial_rate": {
-            "expression": "initial_rate_pct / 100",
+          "annual_rate_pct": {
+            "expression": "use_index == 'yes' ? index_rate_pct + margin_pct : initial_rate_pct",
             "dependencies": [
+              "use_index",
+              "index_rate_pct",
+              "margin_pct",
               "initial_rate_pct"
             ],
-            "label": "Initial interest rate (decimal)",
-            "format": "decimal",
+            "label": "Annual interest rate (percent)",
+            "unit": "%",
+            "format": "percent",
             "display": true
           },
-          "monthly_rate_initial": {
-            "expression": "initial_rate / payments_per_year",
+          "periodic_rate": {
+            "expression": "annual_rate_pct/100/payments_per_year",
             "dependencies": [
-              "initial_rate",
+              "annual_rate_pct",
               "payments_per_year"
             ],
-            "label": "Initial periodic rate",
+            "label": "Periodic rate",
+            "unit": "",
             "format": "decimal",
             "display": false
           },
-          "n_total_payments": {
-            "expression": "loan_term_years * payments_per_year",
+          "n_payments": {
+            "expression": "amortization_years*payments_per_year",
             "dependencies": [
-              "loan_term_years",
+              "amortization_years",
               "payments_per_year"
             ],
             "label": "Total number of payments",
+            "unit": "",
             "format": "integer",
             "display": false
           },
-          "n_payments_fixed": {
-            "expression": "initial_fixed_period_years * payments_per_year",
+          "n_initial_payments": {
+            "expression": "initial_period_yrs*payments_per_year",
             "dependencies": [
-              "initial_fixed_period_years",
+              "initial_period_yrs",
               "payments_per_year"
             ],
-            "label": "Number of payments in fixed period",
+            "label": "Number of payments in initial fixed period",
+            "unit": "",
             "format": "integer",
             "display": false
           },
-          "monthly_payment_initial": {
-            "expression": "principal * monthly_rate_initial / (1 - pow(1 + monthly_rate_initial, -n_total_payments))",
+          "payment_amount": {
+            "expression": "principal * periodic_rate / (1 - (1+periodic_rate)^(-n_payments))",
             "dependencies": [
               "principal",
-              "monthly_rate_initial",
-              "n_total_payments"
+              "periodic_rate",
+              "n_payments"
             ],
-            "label": "Estimated monthly payment during initial fixed period",
-            "unit": "USD",
+            "label": "Initial periodic payment",
+            "unit": "currency",
             "format": "currency",
             "display": true
           },
-          "raw_new_rate_pct": {
-            "expression": "index_rate_pct + margin_pct",
+          "outstanding_balance": {
+            "expression": "principal*(1+periodic_rate)^n_initial_payments - payment_amount*(( (1+periodic_rate)^n_initial_payments -1)/periodic_rate)",
             "dependencies": [
-              "index_rate_pct",
-              "margin_pct"
+              "principal",
+              "periodic_rate",
+              "n_initial_payments",
+              "payment_amount"
             ],
-            "label": "Index + margin (percent)",
+            "label": "Outstanding balance at first adjustment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_rate_after_annual": {
+            "expression": "annual_rate_pct + expected_index_change_pct",
+            "dependencies": [
+              "annual_rate_pct",
+              "expected_index_change_pct"
+            ],
+            "label": "Example annual rate after index change (percent)",
+            "unit": "%",
             "format": "percent",
             "display": false
           },
-          "capped_new_rate_pct": {
-            "expression": "min(raw_new_rate_pct, initial_rate_pct + cap_per_adjustment_pct, initial_rate_pct + lifetime_cap_pct)",
+          "periodic_rate_after": {
+            "expression": "payment_rate_after_annual/100/payments_per_year",
             "dependencies": [
-              "raw_new_rate_pct",
-              "initial_rate_pct",
-              "cap_per_adjustment_pct",
-              "lifetime_cap_pct"
-            ],
-            "label": "Adjusted rate after caps (percent)",
-            "format": "percent",
-            "display": true
-          },
-          "monthly_rate_new": {
-            "expression": "(capped_new_rate_pct / 100) / payments_per_year",
-            "dependencies": [
-              "capped_new_rate_pct",
+              "payment_rate_after_annual",
               "payments_per_year"
             ],
             "label": "Periodic rate after adjustment",
+            "unit": "",
             "format": "decimal",
             "display": false
           },
           "remaining_payments": {
-            "expression": "n_total_payments - n_payments_fixed",
+            "expression": "(amortization_years - initial_period_yrs)*payments_per_year",
             "dependencies": [
-              "n_total_payments",
-              "n_payments_fixed"
+              "amortization_years",
+              "initial_period_yrs",
+              "payments_per_year"
             ],
-            "label": "Remaining payments after fixed period",
+            "label": "Remaining payments after initial period",
+            "unit": "",
             "format": "integer",
             "display": false
           },
-          "monthly_payment_after_adjustment": {
-            "expression": "principal * monthly_rate_new / (1 - pow(1 + monthly_rate_new, -remaining_payments))",
+          "payment_amount_after": {
+            "expression": "outstanding_balance * periodic_rate_after / (1 - (1+periodic_rate_after)^(-remaining_payments))",
             "dependencies": [
-              "principal",
-              "monthly_rate_new",
+              "outstanding_balance",
+              "periodic_rate_after",
               "remaining_payments"
             ],
-            "label": "Estimated monthly payment after first adjustment",
-            "unit": "USD",
+            "label": "Example periodic payment after adjustment",
+            "unit": "currency",
             "format": "currency",
             "display": true
+          },
+          "payment_change_pct": {
+            "expression": "(payment_amount_after - payment_amount)/payment_amount*100",
+            "dependencies": [
+              "payment_amount_after",
+              "payment_amount"
+            ],
+            "label": "Example change in payment (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "initial_cap_applied_pct": {
+            "expression": "caps_initial_pct",
+            "dependencies": [
+              "caps_initial_pct"
+            ],
+            "label": "Initial adjustment cap (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "period_cap_pct": {
+            "expression": "caps_period_pct",
+            "dependencies": [
+              "caps_period_pct"
+            ],
+            "label": "Periodic adjustment cap (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "lifetime_cap_pct": {
+            "expression": "caps_lifetime_pct",
+            "dependencies": [
+              "caps_lifetime_pct"
+            ],
+            "label": "Lifetime cap (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
           }
         },
         "outputs": [
           {
-            "id": "first_month_payment",
-            "label": "Estimated first-month payment (fixed period)",
-            "variable": "monthly_payment_initial",
+            "id": "initial_payment",
+            "label": "Initial periodic payment",
+            "variable": "payment_amount",
             "unit": "USD",
             "format": "currency"
           },
           {
-            "id": "payment_after_first_adjustment",
-            "label": "Estimated payment after first adjustment",
-            "variable": "monthly_payment_after_adjustment",
+            "id": "outstanding_balance",
+            "label": "Outstanding balance at first reset",
+            "variable": "outstanding_balance",
             "unit": "USD",
             "format": "currency"
           },
           {
-            "id": "adjusted_rate_percent",
-            "label": "Adjusted rate after caps (percent)",
-            "variable": "capped_new_rate_pct",
+            "id": "post_adjustment_payment",
+            "label": "Example payment after adjustment",
+            "variable": "payment_amount_after",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payment_change_pct",
+            "label": "Example payment change",
+            "variable": "payment_change_pct",
             "unit": "%",
             "format": "percent"
-          },
-          {
-            "id": "remaining_payments",
-            "label": "Remaining payments after fixed period",
-            "variable": "remaining_payments",
-            "format": "integer"
           }
         ]
       },
-      "fully_variable": {
-        "label": "Fully variable loan (rate can change from the start)",
-        "description": "Rate is based on index + margin and may change at each adjustment period. Caps (per-adjustment and lifetime) limit increases where applicable.",
+      "interest_only": {
+        "label": "Interest-Only Adjustable-Rate Loan",
+        "description": "Interest-only payment mode during an initial period, then converts to amortizing at adjustment. Calculates interest-only payment and example payment after adjustment.",
         "variables": {
-          "raw_rate_pct": {
-            "expression": "index_rate_pct + margin_pct",
+          "annual_rate_pct": {
+            "expression": "use_index == 'yes' ? index_rate_pct + margin_pct : initial_rate_pct",
             "dependencies": [
+              "use_index",
               "index_rate_pct",
-              "margin_pct"
-            ],
-            "label": "Index + margin (percent)",
-            "format": "percent",
-            "display": false
-          },
-          "capped_rate_pct": {
-            "expression": "min(raw_rate_pct, initial_rate_pct + cap_per_adjustment_pct, initial_rate_pct + lifetime_cap_pct)",
-            "dependencies": [
-              "raw_rate_pct",
-              "initial_rate_pct",
-              "cap_per_adjustment_pct",
-              "lifetime_cap_pct"
-            ],
-            "label": "Initial adjusted rate after caps (percent)",
-            "format": "percent",
-            "display": true
-          },
-          "monthly_rate_var": {
-            "expression": "(capped_rate_pct / 100) / payments_per_year",
-            "dependencies": [
-              "capped_rate_pct",
-              "payments_per_year"
-            ],
-            "label": "Periodic rate (variable)",
-            "format": "decimal",
-            "display": false
-          },
-          "n_total_payments": {
-            "expression": "loan_term_years * payments_per_year",
-            "dependencies": [
-              "loan_term_years",
-              "payments_per_year"
-            ],
-            "label": "Total number of payments",
-            "format": "integer",
-            "display": false
-          },
-          "monthly_payment_variable": {
-            "expression": "principal * monthly_rate_var / (1 - pow(1 + monthly_rate_var, -n_total_payments))",
-            "dependencies": [
-              "principal",
-              "monthly_rate_var",
-              "n_total_payments"
-            ],
-            "label": "Estimated monthly payment (variable-rate calculation)",
-            "unit": "USD",
-            "format": "currency",
-            "display": true
-          }
-        },
-        "outputs": [
-          {
-            "id": "variable_first_payment",
-            "label": "Estimated first payment (variable loan)",
-            "variable": "monthly_payment_variable",
-            "unit": "USD",
-            "format": "currency"
-          },
-          {
-            "id": "variable_rate_percent",
-            "label": "Initial adjusted rate (percent)",
-            "variable": "capped_rate_pct",
-            "unit": "%",
-            "format": "percent"
-          }
-        ]
-      },
-      "fixed_only": {
-        "label": "Fixed-rate only (comparison)",
-        "description": "Fixed interest rate for the life of the loan. Useful as a baseline comparison against adjustable scenarios.",
-        "variables": {
-          "fixed_rate": {
-            "expression": "initial_rate_pct / 100",
-            "dependencies": [
+              "margin_pct",
               "initial_rate_pct"
             ],
-            "label": "Fixed annual rate (decimal)",
+            "label": "Annual interest rate (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": true
+          },
+          "interest_only_payment": {
+            "expression": "principal * annual_rate_pct/100 / payments_per_year",
+            "dependencies": [
+              "principal",
+              "annual_rate_pct",
+              "payments_per_year"
+            ],
+            "label": "Interest-only periodic payment",
+            "unit": "currency",
+            "format": "currency",
+            "display": true
+          },
+          "payment_rate_after_annual": {
+            "expression": "annual_rate_pct + expected_index_change_pct",
+            "dependencies": [
+              "annual_rate_pct",
+              "expected_index_change_pct"
+            ],
+            "label": "Example annual rate after index change (percent)",
+            "unit": "%",
+            "format": "percent",
+            "display": false
+          },
+          "periodic_rate_after": {
+            "expression": "payment_rate_after_annual/100/payments_per_year",
+            "dependencies": [
+              "payment_rate_after_annual",
+              "payments_per_year"
+            ],
+            "label": "Periodic rate after adjustment",
+            "unit": "",
             "format": "decimal",
             "display": false
           },
-          "monthly_fixed_rate": {
-            "expression": "fixed_rate / payments_per_year",
+          "remaining_payments": {
+            "expression": "(amortization_years - initial_period_yrs)*payments_per_year",
             "dependencies": [
-              "fixed_rate",
+              "amortization_years",
+              "initial_period_yrs",
               "payments_per_year"
             ],
-            "label": "Fixed periodic rate",
-            "format": "decimal",
-            "display": false
-          },
-          "n_total_payments": {
-            "expression": "loan_term_years * payments_per_year",
-            "dependencies": [
-              "loan_term_years",
-              "payments_per_year"
-            ],
-            "label": "Total number of payments",
+            "label": "Remaining payments after interest-only period",
+            "unit": "",
             "format": "integer",
             "display": false
           },
-          "monthly_payment_fixed": {
-            "expression": "principal * monthly_fixed_rate / (1 - pow(1 + monthly_fixed_rate, -n_total_payments))",
+          "post_adjustment_amort_payment": {
+            "expression": "principal * periodic_rate_after / (1 - (1+periodic_rate_after)^(-remaining_payments))",
             "dependencies": [
               "principal",
-              "monthly_fixed_rate",
-              "n_total_payments"
+              "periodic_rate_after",
+              "remaining_payments"
             ],
-            "label": "Monthly payment (fixed-rate)",
-            "unit": "USD",
+            "label": "Example periodic payment after adjustment (amortizing)",
+            "unit": "currency",
             "format": "currency",
+            "display": true
+          },
+          "payment_change_pct": {
+            "expression": "(post_adjustment_amort_payment - interest_only_payment)/interest_only_payment*100",
+            "dependencies": [
+              "post_adjustment_amort_payment",
+              "interest_only_payment"
+            ],
+            "label": "Example change relative to interest-only payment",
+            "unit": "%",
+            "format": "percent",
             "display": true
           }
         },
         "outputs": [
           {
-            "id": "fixed_monthly_payment",
-            "label": "Monthly payment (fixed-rate)",
-            "variable": "monthly_payment_fixed",
+            "id": "interest_only_payment",
+            "label": "Interest-only payment (initial period)",
+            "variable": "interest_only_payment",
             "unit": "USD",
             "format": "currency"
+          },
+          {
+            "id": "post_adjustment_amort_payment",
+            "label": "Example amortizing payment after adjustment",
+            "variable": "post_adjustment_amort_payment",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "interest_only_change_pct",
+            "label": "Example payment change vs interest-only",
+            "variable": "payment_change_pct",
+            "unit": "%",
+            "format": "percent"
           }
         ]
       }
@@ -286,83 +319,133 @@
     "fields": [
       {
         "id": "principal",
-        "label": "Loan principal (total balance)",
+        "label": "Loan principal (amount borrowed)",
         "type": "number",
         "default": 20000,
         "min": 0,
         "step": 100
       },
       {
-        "id": "loan_term_years",
-        "label": "Loan term (years)",
-        "type": "integer",
-        "default": 10,
-        "min": 1,
-        "max": 50,
-        "step": 1
+        "id": "use_index",
+        "label": "Rate input mode",
+        "type": "select",
+        "default": "no",
+        "options": [
+          {
+            "label": "No — enter full annual rate",
+            "value": "no"
+          },
+          {
+            "label": "Yes — compute rate as index + margin",
+            "value": "yes"
+          }
+        ]
       },
       {
         "id": "initial_rate_pct",
-        "label": "Initial interest rate (annual %, nominal)",
+        "label": "Initial annual rate (percent) — enter if not using index+margin",
         "type": "number",
-        "default": 5,
+        "default": 5.0,
         "min": 0,
         "max": 100,
         "step": 0.01
       },
       {
         "id": "index_rate_pct",
-        "label": "Current index rate (annual %, e.g., LIBOR, SOFR equivalent)",
+        "label": "Current index rate (percent) — e.g., LIBOR, SOFR",
         "type": "number",
-        "default": 3,
+        "default": 2.5,
         "min": -10,
         "max": 100,
         "step": 0.01
       },
       {
         "id": "margin_pct",
-        "label": "Lender margin (percentage points)",
+        "label": "Lender margin (percent)",
         "type": "number",
-        "default": 2,
-        "min": 0,
-        "max": 50,
-        "step": 0.01
-      },
-      {
-        "id": "adjustment_frequency_years",
-        "label": "Adjustment frequency (years between rate changes)",
-        "type": "integer",
-        "default": 1,
-        "min": 1,
-        "max": 5,
-        "step": 1
-      },
-      {
-        "id": "cap_per_adjustment_pct",
-        "label": "Per-adjustment cap (maximum percentage point change at each adjustment)",
-        "type": "number",
-        "default": 2,
+        "default": 2.5,
         "min": 0,
         "max": 100,
         "step": 0.01
       },
       {
-        "id": "lifetime_cap_pct",
-        "label": "Lifetime cap (maximum percentage points above the initial rate)",
-        "type": "number",
-        "default": 6,
-        "min": 0,
-        "max": 100,
-        "step": 0.01
-      },
-      {
-        "id": "initial_fixed_period_years",
-        "label": "Initial fixed period (years; set to 0 for no fixed period)",
+        "id": "initial_period_yrs",
+        "label": "Initial fixed or interest-only period (years)",
         "type": "integer",
         "default": 5,
         "min": 0,
         "max": 30,
         "step": 1
+      },
+      {
+        "id": "adjust_interval_months",
+        "label": "Rate adjustment interval (months)",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 120,
+        "step": 1
+      },
+      {
+        "id": "amortization_years",
+        "label": "Total amortization term (years)",
+        "type": "integer",
+        "default": 10,
+        "min": 1,
+        "max": 40,
+        "step": 1
+      },
+      {
+        "id": "payment_type",
+        "label": "Payment mode",
+        "type": "select",
+        "default": "amortizing",
+        "options": [
+          {
+            "label": "Amortizing",
+            "value": "amortizing"
+          },
+          {
+            "label": "Interest-only for initial period",
+            "value": "interest_only"
+          }
+        ]
+      },
+      {
+        "id": "expected_index_change_pct",
+        "label": "Example index change at next reset (percentage points)",
+        "type": "number",
+        "default": 0.5,
+        "min": -10,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "caps_initial_pct",
+        "label": "Initial adjustment cap (percent)",
+        "type": "number",
+        "default": 2.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "caps_period_pct",
+        "label": "Periodic adjustment cap (percent)",
+        "type": "number",
+        "default": 2.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "caps_lifetime_pct",
+        "label": "Lifetime cap above initial rate (percent)",
+        "type": "number",
+        "default": 6.0,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
       },
       {
         "id": "payments_per_year",
@@ -373,41 +456,70 @@
         "max": 12,
         "step": 1
       }
+    ],
+    "sections": [
+      {
+        "id": "index_inputs",
+        "label": "Index / Margin inputs",
+        "show_when": {
+          "field": "use_index",
+          "is": "yes"
+        },
+        "fields": [
+          {
+            "id": "index_rate_pct",
+            "label": "Current index rate (percent)",
+            "type": "number",
+            "default": 2.5,
+            "min": -10,
+            "max": 100,
+            "step": 0.01
+          },
+          {
+            "id": "margin_pct",
+            "label": "Lender margin (percent)",
+            "type": "number",
+            "default": 2.5,
+            "min": 0,
+            "max": 100,
+            "step": 0.01
+          }
+        ]
+      }
     ]
   },
   "page_content": {
     "introduction": [
-      "This calculator estimates monthly payments for adjustable-rate student loans and provides a fixed-rate comparison. It supports hybrid fixed-then-adjustable structures (common in private student loans) and fully variable loans. Use the inputs to model how index changes, margin, and caps affect payments.",
-      "Results are estimates intended to help with planning. They are not loan offers and do not replace official disclosures or lender-provided amortization schedules."
+      "This calculator estimates payments for adjustable-rate student loans. It supports two principal modes: amortizing loans and interest-only initial periods. You can enter a full annual rate or compute the rate as index + margin.",
+      "Use the form to simulate an example rate adjustment at the next reset. Results include the initial periodic payment, outstanding balance at the first reset, and an example post-adjustment payment. These are illustrative estimates, not a repayment schedule."
     ],
     "methodology": [
-      "Payment calculations use standard amortizing loan formulas: periodic rate r, number of payments n, and the annuity formula Payment = r * P / (1 - (1+r)^-n) to compute level payments for a given rate and remaining term.",
-      "Adjusted rates are modeled as index + margin, then limited by a per-adjustment cap and a lifetime cap. The calculator computes the first adjusted payment assuming recalculation at the first scheduled adjustment and full amortization over the remaining term.",
-      "Numerical and data-handling practices align with recognized guidance for accuracy and traceability, including NIST best practices for numerical computations and data integrity, ISO quality management principles, and IEEE recommendations for floating-point considerations. See accuracy and caveats below."
+      "The tool computes periodic rates from annual percentage rates and payment frequency, then applies standard amortization formulas to derive periodic payments and remaining balances.",
+      "When an initial fixed or interest-only period ends, this calculator models an example single adjustment using an expected change to the annual rate (percentage points). It applies standard formulas to compute the outstanding principal at reset and then the amortizing payment required over the remaining term.",
+      "Caps and lifetime limits are surfaced as inputs and shown in the glossary; users should verify contract terms and how caps are actually applied by their lender. This calculator does not enforce contractual cap calculations beyond providing fields to capture them for user awareness."
     ],
     "how_is_calculated": [
-      "Convert percentage inputs to decimals by dividing by 100 for rate computations.",
-      "Periodic rate r = annual_rate_decimal / payments_per_year.",
-      "Monthly payment (amortizing) = r * principal / (1 - (1 + r)^-n) where n is the number of remaining periodic payments.",
-      "Adjusted rate after caps = min(index + margin, initial rate + per-adjustment cap, initial rate + lifetime cap).",
-      "For hybrid loans, the initial payment is computed using the initial rate for the full term as a baseline; the post-adjustment payment is recomputed using the capped adjusted rate amortized over the remaining term."
+      "Periodic rate = annual rate (%) / 100 / payments per year.",
+      "Standard amortizing payment: payment = P * r / (1 - (1 + r)^-N) where P is principal, r is periodic rate, N is total payments.",
+      "Outstanding balance after k payments: balance = P*(1+r)^k - payment * (( (1+r)^k - 1) / r).",
+      "Post-adjustment payment example uses outstanding balance and a hypothetical new periodic rate to compute the amortizing payment for remaining payments."
     ],
     "faqs": [
       {
-        "question": "Is this an official payoff or payoff schedule?",
-        "answer": "No. This tool provides estimates only. Official payoff amounts, exact amortization schedules, and borrower rights are provided by your loan servicer and loan agreement. Use this as a planning aid."
+        "question": "Is this an exact repayment schedule?",
+        "answer": "No. This tool produces illustrative example payments and balances using standard formulas. Actual schedules depend on exact contract terms, rounding rules, amortization conventions, and how your servicer applies caps and index resets."
       },
       {
-        "question": "Which index should I use for the index rate input?",
-        "answer": "Use the published index referenced in your loan contract (for example SOFR, a published treasury rate, or another named index). If unsure, consult your loan documents or servicer."
+        "question": "Does the calculator enforce contractual caps and margin rules?",
+        "answer": "The calculator exposes cap fields for awareness but does not automatically apply complex legal cap-roll rules beyond the simple illustrative example. Always consult your loan contract or servicer to confirm cap behavior."
       },
       {
-        "question": "How do caps affect my payments?",
-        "answer": "Caps limit how much the interest rate can rise at each adjustment and over the life of the loan. This calculator applies both per-adjustment and lifetime caps when computing adjusted rates."
+        "question": "What inputs should I use for the index?",
+        "answer": "Enter the current published index value your loan references (for example a published short-term rate) and the lender margin. If uncertain, use the rate shown on your loan statement or contact the servicer."
       },
       {
-        "question": "How accurate are these numbers?",
-        "answer": "Calculations follow standard amortization formulas and cap logic, but they are subject to rounding, timing differences, exact index publication lags, and servicer-specific rules (e.g., negative amortization options, minimum payment floors). See the accuracy and standards citations for more information."
+        "question": "How accurate are the results?",
+        "answer": "Results use standard actuarial formulas. Accuracy depends on input correctness and assumptions about index changes, rounding, and payment timing. See the accuracy caveats and standards references below."
       }
     ],
     "citations": [
@@ -424,39 +536,35 @@
         "url": "https://www.ieee.org"
       },
       {
-        "label": "Occupational Safety and Health Administration (OSHA) — general safety and quality references",
+        "label": "Occupational Safety and Health Administration (OSHA)",
         "url": "https://www.osha.gov"
       },
       {
-        "label": "Consumer Financial Protection Bureau — student loans",
+        "label": "Consumer Financial Protection Bureau (general resources)",
         "url": "https://www.consumerfinance.gov"
       }
     ],
     "glossary": [
       {
         "term": "Index",
-        "definition": "A published rate (for example SOFR or a treasury-based index) that, plus the lender's margin, determines the variable interest rate."
+        "definition": "A published benchmark interest rate (for example SOFR or another market index) used to determine adjustable loan rates."
       },
       {
         "term": "Margin",
-        "definition": "A fixed percentage points amount added to the index by the lender to determine the borrower's rate."
+        "definition": "The fixed percentage added by the lender to the index to determine the fully-indexed rate."
       },
       {
-        "term": "Per-adjustment cap",
-        "definition": "The maximum number of percentage points the interest rate can increase or decrease at any one scheduled adjustment."
+        "term": "Initial fixed period",
+        "definition": "An initial period (years) during which the rate is fixed or the loan may be interest-only before the first adjustment."
       },
       {
-        "term": "Lifetime cap",
-        "definition": "The maximum increase in percentage points above the initial rate allowed over the life of the loan."
+        "term": "Rate cap",
+        "definition": "Contractual limits on how much the rate can change at adjustment (initial cap, periodic cap) and over the lifetime of the loan."
       },
       {
         "term": "Amortization",
-        "definition": "The process of paying off debt with periodic payments that cover interest and principal such that the loan balance reaches zero at the end of the term."
+        "definition": "The process of paying principal and interest over time until the loan is paid off; amortizing payments cover both principal and interest."
       }
-    ],
-    "summary": [
-      "This advanced calculator models common adjustable-rate student loan structures and provides comparable fixed-rate estimates.",
-      "Use indexed rate inputs that match your loan agreement and treat results as planning estimates. Confirm exact terms, schedules, and legal notices with your lender or servicer."
     ]
   },
   "links": {
@@ -464,7 +572,7 @@
     "external": [
       {
         "url": "https://www.nist.gov",
-        "label": "NIST official site",
+        "label": "NIST Home",
         "rel": [
           "noopener",
           "noreferrer"
@@ -472,15 +580,7 @@
       },
       {
         "url": "https://www.iso.org",
-        "label": "ISO official site",
-        "rel": [
-          "noopener",
-          "noreferrer"
-        ]
-      },
-      {
-        "url": "https://www.ieee.org",
-        "label": "IEEE official site",
+        "label": "ISO Home",
         "rel": [
           "noopener",
           "noreferrer"

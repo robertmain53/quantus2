@@ -1,0 +1,479 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Earnings Multiple Valuation Calculator (Advanced)",
+    "description": "Multi-method valuation tool to estimate Equity or Enterprise value using P/E (earnings multiple), EV/EBITDA, and Revenue multiple approaches. Includes controls for normalization, net debt adjustments, control premiums, minority discounts, and per-share calculations."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "equity_pe",
+    "methods": {
+      "equity_pe": {
+        "label": "Equity value using P/E (Price-to-Earnings)",
+        "description": "Estimates equity value directly by applying a P/E multiple to normalized earnings, then applies control premium and minority discount adjustments and divides by shares outstanding for per-share value.",
+        "variables": {
+          "selected_multiple": {
+            "expression": "multiple_type == 'custom' ? custom_multiple_pe : industry_multiple_pe",
+            "dependencies": [
+              "multiple_type",
+              "custom_multiple_pe",
+              "industry_multiple_pe"
+            ],
+            "label": "Selected P/E multiple",
+            "format": "decimal",
+            "display": true
+          },
+          "equity_value": {
+            "expression": "normalized_earnings * selected_multiple * (1 + control_premium_pct/100) * (1 - minority_discount_pct/100)",
+            "dependencies": [
+              "normalized_earnings",
+              "selected_multiple",
+              "control_premium_pct",
+              "minority_discount_pct"
+            ],
+            "label": "Estimated Equity Value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_share": {
+            "expression": "equity_value / shares_outstanding",
+            "dependencies": [
+              "equity_value",
+              "shares_outstanding"
+            ],
+            "label": "Estimated Price per Share",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "equity_value",
+            "label": "Estimated Equity Value",
+            "variable": "equity_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_share",
+            "label": "Estimated Price per Share",
+            "variable": "per_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "enterprise_ebitda": {
+        "label": "Enterprise Value using EV/EBITDA",
+        "description": "Estimates enterprise value by multiplying normalized EBITDA by an EV/EBITDA multiple, then reconciles to equity value by subtracting net debt and minority interest, and adding cash.",
+        "variables": {
+          "selected_multiple_ebitda": {
+            "expression": "multiple_type == 'custom' ? custom_multiple_ebitda : industry_multiple_ebitda",
+            "dependencies": [
+              "multiple_type",
+              "custom_multiple_ebitda",
+              "industry_multiple_ebitda"
+            ],
+            "label": "Selected EV/EBITDA multiple",
+            "format": "decimal",
+            "display": true
+          },
+          "enterprise_value": {
+            "expression": "normalized_ebitda * selected_multiple_ebitda",
+            "dependencies": [
+              "normalized_ebitda",
+              "selected_multiple_ebitda"
+            ],
+            "label": "Estimated Enterprise Value",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_value_from_ev": {
+            "expression": "enterprise_value - net_debt + cash - minority_interest",
+            "dependencies": [
+              "enterprise_value",
+              "net_debt",
+              "cash",
+              "minority_interest"
+            ],
+            "label": "Estimated Equity Value (from EV)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_share_ev": {
+            "expression": "equity_value_from_ev / shares_outstanding",
+            "dependencies": [
+              "equity_value_from_ev",
+              "shares_outstanding"
+            ],
+            "label": "Estimated Price per Share (from EV)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "enterprise_value",
+            "label": "Estimated Enterprise Value",
+            "variable": "enterprise_value",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equity_value_from_ev",
+            "label": "Estimated Equity Value (from EV)",
+            "variable": "equity_value_from_ev",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_share_ev",
+            "label": "Estimated Price per Share (from EV)",
+            "variable": "per_share_ev",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "revenue_multiple": {
+        "label": "Enterprise Value using Revenue Multiple",
+        "description": "Estimates enterprise value by applying a revenue multiple to normalized revenue, then reconciles to equity value by subtracting net debt and minority interest, and adding cash.",
+        "variables": {
+          "selected_multiple_revenue": {
+            "expression": "multiple_type == 'custom' ? custom_multiple_revenue : industry_multiple_revenue",
+            "dependencies": [
+              "multiple_type",
+              "custom_multiple_revenue",
+              "industry_multiple_revenue"
+            ],
+            "label": "Selected Revenue multiple",
+            "format": "decimal",
+            "display": true
+          },
+          "revenue_ev": {
+            "expression": "normalized_revenue * selected_multiple_revenue",
+            "dependencies": [
+              "normalized_revenue",
+              "selected_multiple_revenue"
+            ],
+            "label": "Estimated Enterprise Value (Revenue-based)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "equity_from_revenue_ev": {
+            "expression": "revenue_ev - net_debt + cash - minority_interest",
+            "dependencies": [
+              "revenue_ev",
+              "net_debt",
+              "cash",
+              "minority_interest"
+            ],
+            "label": "Estimated Equity Value (from Revenue EV)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "per_share_revenue": {
+            "expression": "equity_from_revenue_ev / shares_outstanding",
+            "dependencies": [
+              "equity_from_revenue_ev",
+              "shares_outstanding"
+            ],
+            "label": "Estimated Price per Share (from Revenue EV)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "revenue_ev",
+            "label": "Estimated Enterprise Value (Revenue-based)",
+            "variable": "revenue_ev",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "equity_from_revenue_ev",
+            "label": "Estimated Equity Value (from Revenue EV)",
+            "variable": "equity_from_revenue_ev",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "per_share_revenue",
+            "label": "Estimated Price per Share (from Revenue EV)",
+            "variable": "per_share_revenue",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "normalized_earnings",
+        "label": "Normalized Earnings (Net Income or Adjusted EPS × shares)",
+        "type": "number",
+        "default": 100000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "normalized_ebitda",
+        "label": "Normalized EBITDA",
+        "type": "number",
+        "default": 120000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "normalized_revenue",
+        "label": "Normalized Revenue (Trailing 12 months or run-rate)",
+        "type": "number",
+        "default": 500000,
+        "min": 0,
+        "step": 1000
+      },
+      {
+        "id": "multiple_type",
+        "label": "Multiple source",
+        "type": "select",
+        "default": "industry",
+        "options": [
+          {
+            "label": "Industry average (default)",
+            "value": "industry"
+          },
+          {
+            "label": "Custom multiple",
+            "value": "custom"
+          }
+        ]
+      },
+      {
+        "id": "industry_multiple_pe",
+        "label": "Industry average P/E multiple",
+        "type": "number",
+        "default": 12,
+        "min": 0.1,
+        "step": 0.1
+      },
+      {
+        "id": "custom_multiple_pe",
+        "label": "Custom P/E multiple",
+        "type": "number",
+        "default": 10,
+        "min": 0.1,
+        "step": 0.1
+      },
+      {
+        "id": "industry_multiple_ebitda",
+        "label": "Industry average EV/EBITDA multiple",
+        "type": "number",
+        "default": 6,
+        "min": 0.1,
+        "step": 0.1
+      },
+      {
+        "id": "custom_multiple_ebitda",
+        "label": "Custom EV/EBITDA multiple",
+        "type": "number",
+        "default": 5,
+        "min": 0.1,
+        "step": 0.1
+      },
+      {
+        "id": "industry_multiple_revenue",
+        "label": "Industry average Revenue multiple",
+        "type": "number",
+        "default": 1.5,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "custom_multiple_revenue",
+        "label": "Custom Revenue multiple",
+        "type": "number",
+        "default": 1.2,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "net_debt",
+        "label": "Net debt (Total debt - cash)",
+        "type": "number",
+        "default": 0,
+        "step": 1000
+      },
+      {
+        "id": "cash",
+        "label": "Cash and equivalents to add back",
+        "type": "number",
+        "default": 0,
+        "step": 1000
+      },
+      {
+        "id": "minority_interest",
+        "label": "Minority interest / non-controlling interest to subtract",
+        "type": "number",
+        "default": 0,
+        "step": 1000
+      },
+      {
+        "id": "shares_outstanding",
+        "label": "Shares outstanding (for per-share calculation)",
+        "type": "number",
+        "default": 10000,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "control_premium_pct",
+        "label": "Control premium (%) to apply to buyer price",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 200,
+        "step": 0.1
+      },
+      {
+        "id": "minority_discount_pct",
+        "label": "Minority discount (%) to apply",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This multi-method valuation calculator estimates company value using earnings multiples: P/E (equity multiple), EV/EBITDA, and revenue multiples. It supports normalized income inputs, adjustments for net debt, cash, minority interests, control premiums, and per-share results to assist transaction modelling and sanity checks.",
+      "Use this tool as a rapid approximation and calibration aid. It is not a substitute for a full valuation report prepared by a qualified appraiser or financial advisor that includes due diligence, forecast modelling, and careful reconciliation of accounting adjustments."
+    ],
+    "methodology": [
+      "The calculator applies widely used market multiple techniques: multiply an earnings metric by an appropriate multiple, then reconcile enterprise-to-equity values by adding cash and subtracting net debt and minority interests. P/E is applied directly to equity earnings, while EV multiples are applied to enterprise metrics and converted to equity value.",
+      "Inputs should be normalized (one-off items removed, owner compensation adjusted, non-operating gains/losses excluded). Choose industry averages only after confirming comparability in business model, growth, margin profile, capital intensity, and size."
+    ],
+    "how_is_calculated": [
+      "P/E (Equity) approach: Equity value = Normalized Earnings × Selected P/E multiple; apply control premium and minority discount as percentages; Price per share = Equity value ÷ Shares outstanding.",
+      "EV/EBITDA approach: Enterprise value = Normalized EBITDA × Selected EV/EBITDA multiple; Equity value = Enterprise value − Net Debt + Cash − Minority Interest; Price per share = Equity value ÷ Shares outstanding.",
+      "Revenue multiple approach: Enterprise value = Normalized Revenue × Selected Revenue multiple; Equity value reconciled like EV/EBITDA approach."
+    ],
+    "examples": [
+      "If normalized earnings are 200,000 and selected P/E is 8, estimated equity value = 200,000 × 8 = 1,600,000. With 100,000 shares outstanding, price per share = 16.00.",
+      "If normalized EBITDA is 300,000 and EV/EBITDA median is 6, enterprise value = 1,800,000. If net debt = 200,000 and cash = 50,000, equity value = 1,800,000 − 200,000 + 50,000 = 1,650,000."
+    ],
+    "faqs": [
+      {
+        "question": "How should I choose the multiple?",
+        "answer": "Select a multiple from comparable public companies or recent transactions that match size, growth, margin, and business model. Industry averages are a starting point; adjust using company-specific risk, growth outlook, and profitability. For regulatory or audit work, document sources and justification for the chosen multiple."
+      },
+      {
+        "question": "What are common adjustments to earnings before applying a multiple?",
+        "answer": "Remove non-recurring gains/losses, normalize owner compensation, adjust for related-party transactions, and restate accounting treatments where comparables use different policies. Use consistent recurring metrics for comparability."
+      },
+      {
+        "question": "Can this calculator be used for audited or regulatory valuations?",
+        "answer": "This tool produces indicative results. For audited or regulatory valuations, retain a licensed valuation professional. Ensure work follows applicable standards (e.g., IFRS/US GAAP for financials) and document methodology, assumptions, and sensitivity analyses."
+      },
+      {
+        "question": "How accurate are these estimates?",
+        "answer": "Accuracy depends on input quality and choice of multiples. These methods are sensitive to normalization choices and multiples. Use sensitivity testing and scenario analysis; disclose uncertainty and the range of plausible values."
+      },
+      {
+        "question": "How should I handle control premiums and minority discounts?",
+        "answer": "Control premiums and minority discounts reflect market practice and transaction evidence. Apply them as percentages to reflect the difference between controlling interest and a minority stake. Document market sources and rationale."
+      }
+    ],
+    "citations": [
+      {
+        "label": "National Institute of Standards and Technology (NIST)",
+        "url": "https://www.nist.gov/"
+      },
+      {
+        "label": "International Organization for Standardization (ISO)",
+        "url": "https://www.iso.org/"
+      },
+      {
+        "label": "Institute of Electrical and Electronics Engineers (IEEE)",
+        "url": "https://www.ieee.org/"
+      },
+      {
+        "label": "U.S. Occupational Safety and Health Administration (OSHA)",
+        "url": "https://www.osha.gov/"
+      },
+      {
+        "label": "U.S. Securities and Exchange Commission (SEC) - Filings and Standards",
+        "url": "https://www.sec.gov/"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Normalized Earnings",
+        "definition": "Earnings adjusted to remove one-off items, owner-specific compensation distortions, and non-operating items so recurring operating profitability is represented."
+      },
+      {
+        "term": "Enterprise Value (EV)",
+        "definition": "Total firm value equal to market capitalization plus net debt (debt minus cash) and minority interests; represents value attributable to all capital providers."
+      },
+      {
+        "term": "Control Premium",
+        "definition": "Percentage increase applied to reflect the additional price a buyer might pay to acquire a controlling interest in a company."
+      },
+      {
+        "term": "Minority Discount",
+        "definition": "Percentage reduction applied to reflect liquidity or governance disadvantages of holding a minority interest versus a controlling stake."
+      },
+      {
+        "term": "Multiple",
+        "definition": "Ratio (e.g., P/E, EV/EBITDA, EV/Revenue) used to convert a financial metric into an implied valuation based on market comparables or transaction evidence."
+      }
+    ],
+    "summary": [
+      "This tool provides scenario-based, multi-method valuation estimates. It is intended for quick analysis, calibration, and sensitivity exploration; it is not a substitute for formal valuation engagement.",
+      "For regulated, audited, or transaction-grade valuations, work with licensed professionals and retain source documentation, follow applicable accounting rules, and perform sensitivity and scenario analysis."
+    ]
+  },
+  "links": {
+    "internal": [
+      "/valuations/methods/pe-multiples",
+      "/valuations/methods/ev-ebitda",
+      "/valuations/guides/normalization"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov/publications",
+        "label": "NIST Publications",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org/standards.html",
+        "label": "ISO Standards",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo",
+      "FinancialProduct"
+    ]
+  }
+}

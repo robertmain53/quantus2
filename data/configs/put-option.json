@@ -1,0 +1,568 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Put Option Calculator (Multi‑Scenario)",
+    "description": "Interactive put option calculator for long put, short put and synthetic put scenarios. Computes payoff at a specified expiry price, breakeven, maximum profit and loss, and a synthetic-put cost using put-call parity. Includes accuracy notes and references to standards for data integrity and testing."
+  },
+  "logic": {
+    "type": "advanced",
+    "defaultMethod": "long_put",
+    "methods": {
+      "long_put": {
+        "label": "Long Put",
+        "description": "Standard long (buy) put position. Buyer pays premium and benefits when underlying falls below strike at expiry.",
+        "variables": {
+          "total_premium": {
+            "expression": "premium * contracts * contract_size",
+            "dependencies": [
+              "premium",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Total premium paid",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_cost": {
+            "expression": "total_premium + fees",
+            "dependencies": [
+              "total_premium",
+              "fees"
+            ],
+            "label": "Net cost (including fees)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_at_expiry": {
+            "expression": "max(strike - scenario_price, 0) * contracts * contract_size",
+            "dependencies": [
+              "strike",
+              "scenario_price",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Payoff at expiry (before premium)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_profit": {
+            "expression": "payoff_at_expiry - net_cost",
+            "dependencies": [
+              "payoff_at_expiry",
+              "net_cost"
+            ],
+            "label": "Net profit at expiry (after premium and fees)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "breakeven": {
+            "expression": "strike - premium",
+            "dependencies": [
+              "strike",
+              "premium"
+            ],
+            "label": "Breakeven underlying price at expiry (per share)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "total_premium",
+            "label": "Total premium paid",
+            "variable": "total_premium",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_cost",
+            "label": "Net cost (including fees)",
+            "variable": "net_cost",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_at_expiry",
+            "label": "Payoff at expiry (before premium)",
+            "variable": "payoff_at_expiry",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_profit",
+            "label": "Net profit at expiry",
+            "variable": "net_profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "breakeven",
+            "label": "Breakeven price (per share)",
+            "variable": "breakeven",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "short_put": {
+        "label": "Short Put (Sell)",
+        "description": "Naked short put position: seller collects premium and faces assignment risk if underlying falls below strike.",
+        "variables": {
+          "total_premium_received": {
+            "expression": "premium * contracts * contract_size",
+            "dependencies": [
+              "premium",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Total premium received",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_credit": {
+            "expression": "total_premium_received - fees",
+            "dependencies": [
+              "total_premium_received",
+              "fees"
+            ],
+            "label": "Net credit (after fees)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "payoff_at_expiry": {
+            "expression": "-max(strike - scenario_price, 0) * contracts * contract_size",
+            "dependencies": [
+              "strike",
+              "scenario_price",
+              "contracts",
+              "contract_size"
+            ],
+            "label": "Seller payoff at expiry (negative if assigned)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "net_profit": {
+            "expression": "net_credit + payoff_at_expiry",
+            "dependencies": [
+              "net_credit",
+              "payoff_at_expiry"
+            ],
+            "label": "Net profit at expiry (including premium received)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "max_profit": {
+            "expression": "net_credit",
+            "dependencies": [
+              "net_credit"
+            ],
+            "label": "Maximum possible profit",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "theoretical_max_loss": {
+            "expression": "strike * contracts * contract_size - net_credit",
+            "dependencies": [
+              "strike",
+              "contracts",
+              "contract_size",
+              "net_credit"
+            ],
+            "label": "Theoretical max loss (if underlying goes to zero)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "breakeven": {
+            "expression": "strike - premium",
+            "dependencies": [
+              "strike",
+              "premium"
+            ],
+            "label": "Breakeven underlying price at expiry (per share)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "total_premium_received",
+            "label": "Total premium received",
+            "variable": "total_premium_received",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_credit",
+            "label": "Net credit (after fees)",
+            "variable": "net_credit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "payoff_at_expiry",
+            "label": "Seller payoff at expiry",
+            "variable": "payoff_at_expiry",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "net_profit",
+            "label": "Net profit at expiry",
+            "variable": "net_profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "max_profit",
+            "label": "Maximum profit",
+            "variable": "max_profit",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "theoretical_max_loss",
+            "label": "Theoretical max loss",
+            "variable": "theoretical_max_loss",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "breakeven",
+            "label": "Breakeven price (per share)",
+            "variable": "breakeven",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      },
+      "synthetic_put": {
+        "label": "Synthetic Put (via Put-Call Parity)",
+        "description": "Estimate of put price based on call price, underlying and present value of strike using put-call parity: P = C - S + K * e^{-rT}. Useful to compare market put premium versus theoretical parity price.",
+        "variables": {
+          "T_years": {
+            "expression": "days_to_expiry / 365",
+            "dependencies": [
+              "days_to_expiry"
+            ],
+            "label": "Time to expiry (years)",
+            "format": "decimal",
+            "display": false
+          },
+          "pv_strike_per_share": {
+            "expression": "strike * exp(-risk_free_rate * (days_to_expiry / 365))",
+            "dependencies": [
+              "strike",
+              "risk_free_rate",
+              "days_to_expiry"
+            ],
+            "label": "Present value of strike (per share)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "synthetic_put_price_per_share": {
+            "expression": "call_premium - underlying + pv_strike_per_share",
+            "dependencies": [
+              "call_premium",
+              "underlying",
+              "pv_strike_per_share"
+            ],
+            "label": "Synthetic put theoretical price (per share)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "synthetic_put_total_cost": {
+            "expression": "synthetic_put_price_per_share * contracts * contract_size + fees",
+            "dependencies": [
+              "synthetic_put_price_per_share",
+              "contracts",
+              "contract_size",
+              "fees"
+            ],
+            "label": "Synthetic put total cost (including fees)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          },
+          "parity_difference_per_share": {
+            "expression": "premium - synthetic_put_price_per_share",
+            "dependencies": [
+              "premium",
+              "synthetic_put_price_per_share"
+            ],
+            "label": "Market put minus synthetic put (per share)",
+            "unit": "USD",
+            "format": "currency",
+            "display": true
+          }
+        },
+        "outputs": [
+          {
+            "id": "pv_strike_per_share",
+            "label": "Present value of strike (per share)",
+            "variable": "pv_strike_per_share",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "synthetic_put_price_per_share",
+            "label": "Synthetic put price (per share)",
+            "variable": "synthetic_put_price_per_share",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "synthetic_put_total_cost",
+            "label": "Synthetic put total cost",
+            "variable": "synthetic_put_total_cost",
+            "unit": "USD",
+            "format": "currency"
+          },
+          {
+            "id": "parity_difference_per_share",
+            "label": "Market put minus synthetic put (per share)",
+            "variable": "parity_difference_per_share",
+            "unit": "USD",
+            "format": "currency"
+          }
+        ]
+      }
+    }
+  },
+  "form": {
+    "fields": [
+      {
+        "id": "underlying",
+        "label": "Current underlying price (per share)",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "scenario_price",
+        "label": "Scenario / expiry underlying price (per share)",
+        "type": "number",
+        "default": 100,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "strike",
+        "label": "Strike price",
+        "type": "number",
+        "default": 100,
+        "min": 0.01,
+        "step": 0.01
+      },
+      {
+        "id": "premium",
+        "label": "Put premium (per share)",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "call_premium",
+        "label": "Call premium (per share) — for synthetic parity",
+        "type": "number",
+        "default": 2.5,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "contracts",
+        "label": "Number of contracts",
+        "type": "integer",
+        "default": 1,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "contract_size",
+        "label": "Contract size (shares per contract)",
+        "type": "integer",
+        "default": 100,
+        "min": 1,
+        "step": 1
+      },
+      {
+        "id": "fees",
+        "label": "Total round-trip fees (USD)",
+        "type": "number",
+        "default": 1.0,
+        "min": 0,
+        "step": 0.01
+      },
+      {
+        "id": "days_to_expiry",
+        "label": "Days to expiry",
+        "type": "integer",
+        "default": 30,
+        "min": 0,
+        "max": 3650,
+        "step": 1
+      },
+      {
+        "id": "risk_free_rate",
+        "label": "Risk-free rate (annual, decimal)",
+        "type": "number",
+        "default": 0.03,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "dividend_yield",
+        "label": "Dividend yield (annual, decimal)",
+        "type": "number",
+        "default": 0.0,
+        "min": 0,
+        "step": 0.0001
+      },
+      {
+        "id": "implied_vol",
+        "label": "Implied volatility (annual, decimal) — optional",
+        "type": "number",
+        "default": 0.25,
+        "min": 0,
+        "step": 0.0001
+      }
+    ]
+  },
+  "page_content": {
+    "introduction": [
+      "This calculator models standard put option scenarios: long put (buy), short put (sell), and an estimate of a synthetic put derived from put-call parity. Use the inputs to evaluate payoff at a chosen expiry price, breakeven, net profit/loss, and parity differences.",
+      "Designed for scenario analysis and educational insight. Results are deterministic algebraic computations based on your inputs; they do not incorporate real-time market execution, slippage, margin requirements, assignment probability, or tax effects."
+    ],
+    "methodology": [
+      "Payoff calculations compute per-share payoff at expiry then scale by number of contracts and contract size. Premiums are treated on a per-share basis and multiplied by contract quantity.",
+      "The synthetic put estimate uses put-call parity: P = C - S + K * e^{-rT}. Present value of strike is calculated with continuous discounting using the provided risk-free rate and time to expiry (days/365).",
+      "Data integrity and testing procedures follow best-practice principles for reproducible financial calculators. Development and testing recommendations align with NIST guidance on software testing and verification, ISO software quality management principles, and IEEE recommendations for numerical accuracy validation. Operational safety and workplace processes should follow applicable OSHA guidance where relevant."
+    ],
+    "how_is_calculated": [
+      "Long put payoff at expiry (per share): max(K - S_T, 0). Net profit = payoff * quantity - total premium paid - fees.",
+      "Short put payoff at expiry (per share): -max(K - S_T, 0). Net profit = premium received * quantity - payoff - fees. Maximum profit limited to premium received; theoretical max loss approximated if underlying falls to zero: K * quantity - premium.",
+      "Synthetic put (per share) via parity: P_synth = C - S + K * exp(-r * T). Multiply per-share synthetic price by contracts and contract size, add fees for total cost."
+    ],
+    "examples": [
+      "Example 1: Long 1 put on 100 shares with strike 100, premium 2.50, fees 1. Payoff at expiry if underlying is 90: (100 - 90) * 100 = 1000; net profit = 1000 - (2.5*100) - 1 = 749.",
+      "Example 2: Short 2 puts on 100 shares with strike 50, premium 1.00, fees 2. If underlying is 40 at expiry, seller payoff = -(50 - 40) * 200 = -2000; net profit = (1.00*200 - 2) - 2000 = -1802."
+    ],
+    "faqs": [
+      {
+        "question": "How accurate are these calculations?",
+        "answer": "Calculations are algebraic and precise given the supplied inputs. They do not model execution risk, early assignment, margin, or path‑dependent payoffs. For model verification and numeric testing practices, follow NIST and IEEE testing recommendations. Use results as a scenario guide, not trading advice."
+      },
+      {
+        "question": "Does the tool price options (Black‑Scholes) or compute Greeks?",
+        "answer": "This tool focuses on payoff, breakeven, and parity comparisons. It does not compute Black‑Scholes theoretical prices or Greeks. Use a dedicated pricing model when you need implied volatility calibration or Greek sensitivities."
+      },
+      {
+        "question": "What assumptions underlie the synthetic put calculation?",
+        "answer": "Put-call parity assumes European-style options, frictionless markets, and the ability to borrow/lend at the risk-free rate. The synthetic expression uses continuous discounting of the strike price (K * e^{-rT}). Market realities like dividends, transaction costs, and early exercise for American options can create deviations."
+      },
+      {
+        "question": "How should I validate results before trading?",
+        "answer": "Cross-check with a regulated broker or exchange-provided calculators, perform sensitivity checks (vary premium, underlying, T), and document test cases. Follow ISO software quality and NIST recommended testing protocols for reproducibility. Maintain audit trails of input parameters and test results."
+      }
+    ],
+    "citations": [
+      {
+        "label": "NIST — National Institute of Standards and Technology",
+        "url": "https://www.nist.gov"
+      },
+      {
+        "label": "ISO — International Organization for Standardization",
+        "url": "https://www.iso.org"
+      },
+      {
+        "label": "IEEE — Institute of Electrical and Electronics Engineers",
+        "url": "https://www.ieee.org"
+      },
+      {
+        "label": "OSHA — Occupational Safety and Health Administration",
+        "url": "https://www.osha.gov"
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Put option",
+        "definition": "A contract granting the holder the right, but not the obligation, to sell the underlying asset at a specified strike price on or before expiry."
+      },
+      {
+        "term": "Premium",
+        "definition": "Price paid by the option buyer per share to acquire the option; seller receives this amount."
+      },
+      {
+        "term": "Breakeven",
+        "definition": "Underlying price at expiry where net profit is zero after accounting for premium and fees. For a long put: strike - premium (per share)."
+      },
+      {
+        "term": "Put-call parity",
+        "definition": "A relationship for European options: P = C - S + K * e^{-rT}, linking put (P), call (C), underlying price (S), strike (K), risk-free rate (r), and time (T)."
+      },
+      {
+        "term": "Notional",
+        "definition": "Total underlying exposure: contracts * contract_size * per-share price."
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/options/put-calculator"
+    ],
+    "external": [
+      {
+        "url": "https://www.nist.gov",
+        "label": "NIST",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.iso.org",
+        "label": "ISO",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.ieee.org",
+        "label": "IEEE",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      },
+      {
+        "url": "https://www.osha.gov",
+        "label": "OSHA",
+        "rel": [
+          "noopener",
+          "noreferrer"
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "additionalTypes": [
+      "HowTo"
+    ]
+  }
+}
