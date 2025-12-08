@@ -7,18 +7,8 @@ import { GenericAdvancedCalculator } from "@/components/generic-advanced-calcula
 import { GenericConverter } from "@/components/generic-converter";
 import { GenericSimpleCalculator } from "@/components/generic-simple-calculator";
 import type { CalculatorRecord } from "@/lib/content";
-import {
-  getCalculatorByPath,
-  getCalculatorPaths,
-  getPublishedCalculators,
-  toSlug
-} from "@/lib/content";
-import {
-  parseConversionFromSlug,
-  ConversionContext,
-  convertValue,
-  getUnitById
-} from "@/lib/conversions";
+import { getCalculatorByPath, getPublishedCalculators, toSlug } from "@/lib/content";
+import { parseConversionFromSlug, ConversionContext, convertValue, getUnitById } from "@/lib/conversions";
 import type { ConversionLogicConfig, CalculatorLogicConfig } from "@/lib/calculator-config";
 import {
   buildBreadcrumbSchema,
@@ -33,23 +23,9 @@ interface CalculatorPageProps {
   }>;
 }
 
-export const revalidate = 60 * 60 * 24; // revalidate daily for fresh content/publish dates
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const limit =
-    Number.parseInt(process.env.STATIC_CALCULATOR_LIMIT ?? "", 10) > 0
-      ? Number.parseInt(process.env.STATIC_CALCULATOR_LIMIT ?? "", 10)
-      : 80;
-
-  return getPublishedCalculators()
-    .slice()
-    .sort((a, b) => b.trafficEstimate - a.trafficEstimate)
-    .slice(0, limit)
-    .map((calculator) => ({
-      slug: calculator.fullPath.split("/").filter(Boolean)
-    }));
-}
 
 export async function generateMetadata(
   props: CalculatorPageProps
@@ -460,7 +436,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             Related experiences
           </h2>
           <ul className="mt-4 space-y-3 text-sm text-slate-600">
-            {related.map((item) => (
+            {related.map((item: CalculatorRecord) => (
               <li key={item.fullPath}>
                 <Link href={item.fullPath} className="hover:text-brand">
                   {item.title}
