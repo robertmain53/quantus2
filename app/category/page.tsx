@@ -3,6 +3,9 @@ import Link from "next/link";
 
 import { getCategories } from "@/lib/content";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Category Directory",
   description:

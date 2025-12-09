@@ -1,10 +1,9 @@
 import Link from "next/link";
 
-import {
-  getCategories,
-  getTopCalculators,
-  getUpcomingPublishSchedule
-} from "@/lib/content";
+import { getCategories, getTopCalculators, getUpcomingPublishSchedule } from "@/lib/content";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function HomePage() {
   const categories = getCategories().slice(0, 6);

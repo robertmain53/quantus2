@@ -4,16 +4,13 @@ import { notFound } from "next/navigation";
 
 import { getCategories, getCategoryBySlug } from "@/lib/content";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface CategoryPageProps {
   params: Promise<{
     categorySlug: string;
   }>;
-}
-
-export async function generateStaticParams() {
-  return getCategories().map((category) => ({
-    categorySlug: category.slug
-  }));
 }
 
 export async function generateMetadata(

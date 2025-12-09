@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 
 import { ConfigPlayground } from "@/components/admin/config-playground";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Calculator Config Playground",
   description:

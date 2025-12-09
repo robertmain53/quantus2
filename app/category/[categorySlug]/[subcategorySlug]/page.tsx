@@ -2,25 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import {
-  getCategories,
-  getSubcategoryBySlug
-} from "@/lib/content";
+import { getSubcategoryBySlug } from "@/lib/content";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface SubcategoryPageProps {
   params: Promise<{
     categorySlug: string;
     subcategorySlug: string;
   }>;
-}
-
-export async function generateStaticParams() {
-  return getCategories().flatMap((category) =>
-    category.subcategories.map((subcategory) => ({
-      categorySlug: category.slug,
-      subcategorySlug: subcategory.slug
-    }))
-  );
 }
 
 export async function generateMetadata(
