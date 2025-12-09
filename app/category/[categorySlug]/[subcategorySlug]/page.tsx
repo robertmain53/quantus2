@@ -43,7 +43,6 @@ export async function generateMetadata(
   }
 
   const { category, subcategory } = lookup;
-  const calculators = getSubcategoryCalculators(category.label, subcategory.label);
   const categoryTitle = titleCase(category.label);
   const subcategoryTitle = titleCase(subcategory.label);
 
