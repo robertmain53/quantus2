@@ -192,19 +192,19 @@ function ensureCache(): ContentCache {
     }
 
     const categoryKey = calculator.category;
-    const categorySlug = toSlug(categoryKey);
+  const categorySlug = toSlug(categoryKey);
 
-    if (!categoryMap.has(categoryKey)) {
-      categoryMap.set(categoryKey, {
-        slug: categorySlug,
-        label: categoryKey,
-        calculators: [],
-        subcategories: [],
-        trafficTotal: 0
-      });
-    }
+  if (!categoryMap.has(categorySlug)) {
+    categoryMap.set(categorySlug, {
+      slug: categorySlug,
+      label: categoryKey,
+      calculators: [],
+      subcategories: [],
+      trafficTotal: 0
+    });
+  }
 
-    const category = categoryMap.get(categoryKey)!;
+  const category = categoryMap.get(categorySlug)!;
     category.calculators.push(calculator);
     category.trafficTotal += calculator.trafficEstimate;
 
