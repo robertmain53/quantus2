@@ -3,11 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 
-interface MobileMenuProps {
-  categories: Array<{ slug: string; label: string }>;
+export interface LightweightCalculator {
+  slug: string;
+  title: string;
+  category: string;
+  subcategory: string | null;
 }
 
-export function MobileMenu({ categories }: MobileMenuProps) {
+interface MobileMenuProps {
+  categories: Array<{ slug: string; label: string }>;
+  calculators: LightweightCalculator[];
+}
+
+export function MobileMenu({ categories, calculators }: MobileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -60,6 +68,23 @@ export function MobileMenu({ categories }: MobileMenuProps) {
                   {category.label}
                 </Link>
               ))}
+              {calculators.length > 0 && (
+                <>
+                  <div className="mt-2 border-t border-slate-200 pt-2 text-xs uppercase tracking-wide text-slate-400">
+                    Popular calculators
+                  </div>
+                  {calculators.map((calculator) => (
+                    <Link
+                      key={calculator.slug}
+                      href={calculator.slug}
+                      className="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand transition-colors no-underline"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {calculator.title}
+                    </Link>
+                  ))}
+                </>
+              )}
             </div>
           </nav>
         </>

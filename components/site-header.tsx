@@ -1,13 +1,17 @@
 import { Suspense } from "react";
 import Link from "next/link";
 
-import { getCategories } from "@/lib/content";
+import { getCategories, getTopCalculators } from "@/lib/content";
 import { SiteSearch } from "@/components/site-search";
-import { MobileMenu } from "@/components/mobile-menu";
+import { MobileMenu, LightweightCalculator } from "@/components/mobile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export function SiteHeader() {
   const categories = getCategories().slice(0, 5);
+  const topCalculators = getTopCalculators(4).map(
+    ({ slug, title, category, subcategory }) =>
+      ({ slug, title, category, subcategory } as LightweightCalculator)
+  );
 
   return (
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
@@ -44,7 +48,7 @@ export function SiteHeader() {
         </div>
         {/* Mobile Menu */}
         <div className="2xl:hidden">
-          <MobileMenu categories={categories} />
+          <MobileMenu categories={categories} calculators={topCalculators} />
         </div>
       </div>
     </header>
