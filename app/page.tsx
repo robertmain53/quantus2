@@ -104,6 +104,23 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="space-y-6">
+        <h2 className="font-serif text-2xl font-semibold text-slate-900">
+          Browse by Category
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {categories.map((category) => (
+            <Link
+              key={`browse-${category.slug}`}
+              href={`/category/${category.slug}`}
+              className="block rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-900 transition hover:border-brand hover:text-brand"
+            >
+              {titleCase(category.label)}
+            </Link>
+          ))}
+        </div>
+      </section>
+    
       <section className="space-y-8">
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">
