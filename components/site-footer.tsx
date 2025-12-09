@@ -40,54 +40,24 @@ export function SiteFooter() {
           <div>
             <p className="mb-2 font-semibold text-slate-200">Browse Categories</p>
             <div className="grid gap-4 text-sm text-slate-300">
-              <div>
-                <Link href="/category/conversions" className="hover:text-white">
-                  Conversions
-                </Link>
-                <div className="text-xs text-slate-400">
-                  /category/conversions/length · /category/conversions/volume
-                </div>
-              </div>
-              <div>
-                <Link href="/category/finance" className="hover:text-white">
-                  Finance
-                </Link>
-                <div className="text-xs text-slate-400">
-                  /category/finance/loans · /category/finance/taxes
-                </div>
-              </div>
-              <div>
-                <Link href="/category/construction" className="hover:text-white">
-                  Construction
-                </Link>
-                <div className="text-xs text-slate-400">
-                  /category/construction/materials · /category/construction/estimates
-                </div>
-              </div>
-              <div>
-                <Link href="/category/business" className="hover:text-white">
-                  Business
-                </Link>
-                <div className="text-xs text-slate-400">
-                  /category/business/accounting · /category/business/investing
-                </div>
-              </div>
-              <div>
-                <Link href="/category/health" className="hover:text-white">
-                  Health
-                </Link>
-                <div className="text-xs text-slate-400">
-                  /category/health/fitness · /category/health/nutrition
-                </div>
-              </div>
-              <div>
-                <Link href="/category/lifestyle" className="hover:text-white">
-                  Lifestyle
-                </Link>
-                <div className="text-xs text-slate-400">
-                  /category/lifestyle/time · /category/lifestyle/travel
-                </div>
-              </div>
+              <Link href="/category/conversions" className="hover:text-white">
+                Conversions
+              </Link>
+              <Link href="/category/finance" className="hover:text-white">
+                Finance
+              </Link>
+              <Link href="/category/construction" className="hover:text-white">
+                Construction
+              </Link>
+              <Link href="/category/business" className="hover:text-white">
+                Business
+              </Link>
+              <Link href="/category/health" className="hover:text-white">
+                Health
+              </Link>
+              <Link href="/category/lifestyle" className="hover:text-white">
+                Lifestyle
+              </Link>
             </div>
           </div>
         </div>
