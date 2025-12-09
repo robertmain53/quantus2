@@ -556,8 +556,8 @@ function buildCategoryMap(calculators: CalculatorRecord[]): Map<string, Category
     const categoryKey = calculator.category;
     const categorySlug = toSlug(categoryKey);
 
-    if (!categoryMap.has(categoryKey)) {
-      categoryMap.set(categoryKey, {
+    if (!categoryMap.has(categorySlug)) {
+      categoryMap.set(categorySlug, {
         slug: categorySlug,
         label: categoryKey,
         calculators: [],
@@ -566,7 +566,7 @@ function buildCategoryMap(calculators: CalculatorRecord[]): Map<string, Category
       });
     }
 
-    const category = categoryMap.get(categoryKey)!;
+    const category = categoryMap.get(categorySlug)!;
     category.calculators.push(calculator);
     category.trafficTotal += calculator.trafficEstimate;
 
