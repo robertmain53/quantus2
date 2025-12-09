@@ -12,6 +12,12 @@ export const metadata: Metadata = {
     "Browse the Cernarus knowledge architecture organized by high-value categories and conversion clusters."
 };
 
+export const metadata = {
+  alternates: {
+    canonical: "https://cernarus.com/category",
+  },
+};
+
 export default function CategoryIndexPage() {
   const categories = getCategories();
 

@@ -6,6 +6,12 @@ export const metadata: Metadata = {
     "Read the Cernarus Terms of Service that govern access to our calculators, data, and platform."
 };
 
+export const metadata = {
+  alternates: {
+    canonical: "https://cernarus.com/terms",
+  },
+};
+
 export default function TermsPage() {
   return (
     <main className="container space-y-8 py-16">

@@ -6,6 +6,12 @@ export const metadata: Metadata = {
     "Learn about Quantus, the calculator platform built for professionals who need standards-aligned answers."
 };
 
+export const metadata = {
+  alternates: {
+    canonical: "https://cernarus.com/about",
+  },
+};
+
 export default function AboutPage() {
   return (
     <main className="container space-y-8 py-16">

@@ -5,6 +5,12 @@ import { getCategories, getTopCalculators, getUpcomingPublishSchedule } from "@/
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+export const metadata = {
+  alternates: {
+    canonical: "https://cernarus.com/",
+  },
+};
+
 export default function HomePage() {
   const categories = getCategories().slice(0, 6);
   const topCalculators = getTopCalculators(6);

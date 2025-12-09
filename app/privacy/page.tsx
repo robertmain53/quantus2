@@ -6,6 +6,12 @@ export const metadata: Metadata = {
     "Understand how Cernarus collects, uses, and protects personal data generated across our platform."
 };
 
+export const metadata = {
+  alternates: {
+    canonical: "https://cernarus.com/privacy",
+  },
+};
+
 export default function PrivacyPage() {
   return (
     <main className="container space-y-8 py-16">

@@ -6,6 +6,12 @@ export const metadata: Metadata = {
     "Details on how Cernarus uses cookies and local storage to enhance performance and personalization."
 };
 
+export const metadata = {
+  alternates: {
+    canonical: "https://cernarus.com/cookies",
+  },
+};
+
 export default function CookiesPage() {
   return (
     <main className="container space-y-8 py-16">
