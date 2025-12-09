@@ -16,7 +16,7 @@ export function SiteHeader() {
     );
 
   return (
-    <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
+    <header className="border-b border-base surface surface-soft backdrop-blur">
       <div className="container flex items-center justify-between gap-4 py-4">
         <Link
           href="/"
@@ -26,7 +26,7 @@ export function SiteHeader() {
         </Link>
         <div className="flex flex-1 items-center justify-end gap-4">
           {/* Desktop Navigation */}
-          <nav className="hidden flex-wrap items-center gap-4 text-sm font-medium text-slate-600 2xl:flex">
+          <nav className="hidden flex-wrap items-center gap-4 text-sm font-medium text-body 2xl:flex">
             <Link href="/category" className="hover:text-brand no-underline">
               All Categories
             </Link>
@@ -34,7 +34,7 @@ export function SiteHeader() {
               <Link
                 key={category.slug}
                 href={`/category/${category.slug}`}
-                className="hover:text-brand no-underline"
+                className="hover:text-accent no-underline"
               >
                 {category.label}
               </Link>
@@ -43,13 +43,14 @@ export function SiteHeader() {
           <Suspense fallback={<span className="text-sm text-slate-400">Loading search…</span>}>
             <SiteSearch />
           </Suspense>
-          <div className="hidden items-center gap-3 text-xs uppercase tracking-wide text-slate-400 2xl:flex 2xl:items-center">
+        </div>
+          <div className="hidden items-center gap-3 text-xs uppercase tracking-wide text-muted 2xl:flex 2xl:items-center">
             <span>Standards aligned · audit ready</span>
             <ThemeToggle />
           </div>
-        </div>
         {/* Mobile Menu */}
-        <div className="2xl:hidden">
+        <div className="2xl:hidden flex items-center gap-2">
+          <ThemeToggle />
           <MobileMenu categories={categories} calculators={popularCalculators} />
         </div>
       </div>
