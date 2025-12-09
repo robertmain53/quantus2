@@ -45,7 +45,7 @@ export function SiteFooter() {
                   Conversions
                 </Link>
                 <div className="text-xs text-slate-400">
-                  /category/conversions
+                  /category/conversions/length · /category/conversions/volume
                 </div>
               </div>
               <div>
@@ -53,7 +53,7 @@ export function SiteFooter() {
                   Finance
                 </Link>
                 <div className="text-xs text-slate-400">
-                  /category/finance · /category/finance/loans · /category/finance/taxes
+                  /category/finance/loans · /category/finance/taxes
                 </div>
               </div>
               <div>
@@ -61,7 +61,7 @@ export function SiteFooter() {
                   Construction
                 </Link>
                 <div className="text-xs text-slate-400">
-                  /category/construction · /category/construction/materials · /category/construction/estimates
+                  /category/construction/materials · /category/construction/estimates
                 </div>
               </div>
               <div>
@@ -69,7 +69,7 @@ export function SiteFooter() {
                   Business
                 </Link>
                 <div className="text-xs text-slate-400">
-                  /category/business · /category/business/accounting · /category/business/investing
+                  /category/business/accounting · /category/business/investing
                 </div>
               </div>
               <div>
@@ -77,7 +77,7 @@ export function SiteFooter() {
                   Health
                 </Link>
                 <div className="text-xs text-slate-400">
-                  /category/health · /category/health/fitness · /category/health/nutrition
+                  /category/health/fitness · /category/health/nutrition
                 </div>
               </div>
               <div>
@@ -85,7 +85,7 @@ export function SiteFooter() {
                   Lifestyle
                 </Link>
                 <div className="text-xs text-slate-400">
-                  /category/lifestyle · /category/lifestyle/time · /category/lifestyle/travel
+                  /category/lifestyle/time · /category/lifestyle/travel
                 </div>
               </div>
             </div>
