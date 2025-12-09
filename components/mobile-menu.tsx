@@ -73,7 +73,7 @@ export function MobileMenu({ categories, calculators }: MobileMenuProps) {
                   <div className="mt-2 border-t border-slate-200 pt-2 text-xs uppercase tracking-wide text-slate-400">
                     Popular calculators
                   </div>
-                  {calculators.map((calculator) => (
+                  {calculators.slice(0, 10).map((calculator) => (
                     <Link
                       key={calculator.slug}
                       href={calculator.slug}
@@ -83,6 +83,13 @@ export function MobileMenu({ categories, calculators }: MobileMenuProps) {
                       {calculator.title}
                     </Link>
                   ))}
+                  <Link
+                    href="/category"
+                    className="block rounded-md px-3 py-2 text-sm font-semibold text-brand hover:bg-slate-100 transition-colors no-underline"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    View All Calculators
+                  </Link>
                 </>
               )}
             </div>

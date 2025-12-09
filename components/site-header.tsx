@@ -8,10 +8,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 export function SiteHeader() {
   const categories = getCategories().slice(0, 5);
-  const topCalculators = getTopCalculators(4).map(
-    ({ slug, title, category, subcategory }) =>
-      ({ slug, title, category, subcategory } as LightweightCalculator)
-  );
+  const popularCalculators = getTopCalculators(20)
+    .slice(0, 20)
+    .map(
+      ({ slug, title, category, subcategory }) =>
+        ({ slug, title, category, subcategory } as LightweightCalculator)
+    );
 
   return (
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
@@ -48,7 +50,7 @@ export function SiteHeader() {
         </div>
         {/* Mobile Menu */}
         <div className="2xl:hidden">
-          <MobileMenu categories={categories} calculators={topCalculators} />
+          <MobileMenu categories={categories} calculators={popularCalculators} />
         </div>
       </div>
     </header>
