@@ -46,14 +46,17 @@ export function SiteFooter() {
               <Link href="/category/finance" className="hover:text-white">
                 Finance
               </Link>
-              <Link href="/category/health" className="hover:text-white">
-                Health
-              </Link>
               <Link href="/category/construction" className="hover:text-white">
                 Construction
               </Link>
-              <Link href="/category/general" className="hover:text-white">
-                General
+              <Link href="/category/business" className="hover:text-white">
+                Business
+              </Link>
+              <Link href="/category/health" className="hover:text-white">
+                Health
+              </Link>
+              <Link href="/category/lifestyle" className="hover:text-white">
+                Lifestyle
               </Link>
             </div>
           </div>
