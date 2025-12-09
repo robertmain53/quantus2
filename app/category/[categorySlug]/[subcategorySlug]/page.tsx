@@ -3,6 +3,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getSubcategoryBySlug } from "@/lib/content";
+import summaryData from "@/data/summary.json";
+
+interface SummaryEntry {
+  slug: string;
+  title: string;
+  category: string;
+  subcategory: string | null;
+  trafficEstimate: number;
+  publishDate: string | null;
+}
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,6 +35,12 @@ export async function generateMetadata(
   }
 
   const { category, subcategory } = lookup;
+  const summaryEntries = summaryData as SummaryEntry[];
+  const calculators = summaryEntries.filter(
+    (entry) =>
+      entry.category === category.label &&
+      entry.subcategory === subcategory.label
+  );
   const categoryTitle = titleCase(category.label);
   const subcategoryTitle = titleCase(subcategory.label);
 
@@ -82,9 +98,9 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
           {subcategory.label.toLowerCase()}, architected for rapid organic growth.
         </p>
         <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-          <span className="rounded-full bg-slate-100 px-3 py-1">
-            {subcategory.calculators.length} calculators
-          </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">
+              {calculators.length} calculators
+            </span>
           <span className="rounded-full bg-slate-100 px-3 py-1">
       {/*      {subcategory.trafficTotal.toLocaleString()} projected visits */}
           </span>
@@ -96,10 +112,10 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
           Experiences in this cluster
         </h2>
         <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-          {subcategory.calculators.map((calculator) => (
-            <article key={calculator.fullPath} className="space-y-2">
+          {calculators.map((calculator) => (
+            <article key={calculator.slug} className="space-y-2">
               <Link
-                href={calculator.fullPath}
+                href={calculator.slug}
                 className="text-lg font-semibold text-slate-900 hover:text-brand"
               >
                 {calculator.title}

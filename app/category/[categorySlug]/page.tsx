@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCategories, getCategoryBySlug } from "@/lib/content";
+import summaryData from "@/data/summary.json";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -11,6 +12,15 @@ interface CategoryPageProps {
   params: Promise<{
     categorySlug: string;
   }>;
+}
+
+interface SummaryEntry {
+  slug: string;
+  title: string;
+  category: string;
+  subcategory: string | null;
+  trafficEstimate: number;
+  publishDate: string | null;
 }
 
 export async function generateMetadata(
@@ -46,7 +56,10 @@ export default async function CategoryPage(props: CategoryPageProps) {
   const subcategorySlugByLabel = new Map(
     subcategories.map((item) => [item.label, item.slug] as const)
   );
-  const calculators = category.calculators;
+  const summaryEntries = summaryData as SummaryEntry[];
+  const calculators = summaryEntries.filter(
+    (entry) => entry.category === category.label
+  );
 
   return (
     <main className="container space-y-12 py-16">
@@ -75,13 +88,13 @@ export default async function CategoryPage(props: CategoryPageProps) {
         <p className="max-w-3xl text-lg text-slate-600">
           High-performing tools designed to help professionals and not acrosss the {category.label.toLowerCase()} landscape.
         </p>
-        <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-          <span className="rounded-full bg-slate-100 px-3 py-1">
-            {category.calculators.length} calculators
-          </span>
-          <span className="rounded-full bg-slate-100 px-3 py-1">
-            {category.subcategories.length} subcategories
-          </span>
+          <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+            <span className="rounded-full bg-slate-100 px-3 py-1">
+              {calculators.length} calculators
+            </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">
+              {category.subcategories.length} subcategories
+            </span>
           <span className="rounded-full bg-slate-100 px-3 py-1">
   {/*          {category.trafficTotal.toLocaleString()} projected daily visits */}
           </span>
@@ -135,9 +148,9 @@ export default async function CategoryPage(props: CategoryPageProps) {
         </h2>
         <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
           {calculators.map((calculator) => (
-            <div key={calculator.fullPath} className="flex flex-col gap-3">
+            <div key={calculator.slug} className="flex flex-col gap-3">
               <Link
-                href={calculator.fullPath}
+                href={calculator.slug}
                 className="text-lg font-semibold text-slate-900 hover:text-brand"
               >
                 {calculator.title}
