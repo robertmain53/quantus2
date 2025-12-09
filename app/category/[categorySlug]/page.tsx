@@ -142,42 +142,6 @@ export default async function CategoryPage(props: CategoryPageProps) {
         </section>
       )}
 
-      <section className="space-y-6">
-        <h2 className="font-serif text-2xl font-semibold text-slate-900">
-          Calculators in this hub
-        </h2>
-        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-          {calculators.map((calculator) => (
-            <div key={calculator.slug} className="flex flex-col gap-3">
-              <Link
-                href={calculator.slug}
-                className="text-lg font-semibold text-slate-900 hover:text-brand"
-              >
-                {calculator.title}
-              </Link>
-              <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
-                <span>{calculator.category}</span>
-                {calculator.subcategory &&
-                  subcategorySlugByLabel.has(calculator.subcategory) && (
-                    <span>
-                      <Link
-                        href={`/category/${category.slug}/${subcategorySlugByLabel.get(
-                          calculator.subcategory
-                        )}`}
-                        className="hover:text-brand"
-                      >
-                        {calculator.subcategory}
-                      </Link>
-                    </span>
-                  )}
-                <span>
-      {/*            {calculator.trafficEstimate.toLocaleString()} projected visits */}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </main>
   );
 }
