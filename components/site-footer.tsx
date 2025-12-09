@@ -44,84 +44,48 @@ export function SiteFooter() {
                 <Link href="/category/conversions" className="hover:text-white">
                   Conversions
                 </Link>
-                <div className="text-xs text-slate-500">
-                  <Link href="/category/conversions/length" className="hover:text-white">
-                    Length
-                  </Link>{" "}
-                  ·{" "}
-                  <Link href="/category/conversions/volume" className="hover:text-white">
-                    Volume
-                  </Link>
+                <div className="text-xs text-slate-400">
+                  /category/conversions
                 </div>
               </div>
               <div>
                 <Link href="/category/finance" className="hover:text-white">
                   Finance
                 </Link>
-                <div className="text-xs text-slate-500">
-                  <Link href="/category/finance/loans" className="hover:text-white">
-                    Loans
-                  </Link>{" "}
-                  ·{" "}
-                  <Link href="/category/finance/taxes" className="hover:text-white">
-                    Taxes
-                  </Link>
+                <div className="text-xs text-slate-400">
+                  /category/finance · /category/finance/loans · /category/finance/taxes
                 </div>
               </div>
               <div>
                 <Link href="/category/construction" className="hover:text-white">
                   Construction
                 </Link>
-                <div className="text-xs text-slate-500">
-                  <Link href="/category/construction/materials" className="hover:text-white">
-                    Materials
-                  </Link>{" "}
-                  ·{" "}
-                  <Link href="/category/construction/estimates" className="hover:text-white">
-                    Estimates
-                  </Link>
+                <div className="text-xs text-slate-400">
+                  /category/construction · /category/construction/materials · /category/construction/estimates
                 </div>
               </div>
               <div>
                 <Link href="/category/business" className="hover:text-white">
                   Business
                 </Link>
-                <div className="text-xs text-slate-500">
-                  <Link href="/category/business/accounting" className="hover:text-white">
-                    Accounting
-                  </Link>{" "}
-                  ·{" "}
-                  <Link href="/category/business/investing" className="hover:text-white">
-                    Investing
-                  </Link>
+                <div className="text-xs text-slate-400">
+                  /category/business · /category/business/accounting · /category/business/investing
                 </div>
               </div>
               <div>
                 <Link href="/category/health" className="hover:text-white">
                   Health
                 </Link>
-                <div className="text-xs text-slate-500">
-                  <Link href="/category/health/fitness" className="hover:text-white">
-                    Fitness
-                  </Link>{" "}
-                  ·{" "}
-                  <Link href="/category/health/nutrition" className="hover:text-white">
-                    Nutrition
-                  </Link>
+                <div className="text-xs text-slate-400">
+                  /category/health · /category/health/fitness · /category/health/nutrition
                 </div>
               </div>
               <div>
                 <Link href="/category/lifestyle" className="hover:text-white">
                   Lifestyle
                 </Link>
-                <div className="text-xs text-slate-500">
-                  <Link href="/category/lifestyle/time" className="hover:text-white">
-                    Time
-                  </Link>{" "}
-                  ·{" "}
-                  <Link href="/category/lifestyle/travel" className="hover:text-white">
-                    Travel
-                  </Link>
+                <div className="text-xs text-slate-400">
+                  /category/lifestyle · /category/lifestyle/time · /category/lifestyle/travel
                 </div>
               </div>
             </div>
