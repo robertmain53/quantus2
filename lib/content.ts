@@ -6,8 +6,39 @@ import {
   type CalculatorConfig,
   parseCalculatorConfig
 } from "./calculator-config";
+import summaryData from "../data/summary.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "calc.csv");
+
+export interface LightweightCalculator {
+  slug: string;
+  fullPath: string;
+  segments: string[];
+  title: string;
+  category: string;
+  subcategory: string | null;
+  trafficEstimate: number;
+  publishDate: string | null;
+}
+interface SummaryEntry {
+  slug: string;
+  title: string;
+  category: string;
+  subcategory?: string | null;
+  trafficEstimate: number;
+  publishDate?: string | null;
+}
+
+const SUMMARY_ENTRIES: SummaryEntry[] = (summaryData as SummaryEntry[]).map(
+  (entry) => ({
+    slug: entry.slug,
+    title: entry.title,
+    category: entry.category,
+    subcategory: entry.subcategory ?? null,
+    trafficEstimate: Number(entry.trafficEstimate ?? 0) || 0,
+    publishDate: entry.publishDate || ""
+  })
+);
 
 export interface CalculatorRecord {
   category: string;
@@ -399,7 +430,10 @@ export function getAllCalculators(): CalculatorRecord[] {
 }
 
 export function getPublishedCalculators(): CalculatorRecord[] {
-  return getAllCalculators().filter((calculator) => calculator.isPublished);
+  const todayIso = new Date().toISOString().split("T")[0];
+  return buildSummaryRecords().filter(
+    (calculator) => !calculator.publishDate || calculator.publishDate <= todayIso
+  );
 }
 
 export function getCalculatorByPath(pathname: string): CalculatorRecord | undefined {
@@ -412,19 +446,13 @@ export function getCalculatorPaths(): string[] {
 }
 
 export function getCategories(): CategorySummary[] {
-  return Array.from(ensureCache().categories.values()).sort(
+  return Array.from(buildCategoryMap(getPublishedCalculators()).values()).sort(
     (a, b) => b.trafficTotal - a.trafficTotal
   );
 }
 
 export function getCategoryBySlug(slug: string): CategorySummary | undefined {
-  const categories = ensureCache().categories;
-  for (const category of categories.values()) {
-    if (category.slug === slug) {
-      return category;
-    }
-  }
-  return undefined;
+  return buildCategoryMap(getPublishedCalculators()).get(slug);
 }
 
 export function invalidateCache() {
@@ -493,4 +521,79 @@ export function searchCalculators(query: string): CalculatorRecord[] {
       (calculator.subcategory?.toLowerCase().includes(normalized) ?? false)
     );
   });
+}
+
+function slugToSegments(slug: string) {
+  return slug
+    .split("/")
+    .filter(Boolean);
+}
+
+function buildSummaryRecords(): CalculatorRecord[] {
+  const todayIso = new Date().toISOString().split("T")[0];
+  return SUMMARY_ENTRIES.map((entry) => {
+    const segments = slugToSegments(entry.slug);
+    return {
+      category: entry.category || "uncategorized",
+      subcategory: entry.subcategory ?? null,
+      componentType: null,
+      config: null,
+      slug: segments[segments.length - 1] ?? "",
+      fullPath: normalizePath(entry.slug),
+      segments,
+      title: entry.title || "",
+      trafficEstimate: entry.trafficEstimate,
+      publishDate: entry.publishDate ?? "",
+      isPublished: !entry.publishDate || entry.publishDate <= todayIso
+    };
+  });
+}
+
+function buildCategoryMap(calculators: CalculatorRecord[]): Map<string, CategorySummary> {
+  const categoryMap = new Map<string, CategorySummary>();
+
+  for (const calculator of calculators) {
+    const categoryKey = calculator.category;
+    const categorySlug = toSlug(categoryKey);
+
+    if (!categoryMap.has(categoryKey)) {
+      categoryMap.set(categoryKey, {
+        slug: categorySlug,
+        label: categoryKey,
+        calculators: [],
+        subcategories: [],
+        trafficTotal: 0
+      });
+    }
+
+    const category = categoryMap.get(categoryKey)!;
+    category.calculators.push(calculator);
+    category.trafficTotal += calculator.trafficEstimate;
+
+    if (calculator.subcategory) {
+      let subcategory = category.subcategories.find(
+        (item) => item.label === calculator.subcategory
+      );
+
+      if (!subcategory) {
+        subcategory = {
+          slug: toSlug(calculator.subcategory),
+          label: calculator.subcategory,
+          calculators: [],
+          trafficTotal: 0
+        };
+        category.subcategories.push(subcategory);
+      }
+
+      subcategory.calculators.push(calculator);
+      subcategory.trafficTotal += calculator.trafficEstimate;
+    }
+  }
+
+  categoryMap.forEach((category) => {
+    category.subcategories.sort((a, b) => b.trafficTotal - a.trafficTotal);
+    category.calculators.sort((a, b) => b.trafficEstimate - a.trafficEstimate);
+  });
+
+  return categoryMap;
 }
