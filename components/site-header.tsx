@@ -16,7 +16,7 @@ export function SiteHeader() {
     );
 
   return (
-    <header className="border-b border-base surface surface-soft backdrop-blur">
+    <header className="border-b border-base surface surface-soft backdrop-blur text-body">
       <div className="container flex items-center justify-between gap-4 py-4">
         <Link
           href="/"
