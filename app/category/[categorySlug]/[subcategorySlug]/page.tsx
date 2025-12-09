@@ -14,6 +14,14 @@ interface SummaryEntry {
   publishDate: string | null;
 }
 
+const summaryEntries = summaryData as SummaryEntry[];
+
+function getSubcategoryCalculators(categoryLabel: string, subcategoryLabel: string) {
+  return summaryEntries.filter(
+    (entry) => entry.category === categoryLabel && entry.subcategory === subcategoryLabel
+  );
+}
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -35,12 +43,7 @@ export async function generateMetadata(
   }
 
   const { category, subcategory } = lookup;
-  const summaryEntries = summaryData as SummaryEntry[];
-  const calculators = summaryEntries.filter(
-    (entry) =>
-      entry.category === category.label &&
-      entry.subcategory === subcategory.label
-  );
+  const calculators = getSubcategoryCalculators(category.label, subcategory.label);
   const categoryTitle = titleCase(category.label);
   const subcategoryTitle = titleCase(subcategory.label);
 
@@ -62,6 +65,7 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
   }
 
   const { category, subcategory } = lookup;
+  const calculators = getSubcategoryCalculators(category.label, subcategory.label);
 
   return (
     <main className="container space-y-12 py-16">
