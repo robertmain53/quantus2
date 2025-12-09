@@ -3,10 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "About Quantus",
   description:
-    "Learn about Quantus, the calculator platform built for professionals who need standards-aligned answers."
-};
-
-export const metadata = {
+    "Learn about Quantus, the calculator platform built for professionals who need standards-aligned answers.",
   alternates: {
     canonical: "https://cernarus.com/about",
   },

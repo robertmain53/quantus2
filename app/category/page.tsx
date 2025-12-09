@@ -9,10 +9,7 @@ export const revalidate = 0;
 export const metadata: Metadata = {
   title: "Category Directory",
   description:
-    "Browse the Cernarus knowledge architecture organized by high-value categories and conversion clusters."
-};
-
-export const metadata = {
+    "Browse the Cernarus knowledge architecture organized by high-value categories and conversion clusters.",
   alternates: {
     canonical: "https://cernarus.com/category",
   },

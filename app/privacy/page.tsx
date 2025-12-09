@@ -3,10 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Understand how Cernarus collects, uses, and protects personal data generated across our platform."
-};
-
-export const metadata = {
+    "Understand how Cernarus collects, uses, and protects personal data generated across our platform.",
   alternates: {
     canonical: "https://cernarus.com/privacy",
   },

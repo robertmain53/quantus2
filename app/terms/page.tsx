@@ -3,10 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Read the Cernarus Terms of Service that govern access to our calculators, data, and platform."
-};
-
-export const metadata = {
+    "Read the Cernarus Terms of Service that govern access to our calculators, data, and platform.",
   alternates: {
     canonical: "https://cernarus.com/terms",
   },
