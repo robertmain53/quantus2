@@ -27,7 +27,7 @@ export function GenericSimpleCalculator({ config }: GenericSimpleCalculatorProps
 
   if (!form || !logic) {
     return (
-      <section className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+      <section className="space-y-3 rounded-2xl border border-base surface p-6 text-sm text-body shadow-soft">
         <h2 className="text-base font-semibold">Formula configuration required</h2>
         <p>
           Provide <code>form.fields</code>, <code>form.result.outputs</code>, and{" "}
@@ -251,12 +251,12 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Results
           </h3>
-          <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
-            <span className="text-emerald-600">Updates as you type</span>
+          <div className="flex items-center gap-3 text-xs font-semibold text-muted">
+            <span className="text-accent">Updates as you type</span>
             <button
               type="button"
               onClick={() => setProMode((prev) => !prev)}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700 shadow-sm hover:border-slate-300"
+              className="rounded-full border border-base surface px-3 py-1 text-body shadow-sm hover:border-strong"
             >
               {proMode ? "Pro On (P)" : "Pro Off (P)"}
             </button>
@@ -267,17 +267,17 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
             {outputs.map((output) => (
               <div
                 key={output.id}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                className="rounded-xl border border-base surface px-4 py-3"
               >
-                <p className="text-sm font-medium text-slate-600">{output.label}</p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
+                <p className="text-sm font-medium text-muted">{output.label}</p>
+                <p className="mt-1 text-xl font-semibold text-body">
                   {formatOutputValue(output.value, output.format, output.unit)}
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-slate-500">Start entering values to see calculated results.</p>
+          <p className="mt-3 text-sm text-muted">Start entering values to see calculated results.</p>
         )}
         {outputs.length > 0 && (
           <div className="mt-4">
@@ -291,23 +291,23 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
                     { label: `Scenario ${prev.length + 1}`, outputs }
                   ])
                 }
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
-              >
-                Save scenario
-              </button>
-              <button
-                type="button"
+                className="rounded-full border border-base surface px-3 py-1 font-semibold text-body shadow-sm hover:border-strong"
+                >
+                  Save scenario
+                </button>
+                <button
+                  type="button"
                 onClick={() => window.print()}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 shadow-sm hover:border-slate-300"
-              >
-                Export PDF
-              </button>
+                className="rounded-full border border-base surface px-3 py-1 font-semibold text-body shadow-sm hover:border-strong"
+                >
+                  Export PDF
+                </button>
             </div>
           </div>
         )}
         {outputs.length > 0 && (
-          <div className="sticky bottom-4 mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm shadow-emerald-100 md:static md:bg-transparent md:border-0 md:shadow-none">
-            <div className="flex items-center justify-between text-sm font-semibold text-emerald-700">
+          <div className="sticky bottom-4 mt-4 rounded-2xl border border-base surface px-4 py-3 shadow-sm shadow-soft md:static md:bg-transparent md:border-0 md:shadow-none">
+            <div className="flex items-center justify-between text-sm font-semibold text-body">
               <span>Primary result</span>
               <span>{formatOutputValue(outputs[0].value, outputs[0].format, outputs[0].unit)}</span>
             </div>
@@ -316,37 +316,37 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
       </div>
 
       {proMode && (
-        <div className="bento-tile bento-span-2 p-6">
+        <div className="surface bento-tile bento-span-2 p-6 shadow-soft border border-base">
           <button
             type="button"
             onClick={() => setShowDetails((prev) => !prev)}
-            className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:border-slate-300"
+            className="flex w-full items-center justify-between rounded-lg border border-base surface px-4 py-3 text-left text-sm font-semibold text-body hover:border-strong"
           >
             <span>How this is calculated</span>
-            <span aria-hidden className="text-slate-500">{showDetails ? "▲" : "▼"}</span>
+            <span aria-hidden className="text-muted">{showDetails ? "▲" : "▼"}</span>
           </button>
 
           {showDetails && (
-            <div className="mt-4 space-y-4 text-sm text-slate-700">
+            <div className="mt-4 space-y-4 text-sm text-body">
               {compiledOutputs.map((output) => (
                 <div
                   key={`audit-${output.id}`}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3"
+                  className="rounded-xl border border-base surface px-4 py-3"
                 >
-                  <p className="text-sm font-semibold text-slate-800">{output.label}</p>
-                  <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Expression</p>
-                  <code className="mt-1 block overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+                  <p className="text-sm font-semibold text-body">{output.label}</p>
+                  <p className="mt-1 text-xs uppercase tracking-wide text-muted">Expression</p>
+                  <code className="mt-1 block overflow-x-auto rounded-lg surface-strong p-3 text-xs text-body">
                     {formatExpressionWithValues(
                       getOutputExpression(compiledOutputs, output.id),
                       numericValues
                     )}
                   </code>
-                  <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Inputs used</p>
-                  <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                  <p className="mt-3 text-xs uppercase tracking-wide text-muted">Inputs used</p>
+                  <ul className="mt-2 space-y-1 text-xs text-muted">
                     {fieldIds.map((id) => (
                       <li key={`input-${output.id}-${id}`} className="flex justify-between">
-                        <span className="text-slate-500">{id}</span>
-                        <span className="font-semibold text-slate-800">
+                        <span className="text-muted">{id}</span>
+                        <span className="font-semibold text-body">
                           {Number.isFinite(numericValues[id])
                             ? numericValues[id].toLocaleString("en-US", {
                                 maximumFractionDigits: 6
@@ -364,30 +364,30 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
       )}
 
       {chartPoints.length > 0 && (
-        <div className="bento-tile bento-span-2 p-6">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Visualization
-            </h3>
-            <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
-              <label className="flex items-center gap-1">
-                <span>Points</span>
-                <select
-                  value={chartPointLimit}
-                  onChange={(e) => setChartPointLimit(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                >
+      <div className="surface bento-tile bento-span-2 p-6 border border-base shadow-soft">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+            Visualization
+          </h3>
+          <div className="flex items-center gap-3 text-xs font-semibold text-muted">
+            <label className="flex items-center gap-1">
+              <span>Points</span>
+              <select
+                value={chartPointLimit}
+                onChange={(e) => setChartPointLimit(e.target.value)}
+                className="rounded-lg border border-base surface px-2 py-1 text-xs text-body shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              >
                   <option value="all">All</option>
                   <option value="5">5</option>
                   <option value="10">10</option>
                   <option value="20">20</option>
                 </select>
               </label>
-              <button
-                type="button"
-                onClick={() => setShowChart((prev) => !prev)}
-                className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
-              >
+            <button
+              type="button"
+              onClick={() => setShowChart((prev) => !prev)}
+              className="text-xs font-semibold text-accent underline underline-offset-4 hover:text-body"
+            >
                 {showChart ? "Hide chart" : "Load chart"}
               </button>
             </div>
@@ -402,36 +402,36 @@ function SimpleCalculatorForm({ form, logic }: SimpleCalculatorFormProps) {
               />
             </div>
           ) : (
-            <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100" />
+          <div className="mt-3 h-24 animate-pulse rounded-xl surface" />
           )}
         </div>
       )}
 
       {savedScenarios.length > 0 && (
-        <div className="bento-tile bento-span-2 p-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <div className="surface bento-tile bento-span-2 p-6 border border-base shadow-soft">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
             Scenario comparison
           </h3>
           <div className="mt-3 overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="surface-soft">
                 <tr>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Output</th>
+                  <th className="px-3 py-2 text-left font-semibold text-body">Output</th>
                   {savedScenarios.map((s) => (
-                    <th key={s.label} className="px-3 py-2 text-left font-semibold text-slate-700">
+                    <th key={s.label} className="px-3 py-2 text-left font-semibold text-body">
                       {s.label}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {outputs.map((output) => (
                   <tr key={output.id}>
-                    <td className="px-3 py-2 text-slate-800">{output.label}</td>
+                    <td className="px-3 py-2 text-body">{output.label}</td>
                     {savedScenarios.map((s, idx) => {
                       const match = s.outputs.find((o) => o.id === output.id);
                       return (
-                        <td key={`${output.id}-${idx}`} className="px-3 py-2 text-slate-700">
+                        <td key={`${output.id}-${idx}`} className="px-3 py-2 text-body">
                           {match
                             ? formatOutputValue(match.value, match.format, match.unit)
                             : "—"}
@@ -460,7 +460,7 @@ function renderInput(
         type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+        className="w-full rounded-lg border border-base surface px-3 py-2 text-sm text-body shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
       />
     );
   }
@@ -470,7 +470,7 @@ function renderInput(
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+        className="w-full rounded-lg border border-base surface px-3 py-2 text-sm text-body shadow-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
       >
         <option value="">Select...</option>
         {field.options.map((option) => (
