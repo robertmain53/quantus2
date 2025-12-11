@@ -114,7 +114,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className="bg-slate-50 text-slate-900">
+      <body className="flex min-h-screen flex-col surface-soft text-body">
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
           <div className="flex-1">{children}</div>
