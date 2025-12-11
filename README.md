@@ -194,9 +194,35 @@ This model removes bespoke React development from the daily cadence. Humans conc
 
 > **Quality gates:** Maintain automated validation inside `lib/content.ts` to reject malformed JSON, missing enum values, or unsupported content patterns before build time.
 
-### AI prompt template
+## Current architecture highlights
 
-**How to use**
+- **Critical CSS + semantic palette layer** – `app/critical.css` powers the shell (header, footer, hero) with the CSS variables we flip via `data-theme`. `globals.css` imports it before pulling in the purged Tailwind bundle so the layout renders immediately while the larger stylesheet loads.
+- **Fluid theme toggle** – `ThemeToggle` now lives in both the desktop and mobile header bars. It writes `data-theme` to `<html>` and the CSS helpers (`.surface`, `.text-body`, `.border-base`, `.shadow-soft`, overrides for `text-slate-*`, `bg-white`, etc.) reference those variables, ensuring every card, button, input, and table respects the dark/light palette.
+- **Critical data summary** – `scripts/generate-summary.ts` produces `data/summary.json`, a lightweight index (slug, title, category, subcategory, traffic, publish date) imported by `lib/content.ts` for navigation, listing pages, sitemap, and category metadata. Individual calculator pages still load the full `config_json`, but the summary prevents the rest of the shell from reading 900+ JSON blobs during builds.
+- **Lightweight mobile navigation** – `SiteHeader` now computes `LightweightCalculator[]` (slug/title/category/subcategory) and passes the top 10 to `MobileMenu`. The menu applies `.slice(0, 10)` plus a `View all` link so the client bundle stays small and no ISR overflow occurs.
+- **CSV-driven publishing** – `data/calc.csv` remains the single source of truth. Each row defines taxonomy, slug, metadata, engine contract (`component_type` + `config_json`), citations, and publish dates. `lib/content.ts` reads the file once per build, filters unpublished rows, and exposes helpers for `getStaticParams`, category maps, search, and metadata.
+- **Pipeline guardrails** – `npm run lint:configs` validates every config before `next build`. The build command runs `scripts/generate-summary.ts` through `app/globals.css` import (the critical CSS helper) so the summary stays fresh and the shell renders immediately on every deploy.
+
+## Operational blueprint (phase recap)
+
+1. **Research & prompt build**
+   * Research team gathers competitor calculators, regulatory sources, and internal requirements (see `miglioramentiux.md` for UX cues).
+   * AI prompt template (stored in `scripts/generate-prompts.js`) bundles the ask: `component_type`, `config_json`, `page_content`, citations, schema, links, and how-is-calculated narrative. The output must include clean JSON with escaped `>`/`<`.
+2. **Config creation**
+   * The generated JSON is validated by `scripts/lint-configs.js` and then copied into `data/calc.csv`.
+   * `scripts/generate-summary.ts` runs before builds (imported in `globals.css`) to emit `data/summary.json`, which keeps navigation, sitemap, and category lookup fast.
+3. **Build + deploy**
+   * `npm run build` runs `lint:configs`, `next build`, and generates SSG/ISR pages. The lightweight summary allows category pages to render static `<Link>` lists without loading every config.
+   * Vercel builds leverage the `critical.css` subset for a fast first paint while the purged Tailwind bundle (≈25 KB) finishes loading.
+4. **Live monitoring**
+   * App-level telemetry (e.g., `rootStructuredData`) and `SiteHeader`/`ThemeToggle` deliver consistent experience, while `SiteFooter` exposes crawlable category links for SEO.
+
+## Next steps for newcomers
+
+- Follow the **AI prompt template** in `scripts/generate-prompts.js` when generating new calculators.
+- Keep all new rows in `data/calc.csv` (no forked configs). Use `component_type` to select the engine and keep `config_json` accurate.
+- Run `npm run build` locally to let the summary regenerate, then push to your CI pipeline.
+- If you need a new presentation pattern, extend the relevant engine (`GenericConverter`, `GenericSimpleCalculator`, `GenericAdvancedCalculator`) rather than adding bespoke React pages.
 
 - Gather your research corpus (competitor pages, regulations, spreadsheets, notes) in a single folder. Compress it into a `.zip` when sending to a chat model, or keep it beside the repo when using a VS Code AI assistant that can read local files.
 - Prepare a short "context packet" to paste alongside the prompt:
