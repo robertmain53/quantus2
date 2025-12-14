@@ -20,6 +20,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.9,
       lastModified: fallbackDate
+    },
+    {
+      url: getSiteUrl("/calculators"),
+      changeFrequency: "daily",
+      priority: 0.9,
+      lastModified: fallbackDate
     }
   ] satisfies MetadataRoute.Sitemap;
 

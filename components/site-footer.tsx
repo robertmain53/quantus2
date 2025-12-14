@@ -17,6 +17,9 @@ export function SiteFooter() {
           <nav>
             <p className="mb-2 font-semibold text-body">Policies</p>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+              <Link href="/calculators" className="hover:text-accent">
+                All Calculators
+              </Link>
               <Link href="/about" className="hover:text-accent">
                 About
               </Link>

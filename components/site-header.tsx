@@ -30,6 +30,9 @@ export function SiteHeader() {
             <Link href="/category" className="hover:text-brand no-underline">
               All Categories
             </Link>
+            <Link href="/calculators" className="hover:text-brand no-underline">
+              All Calculators
+            </Link>
             {categories.map((category) => (
               <Link
                 key={category.slug}

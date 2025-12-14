@@ -58,6 +58,13 @@ export function MobileMenu({ categories, calculators }: MobileMenuProps) {
               >
                 Categories
               </Link>
+              <Link
+                href="/calculators"
+                className="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand transition-colors no-underline"
+                onClick={() => setIsOpen(false)}
+              >
+                All Calculators
+              </Link>
               {categories.map((category) => (
                 <Link
                   key={category.slug}
@@ -84,7 +91,7 @@ export function MobileMenu({ categories, calculators }: MobileMenuProps) {
                     </Link>
                   ))}
                   <Link
-                    href="/category"
+                    href="/calculators"
                     className="block rounded-md px-3 py-2 text-sm font-semibold text-brand hover:bg-slate-100 transition-colors no-underline"
                     onClick={() => setIsOpen(false)}
                   >
