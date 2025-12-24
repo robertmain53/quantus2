@@ -98,6 +98,12 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const examples = pageContent?.examples ?? [];
   const summaryParagraphs = pageContent?.summary ?? [];
   const citationEntries = pageContent?.citations ?? [];
+  const citations = citationEntries
+    .map((citation) => ({
+      ...citation,
+      url: citation.url ? normalizeExternalUrl(citation.url) : null
+    }))
+    .filter((citation) => citation.label || citation.text || citation.url);
   const faqEntriesFromConfig = pageContent?.faqs ?? null;
   const pageDescription =
     config?.metadata?.description ??
@@ -395,13 +401,13 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </div>
         </section>
 
-        {citationEntries.length > 0 && (
+        {citations.length > 0 && (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
             <h2 className="font-serif text-2xl font-semibold text-slate-900">
               Sources & citations
             </h2>
             <ul className="space-y-3 text-sm text-slate-600">
-              {citationEntries.map((citation, index) => (
+              {citations.map((citation, index) => (
                 <li key={citation.url ?? index}>
                   <span className="font-medium text-slate-800">
                     {citation.label ?? citation.text ?? citation.url}
@@ -504,6 +510,24 @@ function normalizeInternalPath(path: string) {
   return withLeading.replace(/\/+/g, "/").replace(/\/+$/g, "") || null;
 }
 
+function normalizeExternalUrl(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const markdownLinkMatch = trimmed.match(/^\[.*\]\((https?:\/\/[^)]+)\)$/);
+  if (markdownLinkMatch) {
+    return markdownLinkMatch[1];
+  }
+
+  if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+    return trimmed;
+  }
+
+  return null;
+}
+
 interface ExternalLink {
   url: string;
   label?: string;
@@ -522,7 +546,10 @@ function resolveExternalLinks(entries: unknown): ExternalLink[] {
     if (!entry || typeof entry !== "object") {
       return;
     }
-    const url = "url" in entry && typeof entry.url === "string" ? entry.url.trim() : "";
+    const url =
+      "url" in entry && typeof entry.url === "string"
+        ? normalizeExternalUrl(entry.url) ?? ""
+        : "";
     if (!url || seen.has(url)) {
       return;
     }
