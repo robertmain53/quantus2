@@ -98,6 +98,14 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const examples = pageContent?.examples ?? [];
   const summaryParagraphs = pageContent?.summary ?? [];
   const citationEntries = pageContent?.citations ?? [];
+  const calculationLogic = pageContent?.calculation_logic;
+  const limitations = pageContent?.limitations;
+  const realScenarios = pageContent?.real_scenarios;
+  const resultInterpretation = pageContent?.result_interpretation;
+  const commonMistakes = pageContent?.common_mistakes;
+  const author = config?.metadata?.author;
+  const lastUpdated = config?.metadata?.lastUpdated;
+  const disclaimer = config?.metadata?.disclaimer;
   const citations = citationEntries
     .map((citation) => ({
       ...citation,
@@ -254,17 +262,233 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
               <p className="text-lg text-slate-600">{pageDescription}</p>
             )}
             <div className="flex flex-wrap gap-3 text-xs uppercase tracking-wide text-slate-400">
-              {calculator.publishDate && (
-                <span>Updated {humanizeDate(calculator.publishDate)}</span>
+              {(lastUpdated || calculator.publishDate) && (
+                <span>Updated {lastUpdated ? lastUpdated : (calculator.publishDate ? humanizeDate(calculator.publishDate) : 'Recently')}</span>
               )}
-        {/*      <span>{calculator.trafficEstimate.toLocaleString()} projected daily visits</span> */} 
+        {/*      <span>{calculator.trafficEstimate.toLocaleString()} projected daily visits</span> */}
             </div>
+            {author && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-900">
+                      {typeof author === 'object' && author !== null && 'name' in author
+                        ? String(author.name)
+                        : 'Expert Review'}
+                    </p>
+                    {typeof author === 'object' && author !== null && 'credentials' in author && (
+                      <p className="text-slate-600">{String(author.credentials)}</p>
+                    )}
+                    {typeof author === 'object' && author !== null && 'role' in author && (
+                      <p className="text-xs text-slate-500">{String(author.role)}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {disclaimer && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">
+                <p className="font-semibold text-amber-900">Important Disclaimer</p>
+                <p className="mt-1 text-amber-800">{disclaimer}</p>
+              </div>
+            )}
           </div>
         </header>
 
         {advancedCalculatorNode}
         {converterNode}
         {simpleCalculatorNode}
+
+        {calculationLogic && typeof calculationLogic === 'object' && (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">How This Calculator Works</h2>
+            {'overview' in calculationLogic && (
+              <p className="text-base text-slate-600">{String(calculationLogic.overview)}</p>
+            )}
+            {'tax_year' in calculationLogic && 'official_source' in calculationLogic && (
+              <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-600">
+                <p><span className="font-semibold">Tax Year:</span> {String(calculationLogic.tax_year)}</p>
+                <p className="mt-1"><span className="font-semibold">Source:</span> {String(calculationLogic.official_source)}</p>
+              </div>
+            )}
+            {'formula_breakdown' in calculationLogic && Array.isArray(calculationLogic.formula_breakdown) && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-slate-800">Formula Breakdown</h3>
+                {calculationLogic.formula_breakdown.map((step: unknown, index: number) => {
+                  if (typeof step !== 'object' || step === null) return null;
+                  const s = step as Record<string, unknown>;
+                  return (
+                    <div key={index} className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+                          {String(s.step || index + 1)}
+                        </span>
+                        <div className="flex-1 space-y-2">
+                          {s.name ? <h4 className="font-semibold text-slate-900">{String(s.name)}</h4> : null}
+                          {s.formula ? (
+                            <code className="block rounded bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                              {String(s.formula)}
+                            </code>
+                          ) : null}
+                          {s.explanation ? <p className="text-slate-600">{String(s.explanation)}</p> : null}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {resultInterpretation && typeof resultInterpretation === 'object' && (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">Understanding Your Results</h2>
+            {'understanding_your_results' in resultInterpretation && Array.isArray(resultInterpretation.understanding_your_results) && (
+              <div className="space-y-4">
+                {resultInterpretation.understanding_your_results.map((item: unknown, index: number) => {
+                  if (typeof item !== 'object' || item === null) return null;
+                  const i = item as Record<string, unknown>;
+                  return (
+                    <div key={index}>
+                      {i.concept ? <h3 className="font-semibold text-slate-800">{String(i.concept)}</h3> : null}
+                      {i.explanation ? <p className="mt-1 text-slate-600">{String(i.explanation)}</p> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {'optimization_strategies' in resultInterpretation && Array.isArray(resultInterpretation.optimization_strategies) && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-slate-800">Optimization Strategies</h3>
+                {resultInterpretation.optimization_strategies.map((item: unknown, index: number) => {
+                  if (typeof item !== 'object' || item === null) return null;
+                  const i = item as Record<string, unknown>;
+                  return (
+                    <div key={index} className="rounded-md border-l-4 border-brand bg-slate-50 p-4">
+                      {i.strategy ? <h4 className="font-semibold text-slate-900">{String(i.strategy)}</h4> : null}
+                      {i.details ? <p className="mt-1 text-slate-600">{String(i.details)}</p> : null}
+                      {i.example ? (
+                        <p className="mt-2 text-sm italic text-slate-500">Example: {String(i.example)}</p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {realScenarios && Array.isArray(realScenarios) && realScenarios.length > 0 && (
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">Real-World Scenarios</h2>
+            <div className="space-y-6">
+              {realScenarios.map((scenario, index) => {
+                if (typeof scenario !== 'object' || scenario === null) return null;
+                const s = scenario as Record<string, unknown>;
+                return (
+                  <div key={index} className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
+                    {s.scenario_name ? (
+                      <h3 className="font-serif text-lg font-semibold text-slate-900">{String(s.scenario_name)}</h3>
+                    ) : null}
+                    {s.profile && typeof s.profile === 'object' ? (
+                      <div className="mt-3 grid gap-2 text-sm">
+                        {Object.entries(s.profile as Record<string, unknown>).map(([key, value]) => (
+                          <div key={key} className="flex gap-2">
+                            <span className="font-medium text-slate-600">{key.replace(/_/g, ' ')}:</span>
+                            <span className="text-slate-800">{String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    {s.calculation_walkthrough && typeof s.calculation_walkthrough === 'object' ? (
+                      <div className="mt-4 space-y-2 rounded-md bg-slate-800 p-4 text-sm text-slate-100">
+                        <p className="font-semibold text-sky-300">Calculation Steps:</p>
+                        {Object.entries(s.calculation_walkthrough as Record<string, unknown>).map(([key, value]) => (
+                          <p key={key} className="font-mono text-xs">{String(value)}</p>
+                        ))}
+                      </div>
+                    ) : null}
+                    {s.interpretation ? (
+                      <p className="mt-3 text-slate-600">{String(s.interpretation)}</p>
+                    ) : null}
+                    {s.optimization_tip ? (
+                      <div className="mt-3 rounded-md border-l-4 border-green-500 bg-green-50 p-3 text-sm">
+                        <p className="font-semibold text-green-900">💡 Optimization Tip</p>
+                        <p className="mt-1 text-green-800">{String(s.optimization_tip)}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {limitations && typeof limitations === 'object' && (
+          <section className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+            <h2 className="font-serif text-2xl font-semibold text-amber-900">
+              {'title' in limitations ? String(limitations.title) : 'Limitations'}
+            </h2>
+            {'items' in limitations && Array.isArray(limitations.items) && (
+              <div className="space-y-3">
+                {limitations.items.map((item: unknown, index: number) => {
+                  if (typeof item !== 'object' || item === null) return null;
+                  const i = item as Record<string, unknown>;
+                  return (
+                    <div key={index} className="rounded-md border border-amber-300 bg-white p-4">
+                      {i.limitation ? (
+                        <h3 className="font-semibold text-amber-900">{String(i.limitation)}</h3>
+                      ) : null}
+                      {i.details ? (
+                        <p className="mt-1 text-sm text-amber-800">{String(i.details)}</p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {commonMistakes && Array.isArray(commonMistakes) && commonMistakes.length > 0 && (
+          <section className="space-y-4 rounded-2xl border border-red-200 bg-red-50 p-6 shadow-sm">
+            <h2 className="font-serif text-2xl font-semibold text-red-900">Common Mistakes to Avoid</h2>
+            <div className="space-y-4">
+              {commonMistakes.map((mistake, index) => {
+                if (typeof mistake !== 'object' || mistake === null) return null;
+                const m = mistake as Record<string, unknown>;
+                return (
+                  <div key={index} className="rounded-md border border-red-300 bg-white p-4">
+                    {m.mistake ? (
+                      <h3 className="font-semibold text-red-900">❌ {String(m.mistake)}</h3>
+                    ) : null}
+                    {m.why_it_happens ? (
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="font-semibold">Why it happens:</span> {String(m.why_it_happens)}
+                      </p>
+                    ) : null}
+                    {m.consequence ? (
+                      <p className="mt-1 text-sm text-red-700">
+                        <span className="font-semibold">Consequence:</span> {String(m.consequence)}
+                      </p>
+                    ) : null}
+                    {m.how_to_avoid ? (
+                      <p className="mt-2 text-sm text-green-700">
+                        <span className="font-semibold">✓ How to avoid:</span> {String(m.how_to_avoid)}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {methodologyParagraphs.length > 0 ? (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
