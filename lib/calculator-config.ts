@@ -10,11 +10,16 @@ export interface CalculatorConfig {
   pageContent: PageContentConfig | null;
   schema: SchemaConfig | null;
   links: LinkConfig | null;
+  contentStructure?: Record<string, unknown> | null;
 }
 
 export interface MetadataConfig {
   title?: string;
   description?: string;
+  lastUpdated?: string;
+  taxYearBasis?: string;
+  author?: Record<string, unknown>;
+  disclaimer?: string;
 }
 
 export interface CalculatorFormConfig {
@@ -131,9 +136,14 @@ export interface PageContentConfig {
   how_is_calculated?: string[];
   examples?: string[];
   faqs?: Array<{ question: string; answer: string }>;
-  citations?: Array<{ label?: string; text?: string; url: string }>;
+  citations?: Array<{ label?: string; text?: string; url: string; description?: string }>;
   glossary?: Array<{ term: string; definition: string }>;
   summary?: string[];
+  calculation_logic?: Record<string, unknown>;
+  limitations?: Record<string, unknown>;
+  real_scenarios?: Array<Record<string, unknown>>;
+  result_interpretation?: Record<string, unknown>;
+  common_mistakes?: Array<Record<string, unknown>>;
 }
 
 export interface SchemaConfig {
@@ -160,7 +170,8 @@ const ALLOWED_TOP_LEVEL_KEYS = new Set([
   "page_content",
   "schema",
   "links",
-  "seo_links"
+  "seo_links",
+  "content_structure"
 ]);
 
 const ALLOWED_PAGE_CONTENT_KEYS = new Set([
@@ -171,7 +182,12 @@ const ALLOWED_PAGE_CONTENT_KEYS = new Set([
   "faqs",
   "citations",
   "glossary",
-  "summary"
+  "summary",
+  "calculation_logic",
+  "limitations",
+  "real_scenarios",
+  "result_interpretation",
+  "common_mistakes"
 ]);
 
 export function parseCalculatorConfig(raw: string, context: string): CalculatorConfig {
@@ -225,6 +241,7 @@ export function validateCalculatorConfig(raw: string, context: string): Validati
   const pageContent = parsePageContent(parsedRecord, context, errors);
   const schema = parseSchema(parsedRecord.schema, context, errors);
   const links = parseLinks(parsedRecord, context, errors);
+  const contentStructure = parsedRecord.content_structure as Record<string, unknown> | undefined;
 
   if (errors.length > 0) {
     return { config: null, errors };
@@ -238,7 +255,8 @@ export function validateCalculatorConfig(raw: string, context: string): Validati
       form,
       pageContent,
       schema,
-      links
+      links,
+      contentStructure: contentStructure ?? null
     },
     errors
   };
@@ -288,6 +306,39 @@ function parseMetadata(metadata: unknown, context: string, errors: string[]): Me
       result.description = metadata.description.trim();
     } else {
       errors.push(`${context}: metadata.description must be a string`);
+    }
+  }
+
+  if (metadata.lastUpdated !== undefined) {
+    if (typeof metadata.lastUpdated === "string") {
+      result.lastUpdated = metadata.lastUpdated.trim();
+    } else {
+      errors.push(`${context}: metadata.lastUpdated must be a string`);
+    }
+  }
+
+  if (metadata.taxYearBasis !== undefined) {
+    if (typeof metadata.taxYearBasis === "string") {
+      result.taxYearBasis = metadata.taxYearBasis.trim();
+    } else {
+      errors.push(`${context}: metadata.taxYearBasis must be a string`);
+    }
+  }
+
+  if (metadata.author !== undefined) {
+    if (isPlainObject(metadata.author)) {
+      result.author = metadata.author as Record<string, unknown>;
+    } else {
+      errors.push(`${context}: metadata.author must be an object`);
+    }
+  }
+
+  if (metadata.disclaimer !== undefined) {
+    if (typeof metadata.disclaimer === "string") {
+      assertNoHtml(metadata.disclaimer, `${context}: metadata.disclaimer`, errors);
+      result.disclaimer = metadata.disclaimer.trim();
+    } else {
+      errors.push(`${context}: metadata.disclaimer must be a string`);
     }
   }
 
@@ -962,6 +1013,26 @@ function parsePageContent(
   const citations = parseCitations(pageContentCandidate.citations, context, errors);
   const glossary = parseGlossary(pageContentCandidate.glossary, context, errors);
 
+  const calculationLogic = pageContentCandidate.calculation_logic !== undefined && isPlainObject(pageContentCandidate.calculation_logic)
+    ? pageContentCandidate.calculation_logic as Record<string, unknown>
+    : undefined;
+
+  const limitations = pageContentCandidate.limitations !== undefined && isPlainObject(pageContentCandidate.limitations)
+    ? pageContentCandidate.limitations as Record<string, unknown>
+    : undefined;
+
+  const realScenarios = pageContentCandidate.real_scenarios !== undefined && Array.isArray(pageContentCandidate.real_scenarios)
+    ? pageContentCandidate.real_scenarios as Array<Record<string, unknown>>
+    : undefined;
+
+  const resultInterpretation = pageContentCandidate.result_interpretation !== undefined && isPlainObject(pageContentCandidate.result_interpretation)
+    ? pageContentCandidate.result_interpretation as Record<string, unknown>
+    : undefined;
+
+  const commonMistakes = pageContentCandidate.common_mistakes !== undefined && Array.isArray(pageContentCandidate.common_mistakes)
+    ? pageContentCandidate.common_mistakes as Array<Record<string, unknown>>
+    : undefined;
+
   return {
     introduction,
     methodology,
@@ -970,7 +1041,12 @@ function parsePageContent(
     summary,
     faqs,
     citations,
-    glossary
+    glossary,
+    calculation_logic: calculationLogic,
+    limitations,
+    real_scenarios: realScenarios,
+    result_interpretation: resultInterpretation,
+    common_mistakes: commonMistakes
   };
 }
 
