@@ -533,6 +533,7 @@ function buildSummaryRecords(): CalculatorRecord[] {
   const todayIso = new Date().toISOString().split("T")[0];
   return SUMMARY_ENTRIES.map((entry) => {
     const segments = slugToSegments(entry.slug);
+    const publishDate = normalizeDate(entry.publishDate ?? undefined);
     return {
       category: entry.category || "uncategorized",
       subcategory: entry.subcategory ?? null,
@@ -543,8 +544,8 @@ function buildSummaryRecords(): CalculatorRecord[] {
       segments,
       title: entry.title || "",
       trafficEstimate: entry.trafficEstimate,
-      publishDate: entry.publishDate ?? "",
-      isPublished: !entry.publishDate || entry.publishDate <= todayIso
+      publishDate,
+      isPublished: !publishDate || publishDate <= todayIso
     };
   });
 }
