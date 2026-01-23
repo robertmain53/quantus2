@@ -153,9 +153,6 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
     faqEntriesFromConfig && faqEntriesFromConfig.length > 0
       ? faqEntriesFromConfig
       : buildFaq(calculator.title, conversion);
-  const evidenceLinks = citationEntries
-    .map((citation) => citation.url)
-    .filter((url): url is string => Boolean(url));
   const advancedCalculatorNode =
     ((componentType === "advanced_calc" || config?.logic?.type === "advanced") && config) ? (
       <GenericAdvancedCalculator config={config} />
