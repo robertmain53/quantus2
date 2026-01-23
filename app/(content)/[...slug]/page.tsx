@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ConversionCalculator } from "@/components/conversion-calculator";
+import { GovernanceStrip } from "@/components/governance-strip";
 import { GenericAdvancedCalculator } from "@/components/generic-advanced-calculator";
 import { GenericConverter } from "@/components/generic-converter";
 import { GenericSimpleCalculator } from "@/components/generic-simple-calculator";
@@ -300,53 +301,16 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             )}
 
             {/* Governance strip (compact, above-the-fold) */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-700">
-                  <span>
-                    <span className="font-semibold">Updated:</span> {humanizeDate(versioning.lastUpdated)}
-                  </span>
-                  <span className="text-slate-400" aria-hidden>
-                    •
-                  </span>
-                  <span>
-                    <span className="font-semibold">QA:</span> PASS (golden {versioning.tests.goldenCases}, edge{" "}
-                    {versioning.tests.edgeCases})
-                  </span>
-                  <span className="text-slate-400" aria-hidden>
-                    •
-                  </span>
-                  <span>
-                    <span className="font-semibold">Reviewed by:</span> {versioning.reviewedBy.name}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (typeof window === "undefined") return;
-                    void navigator.clipboard.writeText(governanceSummary);
-                  }}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 hover:border-slate-400"
-                >
-                  Copy governance summary
-                </button>
-              </div>
-
-              {evidenceDomains.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {evidenceDomains.slice(0, 6).map((d) => (
-                    <span
-                      key={d}
-                      className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600"
-                      title="Evidence domain"
-                    >
-                      {d}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <p className="mt-3 text-sm text-slate-600">{verifiedAccuracyCopy}</p>
+            <div className="space-y-3">
+              <GovernanceStrip
+                lastUpdatedLabel={humanizeDate(versioning.lastUpdated)}
+                goldenCases={versioning.tests.goldenCases}
+                edgeCases={versioning.tests.edgeCases}
+                reviewerName={versioning.reviewedBy.name}
+                evidenceDomains={evidenceDomains}
+                governanceSummary={governanceSummary}
+              />
+              <p className="text-sm text-slate-600">{verifiedAccuracyCopy}</p>
             </div>
 
             {author && (
