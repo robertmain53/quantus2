@@ -198,6 +198,16 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / (3.785411784 / 16),
     decimalPlaces: 4
   },
+  us_cup: {
+    id: "us_cup",
+    label: "US Cup",
+    symbol: "cup",
+    kind: "volume",
+    // Keep parity with the US cup definition used for "cup".
+    toBase: (value) => value * (3.785411784 / 16),
+    fromBase: (value) => value / (3.785411784 / 16),
+    decimalPlaces: 4
+  },
   teaspoon: {
     id: "teaspoon",
     label: "Teaspoon",
@@ -1478,6 +1488,9 @@ meter: "meter",
   qt: "quart",
   cup: "cup",
   cups: "cup",
+  us_cup: "us_cup",
+  "us cup": "us_cup",
+  "us cups": "us_cup",
   teaspoon: "teaspoon",
   teaspoons: "teaspoon",
   tsp: "teaspoon",
