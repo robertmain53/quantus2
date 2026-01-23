@@ -19,8 +19,19 @@ import fs from "node:fs";
 import path from "node:path";
 
 // NOTE: These are TypeScript modules; use tsx (or node+loader) to run this script.
-import { getPublishedCalculators } from "../lib/content.ts";
-import { getVersioningPolicy, getVersioningRecord } from "../lib/versioning.ts";
+import * as contentModule from "../lib/content.ts";
+import * as versioningModule from "../lib/versioning.ts";
+
+const getPublishedCalculators =
+  contentModule.getPublishedCalculators ?? contentModule.default?.getPublishedCalculators;
+const getVersioningPolicy =
+  versioningModule.getVersioningPolicy ?? versioningModule.default?.getVersioningPolicy;
+const getVersioningRecord =
+  versioningModule.getVersioningRecord ?? versioningModule.default?.getVersioningRecord;
+
+if (!getPublishedCalculators || !getVersioningPolicy || !getVersioningRecord) {
+  throw new Error("qa-versioning: failed to resolve required module exports.");
+}
 
 const ALLOWED_RISK = new Set(["low", "medium", "high"]);
 
