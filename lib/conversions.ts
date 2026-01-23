@@ -208,6 +208,26 @@ const units: Record<string, UnitDefinition> = {
     fromBase: (value) => value / (3.785411784 / 16),
     decimalPlaces: 4
   },
+  metric_cup: {
+    id: "metric_cup",
+    label: "Metric Cup",
+    symbol: "cup (metric)",
+    kind: "volume",
+    // Metric cup defined as exactly 250 mL.
+    toBase: (value) => value * 0.25,
+    fromBase: (value) => value / 0.25,
+    decimalPlaces: 4
+  },
+  imperial_cup: {
+    id: "imperial_cup",
+    label: "Imperial/UK Cup",
+    symbol: "cup (imp)",
+    kind: "volume",
+    // Imperial cup defined as 284.13125 mL.
+    toBase: (value) => value * 0.28413125,
+    fromBase: (value) => value / 0.28413125,
+    decimalPlaces: 4
+  },
   teaspoon: {
     id: "teaspoon",
     label: "Teaspoon",
@@ -1491,6 +1511,16 @@ meter: "meter",
   us_cup: "us_cup",
   "us cup": "us_cup",
   "us cups": "us_cup",
+  metric_cup: "metric_cup",
+  "metric cup": "metric_cup",
+  "metric cups": "metric_cup",
+  imperial_cup: "imperial_cup",
+  "imperial cup": "imperial_cup",
+  "imperial cups": "imperial_cup",
+  "uk cup": "imperial_cup",
+  "uk cups": "imperial_cup",
+  "british cup": "imperial_cup",
+  "british cups": "imperial_cup",
   teaspoon: "teaspoon",
   teaspoons: "teaspoon",
   tsp: "teaspoon",
