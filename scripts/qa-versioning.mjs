@@ -1,25 +1,26 @@
 // scripts/qa-versioning.mjs
-// Deterministic governance gate for calculator pages.
+//
+// Deterministic governance gate for published calculator pages.
 // Fails CI when published calculators violate risk-tier requirements in data/versioning.json.
 //
-// Usage:
-//   node scripts/qa-versioning.mjs
+// Run (recommended):
+//   pnpm -s tsx scripts/qa-versioning.mjs
+// or:
+//   npx -y tsx scripts/qa-versioning.mjs
+//
+// Alternative (if you prefer ts-node loader):
+//   node --loader ts-node/esm scripts/qa-versioning.mjs
 //
 // Exit codes:
-//   0 = pass
-//   1 = fail
+//   0 = PASS
+//   1 = FAIL
 
 import fs from "node:fs";
 import path from "node:path";
 
-import { getPublishedCalculators } from "../src/lib/content.js";
-import { getVersioningPolicy, getVersioningRecord } from "../src/lib/versioning.js";
-
-/**
- * IMPORTANT:
- * - This script assumes your app code is transpiled/available for Node ESM import.
- * - If your repo structure differs (e.g., no /src), adjust import paths accordingly.
- */
+// NOTE: These are TypeScript modules; use tsx (or node+loader) to run this script.
+import { getPublishedCalculators } from "../lib/content.ts";
+import { getVersioningPolicy, getVersioningRecord } from "../lib/versioning.ts";
 
 const ALLOWED_RISK = new Set(["low", "medium", "high"]);
 
@@ -28,20 +29,17 @@ function fail(msg) {
 }
 
 function warn(msg) {
-  // eslint-disable-next-line no-console
   console.warn(`[QA-VERSIONING][WARN] ${msg}`);
 }
 
 function info(msg) {
-  // eslint-disable-next-line no-console
   console.log(`[QA-VERSIONING] ${msg}`);
 }
 
 function readVersioningJson() {
   const filePath = path.join(process.cwd(), "data", "versioning.json");
   const raw = fs.readFileSync(filePath, "utf-8");
-  const data = JSON.parse(raw);
-  return data;
+  return JSON.parse(raw);
 }
 
 function normalizeExternalUrl(raw) {
@@ -49,7 +47,6 @@ function normalizeExternalUrl(raw) {
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
-  // Markdown link [label](url)
   const markdownLinkMatch = trimmed.match(/^\[.*\]\((https?:\/\/[^)]+)\)$/);
   if (markdownLinkMatch) return markdownLinkMatch[1];
 
@@ -58,12 +55,14 @@ function normalizeExternalUrl(raw) {
 }
 
 function extractEvidenceLinksFromConfig(calcConfig) {
+  // Your page.tsx sources citations from: config?.pageContent?.citations
   const citations = calcConfig?.pageContent?.citations;
   if (!Array.isArray(citations)) return [];
+
   const urls = citations
     .map((c) => (c && typeof c === "object" ? normalizeExternalUrl(c.url) : null))
     .filter(Boolean);
-  // Dedupe + sort for determinism
+
   return Array.from(new Set(urls)).sort();
 }
 
@@ -110,12 +109,14 @@ function ensureChangelogMatches(versioning, ctx) {
   if (!Array.isArray(versioning.changelog) || versioning.changelog.length === 0) {
     fail(`${ctx}: changelog is required and must be non-empty`);
   }
-  const hasEntryForEngine = versioning.changelog.some((e) => e && e.version === versioning.engineVersion);
+  const hasEntryForEngine = versioning.changelog.some(
+    (e) => e && e.version === versioning.engineVersion
+  );
   if (!hasEntryForEngine) {
     fail(`${ctx}: changelog must contain an entry for engineVersion=${versioning.engineVersion}`);
   }
 
-  // Optional but strongly recommended: lastUpdated == most recent changelog date
+  // Strong invariant: lastUpdated equals latest changelog date (YYYY-MM-DD).
   const dates = versioning.changelog
     .map((e) => parseIsoDateOrNull(e?.date))
     .filter(Boolean)
@@ -147,11 +148,12 @@ function ensureReviewer(versioning, req, ctx) {
     }
     ensureNonEmptyString("reviewedBy.name", versioning.reviewedBy.name, ctx);
 
-    // Optional but recommended: role OR credentials should exist for medium/high
     if (versioning.riskLevel !== "low") {
-      const hasRole = typeof versioning.reviewedBy.role === "string" && versioning.reviewedBy.role.trim() !== "";
+      const hasRole =
+        typeof versioning.reviewedBy.role === "string" && versioning.reviewedBy.role.trim() !== "";
       const hasCreds =
-        typeof versioning.reviewedBy.credentials === "string" && versioning.reviewedBy.credentials.trim() !== "";
+        typeof versioning.reviewedBy.credentials === "string" &&
+        versioning.reviewedBy.credentials.trim() !== "";
       if (!hasRole && !hasCreds) {
         fail(`${ctx}: reviewedBy should include role and/or credentials for riskLevel=${versioning.riskLevel}`);
       }
@@ -159,7 +161,7 @@ function ensureReviewer(versioning, req, ctx) {
   }
 
   if (req.requireReviewerScope) {
-    // You will add this in your VersioningRecord after updating versioning.ts
+    // If/when you add reviewedBy.scope in versioning.ts types, this becomes enforceable.
     const scope = versioning.reviewedBy?.scope;
     if (!Array.isArray(scope) || scope.length === 0) {
       fail(`${ctx}: reviewedBy.scope is required for riskLevel=${versioning.riskLevel}`);
@@ -184,7 +186,6 @@ function main() {
   const policy = getVersioningPolicy();
   const versioningJson = readVersioningJson();
 
-  // Sanity: policy in code should match policy in JSON file (optional check)
   if (!versioningJson?.policy?.semanticVersioning) {
     fail(`data/versioning.json: missing policy.semanticVersioning`);
   }
@@ -196,45 +197,41 @@ function main() {
 
   for (const calc of calculators) {
     const ctx = `${calc.fullPath}`;
-
     try {
       const evidenceFromPage = extractEvidenceLinksFromConfig(calc.config);
-      const versioning = getVersioningRecord(calc.fullPath, calc.config, calc.publishDate ?? null, evidenceFromPage);
+      const versioning = getVersioningRecord(
+        calc.fullPath,
+        calc.config,
+        calc.publishDate ?? null,
+        evidenceFromPage
+      );
 
       ensureAllowedRisk(versioning.riskLevel, ctx);
 
-      const req = getRequirements(policy, versioning.riskLevel) ?? {
-        requireReviewer: true,
-        requireChangelog: true,
-        requireEvidence: versioning.riskLevel !== "low",
-        requireTests: true,
-        minGoldenCases: versioning.riskLevel === "high" ? 50 : versioning.riskLevel === "medium" ? 25 : 10,
-        minEdgeCases: versioning.riskLevel === "high" ? 200 : versioning.riskLevel === "medium" ? 120 : 25,
-        requireReviewerScope: versioning.riskLevel === "high"
-      };
+      const req =
+        getRequirements(policy, versioning.riskLevel) ?? {
+          requireReviewer: true,
+          requireChangelog: true,
+          requireEvidence: versioning.riskLevel !== "low",
+          requireTests: true,
+          minGoldenCases: versioning.riskLevel === "high" ? 50 : versioning.riskLevel === "medium" ? 25 : 10,
+          minEdgeCases: versioning.riskLevel === "high" ? 200 : versioning.riskLevel === "medium" ? 120 : 25,
+          requireReviewerScope: versioning.riskLevel === "high"
+        };
 
       if (req.requireChangelog) ensureChangelogMatches(versioning, ctx);
       if (req.requireTests) ensureTests(versioning, req, ctx);
       ensureReviewer(versioning, req, ctx);
       ensureEvidence(versioning, req, ctx);
       ensureRecordId(versioning, ctx);
-
-      // Soft warnings
-      if ((versioning.riskLevel === "medium" || versioning.riskLevel === "high") && versioning.evidence.length === 0) {
-        warn(`${ctx}: medium/high risk calculator has zero evidence links (should not happen if requireEvidence=true)`);
-      }
     } catch (e) {
       failures.push(String(e?.message ?? e));
     }
   }
 
   if (failures.length > 0) {
-    // eslint-disable-next-line no-console
     console.error(`\n[QA-VERSIONING] FAIL (${failures.length}):`);
-    for (const msg of failures) {
-      // eslint-disable-next-line no-console
-      console.error(`- ${msg}`);
-    }
+    for (const msg of failures) console.error(`- ${msg}`);
     process.exit(1);
   }
 
