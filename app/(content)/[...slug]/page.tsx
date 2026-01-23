@@ -1,3 +1,4 @@
+// app/[...slug]/page.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,14 +7,10 @@ import { ConversionCalculator } from "@/components/conversion-calculator";
 import { GenericAdvancedCalculator } from "@/components/generic-advanced-calculator";
 import { GenericConverter } from "@/components/generic-converter";
 import { GenericSimpleCalculator } from "@/components/generic-simple-calculator";
+import { GovernanceStripClient } from "@/components/governance-strip-client";
 import type { CalculatorRecord } from "@/lib/content";
 import { getCalculatorByPath, getPublishedCalculators, toSlug } from "@/lib/content";
-import {
-  parseConversionFromSlug,
-  ConversionContext,
-  convertValue,
-  getUnitById
-} from "@/lib/conversions";
+import { parseConversionFromSlug, type ConversionContext, convertValue, getUnitById } from "@/lib/conversions";
 import type { ConversionLogicConfig, CalculatorLogicConfig } from "@/lib/calculator-config";
 import { getVersioningPolicy, getVersioningRecord } from "@/lib/versioning";
 import { buildBreadcrumbSchema, buildFaqSchema, buildWebPageSchema, getSiteUrl } from "@/lib/seo";
@@ -36,7 +33,9 @@ export async function generateMetadata(props: CalculatorPageProps): Promise<Meta
   if (!calculator) return {};
 
   if (!calculator.isPublished) {
-    return { robots: { index: false, follow: false } };
+    return {
+      robots: { index: false, follow: false }
+    };
   }
 
   const conversion = parseConversionFromSlug(calculator.slug);
@@ -96,18 +95,8 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const resultInterpretation = pageContent?.result_interpretation;
   const commonMistakes = pageContent?.common_mistakes;
 
-  const author = config?.metadata?.author;
-  const disclaimer = config?.metadata?.disclaimer;
-
-  const authorSchema =
-    typeof author === "object" && author !== null && "name" in author
-      ? {
-          "@type": "Person",
-          name: String(author.name),
-          jobTitle: "role" in author ? String(author.role) : undefined,
-          description: "credentials" in author ? String(author.credentials) : undefined
-        }
-      : null;
+  const author = config?.metadata?.author ?? null;
+  const disclaimer = config?.metadata?.disclaimer ?? null;
 
   const citations = citationEntries
     .map((citation) => ({
@@ -120,27 +109,10 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
     .map((citation) => citation.url)
     .filter((url): url is string => Boolean(url));
 
-  const versioning = getVersioningRecord(
-    calculator.fullPath,
-    config,
-    calculator.publishDate,
-    evidenceLinks
-  );
-
+  const versioning = getVersioningRecord(calculator.fullPath, config, calculator.publishDate, evidenceLinks);
   const versioningPolicy = getVersioningPolicy();
 
-  const reviewerSchema = versioning.reviewedBy?.name
-    ? {
-        "@type": "Person",
-        name: versioning.reviewedBy.name,
-        jobTitle: versioning.reviewedBy.role,
-        description: versioning.reviewedBy.credentials
-      }
-    : null;
-
-  const governanceSummary = buildGovernanceSummary(versioning);
-  const evidenceDomains = deriveEvidenceDomains(versioning.evidence ?? []);
-
+  // Defensible "Verified Accuracy" copy.
   const evidenceText = (versioning.evidence ?? []).join(" ").toLowerCase();
   const hasNistIsoEvidence =
     evidenceText.includes("nist.gov") ||
@@ -165,9 +137,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const subcategorySlug = calculator.subcategory ? toSlug(calculator.subcategory) : null;
 
   const faqEntries =
-    faqEntriesFromConfig && faqEntriesFromConfig.length > 0
-      ? faqEntriesFromConfig
-      : buildFaq(calculator.title, conversion);
+    faqEntriesFromConfig && faqEntriesFromConfig.length > 0 ? faqEntriesFromConfig : buildFaq(calculator.title, conversion);
 
   const advancedCalculatorNode =
     (componentType === "advanced_calc" || config?.logic?.type === "advanced") && config ? (
@@ -181,8 +151,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
       <ConversionCalculator fromUnitId={conversion.from.id} toUnitId={conversion.to.id} />
     ) : null;
 
-  const simpleCalculatorNode =
-    componentType === "simple_calc" && config ? <GenericSimpleCalculator config={config} /> : null;
+  const simpleCalculatorNode = componentType === "simple_calc" && config ? <GenericSimpleCalculator config={config} /> : null;
 
   const breadcrumbs = [
     { name: "Home", url: getSiteUrl("/") },
@@ -196,17 +165,54 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
     { name: calculator.title, url: getSiteUrl(calculator.fullPath) }
   ];
 
+  const pageUrl = getSiteUrl(calculator.fullPath);
+  const orgId = `${getSiteUrl("/") }#organization`;
+  const pageId = `${pageUrl}#webpage`;
+  const authorId = author && isNamedPerson(author) ? `${pageUrl}#author-${slugify(String(author.name))}` : null;
+  const reviewerId = versioning.reviewedBy?.name ? `${pageUrl}#reviewer-${slugify(String(versioning.reviewedBy.name))}` : null;
+
+  const authorSchema = author && isNamedPerson(author)
+    ? {
+        "@type": "Person",
+        "@id": authorId!,
+        name: String(author.name),
+        jobTitle: "role" in author ? String((author as any).role) : undefined,
+        description: "credentials" in author ? String((author as any).credentials) : undefined,
+        worksFor: { "@id": orgId }
+      }
+    : null;
+
+  const reviewerSchema = versioning.reviewedBy?.name
+    ? {
+        "@type": "Person",
+        "@id": reviewerId!,
+        name: versioning.reviewedBy.name,
+        jobTitle: versioning.reviewedBy.role,
+        description: versioning.reviewedBy.credentials,
+        worksFor: { "@id": orgId }
+      }
+    : null;
+
   const structuredData: Array<Record<string, unknown>> = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": orgId,
+      name: "Fidamen",
+      url: getSiteUrl("/")
+    },
+    ...(authorSchema ? [authorSchema] : []),
+    ...(reviewerSchema ? [reviewerSchema] : []),
     buildBreadcrumbSchema(breadcrumbs),
     buildWebPageSchema({
       name: calculator.title,
       description: pageDescription,
-      url: getSiteUrl(calculator.fullPath),
+      url: pageUrl,
       category: calculator.category,
-      dateModified: versioning.lastUpdated, // single source of truth
-      author: authorSchema,
-      reviewedBy: reviewerSchema
-    })
+      dateModified: versioning.lastUpdated,
+      author: authorSchema ? { "@id": authorSchema["@id"] } : null,
+      reviewedBy: reviewerSchema ? { "@id": reviewerSchema["@id"] } : null
+    }) as Record<string, unknown>
   ];
 
   if (faqEntries.length > 0) structuredData.push(buildFaqSchema(faqEntries));
@@ -223,21 +229,17 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
     name: calculator.title,
     applicationCategory: "CalculatorApplication",
     operatingSystem: "Web",
-    url: getSiteUrl(calculator.fullPath),
+    url: pageUrl,
     description: pageDescription,
     softwareVersion: versioning.engineVersion,
     dateModified: versioning.lastUpdated,
-    reviewedBy: versioning.reviewedBy?.name
-      ? {
-          "@type": "Person",
-          name: versioning.reviewedBy.name,
-          jobTitle: versioning.reviewedBy.role,
-          description: versioning.reviewedBy.credentials
-        }
-      : undefined,
-    publisher: { "@type": "Organization", name: "Fidamen", url: getSiteUrl("/") },
-    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }
+    reviewedBy: reviewerSchema ? { "@id": reviewerSchema["@id"] } : undefined,
+    publisher: { "@id": orgId },
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    mainEntityOfPage: { "@id": pageId }
   });
+
+  const versionDiff = buildVersionDiff(versioning.changelog);
 
   return (
     <main className="container grid gap-12 py-16 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -246,15 +248,11 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           <nav className="text-sm text-slate-500">
             <ol className="flex flex-wrap items-center gap-2">
               <li>
-                <Link href="/" className="hover:text-brand">
-                  Home
-                </Link>
+                <Link href="/" className="hover:text-brand">Home</Link>
               </li>
               <li aria-hidden>›</li>
               <li>
-                <Link href="/category" className="hover:text-brand">
-                  Categories
-                </Link>
+                <Link href="/category" className="hover:text-brand">Categories</Link>
               </li>
               {categorySlug && (
                 <>
@@ -270,10 +268,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                 <>
                   <li aria-hidden>›</li>
                   <li>
-                    <Link
-                      href={`/category/${categorySlug}/${subcategorySlug}`}
-                      className="text-slate-700 hover:text-brand"
-                    >
+                    <Link href={`/category/${categorySlug}/${subcategorySlug}`} className="text-slate-700 hover:text-brand">
                       {calculator.subcategory}
                     </Link>
                   </li>
@@ -299,55 +294,31 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
               <p className="text-lg text-slate-600">{pageDescription}</p>
             )}
 
-            {/* Governance strip (compact, above-the-fold) */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-700">
-                  <span>
-                    <span className="font-semibold">Updated:</span> {humanizeDate(versioning.lastUpdated)}
-                  </span>
-                  <span className="text-slate-400" aria-hidden>
-                    •
-                  </span>
-                  <span>
-                    <span className="font-semibold">QA:</span> PASS (golden {versioning.tests.goldenCases}, edge{" "}
-                    {versioning.tests.edgeCases})
-                  </span>
-                  <span className="text-slate-400" aria-hidden>
-                    •
-                  </span>
-                  <span>
-                    <span className="font-semibold">Reviewed by:</span> {versioning.reviewedBy.name}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (typeof window === "undefined") return;
-                    void navigator.clipboard.writeText(governanceSummary);
-                  }}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 hover:border-slate-400"
-                >
-                  Copy governance summary
-                </button>
-              </div>
-
-              {evidenceDomains.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {evidenceDomains.slice(0, 6).map((d) => (
-                    <span
-                      key={d}
-                      className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600"
-                      title="Evidence domain"
-                    >
-                      {d}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <p className="mt-3 text-sm text-slate-600">{verifiedAccuracyCopy}</p>
+            {/* Public QA badge + Updated date: always from versioning.lastUpdated */}
+            <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
+              <span>Updated {humanizeDate(versioning.lastUpdated)}</span>
+              <span aria-hidden>•</span>
+              <span className={qaBadgeClass(versioning.riskLevel)}>
+                QA PASS — golden {versioning.tests.goldenCases} / edge {versioning.tests.edgeCases}
+              </span>
+              <span className="normal-case text-slate-500">
+                Run {versioning.tests.runId}
+              </span>
             </div>
+
+            {/* Governance strip (client-only for copy action) */}
+            <GovernanceStripClient
+              recordId={versioning.recordId}
+              lastUpdated={versioning.lastUpdated}
+              engineVersion={versioning.engineVersion}
+              dataVersion={versioning.dataVersion}
+              contentVersion={versioning.contentVersion}
+              uiVersion={versioning.uiVersion}
+              riskLevel={versioning.riskLevel}
+              reviewedBy={versioning.reviewedBy}
+              tests={versioning.tests}
+              pageUrl={pageUrl}
+            />
 
             {author && (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
@@ -364,16 +335,14 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-slate-900">
-                      {typeof author === "object" && author !== null && "name" in author
-                        ? String(author.name)
-                        : "Expert Review"}
+                      {isNamedPerson(author) ? String(author.name) : "Expert Review"}
                     </p>
-                    {typeof author === "object" && author !== null && "credentials" in author && (
-                      <p className="text-slate-600">{String(author.credentials)}</p>
-                    )}
-                    {typeof author === "object" && author !== null && "role" in author && (
-                      <p className="text-xs text-slate-500">{String(author.role)}</p>
-                    )}
+                    {isNamedPerson(author) && "credentials" in author && (author as any).credentials ? (
+                      <p className="text-slate-600">{String((author as any).credentials)}</p>
+                    ) : null}
+                    {isNamedPerson(author) && "role" in author && (author as any).role ? (
+                      <p className="text-xs text-slate-500">{String((author as any).role)}</p>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -395,10 +364,10 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
         {calculationLogic && typeof calculationLogic === "object" && (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
             <h2 className="font-serif text-2xl font-semibold text-slate-900">How This Calculator Works</h2>
-            {"overview" in calculationLogic && (
+            {"overview" in calculationLogic ? (
               <p className="text-base text-slate-600">{String((calculationLogic as any).overview)}</p>
-            )}
-            {"tax_year" in calculationLogic && "official_source" in calculationLogic && (
+            ) : null}
+            {"tax_year" in calculationLogic && "official_source" in calculationLogic ? (
               <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-600">
                 <p>
                   <span className="font-semibold">Tax Year:</span> {String((calculationLogic as any).tax_year)}
@@ -407,8 +376,8 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                   <span className="font-semibold">Source:</span> {String((calculationLogic as any).official_source)}
                 </p>
               </div>
-            )}
-            {"formula_breakdown" in calculationLogic && Array.isArray((calculationLogic as any).formula_breakdown) && (
+            ) : null}
+            {"formula_breakdown" in calculationLogic && Array.isArray((calculationLogic as any).formula_breakdown) ? (
               <div className="space-y-4">
                 <h3 className="font-semibold text-slate-800">Formula Breakdown</h3>
                 {(calculationLogic as any).formula_breakdown.map((step: unknown, index: number) => {
@@ -434,7 +403,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                   );
                 })}
               </div>
-            )}
+            ) : null}
           </section>
         )}
 
@@ -442,39 +411,38 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
             <h2 className="font-serif text-2xl font-semibold text-slate-900">Understanding Your Results</h2>
             {"understanding_your_results" in resultInterpretation &&
-              Array.isArray((resultInterpretation as any).understanding_your_results) && (
-                <div className="space-y-4">
-                  {(resultInterpretation as any).understanding_your_results.map((item: unknown, index: number) => {
-                    if (typeof item !== "object" || item === null) return null;
-                    const i = item as Record<string, unknown>;
-                    return (
-                      <div key={index}>
-                        {i.concept ? <h3 className="font-semibold text-slate-800">{String(i.concept)}</h3> : null}
-                        {i.explanation ? <p className="mt-1 text-slate-600">{String(i.explanation)}</p> : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            Array.isArray((resultInterpretation as any).understanding_your_results) ? (
+              <div className="space-y-4">
+                {(resultInterpretation as any).understanding_your_results.map((item: unknown, index: number) => {
+                  if (typeof item !== "object" || item === null) return null;
+                  const i = item as Record<string, unknown>;
+                  return (
+                    <div key={index}>
+                      {i.concept ? <h3 className="font-semibold text-slate-800">{String(i.concept)}</h3> : null}
+                      {i.explanation ? <p className="mt-1 text-slate-600">{String(i.explanation)}</p> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
             {"optimization_strategies" in resultInterpretation &&
-              Array.isArray((resultInterpretation as any).optimization_strategies) && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-slate-800">Optimization Strategies</h3>
-                  {(resultInterpretation as any).optimization_strategies.map((item: unknown, index: number) => {
-                    if (typeof item !== "object" || item === null) return null;
-                    const i = item as Record<string, unknown>;
-                    return (
-                      <div key={index} className="rounded-md border-l-4 border-brand bg-slate-50 p-4">
-                        {i.strategy ? <h4 className="font-semibold text-slate-900">{String(i.strategy)}</h4> : null}
-                        {i.details ? <p className="mt-1 text-slate-600">{String(i.details)}</p> : null}
-                        {i.example ? (
-                          <p className="mt-2 text-sm italic text-slate-500">Example: {String(i.example)}</p>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            Array.isArray((resultInterpretation as any).optimization_strategies) ? (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-slate-800">Optimization Strategies</h3>
+                {(resultInterpretation as any).optimization_strategies.map((item: unknown, index: number) => {
+                  if (typeof item !== "object" || item === null) return null;
+                  const i = item as Record<string, unknown>;
+                  return (
+                    <div key={index} className="rounded-md border-l-4 border-brand bg-slate-50 p-4">
+                      {i.strategy ? <h4 className="font-semibold text-slate-900">{String(i.strategy)}</h4> : null}
+                      {i.details ? <p className="mt-1 text-slate-600">{String(i.details)}</p> : null}
+                      {i.example ? <p className="mt-2 text-sm italic text-slate-500">Example: {String(i.example)}</p> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </section>
         )}
 
@@ -493,6 +461,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                     {s.scenario_name ? (
                       <h3 className="font-serif text-lg font-semibold text-slate-900">{String(s.scenario_name)}</h3>
                     ) : null}
+
                     {s.profile && typeof s.profile === "object" ? (
                       <div className="mt-3 grid gap-2 text-sm">
                         {Object.entries(s.profile as Record<string, unknown>).map(([key, value]) => (
@@ -503,16 +472,16 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                         ))}
                       </div>
                     ) : null}
+
                     {s.calculation_walkthrough && typeof s.calculation_walkthrough === "object" ? (
                       <div className="mt-4 space-y-2 rounded-md bg-slate-800 p-4 text-sm text-slate-100">
                         <p className="font-semibold text-sky-300">Calculation Steps:</p>
                         {Object.entries(s.calculation_walkthrough as Record<string, unknown>).map(([key, value]) => (
-                          <p key={key} className="font-mono text-xs">
-                            {String(value)}
-                          </p>
+                          <p key={key} className="font-mono text-xs">{String(value)}</p>
                         ))}
                       </div>
                     ) : null}
+
                     {s.interpretation ? <p className="mt-3 text-slate-600">{String(s.interpretation)}</p> : null}
                     {s.optimization_tip ? (
                       <div className="mt-3 rounded-md border-l-4 border-green-500 bg-green-50 p-3 text-sm">
@@ -532,7 +501,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             <h2 className="font-serif text-2xl font-semibold text-amber-900">
               {"title" in limitations ? String((limitations as any).title) : "Limitations"}
             </h2>
-            {"items" in limitations && Array.isArray((limitations as any).items) && (
+            {"items" in limitations && Array.isArray((limitations as any).items) ? (
               <div className="space-y-3">
                 {(limitations as any).items.map((item: unknown, index: number) => {
                   if (typeof item !== "object" || item === null) return null;
@@ -545,7 +514,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                   );
                 })}
               </div>
-            )}
+            ) : null}
           </section>
         )}
 
@@ -599,8 +568,8 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             <ol className="space-y-3 text-base text-slate-600">
               {conversion ? (
                 <>
-                  <li>1. Enter the value you want to convert in the first input field. You can type decimals or whole numbers.</li>
-                  <li>2. The result updates instantly with our high-precision formulas, rounding to sensible decimal places for practical use.</li>
+                  <li>1. Enter the value you want to convert in the first input field.</li>
+                  <li>2. The result updates instantly with our high-precision formulas.</li>
                   <li>
                     3. Use the swap button to reverse the calculation and move from{" "}
                     {conversion.to.label.toLowerCase()} back to {conversion.from.label.toLowerCase()}.
@@ -608,9 +577,9 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                 </>
               ) : (
                 <>
-                  <li>1. Enter your latest business assumptions in the inputs above. Every field is validated to keep projections realistic.</li>
-                  <li>2. Results refresh instantly so you can compare profitability, efficiency, and payback metrics across calculation methods.</li>
-                  <li>3. Review the methodology and worked examples below to confirm how each formula maps to your operating model.</li>
+                  <li>1. Enter your latest assumptions in the inputs above.</li>
+                  <li>2. Results refresh instantly so you can compare scenarios.</li>
+                  <li>3. Review the methodology and worked examples below.</li>
                 </>
               )}
             </ol>
@@ -658,154 +627,18 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
               {citations.map((citation, index) => (
                 <li key={citation.url ?? index}>
                   <span className="font-medium text-slate-800">{citation.label ?? citation.text ?? citation.url}</span>
-                  {citation.url && (
+                  {citation.url ? (
                     <>
-                      {" "}
-                      —{" "}
+                      {" "}—{" "}
                       <a href={citation.url} target="_blank" rel="noopener noreferrer" className="hover:text-brand">
                         {citation.url}
                       </a>
                     </>
-                  )}
-                  {citation.text && <p className="text-xs text-slate-500">{citation.text}</p>}
+                  ) : null}
+                  {citation.text ? <p className="text-xs text-slate-500">{citation.text}</p> : null}
                 </li>
               ))}
             </ul>
-          </section>
-        )}
-
-        {/* Versioning moved down and collapsed by default */}
-        {(advancedCalculatorNode || converterNode || simpleCalculatorNode) && (
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-            <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                <div>
-                  <h2 className="font-serif text-2xl font-semibold text-slate-900">Versioning</h2>
-                  <p className="mt-1 text-sm text-slate-600">Change-control record for this calculator.</p>
-                </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs uppercase tracking-wide text-slate-600">
-                  Record ID: {versioning.recordId}
-                </div>
-              </summary>
-
-              <div className="mt-6 space-y-6">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Engine</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900">v{versioning.engineVersion}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Data</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">{versioning.dataVersion}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Content</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900">v{versioning.contentVersion}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">UI</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900">v{versioning.uiVersion}</p>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Governance</h3>
-                    <div className="mt-3 space-y-2 text-sm text-slate-700">
-                      <p>
-                        <span className="font-semibold">Last updated:</span> {humanizeDate(versioning.lastUpdated)}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Reviewed by:</span> {versioning.reviewedBy.name}
-                        {versioning.reviewedBy.role ? ` (${versioning.reviewedBy.role})` : ""}
-                      </p>
-                      {versioning.reviewedBy.credentials && (
-                        <p className="text-xs text-slate-500">Credentials: {versioning.reviewedBy.credentials}</p>
-                      )}
-                      <p>
-                        <span className="font-semibold">Risk level:</span> {versioning.riskLevel}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Test status</h3>
-                    <div className="mt-3 space-y-2 text-sm text-slate-700">
-                      <p>
-                        QA: PASS (golden {versioning.tests.goldenCases} + edge {versioning.tests.edgeCases})
-                      </p>
-                      <p>
-                        Last run: {versioning.tests.lastRun} • Run ID: {versioning.tests.runId}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Semantic versioning</h3>
-                  <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
-                    <li>MAJOR: {versioningPolicy.semanticVersioning.major}</li>
-                    <li>MINOR: {versioningPolicy.semanticVersioning.minor}</li>
-                    <li>PATCH: {versioningPolicy.semanticVersioning.patch}</li>
-                  </ul>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Review protocol</h3>
-                  <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
-                    {versioningPolicy.reviewProtocol.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      Assumptions & limitations
-                    </h3>
-                    <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
-                      {versioning.assumptions.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                      {versioning.limitations.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Change log</h3>
-                    <div className="mt-3 space-y-3 text-sm text-slate-700">
-                      {versioning.changelog.map((entry) => (
-                        <div key={`${entry.version}-${entry.date}`} className="rounded-md bg-white p-3">
-                          <p className="font-semibold text-slate-900">
-                            v{entry.version} • {entry.date} • {entry.changeType.toUpperCase()}
-                          </p>
-                          <p className="mt-1">{entry.summary}</p>
-                          <p className="mt-1 text-xs text-slate-600">Why: {entry.why}</p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Areas: {entry.areas.join(", ")} • Reviewer: {entry.reviewer.name} • Entry ID:{" "}
-                            {entry.signature}
-                          </p>
-                          {entry.evidence.length > 0 && (
-                            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-500">
-                              {entry.evidence.map((url) => (
-                                <li key={url}>
-                                  <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-brand">
-                                    {url}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </details>
           </section>
         )}
 
@@ -819,9 +652,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                   <ul className="mt-3 space-y-3 text-sm text-slate-600">
                     {related.map((item: CalculatorRecord) => (
                       <li key={item.fullPath}>
-                        <Link href={item.fullPath} className="hover:text-brand">
-                          {item.title}
-                        </Link>
+                        <Link href={item.fullPath} className="hover:text-brand">{item.title}</Link>
                       </li>
                     ))}
                   </ul>
@@ -830,15 +661,11 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 
               {internalLinks.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    Related calculators
-                  </h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Related calculators</h3>
                   <ul className="mt-3 space-y-3 text-sm text-slate-600">
                     {internalLinks.map((item) => (
                       <li key={item.fullPath}>
-                        <Link href={item.fullPath} className="hover:text-brand">
-                          {item.title}
-                        </Link>
+                        <Link href={item.fullPath} className="hover:text-brand">{item.title}</Link>
                       </li>
                     ))}
                   </ul>
@@ -847,18 +674,14 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 
               {externalLinks.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    External guidance
-                  </h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">External guidance</h3>
                   <ul className="mt-3 space-y-3 text-sm text-slate-600">
                     {externalLinks.map((item) => (
                       <li key={item.url}>
                         <a
                           href={item.url}
                           target="_blank"
-                          rel={[..."noopener noreferrer".split(" "), ...(item.rel ?? [])]
-                            .filter(Boolean)
-                            .join(" ")}
+                          rel={[..."noopener noreferrer".split(" "), ...(item.rel ?? [])].filter(Boolean).join(" ")}
                           className="hover:text-brand"
                         >
                           {item.label ?? item.url}
@@ -871,12 +694,174 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             </div>
           </section>
         )}
+
+        {/* Versioning moved to bottom + version diff rendering */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+          <details className="group">
+            <summary className="cursor-pointer list-none">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-serif text-2xl font-semibold text-slate-900">Versioning & Change Control</h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Audit record (versions, QA runs, reviewer sign-off, and evidence).
+                  </p>
+                </div>
+                <div className="text-xs uppercase tracking-wide text-slate-500">
+                  Record ID: {versioning.recordId}
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">What changed (latest)</p>
+                  {versionDiff ? (
+                    <div className="mt-2 space-y-1 text-sm text-slate-700">
+                      <p className="font-semibold text-slate-900">
+                        v{versionDiff.current.version} • {versionDiff.current.date} • {versionDiff.current.changeType.toUpperCase()}
+                      </p>
+                      <p>{versionDiff.current.summary}</p>
+                      <p className="text-xs text-slate-600">Why: {versionDiff.current.why}</p>
+                      {versionDiff.previous ? (
+                        <p className="text-xs text-slate-500">
+                          Previous: v{versionDiff.previous.version} • {versionDiff.previous.date}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-700">No changelog entries found.</p>
+                  )}
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Public QA status</p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    PASS — golden {versioning.tests.goldenCases} + edge {versioning.tests.edgeCases}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Last run: {versioning.tests.lastRun} • Run: {versioning.tests.runId}
+                  </p>
+                </div>
+              </div>
+            </summary>
+
+            <div className="mt-6 space-y-6">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Engine</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">v{versioning.engineVersion}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Data</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{versioning.dataVersion}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Content</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">v{versioning.contentVersion}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">UI</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">v{versioning.uiVersion}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Governance</h3>
+                  <div className="mt-3 space-y-2 text-sm text-slate-700">
+                    <p><span className="font-semibold">Last updated:</span> {humanizeDate(versioning.lastUpdated)}</p>
+                    <p>
+                      <span className="font-semibold">Reviewed by:</span>{" "}
+                      {versioning.reviewedBy.name}
+                      {versioning.reviewedBy.role ? ` (${versioning.reviewedBy.role})` : ""}
+                    </p>
+                    {versioning.reviewedBy.credentials ? (
+                      <p className="text-xs text-slate-500">Credentials: {versioning.reviewedBy.credentials}</p>
+                    ) : null}
+                    <p><span className="font-semibold">Risk level:</span> {versioning.riskLevel}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Reviewer profile (entity)</h3>
+                  <div className="mt-3 text-sm text-slate-700">
+                    <p className="font-semibold text-slate-900">{versioning.reviewedBy.name}</p>
+                    {versioning.reviewedBy.role ? <p className="text-slate-600">{versioning.reviewedBy.role}</p> : null}
+                    {versioning.reviewedBy.credentials ? (
+                      <p className="text-xs text-slate-500">{versioning.reviewedBy.credentials}</p>
+                    ) : null}
+                    <p className="mt-2 text-xs text-slate-500">
+                      Entity ID: {reviewerId ?? "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Semantic versioning</h3>
+                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
+                  <li>MAJOR: {versioningPolicy.semanticVersioning.major}</li>
+                  <li>MINOR: {versioningPolicy.semanticVersioning.minor}</li>
+                  <li>PATCH: {versioningPolicy.semanticVersioning.patch}</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Review protocol</h3>
+                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
+                  {versioningPolicy.reviewProtocol.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Assumptions & limitations</h3>
+                  <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
+                    {versioning.assumptions.map((item) => <li key={item}>{item}</li>)}
+                    {versioning.limitations.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Change log</h3>
+                  <div className="mt-3 space-y-3 text-sm text-slate-700">
+                    {versioning.changelog.map((entry) => (
+                      <div key={`${entry.version}-${entry.date}`} className="rounded-md bg-white p-3">
+                        <p className="font-semibold text-slate-900">
+                          v{entry.version} • {entry.date} • {entry.changeType.toUpperCase()}
+                        </p>
+                        <p className="mt-1">{entry.summary}</p>
+                        <p className="mt-1 text-xs text-slate-600">Why: {entry.why}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Areas: {entry.areas.join(", ")} • Reviewer: {entry.reviewer.name} • Entry ID: {entry.signature}
+                        </p>
+                        {entry.evidence.length > 0 ? (
+                          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-500">
+                            {entry.evidence.map((url) => (
+                              <li key={url}>
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-brand">
+                                  {url}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </section>
       </article>
 
       <aside className="space-y-8">
         <div className="rounded-2xl border border-slate-200 bg-slate-900 p-6 text-slate-100 shadow-sm shadow-slate-800">
           <p className="text-sm uppercase tracking-wide text-sky-300">Verified Accuracy</p>
           <p className="mt-3 text-base">{verifiedAccuracyCopy}</p>
+          <div className="mt-4 text-xs text-slate-300">
+            QA: PASS • golden {versioning.tests.goldenCases} • edge {versioning.tests.edgeCases} • {versioning.tests.runId}
+          </div>
         </div>
       </aside>
 
@@ -928,6 +913,7 @@ function normalizeExternalUrl(raw: string) {
   if (markdownLinkMatch) return markdownLinkMatch[1];
 
   if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) return trimmed;
+
   return null;
 }
 
@@ -946,18 +932,15 @@ function resolveExternalLinks(entries: unknown): ExternalLink[] {
   entries.forEach((entry) => {
     if (!entry || typeof entry !== "object") return;
 
-    const rawUrl = "url" in entry ? (entry as any).url : null;
-    const url = typeof rawUrl === "string" ? normalizeExternalUrl(rawUrl) ?? "" : "";
+    const url =
+      "url" in entry && typeof (entry as any).url === "string" ? normalizeExternalUrl((entry as any).url) ?? "" : "";
     if (!url || seen.has(url)) return;
 
-    const label =
-      "label" in entry && typeof (entry as any).label === "string" ? (entry as any).label.trim() : undefined;
+    const label = "label" in entry && typeof (entry as any).label === "string" ? (entry as any).label.trim() : undefined;
 
     const rel =
       "rel" in entry && Array.isArray((entry as any).rel)
-        ? (entry as any).rel.filter(
-            (token: unknown): token is string => typeof token === "string" && token.trim() !== ""
-          )
+        ? (entry as any).rel.filter((token: unknown): token is string => typeof token === "string" && token.trim() !== "")
         : undefined;
 
     links.push({ url, label, rel });
@@ -999,18 +982,15 @@ function buildFaq(title: string, conversion: ConversionContext | null): { questi
     return [
       {
         question: `What does the ${title} help me accomplish?`,
-        answer:
-          "This calculator distills the key formula and process so you can solve the problem faster than manual math or spreadsheet templates."
+        answer: "This calculator distills the key formula and process so you can solve the problem faster than manual math or spreadsheet templates."
       },
       {
         question: "How should I cite or reference the result?",
-        answer:
-          "Fidamen calculators follow industry-standard formulas and document the methodology so you can confidently cite results in reports and client deliverables."
+        answer: "Fidamen calculators follow industry-standard formulas and document the methodology so you can confidently cite results in reports and client deliverables."
       },
       {
         question: "How often is this experience updated?",
-        answer:
-          "We refresh each experience quarterly—more frequently when underlying standards change—to keep pace with search intent and algorithm updates."
+        answer: "We refresh each experience quarterly—more frequently when underlying standards change—to keep pace with search intent and algorithm updates."
       }
     ];
   }
@@ -1026,8 +1006,7 @@ function buildFaq(title: string, conversion: ConversionContext | null): { questi
     },
     {
       question: "How accurate is this converter?",
-      answer:
-        "We anchor every conversion to internationally recognized base units. The calculator rounds to sensible decimals for readability, but core math runs at double precision."
+      answer: "We anchor every conversion to internationally recognized base units. The calculator rounds to sensible decimals for readability, but core math runs at double precision."
     }
   ];
 }
@@ -1035,6 +1014,7 @@ function buildFaq(title: string, conversion: ConversionContext | null): { questi
 function deriveLinearCoefficients(context: ConversionContext) {
   const forwardZero = convertValue(0, "forward", context);
   const forwardOne = convertValue(1, "forward", context);
+
   const slope = forwardOne - forwardZero;
   const intercept = forwardZero;
 
@@ -1069,32 +1049,42 @@ function buildReverseFormulaExplanation(context: ConversionContext) {
   const slopeText = slope.toLocaleString(undefined, { maximumFractionDigits: 8 });
   const interceptMagnitude = Math.abs(intercept).toLocaleString(undefined, { maximumFractionDigits: 8 });
   const verb = intercept >= 0 ? "subtract" : "add";
+
   return `Yes. Swap the converter direction or ${verb} ${interceptMagnitude} from your ${context.to.label.toLowerCase()} value, then divide the result by ${slopeText}.`;
 }
 
-function deriveEvidenceDomains(urls: string[]) {
-  const domains = new Set<string>();
-  for (const u of urls) {
-    try {
-      const host = new URL(u).hostname.toLowerCase();
-      domains.add(host.replace(/^www\./, ""));
-    } catch {
-      // ignore
-    }
-  }
-  return Array.from(domains).sort();
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
-function buildGovernanceSummary(versioning: any) {
-  const parts = [
-    `Updated ${String(versioning.lastUpdated).slice(0, 10)}`,
-    `Engine v${versioning.engineVersion}`,
-    `Content v${versioning.contentVersion}`,
-    `UI v${versioning.uiVersion}`,
-    `Data ${versioning.dataVersion}`,
-    `QA PASS (golden ${versioning.tests?.goldenCases ?? "?"}, edge ${versioning.tests?.edgeCases ?? "?"})`,
-    `Reviewed by ${versioning.reviewedBy?.name ?? "Unknown"}`,
-    `Record ID ${versioning.recordId}`
-  ];
-  return parts.join(" • ");
+function isNamedPerson(value: unknown): value is { name: string } {
+  return Boolean(value && typeof value === "object" && "name" in (value as any) && typeof (value as any).name === "string");
+}
+
+function buildVersionDiff(changelog: Array<any> | null | undefined) {
+  if (!Array.isArray(changelog) || changelog.length === 0) return null;
+
+  const sorted = [...changelog].sort((a, b) => {
+    const da = new Date(String(a?.date ?? "1970-01-01")).getTime();
+    const db = new Date(String(b?.date ?? "1970-01-01")).getTime();
+    return db - da;
+  });
+
+  const current = sorted[0] ?? null;
+  const previous = sorted[1] ?? null;
+
+  if (!current) return null;
+
+  return { current, previous };
+}
+
+function qaBadgeClass(riskLevel: string) {
+  const base = "rounded-full border px-2 py-1";
+  if (riskLevel === "high") return `${base} border-red-200 bg-red-50 text-red-700`;
+  if (riskLevel === "medium") return `${base} border-amber-200 bg-amber-50 text-amber-700`;
+  return `${base} border-slate-200 bg-slate-50 text-slate-600`;
 }
