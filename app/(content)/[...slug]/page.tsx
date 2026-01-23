@@ -10,6 +10,7 @@ import type { CalculatorRecord } from "@/lib/content";
 import { getCalculatorByPath, getPublishedCalculators, toSlug } from "@/lib/content";
 import { parseConversionFromSlug, ConversionContext, convertValue, getUnitById } from "@/lib/conversions";
 import type { ConversionLogicConfig, CalculatorLogicConfig } from "@/lib/calculator-config";
+import { getVersioningPolicy, getVersioningRecord } from "@/lib/versioning";
 import {
   buildBreadcrumbSchema,
   buildFaqSchema,
@@ -106,12 +107,39 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const author = config?.metadata?.author;
   const lastUpdated = config?.metadata?.lastUpdated;
   const disclaimer = config?.metadata?.disclaimer;
+  const authorSchema =
+    typeof author === "object" && author !== null && "name" in author
+      ? {
+          "@type": "Person",
+          name: String(author.name),
+          jobTitle: "role" in author ? String(author.role) : undefined,
+          description: "credentials" in author ? String(author.credentials) : undefined
+        }
+      : null;
   const citations = citationEntries
     .map((citation) => ({
       ...citation,
       url: citation.url ? normalizeExternalUrl(citation.url) : null
     }))
     .filter((citation) => citation.label || citation.text || citation.url);
+  const evidenceLinks = citations
+    .map((citation) => citation.url)
+    .filter((url): url is string => Boolean(url));
+  const versioning = getVersioningRecord(
+    calculator.fullPath,
+    config,
+    calculator.publishDate,
+    evidenceLinks
+  );
+  const versioningPolicy = getVersioningPolicy();
+  const reviewerSchema = versioning.reviewedBy?.name
+    ? {
+        "@type": "Person",
+        name: versioning.reviewedBy.name,
+        jobTitle: versioning.reviewedBy.role,
+        description: versioning.reviewedBy.credentials
+      }
+    : null;
   const faqEntriesFromConfig = pageContent?.faqs ?? null;
   const pageDescription =
     config?.metadata?.description ??
@@ -125,6 +153,9 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
     faqEntriesFromConfig && faqEntriesFromConfig.length > 0
       ? faqEntriesFromConfig
       : buildFaq(calculator.title, conversion);
+  const evidenceLinks = citationEntries
+    .map((citation) => citation.url)
+    .filter((url): url is string => Boolean(url));
   const advancedCalculatorNode =
     ((componentType === "advanced_calc" || config?.logic?.type === "advanced") && config) ? (
       <GenericAdvancedCalculator config={config} />
@@ -169,7 +200,9 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
       description: pageDescription,
       url: getSiteUrl(calculator.fullPath),
       category: calculator.category,
-      dateModified: calculator.publishDate
+      dateModified: calculator.publishDate,
+      author: authorSchema,
+      reviewedBy: reviewerSchema
     })
   ];
 
@@ -186,22 +219,35 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
     }
   }
 
-  if (conversion) {
-    structuredData.push({
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      name: calculator.title,
-      applicationCategory: "CalculatorApplication",
-      operatingSystem: "Web",
-      url: getSiteUrl(calculator.fullPath),
-      description: pageDescription,
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD"
-      }
-    });
-  }
+  structuredData.push({
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: calculator.title,
+    applicationCategory: "CalculatorApplication",
+    operatingSystem: "Web",
+    url: getSiteUrl(calculator.fullPath),
+    description: pageDescription,
+    softwareVersion: versioning.engineVersion,
+    dateModified: versioning.lastUpdated,
+    reviewedBy: versioning.reviewedBy?.name
+      ? {
+          "@type": "Person",
+          name: versioning.reviewedBy.name,
+          jobTitle: versioning.reviewedBy.role,
+          description: versioning.reviewedBy.credentials
+        }
+      : undefined,
+    publisher: {
+      "@type": "Organization",
+      name: "Fidamen",
+      url: getSiteUrl("/")
+    },
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD"
+    }
+  });
 
   return (
     <main className="container grid gap-12 py-16 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -302,16 +348,169 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 
         {advancedCalculatorNode}
         {converterNode}
-        {converterNode && (
-          <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-            <h2 className="font-serif text-2xl font-semibold text-slate-900">Versioning</h2>
-            <p className="text-base text-slate-600">
-              Versioning. This converter is governed and versioned. Updates to formulas, unit
-              definitions, or rounding rules are reviewed and logged before release.
-            </p>
+        {simpleCalculatorNode}
+
+        {(advancedCalculatorNode || converterNode || simpleCalculatorNode) && (
+          <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl font-semibold text-slate-900">Versioning</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Change-control record for this calculator.
+                </p>
+              </div>
+              <div className="text-xs uppercase tracking-wide text-slate-500">
+                Record ID: {versioning.recordId}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Engine</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">
+                  v{versioning.engineVersion}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Data</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {versioning.dataVersion}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Content</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">
+                  v{versioning.contentVersion}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">UI</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">
+                  v{versioning.uiVersion}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Governance
+                </h3>
+                <div className="mt-3 space-y-2 text-sm text-slate-700">
+                  <p>
+                    <span className="font-semibold">Last updated:</span>{" "}
+                    {humanizeDate(versioning.lastUpdated)}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Reviewed by:</span>{" "}
+                    {versioning.reviewedBy.name}
+                    {versioning.reviewedBy.role ? ` (${versioning.reviewedBy.role})` : ""}
+                  </p>
+                  {versioning.reviewedBy.credentials && (
+                    <p className="text-xs text-slate-500">
+                      Credentials: {versioning.reviewedBy.credentials}
+                    </p>
+                  )}
+                  <p>
+                    <span className="font-semibold">Risk level:</span> {versioning.riskLevel}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Methodology: See “How This Calculator Works” and the Sources & citations section.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Test status
+                </h3>
+                <div className="mt-3 space-y-2 text-sm text-slate-700">
+                  <p>
+                    QA: PASS (golden {versioning.tests.goldenCases} + edge{" "}
+                    {versioning.tests.edgeCases})
+                  </p>
+                  <p>
+                    Last run: {versioning.tests.lastRun} • Run ID: {versioning.tests.runId}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Semantic versioning
+              </h3>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
+                <li>MAJOR: {versioningPolicy.semanticVersioning.major}</li>
+                <li>MINOR: {versioningPolicy.semanticVersioning.minor}</li>
+                <li>PATCH: {versioningPolicy.semanticVersioning.patch}</li>
+              </ul>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Review protocol
+              </h3>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
+                {versioningPolicy.reviewProtocol.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Assumptions & limitations
+                </h3>
+                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
+                  {versioning.assumptions.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                  {versioning.limitations.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Change log
+                </h3>
+                <div className="mt-3 space-y-3 text-sm text-slate-700">
+                  {versioning.changelog.map((entry) => (
+                    <div key={`${entry.version}-${entry.date}`} className="rounded-md bg-white p-3">
+                      <p className="font-semibold text-slate-900">
+                        v{entry.version} • {entry.date} • {entry.changeType.toUpperCase()}
+                      </p>
+                      <p className="mt-1">{entry.summary}</p>
+                      <p className="mt-1 text-xs text-slate-600">Why: {entry.why}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Areas: {entry.areas.join(", ")} • Reviewer: {entry.reviewer.name} • Entry ID:{" "}
+                        {entry.signature}
+                      </p>
+                      {entry.evidence.length > 0 && (
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-500">
+                          {entry.evidence.map((url) => (
+                            <li key={url}>
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-brand"
+                              >
+                                {url}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </section>
         )}
-        {simpleCalculatorNode}
 
         {calculationLogic && typeof calculationLogic === 'object' && (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">

@@ -49,6 +49,8 @@ export function buildWebPageSchema(options: {
   url: string;
   category?: string;
   dateModified?: string | null;
+  author?: Record<string, unknown> | null;
+  reviewedBy?: Record<string, unknown> | null;
 }) {
   return {
     "@context": "https://schema.org",
@@ -63,6 +65,8 @@ export function buildWebPageSchema(options: {
       url: getSiteUrl()
     },
     about: options.category,
-    dateModified: options.dateModified ?? undefined
+    dateModified: options.dateModified ?? undefined,
+    author: options.author ?? undefined,
+    reviewedBy: options.reviewedBy ?? undefined
   };
 }
