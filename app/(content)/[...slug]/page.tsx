@@ -553,56 +553,20 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </section>
         )}
 
-        {(internalLinks.length > 0 || externalLinks.length > 0) && (
+        {examples.length > 0 && (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-            <h2 className="font-serif text-2xl font-semibold text-slate-900">Further resources</h2>
-            <div className="space-y-6 text-base text-slate-600">
-              {internalLinks.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    Related calculators
-                  </h3>
-                  <ul className="mt-3 space-y-2">
-                    {internalLinks.map((item) => (
-                      <li key={item.fullPath}>
-                        <Link href={item.fullPath} className="hover:text-brand">
-                          {item.title}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {externalLinks.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    External guidance
-                  </h3>
-                  <ul className="mt-3 space-y-2">
-                    {externalLinks.map((item) => (
-                      <li key={item.url}>
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel={[..."noopener noreferrer".split(" "), ...(item.rel ?? [])]
-                            .filter(Boolean)
-                            .join(" ")}
-                          className="hover:text-brand"
-                        >
-                          {item.label ?? item.url}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">Worked examples</h2>
+            <div className="space-y-3 text-base text-slate-600">
+              {examples.map((paragraph, index) => (
+                <p key={`example-${index}`}>{paragraph}</p>
+              ))}
             </div>
           </section>
         )}
 
         <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">
-            Expert Q&A
+            F.A.Q.
           </h2>
           <div className="space-y-6 text-base text-slate-600">
             {faqEntries.map((faq) => (
@@ -648,22 +612,12 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </section>
         )}
 
-        {(examples.length > 0 || related.length > 0) && (
+        {(related.length > 0 || internalLinks.length > 0 || externalLinks.length > 0) && (
           <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
             <h2 className="font-serif text-2xl font-semibold text-slate-900">
-              Worked examples & related tools
+              Further resources
             </h2>
             <div className="grid gap-6 lg:grid-cols-2">
-              {examples.length > 0 && (
-                <div className="space-y-3 text-base text-slate-600">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    Worked examples
-                  </h3>
-                  {examples.map((paragraph, index) => (
-                    <p key={`example-${index}`}>{paragraph}</p>
-                  ))}
-                </div>
-              )}
               {related.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -675,6 +629,45 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
                         <Link href={item.fullPath} className="hover:text-brand">
                           {item.title}
                         </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {internalLinks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    Related calculators
+                  </h3>
+                  <ul className="mt-3 space-y-3 text-sm text-slate-600">
+                    {internalLinks.map((item) => (
+                      <li key={item.fullPath}>
+                        <Link href={item.fullPath} className="hover:text-brand">
+                          {item.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {externalLinks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    External guidance
+                  </h3>
+                  <ul className="mt-3 space-y-3 text-sm text-slate-600">
+                    {externalLinks.map((item) => (
+                      <li key={item.url}>
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel={[..."noopener noreferrer".split(" "), ...(item.rel ?? [])]
+                            .filter(Boolean)
+                            .join(" ")}
+                          className="hover:text-brand"
+                        >
+                          {item.label ?? item.url}
+                        </a>
                       </li>
                     ))}
                   </ul>
