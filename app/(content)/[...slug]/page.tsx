@@ -302,6 +302,15 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 
         {advancedCalculatorNode}
         {converterNode}
+        {converterNode && (
+          <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">Versioning</h2>
+            <p className="text-base text-slate-600">
+              Versioning. This converter is governed and versioned. Updates to formulas, unit
+              definitions, or rounding rules are reviewed and logged before release.
+            </p>
+          </section>
+        )}
         {simpleCalculatorNode}
 
         {calculationLogic && typeof calculationLogic === 'object' && (
