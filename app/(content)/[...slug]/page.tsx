@@ -48,6 +48,19 @@ export async function generateMetadata(
     };
   }
 
+
+  const evidenceText = (versioning?.evidence ?? []).join(" ").toLowerCase();
+const hasNistIsoEvidence =
+  evidenceText.includes("nist.gov") ||
+  evidenceText.includes("iso.org") ||
+  evidenceText.includes("nist") ||
+  evidenceText.includes("iso");
+
+const verifiedAccuracyCopy = hasNistIsoEvidence
+  ? `Built for professionals who demand precision. Where applicable, we benchmark against NIST/ISO references and peer-review updates so you can trust your results.`
+  : `Built for professionals who demand precision. We validate formulas, rounding policies, and edge cases with documented sources and automated regression tests, then record reviewer sign-off for material changes.`;
+
+
   const conversion = parseConversionFromSlug(calculator.slug);
   const title = calculator.title;
   const description = conversion
@@ -197,7 +210,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
       description: pageDescription,
       url: getSiteUrl(calculator.fullPath),
       category: calculator.category,
-      dateModified: calculator.publishDate,
+      dateModified: versioning.lastUpdated,
       author: authorSchema,
       reviewedBy: reviewerSchema
     })
@@ -305,9 +318,19 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
               <p className="text-lg text-slate-600">{pageDescription}</p>
             )}
             <div className="flex flex-wrap gap-3 text-xs uppercase tracking-wide text-slate-400">
-              {(lastUpdated || calculator.publishDate) && (
-                <span>Updated {lastUpdated ? lastUpdated : (calculator.publishDate ? humanizeDate(calculator.publishDate) : 'Recently')}</span>
-              )}
+             {(versioning?.lastUpdated || lastUpdated || calculator.publishDate) && (
+  <span>
+    Updated{" "}
+    {versioning?.lastUpdated
+      ? humanizeDate(versioning.lastUpdated)
+      : lastUpdated
+        ? lastUpdated
+        : calculator.publishDate
+          ? humanizeDate(calculator.publishDate)
+          : "Recently"}
+  </span>
+)}
+
         {/*      <span>{calculator.trafficEstimate.toLocaleString()} projected daily visits</span> */}
             </div>
             {author && (
@@ -889,11 +912,8 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             Verified Accuracy
           </p>
           <p className="mt-3 text-base">
-            Built for professionals who demand precision. We benchmark our
-            {calculator.category.toLowerCase()} against NIST and ISO
-            standards and peer-review every update, so you can trust
-            your data&mdash;whether you&apos;re in the lab or on the job site.
-          </p>
+  {verifiedAccuracyCopy}
+</p>
         </div>
       </aside>
       <script
