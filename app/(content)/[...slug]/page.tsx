@@ -542,17 +542,6 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
           </section>
         )}
 
-        {examples.length > 0 && (
-          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-            <h2 className="font-serif text-2xl font-semibold text-slate-900">Worked examples</h2>
-            <div className="space-y-3 text-base text-slate-600">
-              {examples.map((paragraph, index) => (
-                <p key={`example-${index}`}>{paragraph}</p>
-              ))}
-            </div>
-          </section>
-        )}
-
         {summaryParagraphs.length > 0 && (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
             <h2 className="font-serif text-2xl font-semibold text-slate-900">Key takeaways</h2>
@@ -658,24 +647,45 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
             </ul>
           </section>
         )}
+
+        {(examples.length > 0 || related.length > 0) && (
+          <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <h2 className="font-serif text-2xl font-semibold text-slate-900">
+              Worked examples & related tools
+            </h2>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {examples.length > 0 && (
+                <div className="space-y-3 text-base text-slate-600">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    Worked examples
+                  </h3>
+                  {examples.map((paragraph, index) => (
+                    <p key={`example-${index}`}>{paragraph}</p>
+                  ))}
+                </div>
+              )}
+              {related.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    Related tools
+                  </h3>
+                  <ul className="mt-3 space-y-3 text-sm text-slate-600">
+                    {related.map((item: CalculatorRecord) => (
+                      <li key={item.fullPath}>
+                        <Link href={item.fullPath} className="hover:text-brand">
+                          {item.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
       </article>
 
       <aside className="space-y-8">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
-          <h2 className="text-base font-semibold text-slate-800">
-            Related tools
-          </h2>
-          <ul className="mt-4 space-y-3 text-sm text-slate-600">
-            {related.map((item: CalculatorRecord) => (
-              <li key={item.fullPath}>
-                <Link href={item.fullPath} className="hover:text-brand">
-                  {item.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
         <div className="rounded-2xl border border-slate-200 bg-slate-900 p-6 text-slate-100 shadow-sm shadow-slate-800">
           <p className="text-sm uppercase tracking-wide text-sky-300">
             Verified Accuracy
