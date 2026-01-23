@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Cookie Policy",
   description:
-    "Details on how Cernarus uses cookies and local storage to enhance performance and personalization.",
+    "Details on how Fidamen uses cookies and local storage to enhance performance and personalization.",
   alternates: {
-    canonical: "https://cernarus.com/cookies",
+    canonical: "https://fidamen.com/cookies",
   },
 };
 

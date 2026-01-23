@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Cernarus config linter / fixer
+ * Fidamen config linter / fixer
  *
  * Goals:
  * - Auto-coerce glossary arrays of strings to [{ term, definition }] objects.

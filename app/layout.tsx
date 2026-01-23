@@ -24,26 +24,26 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://cernarus.com"),
+  metadataBase: new URL("https://fidamen.com"),
   title: {
-    default: "Cernarus | Precision Converters & Calculators",
-    template: "%s | Cernarus"
+    default: "Fidamen | Precision Converters & Calculators",
+    template: "%s | Fidamen"
   },
   description:
-    "Cernarus delivers authoritative calculators and unit converters for engineers, analysts, and operations teams who need standards-aligned answers.",
+    "Fidamen delivers authoritative calculators and unit converters for engineers, analysts, and operations teams who need standards-aligned answers.",
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://cernarus.com",
-    siteName: "Cernarus",
-    title: "Cernarus | Precision Converters & Calculators",
+    url: "https://fidamen.com",
+    siteName: "Fidamen",
+    title: "Fidamen | Precision Converters & Calculators",
     description:
       "Explore expertly crafted calculators and conversion tools optimized for accuracy, auditability, and day-to-day professional workflows."
   },
   twitter: {
     card: "summary_large_image",
-    creator: "@cernarus",
-    title: "Cernarus | Precision Converters & Calculators",
+    creator: "@fidamen",
+    title: "Fidamen | Precision Converters & Calculators",
     description:
       "Enterprise-ready calculators and conversion tools designed for dependable decision support."
   },
@@ -75,14 +75,14 @@ export default function RootLayout({
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      name: "Cernarus",
+      name: "Fidamen",
       url: siteUrl,
       sameAs: []
     },
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      name: "Cernarus",
+      name: "Fidamen",
       url: siteUrl,
       potentialAction: {
         "@type": "SearchAction",

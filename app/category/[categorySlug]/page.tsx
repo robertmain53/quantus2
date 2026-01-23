@@ -104,7 +104,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
       {subcategories.length > 0 && (
         <section className="space-y-6">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">
-            Featured sub-clusters
+            Categories
           </h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {subcategories.map((subcategory) => (

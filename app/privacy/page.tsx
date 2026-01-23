@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Understand how Cernarus collects, uses, and protects personal data generated across our platform.",
+    "Understand how Fidamen collects, uses, and protects personal data generated across our platform.",
   alternates: {
-    canonical: "https://cernarus.com/privacy",
+    canonical: "https://fidamen.com/privacy",
   },
 };
 
@@ -34,14 +34,14 @@ export default function PrivacyPage() {
         <h2 className="font-serif text-2xl font-semibold text-slate-900">How we use data</h2>
         <p>
           We aggregate insights to prioritize feature development, monitor reliability, and surface
-          the most impactful experiences. We do not sell personal data to third parties.
+          the most utilized tools. We do not sell personal data to third parties.
         </p>
       </section>
 
       <section className="space-y-3 text-base text-slate-600">
         <h2 className="font-serif text-2xl font-semibold text-slate-900">Your choices</h2>
         <p>
-          You can request access, corrections, or deletion at any time by emailing privacy@cernarus.com.
+          You can request access, corrections, or deletion at any time by emailing privacy@fidamen.com.
           We honor regional privacy regulations and provide opt-outs where required.
         </p>
       </section>

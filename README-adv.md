@@ -2,7 +2,7 @@
 
 Domain: `actionsmatrix.com`
 
-ACTIONSMatrix is the elevated evolution of Cernarus—a decision intelligence engine built around *specialized verticals* and *data-rich context*. While calculators remain part of the experience, the journey begins with a strategic question (“Can I afford this house?”, “Is my child growing as expected?”). The platform answers those questions by combining authoritative content, historical data, and interactive tools inside a clean, application-like interface.
+ACTIONSMatrix is the elevated evolution of Fidamen—a decision intelligence engine built around *specialized verticals* and *data-rich context*. While calculators remain part of the experience, the journey begins with a strategic question (“Can I afford this house?”, “Is my child growing as expected?”). The platform answers those questions by combining authoritative content, historical data, and interactive tools inside a clean, application-like interface.
 
 ## Positioning & philosophy
 

@@ -140,7 +140,7 @@ function main() {
     "STRICT SCHEMA ENFORCEMENT:",
     schemaRules,
     "\nBefore you construct the config, scan ./input for asset research. Use it to refine EEAT, UX, methodology depth.",
-    "Mention sibling Cernarus pages only when relevant.",
+    "Mention sibling Fidamen pages only when relevant.",
     "Only the config_json object is persisted; wrapper keys must not appear in config_json."
   ].join(" ");
 

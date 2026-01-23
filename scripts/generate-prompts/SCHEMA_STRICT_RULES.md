@@ -1,4 +1,4 @@
-# Cernarus Config Schema – STRICT ENFORCEMENT RULES
+# Fidamen Config Schema – STRICT ENFORCEMENT RULES
 
 You MUST follow these rules exactly.  
 Do not deviate. Do not add extra fields.

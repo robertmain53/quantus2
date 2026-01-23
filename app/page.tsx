@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 export const metadata = {
   alternates: {
-    canonical: "https://cernarus.com/",
+    canonical: "https://fidamen.com/",
   },
 };
 
@@ -27,7 +27,7 @@ export default function HomePage() {
             Deliver calculators your experts can trust on deadline.
           </h1>
           <p className="text-lg text-muted">
-            Cernarus keeps every converter auditable—aligning with published standards,
+            Fidamen keeps every converter auditable—aligning with published standards,
             documenting methodology, and presenting results in a workflow your engineers,
             analysts, and operators can rely on for real-world decisions.
           </p>
@@ -89,8 +89,8 @@ export default function HomePage() {
                   {titleCase(category.label)}
                 </Link>
                 <p className="text-sm text-muted">
-                  {category.subcategories.length} sub clusters ·{" "}
-                  {category.calculators.length} experiences
+                  {category.subcategories.length} categories ·{" "}
+                  {category.calculators.length} tools
                 </p>
               </div>
               <div className="mt-6 space-y-2">

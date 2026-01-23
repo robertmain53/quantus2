@@ -663,7 +663,7 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
       <aside className="space-y-8">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
           <h2 className="text-base font-semibold text-slate-800">
-            Related experiences
+            Related tools
           </h2>
           <ul className="mt-4 space-y-3 text-sm text-slate-600">
             {related.map((item: CalculatorRecord) => (
@@ -855,7 +855,7 @@ function buildFaq(
       {
         question: "How should I cite or reference the result?",
         answer:
-          "Cernarus calculators follow industry-standard formulas and document the methodology so you can confidently cite results in reports and client deliverables."
+          "Fidamen calculators follow industry-standard formulas and document the methodology so you can confidently cite results in reports and client deliverables."
       },
       {
         question: "How often is this experience updated?",

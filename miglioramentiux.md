@@ -1,4 +1,4 @@
-Ecco una lista operativa dei miglioramenti UX da implementare su **Cernarus.com**, ordinati per **Ritorno sull'Investimento (ROI)** e **Impatto sull'Utente**.
+Ecco una lista operativa dei miglioramenti UX da implementare su **Fidamen.com**, ordinati per **Ritorno sull'Investimento (ROI)** e **Impatto sull'Utente**.
 
 Questa gerarchia si basa sul principio che un utente deve prima *riuscire* a calcolare (Funzionalità), poi *fidarsi* del risultato (Credibilità), e infine *preferire* il tuo strumento rispetto ad Excel o ai competitor (Delight & Pro Features).
 
@@ -43,13 +43,13 @@ Questa gerarchia si basa sul principio che un utente deve prima *riuscire* a cal
 
 8. **Modalità Comparazione (A/B Testing Personale)**  
    * **Cosa fare:** Permettere di duplicare la colonna del calcolo per vedere due scenari affiancati (es. "Mutuo Fisso" vs "Mutuo Variabile").  
-   * **Perché:** È la funzione numero uno richiesta dagli utenti business che usano Excel. Cernarus può offrirla meglio e più velocemente.    
+   * **Perché:** È la funzione numero uno richiesta dagli utenti business che usano Excel. Fidamen può offrirla meglio e più velocemente.    
 9. **Persistenza Dati Locale (Auto-Save)**  
    * **Cosa fare:** Se l'utente chiude il browser per sbaglio e torna dopo un'ora, i dati inseriti devono essere ancora lì (usando `localStorage`).  
    * **Perché:** Rispetta il tempo dell'utente. Niente è più frustrante di ricompilare un form complesso da zero.    
 10. **Export "Client-Ready"**  
-    * **Cosa fare:** Un pulsante "Esporta PDF" che genera un documento pulito, brandizzato Cernarus, con data, input e risultati, pronto per essere inviato a un cliente o allegato a una tesi.  
-    * **Perché:** Estende il valore del sito fuori dal browser, inserendo il brand Cernarus nei flussi di lavoro professionali.
+    * **Cosa fare:** Un pulsante "Esporta PDF" che genera un documento pulito, brandizzato Fidamen, con data, input e risultati, pronto per essere inviato a un cliente o allegato a una tesi.  
+    * **Perché:** Estende il valore del sito fuori dal browser, inserendo il brand Fidamen nei flussi di lavoro professionali.
 
 ---
 

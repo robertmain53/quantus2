@@ -5,7 +5,7 @@ import { getTopCalculators, searchCalculators } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Search",
-  description: "Search the Cernarus library of calculators and conversion tools."
+  description: "Search the Fidamen library of calculators and conversion tools."
 };
 
 interface SearchPageProps {
@@ -23,7 +23,7 @@ export default async function SearchPage(props: SearchPageProps) {
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">Search</h1>
         <p className="max-w-3xl text-lg text-slate-600">
-          Discover calculators, conversions, and programmatic experiences across the Cernarus
+          Discover calculators, converters, and computational tools across the Fidamen
           knowledge graph.
         </p>
         <form action="/search" method="get" className="flex max-w-xl items-center gap-3">
@@ -54,7 +54,7 @@ export default async function SearchPage(props: SearchPageProps) {
         {query && results.length === 0 && (
           <p className="text-sm text-slate-500">
             We couldn&apos;t find calculators matching your query. Try different keywords or browse
-            the popular experiences below.
+            the popular tools below.
           </p>
         )}
         <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">

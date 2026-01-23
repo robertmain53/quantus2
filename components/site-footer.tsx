@@ -5,12 +5,12 @@ export function SiteFooter() {
     <footer className="border-t border-base surface-strong text-body">
       <div className="container grid gap-6 py-10 md:grid-cols-[2fr_3fr]">
         <div className="space-y-2">
-          <p className="text-lg font-semibold">Cernarus</p>
+          <p className="text-lg font-semibold">Fidamen</p>
           <p className="text-sm text-muted">
             Standards-driven calculators and converters for teams that depend on defensible answers.
           </p>
           <p className="mt-4 text-xs text-muted">
-            © {new Date().getFullYear()} Cernarus. All rights reserved.
+            © {new Date().getFullYear()} Fidamen. All rights reserved.
           </p>
         </div>
         <div className="grid gap-6 md:grid-cols-2">

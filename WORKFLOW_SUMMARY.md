@@ -1,4 +1,4 @@
-# Cernarus Calculator Workflow Summary
+# Fidamen Calculator Workflow Summary
 
 ## Current Status
 

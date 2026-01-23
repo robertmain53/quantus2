@@ -1,4 +1,4 @@
-# Cernarus / Quantus Calculator Config Schema – DEFINITIVE SPECIFICATION (FULL)
+# Fidamen / Fidamen Calculator Config Schema – DEFINITIVE SPECIFICATION (FULL)
 
 **Version**: 1.0.0  
 **Last Updated**: December 3, 2025  
@@ -8,7 +8,7 @@
 
 ## 0. CRITICAL PREMISE
 
-This document defines the **only** acceptable JSON structure for Cernarus / Quantus calculators.
+This document defines the **only** acceptable JSON structure for Fidamen / Fidamen calculators.
 
 If something you want to do is **not explicitly allowed here**, then it is **forbidden**.
 
@@ -882,5 +882,5 @@ If **any** check fails, fix it before returning JSON.
 
 ---
 
-**This document is the non-negotiable contract between AI, content editors, and the Cernarus / Quantus runtime.**  
+**This document is the non-negotiable contract between AI, content editors, and the Fidamen / Fidamen runtime.**  
 If a configuration or an AI response deviates from this schema, it **must be rejected or corrected** before deployment.

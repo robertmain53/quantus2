@@ -22,7 +22,7 @@ export function SiteHeader() {
           href="/"
           className="flex items-center gap-2 font-serif text-xl font-semibold text-slate-900 no-underline"
         >
-          Cernarus
+          Fidamen
         </Link>
         <div className="flex flex-1 items-center justify-end gap-4">
           {/* Desktop Navigation */}

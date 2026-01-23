@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Author Guidelines",
   description:
-    "Publishing standards, voice, and workflow expectations for Cernarus content authors."
+    "Publishing standards, voice, and workflow expectations for Fidamen content authors."
 };
 
 export default function AuthorPage() {
@@ -13,7 +13,7 @@ export default function AuthorPage() {
         <h1 className="font-serif text-4xl font-semibold text-slate-900">Author Guidelines</h1>
         <p className="max-w-3xl text-lg text-slate-600">
           These standards keep every calculator audit-ready, consistent, and compliant with the
-          references professionals expect. Review them before submitting new experiences or
+          references professionals expect. Review them before submitting new tools or
           updating existing ones.
         </p>
       </header>

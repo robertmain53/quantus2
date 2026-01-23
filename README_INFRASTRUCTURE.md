@@ -1,4 +1,4 @@
-# Cernarus Validation & Automation Infrastructure
+# Fidamen Validation & Automation Infrastructure
 
 ## Overview
 

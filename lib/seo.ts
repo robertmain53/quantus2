@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "https://cernarus.com";
+const DEFAULT_SITE_URL = "https://fidamen.com";
 
 export function getSiteUrl(pathname = "/") {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_URL;
@@ -59,7 +59,7 @@ export function buildWebPageSchema(options: {
     inLanguage: "en-US",
     isPartOf: {
       "@type": "WebSite",
-      name: "Cernarus",
+      name: "Fidamen",
       url: getSiteUrl()
     },
     about: options.category,

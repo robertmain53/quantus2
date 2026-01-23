@@ -1,6 +1,6 @@
-# Cernarus Strategic Actions Matrix
+# Fidamen Strategic Actions Matrix
 
-Use this matrix to brief an engineering team or an AI planner on the next generation of the Cernarus enterprise calculator platform. It layers the current README narrative with tactical actions, success metrics, and guardrails so every collaborator—from developers to prompt engineers—can understand their role in advancing the build.
+Use this matrix to brief an engineering team or an AI planner on the next generation of the Fidamen enterprise calculator platform. It layers the current README narrative with tactical actions, success metrics, and guardrails so every collaborator—from developers to prompt engineers—can understand their role in advancing the build.
 
 | Focus Area | Current State (per README) | Strategic Objective | Action Items | Owner / Stakeholders | Metrics & Signals |
 |------------|-----------------------------|---------------------|--------------|----------------------|------------------|
@@ -19,4 +19,4 @@ Use this matrix to brief an engineering team or an AI planner on the next genera
 3. **For theme or layout tweaks**, update `critical.css` + helpers first, then refactor specific components—this keeps the critical CSS small and the shell responsive to the toggle.  
 4. **AI/system audits** should center on `scripts/generate-summary.ts`, `lib/content.ts`, and `scripts/lint-configs.js` since those guarantee data integrity before any build.
 
-Use this file alongside `README.md` as the authoritative playbook for building, governing, and evolving the Cernarus platform. If anything deviates (new engine, new prompt requirement, new CSS need), append to this matrix so the next developer or AI planner can act with clarity. --- ready to execute? noise
+Use this file alongside `README.md` as the authoritative playbook for building, governing, and evolving the Fidamen platform. If anything deviates (new engine, new prompt requirement, new CSS need), append to this matrix so the next developer or AI planner can act with clarity. --- ready to execute? noise

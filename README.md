@@ -1,6 +1,6 @@
-# Cernarus Enterprise Content Platform
+# Fidamen Enterprise Content Platform
 
-Cernarus is a Next.js 14 application engineered to publish thousands of SEO-focused calculators and conversion tools from a single source-of-truth catalogue. The platform emphasizes static-first delivery, structured data, and an editorial workflow that can scale to 120K daily sessions.
+Fidamen is a Next.js 14 application engineered to publish thousands of SEO-focused calculators and conversion tools from a single source-of-truth catalogue. The platform emphasizes static-first delivery, structured data, and an editorial workflow that can scale to 120K daily sessions.
 
 ## Requirements
 
@@ -227,7 +227,7 @@ This model removes bespoke React development from the daily cadence. Humans conc
 - Gather your research corpus (competitor pages, regulations, spreadsheets, notes) in a single folder. Compress it into a `.zip` when sending to a chat model, or keep it beside the repo when using a VS Code AI assistant that can read local files.
 - Prepare a short "context packet" to paste alongside the prompt:
   - Target calculator slug and objective (e.g., `/finance/loans/personal-loan-payment-calculator`).
-  - List of existing Cernarus internal links relevant to the topic (category hubs, related calculators).
+  - List of existing Fidamen internal links relevant to the topic (category hubs, related calculators).
   - Any guardrails (tone, compliance notes, traffic goal, localisation).
 - When using ChatGPT/Gemini/Claude: upload the zip first, then paste the prompt+context.
 - When using VS Code AI: ensure the assistant has access to the research folder (or paste representative excerpts) before running the prompt.
@@ -235,7 +235,7 @@ This model removes bespoke React development from the daily cadence. Humans conc
 Replace the bracketed placeholders in the template below before sending it to the model. When you paste the AI response into `/admin/playground`, you may either paste the entire wrapper (with `component_type` + `config_json`) or only the inner `config_json`.
 
 ````text
-You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Cernarus config schema.
+You are an elite product strategist, quant engineer, and technical copywriter tasked with building the market-leading version of “[CALCULATOR NAME]”. Study every asset provided (competitor calculators, regulatory PDFs, spreadsheets, notes). Your deliverable must be production-ready and strictly follow the Fidamen config schema.
 
 ### CORE OBJECTIVES
 1.  **Deployable JSON:** Produce a single, valid JSON object (`component_type` + `config_json`). No markdown, no commentary.
@@ -282,7 +282,7 @@ You are an elite product strategist, quant engineer, and technical copywriter ta
     * `summary`: Bullet points capturing key insights from attached assets.
     * `glossary`: **Strict Schema:** Array of objects `{ "term": "...", "definition": "..." }`. Do NOT use strings.
 6.  **`links`**:
-    * `internal`: List existing Cernarus slugs (e.g., `/finance/loans/roi`).
+    * `internal`: List existing Fidamen slugs (e.g., `/finance/loans/roi`).
     * `external`: Objects with `{ "url": "...", "label": "...", "rel": ["noopener", "noreferrer"] }`.
 7.  **`schema.additionalTypes`**: Structured data hints (e.g., `HowTo`, `Dataset`) if applicable.
 
@@ -795,8 +795,8 @@ Bottom line: generated/prompts/ is a convenience layer that pre-seeds AI request
 
 - Global navigation highlights top-performing categories and links to the full taxonomy.
 - Conversion pages offer interactive calculators, formula explainers, and expert FAQs.
-- Search surface (`/search`) helps visitors discover published calculators, while unpublished experiences stay hidden until launch.
-- 404 experience points users back to the category index.
+- Search surface (`/search`) helps visitors discover published calculators, while unpublished tools stay hidden until launch.
+- 404 page points users back to the category index.
 
 ## Scaling considerations
 
@@ -810,7 +810,7 @@ Bottom line: generated/prompts/ is a convenience layer that pre-seeds AI request
 
 ## Environment variables
 
-- `NEXT_PUBLIC_SITE_URL`: Set to the production domain (e.g., `https://cernarus.com`). Used for canonical URLs, sitemap, and structured data.
+- `NEXT_PUBLIC_SITE_URL`: Set to the production domain (e.g., `https://fidamen.com`). Used for canonical URLs, sitemap, and structured data.
 
 ## Roadmap ideas
 

@@ -8,11 +8,11 @@
 
 ## Critical Finding: ChatGPT Schema Regression ⚠️
 
-JSON #4 represents a **fundamental breakdown** in the prompt system. Despite re-launching with the updated prompt, ChatGPT generated a **completely different schema** that doesn't match Cernarus at all.
+JSON #4 represents a **fundamental breakdown** in the prompt system. Despite re-launching with the updated prompt, ChatGPT generated a **completely different schema** that doesn't match Fidamen at all.
 
 ### What Happened
 
-ChatGPT generated using a **custom calculator architecture** instead of the Cernarus schema:
+ChatGPT generated using a **custom calculator architecture** instead of the Fidamen schema:
 
 **Submitted Structure:**
 - `slug`, `name`, `version` (number), `category`, `topic` at top level
@@ -24,7 +24,7 @@ ChatGPT generated using a **custom calculator architecture** instead of the Cern
 - Markdown URLs still present
 - Multiple forbidden fields
 
-**Required Structure (Cernarus):**
+**Required Structure (Fidamen):**
 - `version` (string), `metadata` (title + description only)
 - `logic` (type + conversion unit IDs)
 - `page_content` (flat arrays: introduction, methodology, faqs, citations)
@@ -49,7 +49,7 @@ ChatGPT generated using a **custom calculator architecture** instead of the Cern
 
 ## Solution: Manual Restructuring ✅
 
-Rather than waiting for ChatGPT to regenerate (and risk same error), I **manually restructured the excellent content** into the correct Cernarus schema.
+Rather than waiting for ChatGPT to regenerate (and risk same error), I **manually restructured the excellent content** into the correct Fidamen schema.
 
 ### What I Kept (Content Excellence)
 - ✅ All 6 FAQs (high-quality, practical questions)

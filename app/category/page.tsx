@@ -9,9 +9,9 @@ export const revalidate = 0;
 export const metadata: Metadata = {
   title: "Category Directory",
   description:
-    "Browse the Cernarus knowledge architecture organized by high-value categories and conversion clusters.",
+    "Browse the Fidamen knowledge architecture organized by high-value categories and conversion clusters.",
   alternates: {
-    canonical: "https://cernarus.com/category",
+    canonical: "https://fidamen.com/category",
   },
 };
 
@@ -25,8 +25,8 @@ export default function CategoryIndexPage() {
           Category Intelligence
         </h1>
         <p className="max-w-3xl text-lg text-slate-600">
-          Strategic hubs engineered to capture evergreen search demand. Drill
-          into sub-clusters to access individual converter experiences.
+          Organized by discipline and function. Select a category to access
+          individual calculators and converters.
         </p>
       </header>
 

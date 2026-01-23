@@ -48,7 +48,7 @@ export async function generateMetadata(
 
   return {
     title: `${subcategoryTitle} Calculators – ${categoryTitle}`,
-    description: `Programmatic calculators and reference experiences serving the ${subcategoryTitle.toLowerCase()} cluster within ${categoryTitle}.`,
+    description: `Calculators and conversion tools serving the ${subcategoryTitle.toLowerCase()} category within ${categoryTitle}.`,
     alternates: {
       canonical: `/category/${category.slug}/${subcategory.slug}`
     }
@@ -97,8 +97,8 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
           {titleCase(subcategory.label)} Calculators
         </h1>
         <p className="max-w-3xl text-lg text-slate-600">
-          A curated cluster of calculators and conversion experiences focused on{" "}
-          {subcategory.label.toLowerCase()}, architected for rapid organic growth.
+          Calculators and conversion tools focused on{" "}
+          {subcategory.label.toLowerCase()}.
         </p>
         <div className="flex flex-wrap gap-4 text-sm text-slate-500">
             <span className="rounded-full bg-slate-100 px-3 py-1">
@@ -112,7 +112,7 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
 
       <section className="space-y-6">
         <h2 className="font-serif text-2xl font-semibold text-slate-900">
-          Experiences in this cluster
+          Tools in this category
         </h2>
         <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
           {calculators.map((calculator) => (

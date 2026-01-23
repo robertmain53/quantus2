@@ -26,9 +26,9 @@ export async function generateMetadata(
   return {
     title: query ? `All Calculators (search: ${query})` : "All Calculators",
     description:
-      "Browse every published calculator and converter on Cernarus, grouped by category and subcluster.",
+      "Browse every published calculator and converter on Fidamen, grouped by category and subcluster.",
     alternates: {
-      canonical: "https://cernarus.com/calculators"
+      canonical: "https://fidamen.com/calculators"
     },
     robots: query
       ? {
@@ -61,7 +61,7 @@ export default async function CalculatorsDirectoryPage(
           All calculators & converters
         </h1>
         <p className="max-w-3xl text-lg text-slate-600">
-          A single directory page that links to every published experience, keeping navigation
+          A single directory page that links to every published tool, keeping navigation
           user-friendly while giving crawlers a clear two-click path to deep content.
         </p>
         <form action="/calculators" method="get" className="flex max-w-xl items-center gap-3">
@@ -114,7 +114,7 @@ export default async function CalculatorsDirectoryPage(
 
       <section className="space-y-6">
         <h2 className="font-serif text-2xl font-semibold text-slate-900">
-          {query ? "Matching experiences" : "All experiences by category"}
+          {query ? "Matching tools" : "All tools by category"}
         </h2>
 
         <div className="space-y-4">
@@ -148,7 +148,7 @@ export default async function CalculatorsDirectoryPage(
                           {titleCase(categoryLabel)}
                         </h3>
                         <p className="text-sm text-slate-500">
-                          {categoryCalculators.length} experiences ·{" "}
+                          {categoryCalculators.length} tools ·{" "}
                           <Link
                             href={`/category/${categorySlug}`}
                             className="font-medium hover:text-brand"
