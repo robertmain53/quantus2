@@ -80,7 +80,7 @@ export default async function ReviewerProfilePage(props: ReviewerPageProps) {
   ];
 
   return (
-    <main className="container py-16">
+    <main className="container py-8 sm:py-12 lg:py-16">
       <nav className="text-sm text-slate-500">
         <ol className="flex flex-wrap items-center gap-2">
           <li>

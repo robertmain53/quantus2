@@ -10,7 +10,7 @@ export default function ReviewersIndexPage() {
   const seeded = Object.values(directory.bySlug).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <main className="container py-16">
+    <main className="container py-8 sm:py-12 lg:py-16">
       <header className="space-y-3">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">Reviewers</h1>
         <p className="text-slate-600">

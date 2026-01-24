@@ -26,7 +26,7 @@ export function SiteHeader() {
         </Link>
         <div className="flex flex-1 items-center justify-end gap-4">
           {/* Desktop Navigation */}
-          <nav className="hidden flex-wrap items-center gap-4 text-sm font-medium text-body 2xl:flex">
+          <nav className="hidden flex-wrap items-center gap-4 text-sm font-medium text-body xl:flex">
             <Link href="/category" className="hover:text-brand no-underline">
               All Categories
             </Link>
@@ -47,12 +47,12 @@ export function SiteHeader() {
             <SiteSearch />
           </Suspense>
         </div>
-          <div className="hidden items-center gap-3 text-xs uppercase tracking-wide text-muted 2xl:flex 2xl:items-center">
+          <div className="hidden items-center gap-3 text-xs uppercase tracking-wide text-muted xl:flex xl:items-center">
             <span>Standards aligned · audit ready</span>
             <ThemeToggle />
           </div>
         {/* Mobile Menu */}
-        <div className="2xl:hidden flex items-center gap-2">
+        <div className="xl:hidden flex items-center gap-2">
           <ThemeToggle />
           <MobileMenu categories={categories} calculators={popularCalculators} />
         </div>

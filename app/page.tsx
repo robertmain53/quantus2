@@ -17,7 +17,7 @@ export default function HomePage() {
   const publishSchedule = getUpcomingPublishSchedule().slice(0, 5);
 
   return (
-    <main className="container flex flex-col gap-16 py-16">
+    <main className="container flex flex-col gap-8 py-8 sm:gap-12 sm:py-12 lg:gap-16 lg:py-16">
       <section className="grid gap-12 lg:grid-cols-12 lg:items-center">
         <div className="space-y-6 lg:col-span-7">
           <span className="inline-flex items-center rounded-full bg-surface px-4 py-1 text-sm font-medium text-accent">

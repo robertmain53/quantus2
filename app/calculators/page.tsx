@@ -55,7 +55,7 @@ export default async function CalculatorsDirectoryPage(
   }
 
   return (
-    <main className="container space-y-12 py-16">
+    <main className="container space-y-8 py-8 sm:space-y-10 sm:py-12 lg:space-y-12 lg:py-16">
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">
           All calculators & converters

@@ -62,7 +62,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
   );
 
   return (
-    <main className="container space-y-12 py-16">
+    <main className="container space-y-8 py-8 sm:space-y-10 sm:py-12 lg:space-y-12 lg:py-16">
       <nav className="text-sm text-slate-500">
         <ol className="flex flex-wrap items-center gap-2">
           <li>

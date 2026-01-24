@@ -251,7 +251,7 @@ const reviewerSchema = versioning.reviewedBy?.name
   const versionDiff = buildVersionDiff(versioning.changelog);
 
   return (
-    <main className="container grid gap-12 py-16 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <main className="container grid gap-8 py-8 sm:gap-12 sm:py-12 lg:py-16 lg:grid-cols-[minmax(0,1fr)_320px]">
       <article className="space-y-12">
         <header className="space-y-6">
           <nav className="text-sm text-slate-500">
