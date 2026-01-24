@@ -75,15 +75,20 @@ export default function RootLayout({
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      name: "Fidamen",
-      url: siteUrl,
+      "@id": "https://yeahup.net/#organization",
+      name: "Yeah Up S.r.l.",
+      url: "https://yeahup.net/",
       sameAs: []
     },
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": `${siteUrl}#website`,
       name: "Fidamen",
       url: siteUrl,
+      publisher: {
+        "@id": "https://yeahup.net/#organization"
+      },
       potentialAction: {
         "@type": "SearchAction",
         target: `${siteUrl}?q={search_term_string}`,
