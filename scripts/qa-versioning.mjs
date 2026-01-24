@@ -17,6 +17,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { getReviewerDirectory } from "../lib/reviewers.ts";
 
 // NOTE: These are TypeScript modules; use tsx (or node+loader) to run this script.
 import * as contentModule from "../lib/content.ts";
@@ -116,13 +117,57 @@ function ensureAllowedRisk(risk, ctx) {
   }
 }
 
+/**
+ * Enforcement:
+ * - For riskLevel=high, reviewedBy.name must exist in REVIEWERS_SEED.
+ * - For riskLevel=high, the seeded reviewer must have non-empty scope populated (array of strings).
+ *
+ * This is enforced against the reviewer seed record, not the page/versioning record, so that:
+ * - The canonical reviewer entity drives scope; it cannot be omitted in versioning.json overrides.
+ */
+function ensureHighRiskReviewerIsSeededAndScoped(versioning, reviewerDirectory, ctx) {
+  if (versioning.riskLevel !== "high") return;
+
+  const name = versioning.reviewedBy?.name;
+  if (typeof name !== "string" || name.trim() === "") {
+    fail(`${ctx}: reviewedBy.name is required for riskLevel=high`);
+  }
+
+  const seededRecord =
+    reviewerDirectory?.byName &&
+    Object.prototype.hasOwnProperty.call(reviewerDirectory.byName, name)
+      ? reviewerDirectory.byName[name]
+      : null;
+
+  if (!seededRecord) {
+    fail(
+      `${ctx}: riskLevel=high requires reviewedBy.name to exist in REVIEWERS_SEED (lib/reviewers.ts). Missing: "${name}"`
+    );
+  }
+
+  const scope = seededRecord?.scope;
+
+  if (!Array.isArray(scope) || scope.length === 0) {
+    fail(
+      `${ctx}: riskLevel=high requires seeded reviewer "${name}" to have scope populated (non-empty array) in REVIEWERS_SEED`
+    );
+  }
+
+  const bad = scope.find(
+    (s) => typeof s !== "string" || s.trim() === ""
+  );
+  if (bad !== undefined) {
+    fail(
+      `${ctx}: seeded reviewer "${name}" has invalid scope entry. Scope must be an array of non-empty strings`
+    );
+  }
+}
+
 function ensureChangelogMatches(versioning, ctx) {
   if (!Array.isArray(versioning.changelog) || versioning.changelog.length === 0) {
     fail(`${ctx}: changelog is required and must be non-empty`);
   }
-  const hasEntryForEngine = versioning.changelog.some(
-    (e) => e && e.version === versioning.engineVersion
-  );
+  const hasEntryForEngine = versioning.changelog.some((e) => e && e.version === versioning.engineVersion);
   if (!hasEntryForEngine) {
     fail(`${ctx}: changelog must contain an entry for engineVersion=${versioning.engineVersion}`);
   }
@@ -166,13 +211,16 @@ function ensureReviewer(versioning, req, ctx) {
         typeof versioning.reviewedBy.credentials === "string" &&
         versioning.reviewedBy.credentials.trim() !== "";
       if (!hasRole && !hasCreds) {
-        fail(`${ctx}: reviewedBy should include role and/or credentials for riskLevel=${versioning.riskLevel}`);
+        fail(
+          `${ctx}: reviewedBy should include role and/or credentials for riskLevel=${versioning.riskLevel}`
+        );
       }
     }
   }
 
   if (req.requireReviewerScope) {
-    // If/when you add reviewedBy.scope in versioning.ts types, this becomes enforceable.
+    // Enforces reviewedBy.scope presence on the versioning record when policy says so.
+    // High-risk additionally enforces that the canonical seeded reviewer has scope (see ensureHighRiskReviewerIsSeededAndScoped).
     const scope = versioning.reviewedBy?.scope;
     if (!Array.isArray(scope) || scope.length === 0) {
       fail(`${ctx}: reviewedBy.scope is required for riskLevel=${versioning.riskLevel}`);
@@ -194,6 +242,8 @@ function ensureRecordId(versioning, ctx) {
 }
 
 function main() {
+  const reviewerDirectory = getReviewerDirectory();
+
   const policy = getVersioningPolicy();
   const versioningJson = readVersioningJson();
 
@@ -219,14 +269,27 @@ function main() {
 
       ensureAllowedRisk(versioning.riskLevel, ctx);
 
+      // High-risk enforcement against REVIEWERS_SEED + scope
+      ensureHighRiskReviewerIsSeededAndScoped(versioning, reviewerDirectory, ctx);
+
       const req =
         getRequirements(policy, versioning.riskLevel) ?? {
           requireReviewer: true,
           requireChangelog: true,
           requireEvidence: versioning.riskLevel !== "low",
           requireTests: true,
-          minGoldenCases: versioning.riskLevel === "high" ? 50 : versioning.riskLevel === "medium" ? 25 : 10,
-          minEdgeCases: versioning.riskLevel === "high" ? 200 : versioning.riskLevel === "medium" ? 120 : 25,
+          minGoldenCases:
+            versioning.riskLevel === "high"
+              ? 50
+              : versioning.riskLevel === "medium"
+                ? 25
+                : 10,
+          minEdgeCases:
+            versioning.riskLevel === "high"
+              ? 200
+              : versioning.riskLevel === "medium"
+                ? 120
+                : 25,
           requireReviewerScope: versioning.riskLevel === "high"
         };
 

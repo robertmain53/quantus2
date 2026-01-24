@@ -186,16 +186,18 @@ const reviewerId = reviewerCanonicalUrl ? `${reviewerCanonicalUrl}#person` : nul
       }
     : null;
 
-  const reviewerSchema = versioning.reviewedBy?.name
-    ? {
-        "@type": "Person",
-        "@id": reviewerId!,
-        name: versioning.reviewedBy.name,
-        jobTitle: versioning.reviewedBy.role,
-        description: versioning.reviewedBy.credentials,
-        worksFor: { "@id": orgId }
-      }
-    : null;
+const reviewerSchema = versioning.reviewedBy?.name
+  ? {
+      "@type": "Person",
+      "@id": reviewerId!,
+      name: versioning.reviewedBy.name,
+      jobTitle: versioning.reviewedBy.role,
+      description: versioning.reviewedBy.credentials,
+      url: reviewerCanonicalUrl ?? undefined,
+      worksFor: { "@id": orgId }
+    }
+  : null;
+
 
   const structuredData: Array<Record<string, unknown>> = [
     {
