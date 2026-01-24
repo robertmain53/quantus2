@@ -20,6 +20,7 @@ interface CalculatorPageProps {
     slug: string[];
   }>;
 }
+import { getReviewerDirectory, reviewerSlugFromName } from "@/lib/reviewers";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -169,7 +170,10 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const orgId = `${getSiteUrl("/") }#organization`;
   const pageId = `${pageUrl}#webpage`;
   const authorId = author && isNamedPerson(author) ? `${pageUrl}#author-${slugify(String(author.name))}` : null;
-  const reviewerId = versioning.reviewedBy?.name ? `${pageUrl}#reviewer-${slugify(String(versioning.reviewedBy.name))}` : null;
+ const reviewerSlug = versioning.reviewedBy?.name ? reviewerSlugFromName(String(versioning.reviewedBy.name)) : null;
+const reviewerCanonicalUrl = reviewerSlug ? getSiteUrl(`/reviewers/${reviewerSlug}`) : null;
+const reviewerId = reviewerCanonicalUrl ? `${reviewerCanonicalUrl}#person` : null;
+
 
   const authorSchema = author && isNamedPerson(author)
     ? {
