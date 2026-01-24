@@ -64,7 +64,7 @@ export default async function ReviewerProfilePage(props: ReviewerPageProps) {
       "@id": personId,
       name: reviewer.name,
       jobTitle: reviewer.role ?? undefined,
-      description: reviewer.credentials ?? undefined,
+      description: reviewer.bio ?? reviewer.credentials ?? undefined,
       url: canonicalUrl,
       worksFor: { "@id": orgId }
     },
@@ -110,6 +110,13 @@ export default async function ReviewerProfilePage(props: ReviewerPageProps) {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
             <p className="text-xs uppercase tracking-wide text-slate-500">Credentials</p>
             <p className="mt-2 text-base text-slate-700">{reviewer.credentials}</p>
+          </div>
+        ) : null}
+
+        {reviewer.bio ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Biography</p>
+            <p className="mt-2 text-base text-slate-700">{reviewer.bio}</p>
           </div>
         ) : null}
 

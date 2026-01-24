@@ -4,6 +4,7 @@ export type ReviewerProfile = {
   name: string;
   role?: string;
   credentials?: string;
+  bio?: string;
   scope?: string[];
 };
 
@@ -36,6 +37,8 @@ const REVIEWERS_SEED: Array<Omit<ReviewerProfile, "slug"> & { slug?: string }> =
     name: "Ugo Candido",
     role: "Technical Reviewer",
     credentials: "MBA, M.Eng. (Industrial Engineering)",
+    bio:
+      "Leveraging a foundational background in industrial technology and a specialized degree in Management Engineering (Materials Science), Ugo Candido directs the platform's architectural and computational integrity. An alumnus of M.I.B. Trieste (MBA), he applies rigorous systems engineering methodologies derived from extensive tenure as Head of International Projects. Currently CEO of Yeah Up, his functional role as Lead Technologist prioritizes high-precision data modeling and cross-jurisdictional compliance. He orchestrates the validation of engineering algorithms, ensuring strict adherence to technical standards and operational reliability within complex material calculation frameworks.",
     scope: ["Methodology review", "Edge-case validation", "Governance sign-off"]
   }
 ];
@@ -51,6 +54,7 @@ export function getReviewerDirectory() {
       name: r.name,
       role: r.role,
       credentials: r.credentials,
+      bio: r.bio,
       scope: r.scope
     };
     bySlug[slug] = profile;
