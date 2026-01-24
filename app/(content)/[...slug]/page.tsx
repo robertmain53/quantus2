@@ -41,9 +41,12 @@ export async function generateMetadata(props: CalculatorPageProps): Promise<Meta
 
   const conversion = parseConversionFromSlug(calculator.slug);
   const title = calculator.title;
-  const description = conversion
-    ? `Instantly convert ${conversion.from.label.toLowerCase()} to ${conversion.to.label.toLowerCase()} with precise formulas, worked examples, and expert guidance.`
-    : `Authoritative calculator and reference guide for ${title.toLowerCase()}.`;
+  const config = calculator.config;
+  const description =
+    config?.metadata?.description ??
+    (conversion
+      ? `Instantly convert ${conversion.from.label.toLowerCase()} to ${conversion.to.label.toLowerCase()} with precise formulas, worked examples, and expert guidance.`
+      : `Authoritative calculator and reference guide for ${title.toLowerCase()}.`);
 
   const canonicalUrl = getSiteUrl(calculator.fullPath);
 

@@ -70,3 +70,42 @@ export function buildWebPageSchema(options: {
     reviewedBy: options.reviewedBy ?? undefined
   };
 }
+
+/**
+ * Generates a JSON-LD schema of type SoftwareApplication for calculator tools.
+ * @param toolName - The name of the calculator tool
+ * @param description - A description of what the calculator does
+ * @param category - The application category (e.g., "FinanceApplication", "HealthApplication")
+ * @returns A valid JSON-LD object conforming to schema.org/SoftwareApplication
+ */
+export function generateCalculatorSchema(
+  toolName: string,
+  description: string,
+  category: string
+): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: toolName,
+    description: description,
+    applicationCategory: category,
+    operatingSystem: "Web",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD"
+    },
+    provider: {
+      "@type": "Organization",
+      name: "Fidamen",
+      url: getSiteUrl()
+    },
+    featureList: [
+      "Standards-aligned calculations",
+      "Documented methodology",
+      "Auditable outputs"
+    ],
+    softwareVersion: "1.0",
+    applicationSubCategory: "Calculator"
+  };
+}
