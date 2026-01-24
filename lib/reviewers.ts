@@ -31,6 +31,13 @@ const REVIEWERS_SEED: Array<Omit<ReviewerProfile, "slug"> & { slug?: string }> =
   //   credentials: "MBA, M.Eng. (Industrial Engineering)",
   //   scope: ["Methodology review", "Edge-case validation", "Governance sign-off"]
   // }
+
+  {
+    name: "Ugo Candido",
+    role: "Technical Reviewer",
+    credentials: "MBA, M.Eng. (Industrial Engineering)",
+    scope: ["Methodology review", "Edge-case validation", "Governance sign-off"]
+  }
 ];
 
 export function getReviewerDirectory() {
