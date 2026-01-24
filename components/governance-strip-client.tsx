@@ -1,21 +1,22 @@
-'use client';
+// components/governance-strip-client.tsx
+"use client";
 
-interface ReviewerIdentity {
+import * as React from "react";
+
+type ReviewerIdentity = {
   name: string;
   role?: string;
   credentials?: string;
-  scope?: string[];
-  signedAt?: string;
-}
+};
 
-interface VersioningTests {
+type VersioningTests = {
   goldenCases: number;
   edgeCases: number;
   lastRun: string;
   runId: string;
-}
+};
 
-interface GovernanceStripClientProps {
+export function GovernanceStripClient(props: {
   recordId: string;
   lastUpdated: string;
   engineVersion: string;
@@ -26,81 +27,60 @@ interface GovernanceStripClientProps {
   reviewedBy: ReviewerIdentity;
   tests: VersioningTests;
   pageUrl: string;
-}
+}) {
+  const [copied, setCopied] = React.useState(false);
 
-export function GovernanceStripClient({
-  recordId,
-  lastUpdated,
-  engineVersion,
-  dataVersion,
-  contentVersion,
-  uiVersion,
-  riskLevel,
-  reviewedBy,
-  tests,
-  pageUrl
-}: GovernanceStripClientProps) {
-  const handleCopy = () => {
-    if (typeof navigator === "undefined" || !navigator.clipboard) return;
-    const summary = [
-      `Page: ${pageUrl}`,
-      `Record ID: ${recordId}`,
-      `Last updated: ${lastUpdated}`,
-      `Engine v${engineVersion}, Data: ${dataVersion}, Content v${contentVersion}, UI v${uiVersion}`,
-      `Risk: ${riskLevel}`,
-      `Reviewed by: ${reviewedBy.name}${reviewedBy.role ? ` (${reviewedBy.role})` : ""}`,
-      `QA: PASS (golden ${tests.goldenCases}, edge ${tests.edgeCases})`,
-      `Run: ${tests.runId} (${tests.lastRun})`
-    ].join("\n");
-    void navigator.clipboard.writeText(summary);
-  };
+  async function copySummary() {
+    const lines = [
+      `Fidamen Governance Summary`,
+      `URL: ${props.pageUrl}`,
+      `Record ID: ${props.recordId}`,
+      `Last updated: ${props.lastUpdated}`,
+      `Versions: engine v${props.engineVersion} | data ${props.dataVersion} | content v${props.contentVersion} | UI v${props.uiVersion}`,
+      `Risk: ${props.riskLevel}`,
+      `Reviewed by: ${props.reviewedBy.name}${props.reviewedBy.role ? ` (${props.reviewedBy.role})` : ""}`,
+      props.reviewedBy.credentials ? `Credentials: ${props.reviewedBy.credentials}` : "",
+      `QA: PASS (golden ${props.tests.goldenCases} + edge ${props.tests.edgeCases})`,
+      `Run: ${props.tests.runId} • Last run: ${props.tests.lastRun}`
+    ].filter(Boolean);
+
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // fallback
+      const textarea = document.createElement("textarea");
+      textarea.value = lines.join("\n");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    }
+  }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-700">
-          <span>
-            <span className="font-semibold">Updated:</span> {lastUpdated}
-          </span>
-          <span className="text-slate-400" aria-hidden>
-            •
-          </span>
-          <span>
-            <span className="font-semibold">QA:</span> PASS (golden {tests.goldenCases}, edge{" "}
-            {tests.edgeCases})
-          </span>
-          <span className="text-slate-400" aria-hidden>
-            •
-          </span>
-          <span>
-            <span className="font-semibold">Reviewed by:</span> {reviewedBy.name}
-          </span>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Governance</p>
+          <p className="mt-1 text-sm text-slate-700">
+            Record <span className="font-semibold text-slate-900">{props.recordId}</span> • Reviewed by{" "}
+            <span className="font-semibold text-slate-900">{props.reviewedBy.name}</span>
+          </p>
         </div>
         <button
           type="button"
-          onClick={handleCopy}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 hover:border-slate-400"
+          onClick={copySummary}
+          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 hover:bg-slate-100"
+          aria-label="Copy governance summary"
         >
-          Copy governance summary
+          {copied ? "Copied" : "Copy summary"}
         </button>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600">
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-          Engine v{engineVersion}
-        </span>
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-          Data: {dataVersion}
-        </span>
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-          Content v{contentVersion}
-        </span>
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-          UI v{uiVersion}
-        </span>
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-          Record {recordId}
-        </span>
       </div>
     </div>
   );
