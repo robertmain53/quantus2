@@ -18,7 +18,15 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { getReviewerDirectory } from "../lib/reviewers.ts";
+import * as reviewersModule from "../lib/reviewers.ts";
+
+// Resolve reviewers exports defensively (avoids ESM named-export edge cases under tsx/Node)
+const getReviewerDirectory =
+  reviewersModule.getReviewerDirectory ?? reviewersModule.default?.getReviewerDirectory;
+
+if (!getReviewerDirectory) {
+  throw new Error("qa-versioning: failed to resolve getReviewerDirectory from lib/reviewers.ts");
+}
 
 // NOTE: These are TypeScript modules; use tsx (or node+loader) to run this script.
 import * as contentModule from "../lib/content.ts";
@@ -68,7 +76,7 @@ function normalizeExternalUrl(raw) {
 }
 
 function extractEvidenceLinksFromConfig(calcConfig) {
-  // Your page.tsx sources citations from: config?.pageContent?.citations
+  // page.tsx sources citations from: config?.pageContent?.citations
   const citations = calcConfig?.pageContent?.citations;
   if (!Array.isArray(citations)) return [];
 
@@ -214,8 +222,11 @@ function ensureReviewer(versioning, req, ctx) {
     }
   }
 
+  // NOTE:
+  // We DO NOT require versioning.reviewedBy.scope on the record, because your current
+  // ReviewerIdentity type does not include it. High-risk scope is enforced at seed level
+  // via ensureHighRiskReviewerIsSeededAndSeedHasScope().
   if (req.requireReviewerScope) {
-    // Enforce per-record scope (if you support it on the versioning record).
     const scope = versioning.reviewedBy?.scope;
     if (!Array.isArray(scope) || scope.length === 0) {
       fail(`${ctx}: reviewedBy.scope is required for riskLevel=${versioning.riskLevel}`);
@@ -243,13 +254,6 @@ function ensureRecordId(versioning, ctx) {
 function main() {
   const reviewerDirectory = getReviewerDirectory();
 
-  // Hard-stop early if REVIEWERS_SEED is empty but you have (or will have) high risk calculators.
-  if (!reviewerDirectory?.byName || Object.keys(reviewerDirectory.byName).length === 0) {
-    warn(
-      `Reviewer seed directory is empty (REVIEWERS_SEED). This is OK only if no published calculators are riskLevel=high.`
-    );
-  }
-
   const policy = getVersioningPolicy();
   const versioningJson = readVersioningJson();
 
@@ -259,6 +263,35 @@ function main() {
 
   const calculators = getPublishedCalculators();
   info(`Checking versioning governance for ${calculators.length} published calculators...`);
+
+  // Precompute which published calculators are high risk
+  // so we can hard-fail immediately if REVIEWERS_SEED is empty.
+  const seedCount = reviewerDirectory?.byName ? Object.keys(reviewerDirectory.byName).length : 0;
+
+  const highRiskPaths = [];
+  for (const calc of calculators) {
+    const evidenceFromPage = extractEvidenceLinksFromConfig(calc.config);
+    const v = getVersioningRecord(calc.fullPath, calc.config, calc.publishDate ?? null, evidenceFromPage);
+    if (v?.riskLevel === "high") {
+      highRiskPaths.push(calc.fullPath);
+      // no need to keep scanning if seed is empty — we already know we'll fail
+      if (seedCount === 0) break;
+    }
+  }
+
+  // HARDENED GATE:
+  // If any published calculator is high risk AND REVIEWERS_SEED is empty -> FAIL immediately.
+  if (highRiskPaths.length > 0 && seedCount === 0) {
+    fail(
+      `[QA-VERSIONING] REVIEWERS_SEED is empty, but there is at least one published high-risk calculator. ` +
+        `Populate REVIEWERS_SEED in lib/reviewers.ts with at least one reviewer (with scope). ` +
+        `Example high-risk path: ${highRiskPaths[0]}`
+    );
+  }
+
+  if (seedCount === 0) {
+    warn(`Reviewer seed directory is empty (REVIEWERS_SEED). OK only if no published calculators are riskLevel=high.`);
+  }
 
   const failures = [];
 
@@ -275,7 +308,7 @@ function main() {
 
       ensureAllowedRisk(versioning.riskLevel, ctx);
 
-      // New strict enforcement:
+      // High-risk strict enforcement:
       ensureHighRiskReviewerIsSeededAndSeedHasScope(versioning, reviewerDirectory, ctx);
 
       const req =
@@ -288,7 +321,11 @@ function main() {
             versioning.riskLevel === "high" ? 50 : versioning.riskLevel === "medium" ? 25 : 10,
           minEdgeCases:
             versioning.riskLevel === "high" ? 200 : versioning.riskLevel === "medium" ? 120 : 25,
-          requireReviewerScope: versioning.riskLevel === "high"
+
+          // IMPORTANT:
+          // Keep this false unless you add reviewedBy.scope to the VersioningRecord identity itself.
+          // High-risk scope is enforced at the *seeded reviewer* level above.
+          requireReviewerScope: false
         };
 
       if (req.requireChangelog) ensureChangelogMatches(versioning, ctx);
