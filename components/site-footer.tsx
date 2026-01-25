@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 export function SiteFooter() {
@@ -6,8 +5,9 @@ export function SiteFooter() {
     <footer className="border-t border-base surface-strong text-body">
       <div className="container grid gap-6 py-10 md:grid-cols-[2fr_3fr]">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <Image src="/logo-full.png" alt="Fidamen" width={160} height={107} />
+          <div className="space-y-1">
+            <p className="text-lg font-semibold">Fidamen</p>
+            <p className="text-sm text-muted">The Instrument of Trust.</p>
           </div>
           <p className="text-sm text-muted">
             Standards-driven calculators and converters for teams that depend on defensible answers.
