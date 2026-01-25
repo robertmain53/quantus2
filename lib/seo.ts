@@ -1,8 +1,13 @@
 const DEFAULT_SITE_URL = "https://fidamen.com";
 
 export function getSiteUrl(pathname = "/") {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_URL;
-  return new URL(pathname, base).toString();
+  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_URL).replace(/\/+$/g, "");
+  const rawPath = typeof pathname === "string" ? pathname.trim() : "";
+  if (!rawPath || rawPath === "/") {
+    return base;
+  }
+  const normalizedPath = (rawPath.startsWith("/") ? rawPath : `/${rawPath}`).replace(/\/+$/g, "");
+  return `${base}${normalizedPath}`;
 }
 
 export interface BreadcrumbItem {

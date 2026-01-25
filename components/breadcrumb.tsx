@@ -25,12 +25,14 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
     ...items,
   ];
 
-  // Generate JSON-LD BreadcrumbList
+  // Generate JSON-LD BreadcrumbList with stable @id for entity merging
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
+    "@id": `${getSiteUrl(fullItems[fullItems.length - 1].href)}#breadcrumb`,
     itemListElement: fullItems.map((item, index) => ({
       "@type": "ListItem",
+      "@id": `${getSiteUrl(item.href)}#breadcrumb-${index + 1}`,
       position: index + 1,
       name: item.label,
       item: getSiteUrl(item.href),
@@ -43,16 +45,16 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
         <ol className="flex flex-wrap items-center gap-x-1 gap-y-1">
           {fullItems.map((item, index) => {
             const isLast = index === fullItems.length - 1;
+            const separatorClass = index > 0 ? "before:mr-1 before:content-['›'] before:text-slate-400" : "";
 
             return (
               <li
                 key={item.href}
-                className={`flex items-center ${index > 0 ? "before:mr-1 before:content-['›'] before:text-slate-400" : ""}`}
+                aria-current={isLast ? "page" : undefined}
+                className={`flex items-center ${separatorClass}`.trim()}
               >
                 {isLast ? (
-                  <span aria-current="page" className="text-slate-700">
-                    {item.label}
-                  </span>
+                  <span className="text-slate-700">{item.label}</span>
                 ) : (
                   <Link href={item.href} className="hover:text-brand">
                     {item.label}

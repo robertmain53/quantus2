@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 export const metadata = {
   alternates: {
-    canonical: "https://fidamen.com/",
+    canonical: "https://fidamen.com",
   },
 };
 

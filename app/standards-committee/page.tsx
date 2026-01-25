@@ -103,7 +103,7 @@ export default function StandardsCommitteePage() {
 
             <div className="flex flex-wrap gap-4 pt-2">
               <Link
-                href="https://yeahup.net/"
+                href="https://yeahup.net"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"

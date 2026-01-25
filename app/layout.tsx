@@ -75,9 +75,9 @@ export default function RootLayout({
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      "@id": "https://yeahup.net/#organization",
+      "@id": "https://yeahup.net#organization",
       name: "Yeah Up S.r.l.",
-      url: "https://yeahup.net/",
+      url: "https://yeahup.net",
       sameAs: []
     },
     {
@@ -87,7 +87,7 @@ export default function RootLayout({
       name: "Fidamen",
       url: siteUrl,
       publisher: {
-        "@id": "https://yeahup.net/#organization"
+        "@id": "https://yeahup.net#organization"
       },
       potentialAction: {
         "@type": "SearchAction",
