@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function SiteFooter() {
@@ -5,7 +6,10 @@ export function SiteFooter() {
     <footer className="border-t border-base surface-strong text-body">
       <div className="container grid gap-6 py-10 md:grid-cols-[2fr_3fr]">
         <div className="space-y-2">
-          <p className="text-lg font-semibold">Fidamen</p>
+          <div className="flex items-center gap-3">
+            <Image src="/favicon-32x32.png" alt="Fidamen" width={20} height={20} />
+            <p className="text-lg font-semibold">Fidamen</p>
+          </div>
           <p className="text-sm text-muted">
             Standards-driven calculators and converters for teams that depend on defensible answers.
           </p>

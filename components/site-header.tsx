@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { getCategories, getTopCalculators } from "@/lib/content";
@@ -20,9 +21,16 @@ export function SiteHeader() {
       <div className="container flex items-center justify-between gap-4 py-4">
         <Link
           href="/"
-          className="flex items-center gap-2 font-serif text-xl font-semibold text-slate-900 no-underline"
+          className="flex items-center gap-2 text-slate-900 no-underline"
+          aria-label="Fidamen home"
         >
-          Fidamen
+          <Image
+            src="/logo-64.png"
+            alt="Fidamen"
+            width={40}
+            height={40}
+            priority
+          />
         </Link>
         <div className="flex flex-1 items-center justify-end gap-4">
           {/* Desktop Navigation */}
