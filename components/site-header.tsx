@@ -8,7 +8,7 @@ import { MobileMenu, LightweightCalculator } from "@/components/mobile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export function SiteHeader() {
-  const categories = getCategories().slice(0, 5);
+  const categories = getCategories();
   const popularCalculators = getTopCalculators(20)
     .slice(0, 20)
     .map(

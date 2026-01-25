@@ -45,24 +45,33 @@ export function SiteFooter() {
           </nav>
           <div>
             <p className="mb-2 font-semibold text-body">Browse Categories</p>
-            <div className="grid gap-4 text-sm text-muted">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted">
+              <Link href="/category/automotive" className="hover:text-accent">
+                Automotive
+              </Link>
+              <Link href="/category/business" className="hover:text-accent">
+                Business
+              </Link>
+              <Link href="/category/construction" className="hover:text-accent">
+                Construction
+              </Link>
               <Link href="/category/conversions" className="hover:text-accent">
                 Conversions
               </Link>
               <Link href="/category/finance" className="hover:text-accent">
                 Finance
               </Link>
-              <Link href="/category/construction" className="hover:text-accent">
-                Construction
-              </Link>
-              <Link href="/category/business" className="hover:text-accent">
-                Business
+              <Link href="/category/general" className="hover:text-accent">
+                General
               </Link>
               <Link href="/category/health" className="hover:text-accent">
                 Health
               </Link>
               <Link href="/category/lifestyle" className="hover:text-accent">
                 Lifestyle
+              </Link>
+              <Link href="/category/time" className="hover:text-accent">
+                Time
               </Link>
             </div>
           </div>

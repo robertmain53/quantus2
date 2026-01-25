@@ -25,7 +25,7 @@ export default function HomePage() {
           Deliver calculators your experts can trust on deadline.
         </h1>
         <p className="text-lg text-muted">
-          Fidamen keeps every converter auditable—aligning with published standards,
+          Fidamen keeps every converter and calculator auditable—aligning with published standards,
           documenting methodology, and presenting results in a workflow your engineers,
           analysts, and operators can rely on for real-world decisions.
         </p>
