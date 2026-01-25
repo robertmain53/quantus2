@@ -1,8 +1,8 @@
 // app/reviewers/[slug]/page.tsx
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Breadcrumb } from "@/components/breadcrumb";
 import { getReviewerDirectory } from "@/lib/reviewers";
 import { getSiteUrl } from "@/lib/seo";
 
@@ -81,19 +81,12 @@ export default async function ReviewerProfilePage(props: ReviewerPageProps) {
 
   return (
     <main className="container py-8 sm:py-12 lg:py-16">
-      <nav className="text-sm text-slate-500">
-        <ol className="flex flex-wrap items-center gap-2">
-          <li>
-            <Link href="/" className="hover:text-brand">Home</Link>
-          </li>
-          <li aria-hidden>›</li>
-          <li>
-            <Link href="/reviewers" className="hover:text-brand">Reviewers</Link>
-          </li>
-          <li aria-hidden>›</li>
-          <li className="text-slate-700">{reviewer.name}</li>
-        </ol>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: "Reviewers", href: "/reviewers" },
+          { label: reviewer.name, href: `/reviewers/${slug}` }
+        ]}
+      />
 
       <header className="mt-8 space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900 sm:text-5xl">

@@ -1,5 +1,7 @@
 // app/reviewers/page.tsx
 import Link from "next/link";
+
+import { Breadcrumb } from "@/components/breadcrumb";
 import { getReviewerDirectory } from "@/lib/reviewers";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +13,9 @@ export default function ReviewersIndexPage() {
 
   return (
     <main className="container py-8 sm:py-12 lg:py-16">
-      <header className="space-y-3">
+      <Breadcrumb items={[{ label: "Reviewers", href: "/reviewers" }]} />
+
+      <header className="mt-8 space-y-3">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">Reviewers</h1>
         <p className="text-slate-600">
           Canonical reviewer profiles used as entities in structured data and change-control governance.

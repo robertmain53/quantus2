@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Breadcrumb } from "@/components/breadcrumb";
 import { getCategories } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Category Directory",
+  title: "All Categories",
   description:
-    "Browse the Fidamen knowledge architecture organized by high-value categories and conversion clusters.",
+    "Browse all calculator and converter categories on Fidamen, organized by discipline. Find standards-aligned tools for conversions, finance, engineering, health, and more.",
   alternates: {
     canonical: "https://fidamen.com/category",
   },
@@ -20,9 +21,11 @@ export default function CategoryIndexPage() {
 
   return (
     <main className="container space-y-8 py-8 sm:space-y-10 sm:py-12 lg:space-y-12 lg:py-16">
+      <Breadcrumb items={[{ label: "All Categories", href: "/category" }]} />
+
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">
-          Category Intelligence
+          All Categories
         </h1>
         <p className="max-w-3xl text-lg text-slate-600">
           Organized by discipline and function. Select a category to access

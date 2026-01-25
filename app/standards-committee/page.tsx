@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Breadcrumb } from "@/components/breadcrumb";
+
 export const metadata: Metadata = {
   title: "Standards Committee",
   description:
@@ -13,6 +15,8 @@ export const metadata: Metadata = {
 export default function StandardsCommitteePage() {
   return (
     <main className="container space-y-6 py-8 sm:space-y-8 sm:py-12 lg:py-16">
+      <Breadcrumb items={[{ label: "Standards Committee", href: "/standards-committee" }]} />
+
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">
           Standards Committee

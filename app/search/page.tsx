@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Breadcrumb } from "@/components/breadcrumb";
 import { getTopCalculators, searchCalculators } from "@/lib/content";
 
 export const metadata: Metadata = {
@@ -20,6 +21,8 @@ export default async function SearchPage(props: SearchPageProps) {
 
   return (
     <main className="container space-y-8 py-8 sm:space-y-10 sm:py-12 lg:space-y-12 lg:py-16">
+      <Breadcrumb items={[{ label: "Search", href: "/search" }]} />
+
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">Search</h1>
         <p className="max-w-3xl text-lg text-slate-600">

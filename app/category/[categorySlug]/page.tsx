@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Breadcrumb } from "@/components/breadcrumb";
 import { getCategories, getCategoryBySlug } from "@/lib/content";
 import summaryData from "@/data/summary.json";
 
@@ -63,30 +64,19 @@ export default async function CategoryPage(props: CategoryPageProps) {
 
   return (
     <main className="container space-y-8 py-8 sm:space-y-10 sm:py-12 lg:space-y-12 lg:py-16">
-      <nav className="text-sm text-slate-500">
-        <ol className="flex flex-wrap items-center gap-2">
-          <li>
-            <Link href="/" className="hover:text-brand">
-              Home
-            </Link>
-          </li>
-          <li aria-hidden>›</li>
-          <li>
-            <Link href="/category" className="hover:text-brand">
-              Categories
-            </Link>
-          </li>
-          <li aria-hidden>›</li>
-          <li className="text-slate-700">{titleCase(category.label)}</li>
-        </ol>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: "All Categories", href: "/category" },
+          { label: titleCase(category.label), href: `/category/${category.slug}` },
+        ]}
+      />
 
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">
           {titleCase(category.label)} Calculators & Intelligence
         </h1>
         <p className="max-w-3xl text-lg text-slate-600">
-          High-performing tools designed to help professionals and not acrosss the {category.label.toLowerCase()} landscape.
+          Standards-aligned calculators and converters for {category.label.toLowerCase()} professionals. Each tool documents methodology, references authoritative sources, and provides auditable outputs.
         </p>
           <div className="flex flex-wrap gap-4 text-sm text-slate-500">
             <span className="rounded-full bg-slate-100 px-3 py-1">

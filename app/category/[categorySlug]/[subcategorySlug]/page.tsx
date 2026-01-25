@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Breadcrumb } from "@/components/breadcrumb";
 import { getSubcategoryBySlug, getCategoryBySlug } from "@/lib/content";
 import summaryData from "@/data/summary.json";
 
@@ -75,29 +76,13 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
 
   return (
     <main className="container space-y-8 py-8 sm:space-y-10 sm:py-12 lg:space-y-12 lg:py-16">
-      <nav className="text-sm text-slate-500">
-        <ol className="flex flex-wrap items-center gap-2">
-          <li>
-            <Link href="/" className="hover:text-brand">
-              Home
-            </Link>
-          </li>
-          <li aria-hidden>›</li>
-          <li>
-            <Link href="/category" className="hover:text-brand">
-              Categories
-            </Link>
-          </li>
-          <li aria-hidden>›</li>
-          <li>
-            <Link href={`/category/${category.slug}`} className="hover:text-brand">
-              {titleCase(category.label)}
-            </Link>
-          </li>
-          <li aria-hidden>›</li>
-          <li className="text-slate-700">{titleCase(subcategory.label)}</li>
-        </ol>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: "All Categories", href: "/category" },
+          { label: titleCase(category.label), href: `/category/${category.slug}` },
+          { label: titleCase(subcategory.label), href: `/category/${category.slug}/${subcategory.slug}` },
+        ]}
+      />
 
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900 sm:text-5xl">

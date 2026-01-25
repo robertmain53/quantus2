@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { Breadcrumb } from "@/components/breadcrumb";
+
 export const metadata: Metadata = {
   title: "Author Guidelines",
   description:
@@ -9,6 +11,8 @@ export const metadata: Metadata = {
 export default function AuthorPage() {
   return (
     <main className="container space-y-6 py-8 sm:space-y-8 sm:py-12 lg:py-16">
+      <Breadcrumb items={[{ label: "Author Guidelines", href: "/author" }]} />
+
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">Author Guidelines</h1>
         <p className="max-w-3xl text-lg text-slate-600">

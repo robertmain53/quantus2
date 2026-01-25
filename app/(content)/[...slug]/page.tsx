@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Breadcrumb } from "@/components/breadcrumb";
 import { ConversionCalculator } from "@/components/conversion-calculator";
 import { GenericAdvancedCalculator } from "@/components/generic-advanced-calculator";
 import { GenericConverter } from "@/components/generic-converter";
@@ -13,7 +14,7 @@ import { getCalculatorByPath, getPublishedCalculators, toSlug } from "@/lib/cont
 import { parseConversionFromSlug, type ConversionContext, convertValue, getUnitById } from "@/lib/conversions";
 import type { ConversionLogicConfig, CalculatorLogicConfig } from "@/lib/calculator-config";
 import { getVersioningPolicy, getVersioningRecord } from "@/lib/versioning";
-import { buildBreadcrumbSchema, buildFaqSchema, buildWebPageSchema, getSiteUrl } from "@/lib/seo";
+import { buildFaqSchema, buildWebPageSchema, getSiteUrl } from "@/lib/seo";
 
 interface CalculatorPageProps {
   params: Promise<{
@@ -157,16 +158,15 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
 
   const simpleCalculatorNode = componentType === "simple_calc" && config ? <GenericSimpleCalculator config={config} /> : null;
 
-  const breadcrumbs = [
-    { name: "Home", url: getSiteUrl("/") },
-    { name: "Categories", url: getSiteUrl("/category") },
+  const breadcrumbItems = [
+    { label: "All Categories", href: "/category" },
     ...(categorySlug
-      ? [{ name: titleCase(calculator.category), url: getSiteUrl(`/category/${categorySlug}`) }]
+      ? [{ label: titleCase(calculator.category), href: `/category/${categorySlug}` }]
       : []),
     ...(calculator.subcategory && categorySlug && subcategorySlug
-      ? [{ name: calculator.subcategory, url: getSiteUrl(`/category/${categorySlug}/${subcategorySlug}`) }]
+      ? [{ label: calculator.subcategory, href: `/category/${categorySlug}/${subcategorySlug}` }]
       : []),
-    { name: calculator.title, url: getSiteUrl(calculator.fullPath) }
+    { label: calculator.title, href: calculator.fullPath }
   ];
 
   const pageUrl = getSiteUrl(calculator.fullPath);
@@ -212,7 +212,6 @@ const reviewerSchema = versioning.reviewedBy?.name
     },
     ...(authorSchema ? [authorSchema] : []),
     ...(reviewerSchema ? [reviewerSchema] : []),
-    buildBreadcrumbSchema(breadcrumbs),
     buildWebPageSchema({
       name: calculator.title,
       description: pageDescription,
@@ -254,39 +253,7 @@ const reviewerSchema = versioning.reviewedBy?.name
     <main className="container grid gap-8 py-8 sm:gap-12 sm:py-12 lg:py-16 lg:grid-cols-[minmax(0,1fr)_320px]">
       <article className="space-y-12">
         <header className="space-y-6">
-          <nav className="text-sm text-slate-500">
-            <ol className="flex flex-wrap items-center gap-2">
-              <li>
-                <Link href="/" className="hover:text-brand">Home</Link>
-              </li>
-              <li aria-hidden>›</li>
-              <li>
-                <Link href="/category" className="hover:text-brand">Categories</Link>
-              </li>
-              {categorySlug && (
-                <>
-                  <li aria-hidden>›</li>
-                  <li>
-                    <Link href={`/category/${categorySlug}`} className="hover:text-brand">
-                      {titleCase(calculator.category)}
-                    </Link>
-                  </li>
-                </>
-              )}
-              {calculator.subcategory && categorySlug && subcategorySlug && (
-                <>
-                  <li aria-hidden>›</li>
-                  <li>
-                    <Link href={`/category/${categorySlug}/${subcategorySlug}`} className="text-slate-700 hover:text-brand">
-                      {calculator.subcategory}
-                    </Link>
-                  </li>
-                </>
-              )}
-              <li aria-hidden>›</li>
-              <li className="text-slate-700">{calculator.title}</li>
-            </ol>
-          </nav>
+          <Breadcrumb items={breadcrumbItems} />
 
           <div className="space-y-4">
             <h1 className="font-serif text-4xl font-semibold text-slate-900 sm:text-5xl">

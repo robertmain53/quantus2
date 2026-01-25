@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Breadcrumb } from "@/components/breadcrumb";
 import { getCategories, getPublishedCalculators, searchCalculators, toSlug } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
@@ -56,9 +57,11 @@ export default async function CalculatorsDirectoryPage(
 
   return (
     <main className="container space-y-8 py-8 sm:space-y-10 sm:py-12 lg:space-y-12 lg:py-16">
+      <Breadcrumb items={[{ label: "All Calculators", href: "/calculators" }]} />
+
       <header className="space-y-4">
         <h1 className="font-serif text-4xl font-semibold text-slate-900">
-          All calculators & converters
+          All Calculators & Converters
         </h1>
         <p className="max-w-3xl text-lg text-slate-600">
           A single directory page that links to every published tool, keeping navigation
