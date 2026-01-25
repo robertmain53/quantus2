@@ -25,10 +25,10 @@ export function SiteHeader() {
           aria-label="Fidamen home"
         >
           <Image
-            src="/logo-64.png"
+            src="/logo-full.png"
             alt="Fidamen"
-            width={40}
-            height={40}
+            width={200}
+            height={133}
             priority
           />
         </Link>

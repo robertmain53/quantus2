@@ -7,8 +7,7 @@ export function SiteFooter() {
       <div className="container grid gap-6 py-10 md:grid-cols-[2fr_3fr]">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <Image src="/favicon-32x32.png" alt="Fidamen" width={20} height={20} />
-            <p className="text-lg font-semibold">Fidamen</p>
+            <Image src="/logo-full.png" alt="Fidamen" width={160} height={107} />
           </div>
           <p className="text-sm text-muted">
             Standards-driven calculators and converters for teams that depend on defensible answers.
