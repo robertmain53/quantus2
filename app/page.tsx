@@ -109,7 +109,7 @@ export default function HomePage() {
       <section className="space-y-8">
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-2xl font-semibold text-slate-900">
-            Core converters  
+            Core Tools  
           </h2>
           <p className="text-sm text-slate-500">
             Prioritized by demand  
