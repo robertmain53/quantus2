@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getCategories, getTopCalculators, getUpcomingPublishSchedule } from "@/lib/content";
+import { getCategories, getTopCalculators } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,53 +14,32 @@ export const metadata = {
 export default function HomePage() {
   const categories = getCategories().slice(0, 6);
   const topCalculators = getTopCalculators(6);
-  const publishSchedule = getUpcomingPublishSchedule().slice(0, 5);
 
   return (
     <main className="container flex flex-col gap-8 py-8 sm:gap-12 sm:py-12 lg:gap-16 lg:py-16">
-      <section className="grid gap-12 lg:grid-cols-12 lg:items-center">
-        <div className="space-y-6 lg:col-span-7">
-          <span className="inline-flex items-center rounded-full bg-surface px-4 py-1 text-sm font-medium text-accent">
-            Built for Technical Teams
-          </span>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight text-body sm:text-5xl">
-            Deliver calculators your experts can trust on deadline.
-          </h1>
-          <p className="text-lg text-muted">
-            Fidamen keeps every converter auditable—aligning with published standards,
-            documenting methodology, and presenting results in a workflow your engineers,
-            analysts, and operators can rely on for real-world decisions.
-          </p>
-          <div className="flex flex-wrap gap-4 text-sm text-muted">
-            <div className="rounded-lg border border-base bg-surface px-4 py-2 shadow-sm shadow-soft">
-              Versioned methodologies &amp; units
-            </div>
-            <div className="rounded-lg border border-base bg-surface px-4 py-2 shadow-sm shadow-soft">
-              Standards-backed references
-            </div>
-            <div className="rounded-lg border border-base bg-surface px-4 py-2 shadow-sm shadow-soft">
-              Governed release cadence
-            </div>
+      <section className="max-w-3xl space-y-6">
+        <span className="inline-flex items-center rounded-full bg-surface px-4 py-1 text-sm font-medium text-accent">
+          Built for Technical Teams
+        </span>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight text-body sm:text-5xl">
+          Deliver calculators your experts can trust on deadline.
+        </h1>
+        <p className="text-lg text-muted">
+          Fidamen keeps every converter auditable—aligning with published standards,
+          documenting methodology, and presenting results in a workflow your engineers,
+          analysts, and operators can rely on for real-world decisions.
+        </p>
+        <div className="flex flex-wrap gap-4 text-sm text-muted">
+          <div className="rounded-lg border border-base bg-surface px-4 py-2 shadow-sm shadow-soft">
+            Versioned methodologies &amp; units
+          </div>
+          <div className="rounded-lg border border-base bg-surface px-4 py-2 shadow-sm shadow-soft">
+            Standards-backed references
+          </div>
+          <div className="rounded-lg border border-base bg-surface px-4 py-2 shadow-sm shadow-soft">
+            Governed release cadence
           </div>
         </div>
-        <aside className="space-y-6 rounded-2xl border border-base bg-surface p-6 shadow-lg shadow-soft lg:col-span-5">
-          <h2 className="text-base font-semibold text-body">
-            Upcoming releases (versioned roadmap)
-          </h2>
-          <ol className="space-y-4 text-sm text-muted">
-            {publishSchedule.map((entry) => (
-              <li key={entry.path} className="flex items-start gap-3">
-                <span className="mt-1 h-2.5 w-2.5 flex-none rounded-full bg-sky-500" aria-hidden />
-                <div className="space-y-1">
-                  <span className="font-medium text-body">{entry.title}</span>
-                  <p className="text-xs uppercase tracking-wide text-muted">
-                    Publishing {formatPublishDate(entry.publishDate)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </aside>
       </section>
 
       <section className="space-y-8">
@@ -156,21 +135,6 @@ export default function HomePage() {
       </section>
     </main>
   );
-}
-
-function formatTraffic(value: number) {
-  if (value >= 1000) {
-    return `${Math.round(value / 100) / 10}K`;
-  }
-  return value.toString();
-}
-
-function formatPublishDate(value: string) {
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
 }
 
 function titleCase(value: string) {
