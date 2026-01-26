@@ -7,19 +7,19 @@ export function SiteFooter() {
         <div className="space-y-2">
           <div className="space-y-1">
             <p className="text-lg font-semibold">Fidamen</p>
-            <p className="text-sm text-muted">The Instrument of Trust.</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">The Instrument of Trust.</p>
           </div>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Standards-driven calculators and converters for teams that depend on defensible answers.
           </p>
-          <p className="mt-4 text-xs text-muted">
+          <p className="mt-4 text-xs text-slate-500 dark:text-slate-500">
             © {new Date().getFullYear()} Fidamen. All rights reserved.
           </p>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
           <nav>
             <p className="mb-2 font-semibold text-body">Policies</p>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
               <Link href="/calculators" className="hover:text-accent">
                 All Calculators
               </Link>
@@ -45,7 +45,7 @@ export function SiteFooter() {
           </nav>
           <div>
             <p className="mb-2 font-semibold text-body">Browse Categories</p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-600 dark:text-slate-400">
               <Link href="/category/automotive" className="hover:text-accent">
                 Automotive
               </Link>
