@@ -30,6 +30,7 @@ if (!getReviewerDirectory) {
 
 // NOTE: These are TypeScript modules; use tsx (or node+loader) to run this script.
 import * as contentModule from "../lib/content.ts";
+import * as conversionsModule from "../lib/conversions.ts";
 import * as versioningModule from "../lib/versioning.ts";
 
 const getPublishedCalculators =
@@ -38,9 +39,14 @@ const getVersioningPolicy =
   versioningModule.getVersioningPolicy ?? versioningModule.default?.getVersioningPolicy;
 const getVersioningRecord =
   versioningModule.getVersioningRecord ?? versioningModule.default?.getVersioningRecord;
+const parseConversionFromSlug =
+  conversionsModule.parseConversionFromSlug ?? conversionsModule.default?.parseConversionFromSlug;
 
 if (!getPublishedCalculators || !getVersioningPolicy || !getVersioningRecord) {
   throw new Error("qa-versioning: failed to resolve required module exports.");
+}
+if (!parseConversionFromSlug) {
+  throw new Error("qa-versioning: failed to resolve parseConversionFromSlug from lib/conversions.ts");
 }
 
 const ALLOWED_RISK = new Set(["low", "medium", "high"]);
@@ -335,6 +341,60 @@ function main() {
       ensureRecordId(versioning, ctx);
     } catch (e) {
       failures.push(String(e?.message ?? e));
+    }
+  }
+
+  // Non-blocking taxonomy drift warnings.
+  const UNIT_TO_SUBCATEGORY = {
+    length: "Length",
+    weight: "Weight",
+    temperature: "Temperature",
+    volume: "Volume",
+    area: "Area",
+    illuminance: "Illuminance",
+    torque: "Torque",
+    energy: "Energy",
+    speed: "Speed",
+    pressure: "Pressure",
+    power: "Power",
+    data_size: "Data Storage",
+    data_rate: "Data Transfer",
+    time: "Time",
+    currency: "Currency",
+    frequency: "Frequency",
+    density: "Density",
+    force: "Force",
+    voltage: "Voltage",
+    resistance: "Resistance",
+    angle: "Angle",
+    luminous_intensity: "Illuminance",
+    fuel_economy: "Fuel Economy"
+  };
+
+  const mismatchSummary = new Map();
+  let mismatchCount = 0;
+
+  for (const calc of calculators) {
+    if (calc.category !== "Conversions") continue;
+    const slug = calc.slug ?? calc.fullPath.split("/").filter(Boolean).pop() ?? "";
+    const parsed = parseConversionFromSlug(slug);
+    if (!parsed) continue;
+    const expected = UNIT_TO_SUBCATEGORY[parsed.kind];
+    if (expected && calc.subcategory && calc.subcategory !== expected) {
+      mismatchCount += 1;
+      const key = `${calc.subcategory} -> ${expected}`;
+      mismatchSummary.set(key, (mismatchSummary.get(key) ?? 0) + 1);
+      warn(
+        `Taxonomy mismatch: ${calc.fullPath} subcategory="${calc.subcategory}" expected="${expected}"`
+      );
+    }
+  }
+
+  if (mismatchCount > 0) {
+    info("Taxonomy mismatch summary:");
+    const sorted = Array.from(mismatchSummary.entries()).sort((a, b) => b[1] - a[1]);
+    for (const [label, count] of sorted) {
+      info(`- ${count} ${label}`);
     }
   }
 

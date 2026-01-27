@@ -3,8 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getCategories, getCategoryBySlug } from "@/lib/content";
-import summaryData from "@/data/summary.json";
+import { getCategoryBySlug } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,14 +14,6 @@ interface CategoryPageProps {
   }>;
 }
 
-interface SummaryEntry {
-  slug: string;
-  title: string;
-  category: string;
-  subcategory: string | null;
-  trafficEstimate: number;
-  publishDate: string | null;
-}
 
 export async function generateMetadata(
   props: CategoryPageProps
@@ -54,13 +45,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
   }
 
   const subcategories = category.subcategories;
-  const subcategorySlugByLabel = new Map(
-    subcategories.map((item) => [item.label, item.slug] as const)
-  );
-  const summaryEntries = summaryData as SummaryEntry[];
-  const calculators = summaryEntries.filter(
-    (entry) => entry.category === category.label
-  );
+  const calculators = category.calculators;
 
   return (
     <main className="container space-y-8 py-8 sm:space-y-10 sm:py-12 lg:space-y-12 lg:py-16">

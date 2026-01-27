@@ -6,6 +6,7 @@ import {
   type CalculatorConfig,
   parseCalculatorConfig
 } from "./calculator-config";
+import { parseConversionFromSlug, type UnitKind } from "./conversions";
 import summaryData from "../data/summary.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "calc.csv");
@@ -117,8 +118,13 @@ function ensureCache(): ContentCache {
     const segments = fullPath
       .split("/")
       .filter(Boolean);
-    const categoryLabel = row.category?.trim() || "uncategorized";
-    const subcategoryLabel = row.subcategory?.trim() || null;
+    let categoryLabel = row.category?.trim() || "uncategorized";
+    let subcategoryLabel = row.subcategory?.trim() || null;
+    ({ categoryLabel, subcategoryLabel } = normalizeConversionTaxonomy({
+      categoryLabel,
+      subcategoryLabel,
+      slug: row.slug
+    }));
     const title = row.title.trim();
     const trafficEstimate = Number.parseInt(row.traffic_estimate ?? "0", 10);
     const publishDate = normalizeDate(row.New_Publish_Date);
@@ -308,6 +314,50 @@ function normalizeComponentType(input: string | undefined): CalculatorComponentT
   }
 
   throw new Error(`Unsupported component_type value "${input}"`);
+}
+
+const CONVERSION_SUBCATEGORY_BY_KIND: Partial<Record<UnitKind, string>> = {
+  length: "Length",
+  weight: "Weight",
+  temperature: "Temperature",
+  volume: "Volume",
+  area: "Area",
+  illuminance: "Illuminance",
+  torque: "Torque",
+  energy: "Energy",
+  speed: "Speed",
+  pressure: "Pressure",
+  power: "Power",
+  data_size: "Data Storage",
+  data_rate: "Data Transfer",
+  time: "Time",
+  currency: "Currency",
+  frequency: "Frequency",
+  density: "Density",
+  force: "Force",
+  voltage: "Voltage",
+  resistance: "Resistance",
+  angle: "Angle",
+  luminous_intensity: "Illuminance",
+  fuel_economy: "Fuel Economy"
+};
+
+function normalizeConversionTaxonomy(input: {
+  categoryLabel: string;
+  subcategoryLabel: string | null;
+  slug: string;
+}) {
+  const segments = input.slug.split("/").filter(Boolean);
+  const leaf = segments[segments.length - 1] ?? input.slug;
+  const conversion = parseConversionFromSlug(leaf);
+  if (!conversion) {
+    return input;
+  }
+  const subcategory = CONVERSION_SUBCATEGORY_BY_KIND[conversion.kind];
+  return {
+    categoryLabel: "Conversions",
+    subcategoryLabel: subcategory ?? input.subcategoryLabel
+  };
 }
 
 function parseRowConfig(raw: string | undefined, context: string): CalculatorConfig | null {
@@ -534,9 +584,14 @@ function buildSummaryRecords(): CalculatorRecord[] {
   return SUMMARY_ENTRIES.map((entry) => {
     const segments = slugToSegments(entry.slug);
     const publishDate = normalizeDate(entry.publishDate ?? undefined);
+    const normalized = normalizeConversionTaxonomy({
+      categoryLabel: entry.category || "uncategorized",
+      subcategoryLabel: entry.subcategory ?? null,
+      slug: entry.slug
+    });
     return {
-      category: entry.category || "uncategorized",
-      subcategory: entry.subcategory ?? null,
+      category: normalized.categoryLabel,
+      subcategory: normalized.subcategoryLabel ?? null,
       componentType: null,
       config: null,
       slug: segments[segments.length - 1] ?? "",

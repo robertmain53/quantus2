@@ -4,24 +4,6 @@ import { notFound } from "next/navigation";
 
 import { Breadcrumb } from "@/components/breadcrumb";
 import { getSubcategoryBySlug, getCategoryBySlug } from "@/lib/content";
-import summaryData from "@/data/summary.json";
-
-interface SummaryEntry {
-  slug: string;
-  title: string;
-  category: string;
-  subcategory: string | null;
-  trafficEstimate: number;
-  publishDate: string | null;
-}
-
-const summaryEntries = summaryData as SummaryEntry[];
-
-function getSubcategoryCalculators(categoryLabel: string, subcategoryLabel: string) {
-  return summaryEntries.filter(
-    (entry) => entry.category === categoryLabel && entry.subcategory === subcategoryLabel
-  );
-}
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -46,7 +28,7 @@ export async function generateMetadata(
   const { category, subcategory } = lookup;
   const categoryTitle = titleCase(category.label);
   const subcategoryTitle = titleCase(subcategory.label);
-  const calculatorCount = getSubcategoryCalculators(category.label, subcategory.label).length;
+  const calculatorCount = subcategory.calculators.length;
 
   return {
     title: `${subcategoryTitle} Calculators & Tools – ${categoryTitle} | Fidamen`,
@@ -66,7 +48,7 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
   }
 
   const { category, subcategory } = lookup;
-  const calculators = getSubcategoryCalculators(category.label, subcategory.label);
+  const calculators = subcategory.calculators;
 
   // Get sibling subcategories for cross-navigation
   const fullCategory = getCategoryBySlug(params.categorySlug);
