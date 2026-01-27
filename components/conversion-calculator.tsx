@@ -8,6 +8,7 @@ import {
   convertValue,
   getUnitById
 } from "@/lib/conversions";
+import { formatDisplayValue } from "@/lib/formatting";
 import { SharedChart } from "@/components/shared-chart";
 
 interface ConversionCalculatorProps {
@@ -192,14 +193,14 @@ export function ConversionCalculator({
             <input
               type="text"
               readOnly
-              value={isValid ? formatNumber(targetValue, toUnit.decimalPlaces) : "—"}
+              value={isValid ? formatNumber(targetValue, toUnit.decimalPlaces, toUnit) : "—"}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-lg font-semibold text-slate-900 shadow-sm"
             />
             {isValid && (
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(formatNumber(targetValue, toUnit.decimalPlaces));
+                  navigator.clipboard.writeText(formatNumber(targetValue, toUnit.decimalPlaces, toUnit));
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1500);
                 }}
@@ -233,7 +234,7 @@ export function ConversionCalculator({
                 xLabel={fromUnit.symbol}
                 yLabel={toUnit.symbol}
                 points={table.map((row) => ({
-                  label: `${row.input} ${fromUnit.symbol}`,
+                  label: formatValueWithUnit(row.input, fromUnit),
                   value: row.output
                 }))}
               />
@@ -270,7 +271,7 @@ export function ConversionCalculator({
               <div className="sticky bottom-4 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm shadow-emerald-100 md:static md:bg-transparent md:border-0 md:shadow-none">
                 <div className="flex items-center justify-between">
                   <span>Primary result</span>
-                  <span>{formatNumber(targetValue, toUnit.decimalPlaces)}</span>
+                  <span>{formatNumber(targetValue, toUnit.decimalPlaces, toUnit)}</span>
                 </div>
               </div>
             )}
@@ -294,10 +295,10 @@ export function ConversionCalculator({
               {table.map((row) => (
                 <tr key={`${direction}-${row.input}`}>
                   <td className="px-4 py-3 font-medium text-slate-800">
-                    {formatNumber(row.input, fromUnit.decimalPlaces)} {fromUnit.symbol}
+                    {formatValueWithUnit(row.input, fromUnit)}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
-                    {formatNumber(row.output, toUnit.decimalPlaces)} {toUnit.symbol}
+                    {formatValueWithUnit(row.output, toUnit)}
                   </td>
                 </tr>
               ))}
@@ -310,15 +311,36 @@ export function ConversionCalculator({
   );
 }
 
-function formatNumber(value: number, decimals = 4) {
+function formatNumber(
+  value: number,
+  decimals = 4,
+  unit?: { kind?: string; symbol?: string; id?: string; decimalPlaces?: number }
+) {
   if (!Number.isFinite(value)) {
     return "—";
   }
+  const isCurrency = unit?.kind === "currency";
+  return formatDisplayValue(
+    value,
+    isCurrency ? "currency" : undefined,
+    unit?.symbol,
+    unit?.id,
+    unit?.decimalPlaces ?? decimals
+  );
+}
 
-  return value.toLocaleString("en-US", {
-    maximumFractionDigits: decimals,
-    minimumFractionDigits: 0
-  });
+function formatValueWithUnit(
+  value: number,
+  unit?: { kind?: string; symbol?: string; id?: string; decimalPlaces?: number }
+) {
+  const formatted = formatNumber(value, unit?.decimalPlaces ?? 4, unit);
+  if (unit?.kind === "currency") {
+    return formatted;
+  }
+  if (unit?.symbol) {
+    return `${formatted} ${unit.symbol}`;
+  }
+  return formatted;
 }
 
 function sanitizeInput(raw: string) {

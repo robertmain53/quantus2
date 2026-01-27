@@ -1,4 +1,5 @@
 import type { CalculatorFormOutput } from "@/lib/calculator-config";
+import { formatDisplayValue, getDisplayUnit } from "@/lib/formatting";
 
 interface SharedResultsTableProps {
   outputs: Array<{
@@ -34,32 +35,15 @@ export function SharedResultsTable({ outputs }: SharedResultsTableProps) {
             <tr key={output.id}>
               <td className="px-4 py-3 text-slate-800">{output.label}</td>
               <td className="px-4 py-3 font-semibold text-slate-900">
-                {formatValue(output.value, output.format)}
+                {formatDisplayValue(output.value, output.format, output.unit)}
               </td>
-              <td className="px-4 py-3 text-slate-600">{output.unit ?? "—"}</td>
+              <td className="px-4 py-3 text-slate-600">
+                {getDisplayUnit(output.format, output.unit)}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
-}
-
-function formatValue(value: number, format?: string) {
-  if (!Number.isFinite(value)) return "—";
-
-  switch (format) {
-    case "currency":
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 2
-      }).format(value);
-    case "percent":
-      return `${(value * 100).toFixed(2)}%`;
-    case "integer":
-      return Math.round(value).toLocaleString("en-US");
-    default:
-      return value.toLocaleString("en-US", { maximumFractionDigits: 4 });
-  }
 }

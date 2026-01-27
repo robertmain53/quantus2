@@ -9,6 +9,7 @@ import type {
   CalculatorFormField,
   CalculatorFormSection
 } from "@/lib/calculator-config";
+import { formatDisplayValue, resolveCurrencyCode } from "@/lib/formatting";
 import { SharedResultsTable } from "@/components/shared-results-table";
 import { SharedChart } from "@/components/shared-chart";
 
@@ -738,34 +739,16 @@ function formatOutputValue(value: number, format?: string, unit?: string) {
     return "—";
   }
 
-  if (!format) {
-    const formatted = value.toLocaleString("en-US", { maximumFractionDigits: 4 });
-    return unit ? `${formatted} ${unit}` : formatted;
+  const currencyCode = resolveCurrencyCode(unit);
+  if (format === "currency" || unit?.toLowerCase() === "currency" || currencyCode) {
+    return formatDisplayValue(value, "currency", unit);
   }
 
-  switch (format) {
-    case "currency": {
-      const formatter = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 2
-      });
-      return formatter.format(value);
-    }
-    case "percent": {
-      return `${(value * 100).toFixed(2)}%`;
-    }
-    case "decimal": {
-      return value.toLocaleString("en-US", { maximumFractionDigits: 4 });
-    }
-    case "integer": {
-      return Math.round(value).toLocaleString("en-US");
-    }
-    default: {
-      const formatted = value.toLocaleString("en-US", { maximumFractionDigits: 4 });
-      return unit ? `${formatted} ${unit}` : formatted;
-    }
+  const formatted = formatDisplayValue(value, format, unit);
+  if (!format && unit) {
+    return `${formatted} ${unit}`;
   }
+  return formatted;
 }
 
 function getOutputExpression(method: AdvancedMethodConfig, outputId: string): string {

@@ -296,6 +296,8 @@ function checkSelectOptions(form, filePath) {
 }
 
 const HTML_TOKEN_REGEX = /<|>/;
+const CURRENCY_UNIT_REGEX = /^(currency|[A-Z]{3})$/;
+const CURRENCY_SYMBOLS = new Set(["$", "€", "£", "¥", "A$", "C$", "NZ$", "CHF"]);
 
 function checkTextForHtml(pageContent, filePath) {
   if (!pageContent || typeof pageContent !== "object") return;
@@ -341,6 +343,31 @@ function checkTextForHtml(pageContent, filePath) {
       });
     }
   }
+}
+
+function warnCurrencyUnitMismatch(form, filePath) {
+  if (!form || !form.result || !Array.isArray(form.result.outputs)) return;
+
+  form.result.outputs.forEach((output, idx) => {
+    if (!output || typeof output !== "object") return;
+    const format = output.format;
+    if (format !== "currency") return;
+    const unit = typeof output.unit === "string" ? output.unit.trim() : "";
+    const unitUpper = unit.toUpperCase();
+    const isValid =
+      unit &&
+      (CURRENCY_UNIT_REGEX.test(unit) ||
+        CURRENCY_UNIT_REGEX.test(unitUpper) ||
+        CURRENCY_SYMBOLS.has(unit));
+    if (!isValid) {
+      console.warn(
+        `[lint-configs] WARN: output format=currency but unit is missing or non-currency in ${path.relative(
+          PROJECT_ROOT,
+          filePath
+        )} (output index ${idx})`
+      );
+    }
+  });
 }
 
 /**
@@ -389,6 +416,7 @@ function lintConfigFile(filePath) {
   checkFormSections(json.form, filePath);
   checkSelectOptions(json.form, filePath);
   checkTextForHtml(pageContent, filePath);
+  warnCurrencyUnitMismatch(json.form, filePath);
 
   if (dirty) {
     fs.writeFileSync(filePath, JSON.stringify(json, null, 2));
