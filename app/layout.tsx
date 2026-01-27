@@ -70,7 +70,7 @@ export const metadata: Metadata = {
   },
   verification: {
     google: [
-      "nHTljtqRum0afb01lKamYJNLndVCogkYWBc6KQT63zA",
+      "Y4R39L_VJyYsaOutgScGy51YO2kG30A_atKh6mv_2Og",
     ]
   }
 };
@@ -113,7 +113,7 @@ export default function RootLayout({
       className={`${inter.variable} ${sourceSerif.variable} scroll-smooth`}
     >
       <head>
-        <meta name="google-site-verification" content="Y4R39L_VJyYsaOutgScGy51YO2kG30A_atKh6mv_2Og" />
+        
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9476637732224939"
