@@ -5,6 +5,7 @@ import Link from "next/link";
 
 export interface LightweightCalculator {
   slug: string;
+  fullPath: string;
   title: string;
   category: string;
   subcategory: string | null;

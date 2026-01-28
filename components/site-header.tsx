@@ -12,8 +12,8 @@ export function SiteHeader() {
   const popularCalculators = getTopCalculators(20)
     .slice(0, 20)
     .map(
-      ({ slug, title, category, subcategory }) =>
-        ({ slug, title, category, subcategory } as LightweightCalculator)
+      ({ slug, fullPath, title, category, subcategory }) =>
+        ({ slug, fullPath, title, category, subcategory } as LightweightCalculator)
     );
 
   return (
