@@ -117,6 +117,56 @@ export default async function CalculatorPage(props: CalculatorPageProps) {
   const versioning = getVersioningRecord(calculator.fullPath, config, calculator.publishDate, evidenceLinks);
   const versioningPolicy = getVersioningPolicy();
 
+  const contentStructure = (config?.contentStructure ?? null) as Record<string, unknown> | null;
+  const privacyConfig =
+    contentStructure && typeof contentStructure === "object"
+      ? (contentStructure.privacyConfig as Record<string, unknown> | undefined)
+      : undefined;
+  const securityBadgeEnabled =
+    Boolean(contentStructure && contentStructure.securityBadge) ||
+    summaryParagraphs.includes("secure_calculation_badge_enabled");
+  const privacyStorageDisabled =
+    Boolean(privacyConfig && privacyConfig.storeData === false) ||
+    summaryParagraphs.includes("privacy_config_store_data_false");
+  const rateTable =
+    calculationLogic && typeof calculationLogic === "object"
+      ? ((calculationLogic as Record<string, unknown>).rateTable as Record<string, unknown> | undefined)
+      : undefined;
+  const tierMultipliers = Array.isArray(rateTable?.tierMultipliers)
+    ? (rateTable!.tierMultipliers as Array<Record<string, unknown>>)
+    : [];
+  const dataSources =
+    calculationLogic && typeof calculationLogic === "object"
+      ? ((calculationLogic as Record<string, unknown>).dataSources as Array<Record<string, unknown>> | undefined)
+      : undefined;
+
+  let rateAsOf: string | null = null;
+  const rateEndpoint =
+    Array.isArray(dataSources) &&
+    dataSources.find((source) => typeof source.endpoint === "string" && source.endpoint.startsWith("http"))
+      ? (dataSources.find((source) => typeof source.endpoint === "string" && source.endpoint.startsWith("http"))!
+          .endpoint as string)
+      : null;
+  const asOfField =
+    rateTable && typeof rateTable.asOfField === "string" ? String(rateTable.asOfField) : "asOf";
+
+  if (rateEndpoint) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const response = await fetch(rateEndpoint, { signal: controller.signal, next: { revalidate: 3600 } });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const payload = (await response.json()) as Record<string, unknown>;
+        if (payload && typeof payload[asOfField] === "string") {
+          rateAsOf = String(payload[asOfField]);
+        }
+      }
+    } catch {
+      rateAsOf = null;
+    }
+  }
+
   // Defensible "Verified Accuracy" copy.
   const evidenceText = (versioning.evidence ?? []).join(" ").toLowerCase();
   const hasNistIsoEvidence =
@@ -336,6 +386,94 @@ const reviewerSchema = versioning.reviewedBy?.name
         {advancedCalculatorNode}
         {converterNode}
         {simpleCalculatorNode}
+
+        {(securityBadgeEnabled || privacyStorageDisabled || tierMultipliers.length > 0) && (
+          <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl font-semibold text-slate-900">
+                  Secure calculation & market rates
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Disclosures, privacy posture, and live rate governance for this calculator.
+                </p>
+              </div>
+              {securityBadgeEnabled && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+                  Secure Calculation
+                </div>
+              )}
+            </div>
+
+            {privacyStorageDisabled && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <p className="font-semibold text-slate-900">Data privacy</p>
+                <p className="mt-1">Inputs are processed in-session only. No user data storage is required.</p>
+              </div>
+            )}
+
+            {tierMultipliers.length > 0 && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">2026 auto loan rate tiers</h3>
+                  <p className="text-sm text-slate-600">
+                    Base APR is sourced from the live 2026 feed and adjusted by credit tier multipliers.
+                  </p>
+                  {rateAsOf && (
+                    <p className="mt-2 text-xs text-slate-500">Rates as of {rateAsOf}.</p>
+                  )}
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead className="bg-slate-50 text-left text-slate-600">
+                      <tr>
+                        <th className="px-4 py-2 font-semibold">Credit tier</th>
+                        <th className="px-4 py-2 font-semibold">Multiplier</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 text-slate-700">
+                      {tierMultipliers.map((tier, index) => (
+                        <tr key={`tier-${index}`}>
+                          <td className="px-4 py-2 font-medium text-slate-900">
+                            {typeof tier.tier === "string" ? tier.tier : "Tier"}
+                          </td>
+                          <td className="px-4 py-2">
+                            {typeof tier.multiplier === "number" || typeof tier.multiplier === "string"
+                              ? `${tier.multiplier}x`
+                              : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {Array.isArray(dataSources) && dataSources.length > 0 && (
+                  <div className="text-xs text-slate-500">
+                    {dataSources.map((source, index) => (
+                      <p key={`rate-source-${index}`}>
+                        {source.label ? String(source.label) : "Data source"}{" "}
+                        {source.endpoint ? (
+                          <>
+                            —{" "}
+                            <a
+                              href={String(source.endpoint)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-brand"
+                            >
+                              {String(source.endpoint)}
+                            </a>
+                          </>
+                        ) : null}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         {calculationLogic && typeof calculationLogic === "object" && (
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200">
