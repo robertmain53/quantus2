@@ -486,10 +486,7 @@ export function getAllCalculators(): CalculatorRecord[] {
 }
 
 export function getPublishedCalculators(): CalculatorRecord[] {
-  const todayIso = new Date().toISOString().split("T")[0];
-  return buildSummaryRecords().filter(
-    (calculator) => !calculator.publishDate || calculator.publishDate <= todayIso
-  );
+  return ensureCache().calculators.filter((calculator) => calculator.isPublished);
 }
 
 export function getCalculatorByPath(pathname: string): CalculatorRecord | undefined {

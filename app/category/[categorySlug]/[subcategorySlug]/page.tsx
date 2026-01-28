@@ -128,7 +128,7 @@ export default async function SubcategoryPage(props: SubcategoryPageProps) {
           {calculators.map((calculator) => (
             <Link
               key={calculator.slug}
-              href={calculator.slug}
+              href={calculator.fullPath}
               className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand hover:shadow-md"
             >
               <h3 className="font-semibold text-slate-900 group-hover:text-brand">

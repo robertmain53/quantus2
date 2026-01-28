@@ -83,7 +83,7 @@ export function MobileMenu({ categories, calculators }: MobileMenuProps) {
                   {calculators.slice(0, 10).map((calculator) => (
                     <Link
                       key={calculator.slug}
-                      href={calculator.slug}
+                      href={calculator.fullPath}
                       className="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand transition-colors no-underline"
                       onClick={() => setIsOpen(false)}
                     >
