@@ -1,38 +1,81 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "metadata": {
-    "title": "Auto Loan Payment — Fixed‑Rate Estimator",
-    "description": "Estimate periodic payments, total interest, and financed amount for a fixed-rate auto loan. Includes sales tax and fees treatment and supports common payment frequencies."
+    "title": "Auto Loan Payment - Fixed-Rate Estimator",
+    "description": "Fixed-rate auto loan estimator with TILA-aligned disclosures, APR governance, and total cost of ownership modeling.",
+    "lastUpdated": "2026-01-28"
   },
   "logic": {
     "type": "formula",
     "outputs": [
       {
+        "id": "net_trade_in",
+        "label": "Net trade-in equity",
+        "expression": "trade_in_value - amount_owed_on_trade",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "taxable_base",
+        "label": "Taxable vehicle base",
+        "expression": "max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0)",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "sales_tax_amount",
+        "label": "Estimated sales tax",
+        "expression": "max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
         "id": "financed_amount",
         "label": "Financed amount",
-        "expression": "((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)",
-        "unit": null,
+        "expression": "max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100)",
+        "unit": "USD",
         "format": "currency"
+      },
+      {
+        "id": "effective_apr_pct",
+        "label": "APR used in calculation",
+        "expression": "(use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate)",
+        "unit": "%",
+        "format": "decimal"
       },
       {
         "id": "payment",
         "label": "Periodic payment",
-        "expression": "((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))",
-        "unit": null,
+        "expression": "((use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year) === 0 ? (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100)) / (term_months / 12 * payments_per_year) : (((use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year) * (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100))) / (1 - pow(1 + (use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year, -(term_months / 12 * payments_per_year)))",
+        "unit": "USD",
         "format": "currency"
       },
       {
         "id": "total_payment",
         "label": "Total of all payments",
-        "expression": "(((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))) * term_years * payments_per_year",
-        "unit": null,
+        "expression": "((((use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year) === 0 ? (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100)) / (term_months / 12 * payments_per_year) : (((use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year) * (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100))) / (1 - pow(1 + (use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year, -(term_months / 12 * payments_per_year)))))) * (term_months / 12 * payments_per_year)",
+        "unit": "USD",
         "format": "currency"
       },
       {
         "id": "total_interest",
         "label": "Total interest paid",
-        "expression": "((((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))) * term_years * payments_per_year) - (((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100))",
-        "unit": null,
+        "expression": "((((use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year) === 0 ? (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100)) / (term_months / 12 * payments_per_year) : (((use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year) * (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100))) / (1 - pow(1 + (use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year, -(term_months / 12 * payments_per_year)))))) * (term_months / 12 * payments_per_year) - (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100))",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_running_costs",
+        "label": "Estimated operating costs",
+        "expression": "(annual_insurance + annual_maintenance + annual_fuel) * (term_months / 12)",
+        "unit": "USD",
+        "format": "currency"
+      },
+      {
+        "id": "total_cost_of_ownership",
+        "label": "Total cost of ownership",
+        "expression": "((((use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year) === 0 ? (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100)) / (term_months / 12 * payments_per_year) : (((use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year) * (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) + dealer_fees + registration_fees + extended_warranty_cost + (max(vehicle_price - down_payment - (trade_in_value - amount_owed_on_trade), 0) * sales_tax_rate / 100))) / (1 - pow(1 + (use_tier_rate > 0 ? credit_score_tier : annual_percentage_rate) / 100 / payments_per_year, -(term_months / 12 * payments_per_year)))))) * (term_months / 12 * payments_per_year) + down_payment + max(trade_in_value, 0) + ((annual_insurance + annual_maintenance + annual_fuel) * (term_months / 12))",
+        "unit": "USD",
         "format": "currency"
       }
     ]
@@ -40,12 +83,16 @@
   "form": {
     "fields": [
       {
-        "id": "price",
-        "label": "Vehicle price (before tax)",
+        "id": "vehicle_price",
+        "label": "Vehicle price before tax",
         "type": "number",
         "default": 30000,
         "min": 0,
-        "step": 50
+        "step": 50,
+        "helpText": "Use the negotiated vehicle price before tax and fees.",
+        "ariaLabel": "Vehicle price before tax",
+        "errorText": "Enter a valid vehicle price.",
+        "required": true
       },
       {
         "id": "down_payment",
@@ -53,50 +100,174 @@
         "type": "number",
         "default": 3000,
         "min": 0,
-        "step": 50
+        "step": 50,
+        "helpText": "Cash paid upfront that reduces the amount financed.",
+        "ariaLabel": "Down payment amount",
+        "errorText": "Enter a valid down payment.",
+        "required": true
       },
       {
-        "id": "trade_in",
-        "label": "Trade‑in value",
+        "id": "trade_in_value",
+        "label": "Trade-in value",
         "type": "number",
         "default": 0,
         "min": 0,
-        "step": 50
+        "step": 50,
+        "helpText": "Estimated value of the vehicle you trade in.",
+        "ariaLabel": "Trade in value",
+        "errorText": "Enter a valid trade-in value.",
+        "required": false
       },
       {
-        "id": "sales_tax_pct",
-        "label": "Sales tax rate (%)",
+        "id": "amount_owed_on_trade",
+        "label": "Amount owed on trade-in",
         "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50,
+        "helpText": "If you owe more than the trade-in value, this is negative equity.",
+        "ariaLabel": "Amount owed on trade in",
+        "errorText": "Enter a valid amount owed on your trade-in.",
+        "required": false
+      },
+      {
+        "id": "sales_tax_rate",
+        "label": "Sales tax rate",
+        "type": "percent",
         "default": 8,
         "min": 0,
         "max": 25,
-        "step": 0.1
+        "step": 0.1,
+        "helpText": "Use the applicable sales tax rate for your jurisdiction.",
+        "ariaLabel": "Sales tax rate",
+        "errorText": "Enter a valid sales tax rate.",
+        "required": true
       },
       {
-        "id": "fees",
-        "label": "Fees and documentation ($)",
+        "id": "zip_code",
+        "label": "ZIP code for tax lookup",
+        "type": "integer",
+        "default": 0,
+        "min": 0,
+        "max": 99999,
+        "helpText": "Optional. Use when local tax lookup is available.",
+        "ariaLabel": "ZIP code for tax lookup",
+        "errorText": "Enter a valid ZIP code.",
+        "required": false
+      },
+      {
+        "id": "dealer_fees",
+        "label": "Dealer fees",
         "type": "number",
         "default": 500,
         "min": 0,
-        "step": 10
+        "step": 10,
+        "helpText": "Documentation, processing, and dealer add-on fees.",
+        "ariaLabel": "Dealer fees",
+        "errorText": "Enter a valid dealer fee amount.",
+        "required": true
       },
       {
-        "id": "annual_rate_pct",
-        "label": "Annual interest rate (%)",
+        "id": "registration_fees",
+        "label": "Registration and title fees",
         "type": "number",
+        "default": 350,
+        "min": 0,
+        "step": 10,
+        "helpText": "State title, registration, and mandatory filing fees.",
+        "ariaLabel": "Registration and title fees",
+        "errorText": "Enter a valid registration fee amount.",
+        "required": false
+      },
+      {
+        "id": "extended_warranty_cost",
+        "label": "Extended warranty or service contract",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 25,
+        "helpText": "Optional service contracts financed with the loan.",
+        "ariaLabel": "Extended warranty cost",
+        "errorText": "Enter a valid warranty cost.",
+        "required": false
+      },
+      {
+        "id": "credit_score_tier",
+        "label": "Credit score tier (estimated APR)",
+        "type": "select",
+        "default": "",
+        "helpText": "Select a tier to estimate APR from market data.",
+        "ariaLabel": "Credit score tier",
+        "errorText": "Select a valid credit score tier.",
+        "required": false,
+        "options": [
+          {
+            "label": "Super-prime (720+): 4.25%",
+            "value": "4.25"
+          },
+          {
+            "label": "Prime (660-719): 6.25%",
+            "value": "6.25"
+          },
+          {
+            "label": "Near-prime (620-659): 8.75%",
+            "value": "8.75"
+          },
+          {
+            "label": "Subprime (580-619): 12.50%",
+            "value": "12.5"
+          },
+          {
+            "label": "Deep subprime (below 580): 15.90%",
+            "value": "15.9"
+          }
+        ]
+      },
+      {
+        "id": "use_tier_rate",
+        "label": "Use tier-estimated APR",
+        "type": "select",
+        "default": "0",
+        "helpText": "Choose Yes to apply the tier estimate in calculations.",
+        "ariaLabel": "Use tier estimated APR",
+        "errorText": "Select Yes or No.",
+        "required": true,
+        "options": [
+          {
+            "label": "No - use manual APR",
+            "value": "0"
+          },
+          {
+            "label": "Yes - use tier estimate",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "annual_percentage_rate",
+        "label": "Annual Percentage Rate (APR)",
+        "type": "percent",
         "default": 5,
         "min": 0,
-        "max": 100,
-        "step": 0.01
+        "max": 36,
+        "step": 0.01,
+        "helpText": "APR includes certain finance charges and is not the same as interest rate.",
+        "ariaLabel": "Annual Percentage Rate",
+        "errorText": "Enter a valid APR.",
+        "required": true
       },
       {
-        "id": "term_years",
-        "label": "Term (years)",
-        "type": "number",
-        "default": 5,
-        "min": 0.5,
-        "max": 10,
-        "step": 0.25
+        "id": "term_months",
+        "label": "Loan term in months",
+        "type": "integer",
+        "default": 60,
+        "min": 12,
+        "max": 96,
+        "step": 1,
+        "helpText": "Common terms range from 24 to 84 months.",
+        "ariaLabel": "Loan term in months",
+        "errorText": "Enter a valid term in months.",
+        "required": true
       },
       {
         "id": "payments_per_year",
@@ -105,7 +276,67 @@
         "default": 12,
         "min": 1,
         "max": 52,
-        "step": 1
+        "step": 1,
+        "helpText": "Monthly is 12. Biweekly is 26. Weekly is 52.",
+        "ariaLabel": "Payments per year",
+        "errorText": "Enter a valid payments per year value.",
+        "required": true
+      },
+      {
+        "id": "annual_insurance",
+        "label": "Annual insurance cost",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 25,
+        "helpText": "Optional running cost used in total cost of ownership.",
+        "ariaLabel": "Annual insurance cost",
+        "errorText": "Enter a valid annual insurance cost.",
+        "required": false
+      },
+      {
+        "id": "annual_maintenance",
+        "label": "Annual maintenance cost",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 25,
+        "helpText": "Optional running cost for service and repairs.",
+        "ariaLabel": "Annual maintenance cost",
+        "errorText": "Enter a valid annual maintenance cost.",
+        "required": false
+      },
+      {
+        "id": "annual_fuel",
+        "label": "Annual fuel or energy cost",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 25,
+        "helpText": "Optional running cost to model fuel or charging.",
+        "ariaLabel": "Annual fuel or energy cost",
+        "errorText": "Enter a valid annual fuel cost.",
+        "required": false
+      },
+      {
+        "id": "privacy_consent",
+        "label": "Privacy consent",
+        "type": "select",
+        "default": "false",
+        "helpText": "Confirm you consent to processing of these inputs.",
+        "ariaLabel": "Privacy consent",
+        "errorText": "Select your privacy consent choice.",
+        "required": true,
+        "options": [
+          {
+            "label": "Yes, I consent",
+            "value": "true"
+          },
+          {
+            "label": "No",
+            "value": "false"
+          }
+        ]
       }
     ],
     "result": {
@@ -114,111 +345,138 @@
           "id": "financed_amount",
           "label": "Amount financed",
           "format": "currency",
-          "unit": null
+          "unit": "USD"
         },
         {
           "id": "payment",
           "label": "Payment per period",
           "format": "currency",
-          "unit": null
+          "unit": "USD"
         },
         {
           "id": "total_payment",
           "label": "Total paid over term",
           "format": "currency",
-          "unit": null
+          "unit": "USD"
         },
         {
           "id": "total_interest",
           "label": "Total interest paid",
           "format": "currency",
-          "unit": null
+          "unit": "USD"
+        },
+        {
+          "id": "sales_tax_amount",
+          "label": "Estimated sales tax",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_running_costs",
+          "label": "Estimated operating costs",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_cost_of_ownership",
+          "label": "Total cost of ownership",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "effective_apr_pct",
+          "label": "APR used in calculation",
+          "format": "decimal",
+          "unit": "%"
         }
       ]
     }
   },
   "page_content": {
     "introduction": [
-      "This estimator computes periodic payments, the financed amount, total amount paid, and total interest for a fixed‑rate auto loan. It includes common adjustments: down payment, trade‑in value, fees, and sales tax applied to the taxable vehicle amount.",
-      "The tool assumes a fixed nominal annual interest rate and level (equal) payments per period. Select the payments per year to model monthly, biweekly, weekly, or annual schedules."
+      "Regulation Z oriented fixed-rate auto loan estimator with negative equity, fee, and tax handling.",
+      "Outputs include financed amount, payment schedule, and total cost of ownership signals."
+    ],
+    "summary": [
+      "2026_market_rate_table",
+      "2026_fee_benchmark_table",
+      "2026_state_tax_baselines"
     ],
     "methodology": [
-      "We use the standard amortizing fixed‑rate loan formula: payment = r * PV / (1 - (1+r)^-n), where r is the periodic interest rate and n is the total number of payments. The financed amount (PV) is the vehicle price less down payment and trade‑in, plus fees and sales tax (applied to the taxable vehicle amount).",
-      "All numeric calculations use IEEE‑754-compatible arithmetic conventions where implemented; results are rounded for display to two decimal places. This estimator is intended for planning and comparison; final loan offers depend on lender underwriting and local tax rules."
+      "Amortization uses a level-payment fixed-rate formula with deterministic rounding at the display layer."
     ],
     "how_is_calculated": [
-      "Step 1 — Taxable base = price - down_payment - trade_in.",
-      "Step 2 — Financed amount = Taxable base + fees + (Taxable base × sales_tax_pct/100).",
-      "Step 3 — Periodic rate r = annual_rate_pct/100 ÷ payments_per_year. Total payments n = term_years × payments_per_year.",
-      "Step 4 — Periodic payment = (r × Financed amount) ÷ (1 - (1 + r)^-n). Total interest = (Periodic payment × n) - Financed amount."
+      "Taxable base equals vehicle price minus down payment minus net trade-in equity.",
+      "Financed amount includes taxable base, dealer fees, registration, optional warranty, and sales tax.",
+      "Payment uses APR and payment frequency with a zero-rate fallback.",
+      "Total cost of ownership adds operating costs and up-front outlays.",
+      "APR selection is governed by the credit tier toggle and manual override."
     ],
     "examples": [
-      "Example: $30,000 vehicle, $3,000 down, $0 trade‑in, 8% sales tax, $500 fees, 5% APR, 5 years, monthly payments → financed ≈ $28,540; monthly payment ≈ $539. Total interest ≈ $3,375. (Values are illustrative.)"
+      "Example: $30,000 price, $3,000 down, $0 trade-in, 8% tax, $500 fees, 5% APR, 60 months -> payment and totals are estimates only."
     ],
     "faqs": [
       {
-        "question": "How is sales tax applied?",
-        "answer": "Sales tax is applied to the taxable base defined here as vehicle price minus down payment and trade‑in. Local tax rules vary; some jurisdictions tax the full price or apply exemptions. Confirm with your dealer or local tax authority."
+        "question": "How is negative equity handled?",
+        "answer": "Negative equity equals amount owed on trade-in minus trade-in value and increases the financed amount."
       },
       {
-        "question": "What happens if the interest rate is zero?",
-        "answer": "For a 0% nominal rate, the periodic payment simplifies to financed amount divided by total number of payments. Some implementations may show division by zero in the raw formula; this estimator treats 0% as the simple evenly divided case for practical use."
+        "question": "Why do APR and interest rate differ?",
+        "answer": "APR reflects the cost of credit and can include certain finance charges, while the interest rate reflects the base cost of borrowing."
       },
       {
-        "question": "Are results guaranteed to match a lender's offer?",
-        "answer": "No. This estimator provides an approximation for planning. Actual loan offers depend on credit underwriting, fees, insurance requirements, and lender amortization conventions."
-      },
-      {
-        "question": "How precise are the results?",
-        "answer": "Displayed results are rounded to two decimal places. Under the hood calculations follow common floating point conventions; small rounding differences may appear versus lender statements."
-      },
-      {
-        "question": "Is personal data collected by this tool?",
-        "answer": "This configuration describes calculation logic only. Implementations should follow organizational privacy policies and applicable regulations when collecting or storing user inputs."
+        "question": "Does this replace lender disclosures?",
+        "answer": "No. Final lender disclosures control and may differ due to lender-specific fees or timing." 
       }
     ],
     "glossary": [
       {
-        "term": "Periodic rate (r)",
-        "definition": "The nominal annual interest rate divided by the number of payment periods per year."
+        "term": "APR",
+        "definition": "Annual Percentage Rate as defined by Regulation Z, reflecting the cost of credit over a year."
       },
       {
-        "term": "Amortizing loan",
-        "definition": "A loan where each payment covers interest and principal so the loan balance reaches zero at term end."
+        "term": "Negative equity",
+        "definition": "The amount owed on a trade-in that exceeds its value."
       },
       {
-        "term": "Financed amount",
-        "definition": "The net amount borrowed after down payment and trade‑in, plus fees and sales tax as modeled here."
+        "term": "Total cost of ownership",
+        "definition": "Loan payments plus out-of-pocket and operating costs across the selected term."
       }
     ],
+    "calculation_logic": {
+      "disclosures": {
+        "interest_rate_vs_apr": "Interest rate is the nominal cost of borrowing. APR includes certain finance charges and may differ from the interest rate.",
+        "tila_notice": "APR calculations are governed by Regulation Z and Appendix J for closed-end credit. Lender disclosures control.",
+        "estimate_notice": "This tool provides estimates for planning and comparison."
+      },
+      "inputs": {
+        "trade_in_value": "If provided, reduces the taxable base and financed amount.",
+        "amount_owed_on_trade": "Negative equity rolls into the financed amount.",
+        "credit_score_tier": "Optional market-based APR estimate.",
+        "privacy_consent_required": true
+      },
+      "governance": {
+        "security_badge": true,
+        "audit_basis": "TILA and institutional underwriting practices",
+        "data_tables": [
+          "2026_market_rate_table",
+          "2026_fee_benchmark_table"
+        ]
+      }
+    },
+    "limitations": {
+      "jurisdiction": "Tax treatment varies by state and dealer; verify local rules.",
+      "fees": "Some fees may be excluded from APR or handled differently by lenders.",
+      "rounding": "Display rounding is applied for readability and may differ from lender statements."
+    },
     "citations": [
       {
-        "label": "National Institute of Standards and Technology (NIST)",
-        "url": "https://www.nist.gov"
-      },
-      {
-        "label": "International Organization for Standardization (ISO)",
-        "url": "https://www.iso.org"
-      },
-      {
-        "label": "IEEE Standards Association",
-        "url": "https://standards.ieee.org"
-      },
-      {
-        "label": "Occupational Safety and Health Administration (OSHA)",
-        "url": "https://www.osha.gov"
-      },
-      {
-        "label": "CFPB Regulation Z — 12 CFR § 1026.22 Determination of Annual Percentage Rate",
+        "label": "CFPB Regulation Z - 12 CFR 1026.22",
         "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/22/"
       },
       {
-        "label": "CFPB Appendix J — Annual Percentage Rate Computations for Closed-End Credit",
+        "label": "CFPB Appendix J - APR computations for closed-end credit",
         "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/j/"
-      },
-      {
-        "label": "CFPB Annual Percentage Rate Tables",
-        "url": "https://www.consumerfinance.gov/compliance/compliance-resources/other-applicable-requirements/annual-percentage-rate-tables/"
       }
     ]
   },
@@ -226,22 +484,20 @@
     "internal": [],
     "external": [
       {
-        "url": "https://www.nist.gov",
-        "label": "NIST",
-        "rel": [
-          "noopener",
-          "noreferrer"
-        ]
-      },
-      {
-        "url": "https://www.iso.org",
-        "label": "ISO",
+        "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/",
+        "label": "Regulation Z",
         "rel": [
           "noopener",
           "noreferrer"
         ]
       }
     ]
+  },
+  "content_structure": {
+    "securityBadge": true,
+    "governance": "versioned_disclosure",
+    "wcag": "2.2",
+    "data_privacy": "consent_required"
   },
   "schema": {
     "additionalTypes": [
