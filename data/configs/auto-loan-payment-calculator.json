@@ -1,821 +1,192 @@
 {
   "version": "1.0.0",
-  "kind": "calculator_config",
-  "id": "auto_loan_biweekly_payment_calculator",
-  "locale": {
-    "defaultLocale": "en-US",
-    "currency": "USD",
-    "numberingSystem": "latn"
-  },
   "metadata": {
-    "title": "Auto Loan Bi-Weekly Payment Calculator",
-    "description": "Calculate bi-weekly auto loan payments, total interest, total amount paid, and a monthly-equivalent comparison. Supports trade-in negative equity, sales tax, dealer fees, APR vs interest rate terminology, and an optional Total Cost of Ownership view. Uses conservative rounding and clearly states accuracy caveats versus lender schedules."
+    "title": "Auto Loan Payment Calculator",
+    "description": "Estimate periodic auto loan payments, total interest, and total paid using a fixed-rate amortization model with down payment, trade-in, sales tax, and fees."
   },
-
-  "compliance": {
-    "ymyl": {
-      "category": "credit_and_lending",
-      "riskTier": "high",
-      "requiresReview": true
-    },
-    "tila_reg_z": {
-      "enabled": true,
-      "disclosures": {
-        "aprVsInterestRate": {
-          "title": "APR vs. Interest Rate",
-          "text": "Annual Percentage Rate (APR) is a broader measure of borrowing cost than the nominal interest rate. APR may include certain prepaid finance charges and other amounts as defined by applicable law and your lender’s disclosures. This calculator provides estimates for budgeting and comparison and is not a credit offer."
-        },
-        "estimatesNotOffer": {
-          "title": "Estimates; Not a Contract",
-          "text": "Results are estimates based on inputs and standard amortization math. Lender calculations may differ due to rounding, payment timing conventions, fee treatment, and contract-specific rules. Always rely on your loan contract and lender disclosures for final payment amounts and APR."
-        },
-        "paymentTiming": {
-          "title": "Payment Timing Assumption",
-          "text": "Bi-weekly assumes 26 payments per year (every 14 days). Some lenders use semi-monthly schedules (24 payments per year), which produce different results."
-        },
-        "financeChargeNote": {
-          "title": "Finance Charge and Amount Financed (High-Level)",
-          "text": "This tool estimates amount financed and interest paid using a standard fixed-rate amortization model. It does not compute a legally compliant Finance Charge or APR from first principles for all contract variants. For legal disclosures, use lender-provided Truth in Lending disclosures."
-        },
-        "regZReferences": [
-          {
-            "label": "CFPB Regulation Z — 12 CFR § 1026.22 (APR)",
-            "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/22/"
-          },
-          {
-            "label": "CFPB Appendix J — APR Computations (Closed-End Credit)",
-            "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/j/"
-          }
-        ]
-      }
-    },
-    "dataPrivacy": {
-      "privacyConsentRequired": true,
-      "privacyConsentLabel": "I understand results are estimates and I consent to the processing of inputs on this device for calculation purposes.",
-      "noPIIRequired": true,
-      "storage": {
-        "default": "none",
-        "allowLocalDrafts": false
-      }
-    },
-    "security": {
-      "securityBadge": true,
-      "requirements": {
-        "httpsOnly": true,
-        "noThirdPartyInputExfiltration": true
-      }
-    },
-    "accessibility": {
-      "wcag": "2.2",
-      "conformanceTarget": "AA"
-    }
-  },
-
-  "dataSources": {
-    "tables": {
-      "2026_market_rate_table": {
-        "type": "placeholder",
-        "description": "Optional: lender/market APR ranges by credit score tier and term. Populate with your vetted dataset and citations.",
-        "schema": {
-          "tierId": "string",
-          "termMonths": "integer",
-          "aprMin": "number",
-          "aprMax": "number",
-          "asOfDate": "YYYY-MM-DD",
-          "sourceLabel": "string",
-          "sourceUrl": "string"
-        }
-      },
-      "zip_tax_fee_lookup": {
-        "type": "placeholder",
-        "description": "Optional: sales tax rate and typical DMV/dealer fee ranges by ZIP/state/county.",
-        "schema": {
-          "zip": "string",
-          "salesTaxRate": "number",
-          "defaultRegistrationFee": "number",
-          "defaultTitleFee": "number",
-          "asOfDate": "YYYY-MM-DD",
-          "sourceLabel": "string",
-          "sourceUrl": "string"
-        }
-      }
-    }
-  },
-
-  "ui": {
-    "layout": {
-      "mode": "two_column",
-      "sections": [
-        "vehicle_and_trade",
-        "taxes_and_fees",
-        "financing_terms",
-        "optional_paydown",
-        "tco_optional"
-      ]
-    },
-    "resultPresentation": {
-      "primaryOutputs": [
-        "amount_financed",
-        "biweekly_payment_scheduled",
-        "monthly_equivalent_payment",
-        "total_interest_scheduled",
-        "total_paid_scheduled"
-      ],
-      "secondaryOutputs": [
-        "negative_equity_added",
-        "sales_tax_amount",
-        "out_the_door_price",
-        "number_of_biweekly_payments",
-        "effective_loan_term_years"
-      ],
-      "optionalOutputs": [
-        "payoff_date_estimate",
-        "interest_saved_with_extra",
-        "time_saved_with_extra",
-        "tco_total_cost_estimate"
-      ]
-    }
-  },
-
-  "inputs": {
-    "globalDefaults": {
-      "required": true,
-      "inputMode": "decimal",
-      "autocomplete": "off"
-    },
-    "fields": [
-      {
-        "section": "vehicle_and_trade",
-        "id": "vehicle_purchase_price",
-        "label": "Vehicle purchase price",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 30000,
-        "min": 0,
-        "max": 500000,
-        "step": 100,
-        "required": true,
-        "ariaLabel": "Vehicle purchase price in dollars",
-        "helpText": "Enter the negotiated purchase price before taxes and fees. Excludes trade-in adjustments.",
-        "errorText": "Enter a vehicle price of 0 or more."
-      },
-      {
-        "section": "vehicle_and_trade",
-        "id": "down_payment_amount",
-        "label": "Down payment",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 3000,
-        "min": 0,
-        "max": 500000,
-        "step": 50,
-        "required": true,
-        "ariaLabel": "Down payment amount in dollars",
-        "helpText": "Cash paid upfront that reduces the amount financed. Does not include trade-in value.",
-        "errorText": "Down payment must be 0 or more."
-      },
-      {
-        "section": "vehicle_and_trade",
-        "id": "trade_in_value",
-        "label": "Trade-in value",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 500000,
-        "step": 50,
-        "required": true,
-        "ariaLabel": "Trade in value in dollars",
-        "helpText": "Value credited for your trade-in. If you still owe money on the trade-in, enter that separately.",
-        "errorText": "Trade-in value must be 0 or more."
-      },
-      {
-        "section": "vehicle_and_trade",
-        "id": "amount_owed_on_trade_in",
-        "label": "Amount owed on trade-in",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 500000,
-        "step": 50,
-        "required": true,
-        "ariaLabel": "Amount owed on trade in vehicle in dollars",
-        "helpText": "If you owe more than the trade-in is worth, the difference (negative equity) may be added to the new loan.",
-        "errorText": "Amount owed must be 0 or more."
-      },
-
-      {
-        "section": "taxes_and_fees",
-        "id": "sales_tax_rate",
-        "label": "Sales tax rate",
-        "type": "number",
-        "unit": "percent",
-        "format": "percent",
-        "default": 0,
-        "min": 0,
-        "max": 20,
-        "step": 0.01,
-        "required": false,
-        "ariaLabel": "Sales tax rate percentage",
-        "helpText": "If you know your sales tax rate, enter it. Otherwise you may use ZIP lookup if available.",
-        "errorText": "Sales tax rate must be between 0% and 20%."
-      },
-      {
-        "section": "taxes_and_fees",
-        "id": "zip_code_for_tax_lookup",
-        "label": "ZIP code (optional lookup)",
-        "type": "text",
-        "default": "",
-        "pattern": "^[0-9]{5}(-[0-9]{4})?$",
-        "required": false,
-        "ariaLabel": "ZIP code for tax and fee lookup",
-        "helpText": "Optional. If enabled, can prefill sales tax and typical registration/title fees for your area.",
-        "errorText": "Enter a valid ZIP code (e.g., 94105 or 94105-1234)."
-      },
-      {
-        "section": "taxes_and_fees",
-        "id": "dealer_fees_total",
-        "label": "Dealer fees (doc, prep, add-ons)",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 50000,
-        "step": 10,
-        "required": true,
-        "ariaLabel": "Total dealer fees in dollars",
-        "helpText": "Enter dealer-related fees you expect to pay. If fees are financed, they increase amount financed.",
-        "errorText": "Dealer fees must be 0 or more."
-      },
-      {
-        "section": "taxes_and_fees",
-        "id": "government_fees_total",
-        "label": "Government fees (title, registration)",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 20000,
-        "step": 10,
-        "required": true,
-        "ariaLabel": "Title and registration fees in dollars",
-        "helpText": "DMV/title/registration fees. Depending on your contract, these may be paid upfront or financed.",
-        "errorText": "Government fees must be 0 or more."
-      },
-      {
-        "section": "taxes_and_fees",
-        "id": "fees_financed",
-        "label": "Finance taxes and fees into loan?",
-        "type": "boolean",
-        "default": true,
-        "required": true,
-        "ariaLabel": "Toggle whether taxes and fees are included in the loan amount",
-        "helpText": "If enabled, taxes and fees increase the amount financed. If disabled, they are treated as paid upfront.",
-        "errorText": "Select whether taxes and fees are financed."
-      },
-
-      {
-        "section": "financing_terms",
-        "id": "interest_rate_nominal",
-        "label": "Interest rate (nominal)",
-        "type": "number",
-        "unit": "percent",
-        "format": "percent",
-        "default": 6.5,
-        "min": 0,
-        "max": 35,
-        "step": 0.01,
-        "required": true,
-        "ariaLabel": "Nominal annual interest rate percentage",
-        "helpText": "The nominal interest rate used to compute periodic interest. If you only know APR, enter it in APR and leave this equal to APR.",
-        "errorText": "Interest rate must be between 0% and 35%."
-      },
-      {
-        "section": "financing_terms",
-        "id": "annual_percentage_rate_apr",
-        "label": "APR (Annual Percentage Rate)",
-        "type": "number",
-        "unit": "percent",
-        "format": "percent",
-        "default": 6.5,
-        "min": 0,
-        "max": 35,
-        "step": 0.01,
-        "required": true,
-        "ariaLabel": "Annual percentage rate APR",
-        "helpText": "APR may reflect certain prepaid finance charges per lender disclosures. This calculator uses APR as the financing rate input unless you explicitly model charges separately.",
-        "errorText": "APR must be between 0% and 35%."
-      },
-      {
-        "section": "financing_terms",
-        "id": "rate_input_mode",
-        "label": "Rate input mode",
-        "type": "select",
-        "default": "use_apr_as_rate",
-        "required": true,
-        "options": [
-          { "value": "use_apr_as_rate", "label": "Use APR as the amortization rate (common estimate)" },
-          { "value": "use_nominal_as_rate", "label": "Use nominal interest rate as the amortization rate" }
-        ],
-        "ariaLabel": "Select whether to use APR or nominal interest rate for payment calculations",
-        "helpText": "For most consumer comparisons, using APR is acceptable as an estimate. For contract-accurate schedules, use the contract rate and exact fee treatment.",
-        "errorText": "Select a rate input mode."
-      },
-      {
-        "section": "financing_terms",
-        "id": "loan_term_months",
-        "label": "Loan term",
-        "type": "number",
-        "unit": "months",
-        "format": "integer",
-        "default": 60,
-        "min": 6,
-        "max": 96,
-        "step": 1,
-        "required": true,
-        "ariaLabel": "Loan term in months",
-        "helpText": "Typical auto terms range from 24 to 84 months. Bi-weekly calculations convert months to an equivalent number of bi-weekly payments.",
-        "errorText": "Enter a loan term between 6 and 96 months."
-      },
-      {
-        "section": "financing_terms",
-        "id": "credit_score_tier",
-        "label": "Credit score tier (optional)",
-        "type": "select",
-        "default": "not_specified",
-        "required": false,
-        "options": [
-          { "value": "not_specified", "label": "Not specified" },
-          { "value": "super_prime", "label": "Super-prime (e.g., 781–850)" },
-          { "value": "prime", "label": "Prime (e.g., 661–780)" },
-          { "value": "near_prime", "label": "Near-prime (e.g., 601–660)" },
-          { "value": "subprime", "label": "Subprime (e.g., 501–600)" },
-          { "value": "deep_subprime", "label": "Deep subprime (e.g., 300–500)" }
-        ],
-        "ariaLabel": "Credit score tier selection",
-        "helpText": "If provided and a market rate table is configured, the calculator can suggest a typical APR range for your tier and term.",
-        "errorText": "Select a credit score tier or leave as not specified."
-      },
-      {
-        "section": "financing_terms",
-        "id": "origination_fee",
-        "label": "Origination fee (if applicable)",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 5000,
-        "step": 1,
-        "required": false,
-        "ariaLabel": "Origination fee in dollars",
-        "helpText": "Some lenders charge an origination fee. If financed, it increases amount financed; if paid upfront, it increases cash due at signing.",
-        "errorText": "Origination fee must be 0 or more."
-      },
-      {
-        "section": "financing_terms",
-        "id": "origination_fee_financed",
-        "label": "Finance origination fee into loan?",
-        "type": "boolean",
-        "default": true,
-        "required": false,
-        "ariaLabel": "Toggle whether origination fee is included in loan amount",
-        "helpText": "If enabled, the fee increases amount financed and interest cost; if disabled, it is treated as upfront cash.",
-        "errorText": "Select whether origination fee is financed."
-      },
-
-      {
-        "section": "optional_paydown",
-        "id": "extra_payment_biweekly",
-        "label": "Extra payment each bi-weekly period",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 10000,
-        "step": 1,
-        "required": true,
-        "ariaLabel": "Extra payment per biweekly period in dollars",
-        "helpText": "Optional extra amount added to each scheduled bi-weekly payment. If enabled, the calculator can estimate payoff acceleration via re-amortization.",
-        "errorText": "Extra payment must be 0 or more."
-      },
-      {
-        "section": "optional_paydown",
-        "id": "extra_payment_model",
-        "label": "Extra payment modeling",
-        "type": "select",
-        "default": "none",
-        "required": true,
-        "options": [
-          { "value": "none", "label": "Do not re-amortize (show scheduled totals only)" },
-          { "value": "re_amortize_estimate", "label": "Estimate early payoff with extra payments (approx.)" }
-        ],
-        "ariaLabel": "Select how extra payments are modeled",
-        "helpText": "Re-amortization uses a simulated period-by-period payoff estimate. Lender payoff quotes may differ due to daily interest and fee rules.",
-        "errorText": "Select an extra payment modeling method."
-      },
-
-      {
-        "section": "tco_optional",
-        "id": "enable_total_cost_of_ownership",
-        "label": "Include Total Cost of Ownership (TCO) estimate",
-        "type": "boolean",
-        "default": false,
-        "required": true,
-        "ariaLabel": "Toggle total cost of ownership estimate",
-        "helpText": "Adds non-financing costs (insurance, fuel, maintenance, registration, depreciation) to estimate broader ownership cost.",
-        "errorText": "Select whether to include TCO."
-      },
-      {
-        "section": "tco_optional",
-        "id": "tco_years",
-        "label": "TCO horizon",
-        "type": "number",
-        "unit": "years",
-        "format": "decimal",
-        "default": 5,
-        "min": 1,
-        "max": 10,
-        "step": 0.5,
-        "required": false,
-        "ariaLabel": "Total cost of ownership horizon in years",
-        "helpText": "How long you plan to keep the car for the TCO estimate. Often matches loan term, but can differ.",
-        "errorText": "Enter a horizon between 1 and 10 years."
-      },
-      {
-        "section": "tco_optional",
-        "id": "annual_insurance_cost",
-        "label": "Annual insurance cost",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 20000,
-        "step": 50,
-        "required": false,
-        "ariaLabel": "Annual insurance cost in dollars",
-        "helpText": "Optional. If you don’t know, leave blank or 0 and treat TCO as incomplete.",
-        "errorText": "Annual insurance cost must be 0 or more."
-      },
-      {
-        "section": "tco_optional",
-        "id": "annual_maintenance_cost",
-        "label": "Annual maintenance & repairs",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 20000,
-        "step": 50,
-        "required": false,
-        "ariaLabel": "Annual maintenance and repair cost in dollars",
-        "helpText": "Oil, tires, scheduled maintenance, and expected repairs (average).",
-        "errorText": "Annual maintenance cost must be 0 or more."
-      },
-      {
-        "section": "tco_optional",
-        "id": "annual_fuel_cost",
-        "label": "Annual fuel/energy cost",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 30000,
-        "step": 50,
-        "required": false,
-        "ariaLabel": "Annual fuel or energy cost in dollars",
-        "helpText": "Gasoline/diesel or electricity cost per year for driving.",
-        "errorText": "Annual fuel cost must be 0 or more."
-      },
-      {
-        "section": "tco_optional",
-        "id": "annual_registration_taxes",
-        "label": "Annual registration & vehicle taxes",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 10000,
-        "step": 10,
-        "required": false,
-        "ariaLabel": "Annual registration and vehicle taxes in dollars",
-        "helpText": "Recurring registration fees and recurring vehicle taxes (not sales tax at purchase).",
-        "errorText": "Annual registration and taxes must be 0 or more."
-      },
-      {
-        "section": "tco_optional",
-        "id": "annual_depreciation_estimate",
-        "label": "Annual depreciation estimate",
-        "type": "number",
-        "unit": "currency",
-        "format": "currency",
-        "default": 0,
-        "min": 0,
-        "max": 100000,
-        "step": 100,
-        "required": false,
-        "ariaLabel": "Annual depreciation estimate in dollars",
-        "helpText": "Optional. A simple way is (purchase price − expected resale value) ÷ years held.",
-        "errorText": "Annual depreciation must be 0 or more."
-      },
-
-      {
-        "section": "financing_terms",
-        "id": "privacy_consent",
-        "label": "Privacy consent",
-        "type": "boolean",
-        "default": false,
-        "required": true,
-        "ariaLabel": "Privacy consent checkbox",
-        "helpText": "Required to run the calculator. Inputs are processed on this device unless otherwise stated.",
-        "errorText": "Consent is required to run calculations."
-      }
-    ]
-  },
-
   "logic": {
-    "engine": {
-      "type": "formula_plus_simulation",
-      "precision": {
-        "internalDecimalPlaces": 16,
-        "displayRounding": {
-          "currencyDecimals": 2,
-          "percentDecimals": 3,
-          "integerRounding": "round"
-        }
-      },
-      "guards": {
-        "forbidNaN": true,
-        "forbidInfinity": true,
-        "maxIterations": 20000
-      }
-    },
-
-    "derived": [
-      {
-        "id": "negative_equity_added",
-        "label": "Negative equity added",
-        "expression": "max(0, amount_owed_on_trade_in - trade_in_value)",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "trade_in_net_credit",
-        "label": "Net trade-in credit",
-        "expression": "max(0, trade_in_value - amount_owed_on_trade_in)",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "taxable_base",
-        "label": "Taxable base (purchase components subject to sales tax)",
-        "expression": "max(0, vehicle_purchase_price - trade_in_net_credit)",
-        "unit": "currency",
-        "format": "currency",
-        "notes": "Jurisdiction rules vary; some states tax the price net of trade-in, others do not. Treat as an estimate."
-      },
-      {
-        "id": "sales_tax_amount",
-        "label": "Sales tax amount (estimate)",
-        "expression": "taxable_base * (sales_tax_rate/100)",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "out_the_door_price",
-        "label": "Out-the-door price (estimate)",
-        "expression": "vehicle_purchase_price + sales_tax_amount + dealer_fees_total + government_fees_total",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "fees_and_tax_financed",
-        "label": "Taxes and fees financed",
-        "expression": "fees_financed ? (sales_tax_amount + dealer_fees_total + government_fees_total) : 0",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "origination_fee_financed_amount",
-        "label": "Origination fee financed",
-        "expression": "(origination_fee_financed ? origination_fee : 0)",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "amount_financed",
-        "label": "Amount financed (principal)",
-        "expression": "max(0, vehicle_purchase_price - down_payment_amount - trade_in_value + amount_owed_on_trade_in + fees_and_tax_financed + origination_fee_financed_amount)",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "cash_due_at_signing_estimate",
-        "label": "Cash due at signing (estimate)",
-        "expression": "down_payment_amount + (fees_financed ? 0 : (sales_tax_amount + dealer_fees_total + government_fees_total)) + (origination_fee_financed ? 0 : origination_fee)",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "rate_used_annual",
-        "label": "Rate used for amortization (annual)",
-        "expression": "(rate_input_mode == 'use_nominal_as_rate') ? (interest_rate_nominal/100) : (annual_percentage_rate_apr/100)",
-        "unit": "decimal",
-        "format": "decimal"
-      },
-      {
-        "id": "periods_per_year",
-        "label": "Bi-weekly periods per year",
-        "expression": "26",
-        "format": "integer"
-      },
-      {
-        "id": "periodic_rate",
-        "label": "Periodic rate (per bi-weekly period)",
-        "expression": "rate_used_annual / periods_per_year",
-        "unit": "decimal",
-        "format": "decimal"
-      },
-      {
-        "id": "number_of_biweekly_payments",
-        "label": "Number of bi-weekly payments",
-        "expression": "round(loan_term_months * periods_per_year / 12)",
-        "format": "integer",
-        "notes": "This converts months to an equivalent count of bi-weekly periods. Contracts may define payment counts differently."
-      }
-    ],
-
+    "type": "formula",
     "outputs": [
       {
-        "id": "biweekly_payment_scheduled",
-        "label": "Bi-weekly payment (scheduled)",
-        "expression": "periodic_rate == 0 ? (amount_financed / number_of_biweekly_payments) : ((amount_financed * periodic_rate) / (1 - (1 + periodic_rate) ^ (-number_of_biweekly_payments)))",
-        "unit": "currency",
+        "id": "financed_amount",
+        "label": "Financed amount",
+        "expression": "((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)",
+        "unit": "USD",
         "format": "currency"
       },
       {
-        "id": "monthly_equivalent_payment",
-        "label": "Monthly equivalent payment (comparison only)",
-        "expression": "biweekly_payment_scheduled * periods_per_year / 12",
-        "unit": "currency",
+        "id": "payment",
+        "label": "Periodic payment",
+        "expression": "((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))",
+        "unit": "USD",
         "format": "currency"
       },
       {
-        "id": "total_paid_scheduled",
-        "label": "Total paid (scheduled)",
-        "expression": "biweekly_payment_scheduled * number_of_biweekly_payments",
-        "unit": "currency",
+        "id": "total_payment",
+        "label": "Total of all payments",
+        "expression": "(((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))) * term_years * payments_per_year",
+        "unit": "USD",
         "format": "currency"
       },
       {
-        "id": "total_interest_scheduled",
-        "label": "Total interest (scheduled)",
-        "expression": "total_paid_scheduled - amount_financed",
-        "unit": "currency",
+        "id": "total_interest",
+        "label": "Total interest paid",
+        "expression": "((((annual_rate_pct/100/payments_per_year) * ((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100)) / (1 - pow(1 + annual_rate_pct/100/payments_per_year, -term_years*payments_per_year))) * term_years * payments_per_year) - (((price - down_payment - trade_in) + fees + (price - down_payment - trade_in) * sales_tax_pct/100))",
+        "unit": "USD",
         "format": "currency"
-      },
-
-      {
-        "id": "extra_payment_enabled",
-        "label": "Extra payment enabled",
-        "expression": "(extra_payment_model == 're_amortize_estimate') && (extra_payment_biweekly > 0)",
-        "format": "boolean"
-      },
-      {
-        "id": "biweekly_payment_with_extra",
-        "label": "Bi-weekly payment including extra",
-        "expression": "biweekly_payment_scheduled + extra_payment_biweekly",
-        "unit": "currency",
-        "format": "currency"
-      },
-
-      {
-        "id": "payoff_estimate",
-        "label": "Early payoff estimate (if extra payments modeled)",
-        "type": "simulation",
-        "enabledWhen": "extra_payment_enabled",
-        "model": {
-          "method": "period_by_period_amortization",
-          "principal": "amount_financed",
-          "periodicRate": "periodic_rate",
-          "paymentPerPeriod": "biweekly_payment_with_extra",
-          "maxPeriods": 20000,
-          "rounding": {
-            "interestPerPeriod": "round_to_cents",
-            "principalPerPeriod": "round_to_cents"
-          }
-        },
-        "produces": [
-          { "id": "payoff_periods_est", "label": "Estimated payoff periods", "format": "integer" },
-          { "id": "total_paid_with_extra_est", "label": "Estimated total paid (with extra)", "unit": "currency", "format": "currency" },
-          { "id": "total_interest_with_extra_est", "label": "Estimated total interest (with extra)", "unit": "currency", "format": "currency" }
-        ]
-      },
-      {
-        "id": "interest_saved_with_extra",
-        "label": "Estimated interest saved (with extra)",
-        "expression": "extra_payment_enabled ? (total_interest_scheduled - total_interest_with_extra_est) : 0",
-        "unit": "currency",
-        "format": "currency"
-      },
-      {
-        "id": "time_saved_with_extra",
-        "label": "Estimated time saved (years)",
-        "expression": "extra_payment_enabled ? ((number_of_biweekly_payments - payoff_periods_est) / periods_per_year) : 0",
-        "unit": "years",
-        "format": "decimal"
-      },
-      {
-        "id": "effective_loan_term_years",
-        "label": "Loan term (years)",
-        "expression": "loan_term_months / 12",
-        "unit": "years",
-        "format": "decimal"
-      },
-
-      {
-        "id": "tco_total_cost_estimate",
-        "label": "Total Cost of Ownership (estimate)",
-        "enabledWhen": "enable_total_cost_of_ownership",
-        "expression": "(enable_total_cost_of_ownership ? ((tco_years * (annual_insurance_cost + annual_maintenance_cost + annual_fuel_cost + annual_registration_taxes + annual_depreciation_estimate)) + (extra_payment_enabled ? total_paid_with_extra_est : total_paid_scheduled) + (fees_financed ? 0 : (sales_tax_amount + dealer_fees_total + government_fees_total)) + (origination_fee_financed ? 0 : origination_fee)) : 0)",
-        "unit": "currency",
-        "format": "currency",
-        "notes": "TCO is an estimate. If any annual inputs are left at 0, treat TCO as incomplete rather than authoritative."
       }
     ]
   },
-
-  "validation": {
-    "crossFieldRules": [
+  "form": {
+    "fields": [
       {
-        "id": "down_payment_not_excessive",
-        "severity": "warning",
-        "when": "down_payment_amount > vehicle_purchase_price",
-        "message": "Down payment exceeds purchase price. Check inputs."
+        "id": "price",
+        "label": "Vehicle price (before tax)",
+        "type": "number",
+        "default": 30000,
+        "min": 0,
+        "step": 50
       },
       {
-        "id": "trade_in_owed_warning",
-        "severity": "info",
-        "when": "amount_owed_on_trade_in > trade_in_value",
-        "message": "You have negative equity. This may increase the amount financed and total interest."
+        "id": "down_payment",
+        "label": "Down payment",
+        "type": "number",
+        "default": 3000,
+        "min": 0,
+        "step": 50
       },
       {
-        "id": "privacy_consent_required",
-        "severity": "error",
-        "when": "!privacy_consent",
-        "message": "Consent is required to run calculations."
+        "id": "trade_in",
+        "label": "Trade-in value",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "step": 50
       },
       {
-        "id": "term_payment_feasibility",
-        "severity": "error",
-        "when": "number_of_biweekly_payments <= 0",
-        "message": "Loan term results in zero payments. Check loan term input."
-      }
-    ]
-  },
-
-  "content": {
-    "placeholders": {
-      "rateGuidance": "2026_market_rate_table",
-      "taxFeeGuidance": "zip_tax_fee_lookup"
-    },
-    "shortMethodology": [
-      "This tool estimates a fixed-rate installment loan with bi-weekly payments (26 per year).",
-      "Amount financed includes purchase price adjustments, negative equity (if any), and optionally financed taxes/fees and origination fee.",
-      "Scheduled payment uses the standard amortizing loan annuity formula; optional extra payment can be simulated period-by-period for an early payoff estimate."
-    ]
-  },
-
-  "links": {
-    "external": [
-      {
-        "label": "CFPB Regulation Z — 12 CFR § 1026.22",
-        "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/22/",
-        "rel": ["noopener", "noreferrer"]
+        "id": "sales_tax_pct",
+        "label": "Sales tax rate (%)",
+        "type": "number",
+        "default": 8,
+        "min": 0,
+        "max": 25,
+        "step": 0.1
       },
       {
-        "label": "CFPB Appendix J — APR Computations",
-        "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/j/",
-        "rel": ["noopener", "noreferrer"]
+        "id": "fees",
+        "label": "Fees and documentation ($)",
+        "type": "number",
+        "default": 500,
+        "min": 0,
+        "step": 10
+      },
+      {
+        "id": "annual_rate_pct",
+        "label": "Annual interest rate (APR %)",
+        "type": "number",
+        "default": 5,
+        "min": 0,
+        "max": 100,
+        "step": 0.01
+      },
+      {
+        "id": "term_years",
+        "label": "Term (years)",
+        "type": "number",
+        "default": 5,
+        "min": 0.5,
+        "max": 10,
+        "step": 0.25
+      },
+      {
+        "id": "payments_per_year",
+        "label": "Payments per year",
+        "type": "integer",
+        "default": 12,
+        "min": 1,
+        "max": 52,
+        "step": 1
       }
     ],
-    "internal": []
+    "result": {
+      "outputs": [
+        {
+          "id": "financed_amount",
+          "label": "Amount financed",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "payment",
+          "label": "Payment per period",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_payment",
+          "label": "Total paid over term",
+          "format": "currency",
+          "unit": "USD"
+        },
+        {
+          "id": "total_interest",
+          "label": "Total interest paid",
+          "format": "currency",
+          "unit": "USD"
+        }
+      ]
+    }
   },
-
+  "page_content": {
+    "introduction": [
+      "This calculator estimates periodic payments, financed amount, total paid, and total interest for a fixed-rate auto loan. It accounts for down payment, trade-in value, fees, and sales tax applied to the taxable vehicle amount.",
+      "Use it to compare monthly, biweekly, or other payment schedules by adjusting payments per year. Results are planning estimates and may differ from lender disclosures due to rounding or fee treatment."
+    ],
+    "methodology": [
+      "We apply the standard amortizing loan formula with periodic rate r = APR / 100 / payments_per_year and total payments n = term_years × payments_per_year.",
+      "Financed amount equals taxable base plus fees and sales tax. Taxes are modeled as a percentage of the taxable base (price minus down payment and trade-in).",
+      "Results are rounded for display. Lenders may use different day-count or compounding conventions."
+    ],
+    "how_is_calculated": [
+      "Taxable base = price − down_payment − trade_in.",
+      "Financed amount = Taxable base + fees + (Taxable base × sales_tax_pct/100).",
+      "Periodic rate r = annual_rate_pct/100 ÷ payments_per_year; total payments n = term_years × payments_per_year.",
+      "Periodic payment = (r × financed_amount) ÷ (1 − (1 + r)^−n). Total interest = (payment × n) − financed_amount."
+    ],
+    "examples": [
+      "Example: $30,000 price, $3,000 down, $0 trade-in, 8% tax, $500 fees, 5% APR, 5 years, monthly payments → financed amount ≈ $28,540; payment ≈ $539. (Illustrative.)"
+    ],
+    "faqs": [
+      {
+        "question": "How is sales tax applied?",
+        "answer": "This model applies sales tax to the taxable base (price minus down payment and trade-in). Local rules vary; confirm with your dealer or tax authority."
+      },
+      {
+        "question": "Are results guaranteed to match lender quotes?",
+        "answer": "No. This is an estimate for planning. Lenders may apply different rounding or fee conventions."
+      }
+    ],
+    "citations": [
+      {
+        "label": "CFPB Regulation Z — 12 CFR § 1026.22 Determination of Annual Percentage Rate",
+        "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/22/"
+      },
+      {
+        "label": "CFPB Appendix J — Annual Percentage Rate Computations for Closed-End Credit",
+        "url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/j/"
+      }
+    ]
+  },
+  "links": {
+    "internal": [
+      "/finance/loans/auto-loan-payment-calculator-with-bi-weekly-payments",
+      "/finance/loans/auto-loan-payment-calculator-with-extra-payments"
+    ],
+    "external": []
+  },
   "schema": {
-    "additionalTypes": ["FinancialProduct", "SoftwareApplication"],
-    "accessibilityTags": ["WCAG2.2AA"]
+    "additionalTypes": [
+      "HowTo"
+    ]
   }
 }

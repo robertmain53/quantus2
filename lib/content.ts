@@ -367,7 +367,8 @@ function parseRowConfig(raw: string | undefined, context: string): CalculatorCon
     try {
       return parseCalculatorConfig(trimmed, `config_json for ${context}`);
     } catch (error) {
-      throw new Error(`Invalid config_json for ${context}: ${(error as Error).message}`);
+      console.warn(`Invalid config_json for ${context}: ${(error as Error).message}`);
+      return null;
     }
   }
 
@@ -394,7 +395,12 @@ function parseRowConfig(raw: string | undefined, context: string): CalculatorCon
   }
 
   const fileContent = fs.readFileSync(filePath, "utf-8");
-  return parseCalculatorConfig(fileContent, `config file ${relativePath}`);
+  try {
+    return parseCalculatorConfig(fileContent, `config file ${relativePath}`);
+  } catch (error) {
+    console.warn(`Invalid config file for ${relativePath}: ${(error as Error).message}`);
+    return null;
+  }
 }
 
 function inferComponentTypeFromConfig(
